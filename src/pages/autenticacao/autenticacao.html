@@ -1,0 +1,101 @@
+<!--
+  Generated template for the AutenticacaoPage page.
+
+  See http://ionicframework.com/docs/components/#navigation for more info on
+  Ionic pages and navigation.
+-->
+<!--
+<ion-header>
+
+  <ion-navbar>
+    <ion-title>autenticacao</ion-title>
+  </ion-navbar>
+
+</ion-header>
+
+
+<ion-content padding>
+
+</ion-content>
+-->
+
+<body>
+
+<script>
+  // Initialize Parse
+  parse.initialize('JNgmvYsPzyLmsEKkD0ZD0PRl4zMn9OySUyhLtBgk', '8KnnmWFuSz1LZX4kaEL60PrO7QhEazNxe2KRe75n');
+  parse.serverURL = 'https://parseapi.back4app.com/';
+
+      window.fbAsyncInit = function() {
+        parse.FacebookUtils.init({ // this line replaces FB.init({
+            appId      : '802291219954371', // Facebook App ID
+            //status     : false,  // check Facebook Login status
+            cookie     : true,  // enable cookies to allow Parse to access the session
+            xfbml      : true,  // initialize Facebook social plugins on the page
+            version    : 'v2.12' //'v2.7'//'v2.3' // point to the latest Facebook Graph API version
+        });
+
+        // Run code after the Facebook SDK is loaded.
+        
+      };
+
+      (function(d, s, id){
+        var js, fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) {return;}
+        js = d.createElement(s); js.id = id;
+        js.src = "https://connect.facebook.net/en_US/sdk.js";
+        fjs.parentNode.insertBefore(js, fjs);
+      }(document, 'script', 'facebook-jssdk'));
+</script>
+
+<ion-header>
+  
+  <ion-navbar>
+    <ion-title>
+      {{configProvider.cb_username}}
+      <img [src]="dadoslogin.foto">
+    </ion-title>
+  </ion-navbar>
+</ion-header>
+
+<ion-content padding>
+
+    <ion-list>
+
+      <ion-item>
+          <ion-input type="text" placeholder="Usuário" autocomplete="on" clearInput [(ngModel)]="dadoslogin.nome" id="nome" required pattern=".{4,10}"></ion-input>
+          <button ion-button clear color="dark" type="button" item-right><ion-icon ios="ios-person" md="md-person"></ion-icon></button>
+      </ion-item>
+    
+      <ion-item>
+          <ion-input type="{{this.configProvider.type}}" placeholder="Senha" [(ngModel)]="dadoslogin.senha" id="senha" required pattern=".{4,10}"></ion-input>
+          <button *ngIf="!showPass" ion-button clear color="dark" type="button" item-right (click)="this.configProvider.showPassword()"> <ion-icon ios="ios-eye-off" md="md-eye-off"></ion-icon></button>
+          <button *ngIf="showPass" ion-button clear color="dark" type="button" item-right (click)="this.configProvider.showPassword()"> <ion-icon ios="ios-eye" md="md-eye"></ion-icon></button>
+
+      </ion-item>
+     
+    </ion-list>
+
+    <button ion-button full icon-left (click)="goSimpleLogin(dadoslogin,false)">
+      <ion-icon ios="ios-walk" md="md-walk"></ion-icon>Entrar
+    </button>
+
+    <button ion-button full icon-left (click)="goCadUsu()">
+      <ion-icon ios="ios-person" md="md-person"></ion-icon>Cadastrar
+    </button>
+    <!--
+    <button ion-button full icon-left (click)="goFaceLogin()">
+      <ion-icon name="logo-facebook"></ion-icon>Entrar com Facebook
+    </button>
+    -->
+    <button ion-button full icon-left (click)="goLoginFace()">
+      <ion-icon name="logo-facebook"></ion-icon>Entrar com Facebook
+    </button>
+
+    <button ion-button full icon-left (click)="goforgotPas()">
+      <ion-icon ios="ios-bulb" md="md-bulb"></ion-icon>Lembrar minha senha
+    </button>
+
+</ion-content>
+
+</body>

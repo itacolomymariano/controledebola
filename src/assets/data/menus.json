@@ -1,0 +1,47 @@
+{"items":[
+    {
+      "category":"Cadastros",
+      "subs": [
+        {
+          "subcategory":"Perfil",
+          "manufactures": [
+            {
+              "manufacture":"Meu Perfil"
+            },
+            {
+              "manufacture":"Jogador"
+            },
+            {
+              "manufacture":"Árbitro"
+            },
+            {
+                "manufacture":"Scout"
+              }
+          ]
+        },
+        {
+          "subcategory":"Evento",
+          "information":""
+        },
+        {
+          "subcategory":"Premiação",
+          "information":""
+        }
+      ]
+     
+    },
+    {
+      "category":"Configurações",
+      "subs": [
+        {
+          "subcategory":"Organizadores",
+          "information":""
+        },
+        {
+          "subcategory":"Regras",
+          "information":""
+        }
+      ]      
+    }
+    
+  ]}

@@ -1,0 +1,89 @@
+<!--
+Generated template for the ConfiguracoesPage page.
+
+See http://ionicframework.com/docs/components/#navigation for more info on
+Ionic pages and navigation.
+-->
+
+<ion-menu [content]="content">
+  <ion-header>
+    <ion-toolbar>
+      <ion-title>Menu</ion-title>
+    </ion-toolbar>
+  </ion-header>
+<!--
+  <ion-content>
+    <ion-list>
+      
+      <button ion-item (click)="openPerfil()">
+        Perfil
+      </button>
+      <button ion-item (click)="openSobre()">
+        Sobre
+      </button>
+      <button ion-item (click)="sairCB()">
+        Sair
+      </button>
+
+    </ion-list>
+  </ion-content>
+-->
+  <ion-content>
+    <ion-list class="accordion-list">
+      <!--Ita - 24/04/2018 - Abre Primeiro Nível do Menu Accordion -->
+      <ion-list-header *ngFor="let item of pages; let i = index" no-lines no-padding>
+        <button ion-item (click)="toggleSection(i)" detail-none [ngClass]="{'section-active': item.open, 'section': !item.open}">
+          <ion-icon ios="ios-arrow-forward" md="md-arrow-forward" *ngIf="!item.open"></ion-icon>
+          <ion-icon ios="ios-arrow-round-down" md="md-arrow-round-down" *ngIf="item.open"></ion-icon>
+          
+          {{item.category}}
+        </button>
+        
+        <ion-list *ngIf="item.subs && item.open" no-lines>
+          <!--Ita - 24/04/2018 - Abre Segundo Nível do Menu Accordion -->
+          <ion-list-header *ngFor="let child of item.subs; let j = index" no-padding>
+              
+            <button ion-item (click)="toggleItem(i, j)" detail-none class="child-item" >
+              <ion-icon ios="ios-add" md="md-add" *ngIf="!child.open"></ion-icon>
+              <ion-icon ios="ios-close" md="md-close" *ngIf="child.open"></ion-icon>
+              {{child.subcategory}}
+            </button>
+            <!--Ita - 24/04/2018 - Abre Terceiro Nível do Menu Accordion -->
+            <ion-list *ngIf="child.subcategory=='Perfil' && child.open" detail-none class="child-item">
+              <ion-list-header *ngFor="let grandson of child.manufactures; let w = index" no-padding>
+                <button ion-item (click)="toggleSubItem(i, j, w)" detail-none classe="grandson-item">
+                    <!--Ita - 25/04/2018 - Função a ser executada ao clicar no item do Menu(quando este não tiver mais níveis abaixo) -->
+                    <ion-icon ios="ios-create" md="md-create" item-right *ngIf="grandson.manufacture=='Meu Perfil'" (click)="showMyProfile()"></ion-icon>
+                  {{grandson.manufacture}}
+                </button>
+
+              </ion-list-header>
+            </ion-list>
+           
+          </ion-list-header>
+          
+        </ion-list>
+      
+      </ion-list-header>    
+
+      <button ion-item (click)="openSobre()">
+          Sobre
+        </button>
+        <button ion-item (click)="sairCB()">
+          Sair
+      </button>      
+
+    </ion-list>
+  </ion-content>
+      
+</ion-menu>
+
+<ion-nav id="nav" #content [root]="rootPage"></ion-nav>
+
+<!--
+<ion-header>
+  <ion-navbar>
+    <ion-title>Menu</ion-title>
+  </ion-navbar>
+</ion-header>
+-->

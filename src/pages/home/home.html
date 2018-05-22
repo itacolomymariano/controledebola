@@ -1,16 +1,23 @@
+
 <ion-header>
   <ion-navbar>
-    <ion-title>Home</ion-title>
+    <ion-title>
+      {{nomeUsuario}}
+      <img [src]="fcpathfoto">
+    </ion-title>
   </ion-navbar>
 </ion-header>
 
 <ion-content padding>
   <h2>Bemvindo ao Controle de Bola!</h2>
   <p>
-    O aplicativo que fará você um atleta de verdade.
+    O aplicativo que ajuda você nas anotações de suas <code>peladas</code> proporcionando
+    resultados estatísticos sobre os dados informados de maneira compartilhada com 
+    seus grupos de relacionamentos.
   </p>
   <p>
-    Take a look at the <code>src/pages/</code> directory to add or change tabs,
-    update any existing page or create new pages.
+    Incie a navegação definindo as propriedades de seu perfil clicando em
+    <code>Configurações</code> e prepare o ambiente para ter a melhor
+    experiência no uso de nosso divertido App.
   </p>
 </ion-content>
