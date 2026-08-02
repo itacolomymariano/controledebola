@@ -1,0 +1,102 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="cancel()">Voltar</ion-button>
+    </ion-buttons>
+    <ion-title>Perfil de torcedor</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-card>
+    <ion-card-content class="profile-header">
+      <app-user-avatar [avatarUrl]="avatarUrl" [alt]="displayName" size="lg"></app-user-avatar>
+      <div>
+        <h2>{{ displayName }}</h2>
+        @if (apelido && apelido !== displayName) {
+          <p>{{ apelido }}</p>
+        }
+        <ion-note>Nome e foto sao editados em Meus dados.</ion-note>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  @if (hasProfile) {
+    <ion-note class="ion-margin-bottom">
+      Atualize seus dados de torcedor e valores de assistencia abaixo.
+    </ion-note>
+  }
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <ion-note color="medium" class="ion-margin-bottom">
+        Times do coracao, idolos e data de nascimento sao editados em Meus dados.
+      </ion-note>
+      <ion-list lines="full">
+      <ion-item-divider>
+        <ion-label>Por quanto assiste uma pelada</ion-label>
+      </ion-item-divider>
+      <ion-item>
+        <ion-input
+          type="number"
+          label="Presencialmente (R$)"
+          labelPlacement="stacked"
+          formControlName="peladaPresentialRate"
+          min="0"
+          step="0.01"
+        ></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-input
+          type="number"
+          label="Remotamente — filmagem/narracao (R$)"
+          labelPlacement="stacked"
+          formControlName="peladaRemoteRate"
+          min="0"
+          step="0.01"
+        ></ion-input>
+      </ion-item>
+
+      <ion-item-divider>
+        <ion-label>Por quanto assiste uma partida (equipes amadoras)</ion-label>
+      </ion-item-divider>
+      <ion-item>
+        <ion-input
+          type="number"
+          label="Presencialmente (R$)"
+          labelPlacement="stacked"
+          formControlName="matchPresentialRate"
+          min="0"
+          step="0.01"
+        ></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-input
+          type="number"
+          label="Remotamente — filmagem/narracao (R$)"
+          labelPlacement="stacked"
+          formControlName="matchRemoteRate"
+          min="0"
+          step="0.01"
+        ></ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-toggle formControlName="acceptsPaidCommitments">
+          Aceito compromissos quando contratado e pago
+        </ion-toggle>
+      </ion-item>
+      @if (form.get('acceptsPaidCommitments')?.value) {
+        <ion-note color="medium" class="ion-padding commitment-note">
+          Ao aceitar contratacao paga, voce se compromete a comparecer ou assistir a transmissao,
+          realizar a votacao do evento e cumprir os palpites. O nao cumprimento pode resultar em
+          nao recebimento. O administrador pode registrar falta justificada e decidir pelo pagamento.
+        </ion-note>
+      }
+    </ion-list>
+
+    <ion-button expand="block" type="submit" class="ion-margin-top">
+      {{ hasProfile ? 'Salvar alteracoes' : 'Salvar perfil' }}
+    </ion-button>
+  </form>
+</ion-content>

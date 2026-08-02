@@ -1,0 +1,49 @@
+<div class="uniform-picker">
+  <p class="section-title">Serie A</p>
+  <div class="uniform-grid">
+    @for (uniform of uniformsA; track uniform.id) {
+      <button
+        type="button"
+        class="uniform-item"
+        [class.selected]="isSelected(uniform)"
+        [disabled]="disabled"
+        (click)="select(uniform)"
+      >
+        <app-jersey-preview [colors]="uniform.colors" size="sm"></app-jersey-preview>
+        <span>{{ uniform.teamName }}</span>
+      </button>
+    }
+  </div>
+
+  <p class="section-title">Serie B</p>
+  <div class="uniform-grid">
+    @for (uniform of uniformsB; track uniform.id) {
+      <button
+        type="button"
+        class="uniform-item"
+        [class.selected]="isSelected(uniform)"
+        [disabled]="disabled"
+        (click)="select(uniform)"
+      >
+        <app-jersey-preview [colors]="uniform.colors" size="sm"></app-jersey-preview>
+        <span>{{ uniform.teamName }}</span>
+      </button>
+    }
+  </div>
+
+  <p class="section-title">Serie C</p>
+  <div class="uniform-grid">
+    @for (uniform of uniformsC; track uniform.id) {
+      <button
+        type="button"
+        class="uniform-item"
+        [class.selected]="isSelected(uniform)"
+        [disabled]="disabled"
+        (click)="select(uniform)"
+      >
+        <app-jersey-preview [colors]="uniform.colors" size="sm"></app-jersey-preview>
+        <span>{{ uniform.teamName }}</span>
+      </button>
+    }
+  </div>
+</div>

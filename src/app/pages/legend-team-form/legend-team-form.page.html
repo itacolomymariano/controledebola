@@ -1,0 +1,139 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="cancel()">Voltar</ion-button>
+    </ion-buttons>
+    <ion-title>Lenda — Time</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding legend-form-content">
+  <form id="legendTeamForm" [formGroup]="form" (ngSubmit)="submit()">
+    <app-image-picker
+      label="Imagem do time"
+      hint="Escudo ou foto do time lenda."
+      [previewUrl]="imagePreview"
+      (imageSelected)="onImageSelected($event)"
+    ></app-image-picker>
+
+    <ion-list lines="full">
+      <ion-item>
+        <ion-input label="Nome do time" labelPlacement="stacked" formControlName="name"></ion-input>
+      </ion-item>
+      @if (form.get('name')?.touched && form.get('name')?.invalid) {
+        <ion-note color="danger" class="ion-padding-horizontal">Informe o nome do time.</ion-note>
+      }
+      <ion-item>
+        <ion-input label="Apelido do time" labelPlacement="stacked" formControlName="apelido"></ion-input>
+      </ion-item>
+      @if (form.get('apelido')?.touched && form.get('apelido')?.invalid) {
+        <ion-note color="danger" class="ion-padding-horizontal">Informe o apelido do time.</ion-note>
+      }
+
+      <app-birth-date-picker label="Data de nascimento do time" formControlName="foundedDate"></app-birth-date-picker>
+      @if (form.get('foundedDate')?.touched && form.get('foundedDate')?.hasError('incompleteBirthDate')) {
+        <ion-note color="danger" class="ion-padding-horizontal">
+          Selecione dia, mes e ano da data de nascimento do time.
+        </ion-note>
+      }
+      <app-birth-date-picker label="Data que encerrou as atividades" formControlName="endedDate"></app-birth-date-picker>
+      @if (form.get('endedDate')?.touched && form.get('endedDate')?.hasError('incompleteBirthDate')) {
+        <ion-note color="danger" class="ion-padding-horizontal">
+          Selecione dia, mes e ano da data que encerrou as atividades.
+        </ion-note>
+      }
+
+      <ion-item-divider>
+        <ion-label>De onde era o time</ion-label>
+      </ion-item-divider>
+      <app-address-form [formControl]="$any(form.get('location'))" (addressChange)="onLocationChanged()"></app-address-form>
+      @if (form.get('location')?.touched && form.get('location')?.hasError('addressIncomplete')) {
+        <ion-note color="danger" class="ion-padding-horizontal">
+          Informe e confirme o endereco completo (busque pelo CEP ou mapa).
+        </ion-note>
+      }
+
+      <ion-item>
+        <ion-textarea
+          label="Sobre o time"
+          labelPlacement="stacked"
+          formControlName="description"
+          autoGrow="true"
+        ></ion-textarea>
+      </ion-item>
+
+      <ion-item>
+        <ion-select label="Sua relacao com o time lenda" labelPlacement="stacked" formControlName="relationship">
+          @for (option of relationshipOptions; track option.value) {
+            <ion-select-option [value]="option.value">{{ option.label }}</ion-select-option>
+          }
+        </ion-select>
+      </ion-item>
+
+      <ion-item-divider>
+        <ion-label>Atletas que atuaram no time</ion-label>
+      </ion-item-divider>
+      @for (ref of athleteRefs; track ref.type + ref.id; let i = $index) {
+        <ion-item>
+          <ion-label>{{ ref.label }}</ion-label>
+          <ion-note slot="end">{{ ref.type === 'legend_athlete' ? 'Lenda' : 'App' }}</ion-note>
+          <ion-button slot="end" fill="clear" color="danger" (click)="removeAthleteRef(i)">Remover</ion-button>
+        </ion-item>
+      }
+      <ion-button expand="block" fill="outline" (click)="openAthletePicker()">Adicionar atleta</ion-button>
+    </ion-list>
+  </form>
+</ion-content>
+
+<ion-footer class="legend-form-footer">
+  <ion-toolbar>
+    <ion-button
+      expand="block"
+      type="submit"
+      form="legendTeamForm"
+      [disabled]="saving"
+    >
+      {{ saving ? 'Salvando time lenda...' : 'Salvar time lenda' }}
+    </ion-button>
+  </ion-toolbar>
+</ion-footer>
+
+<ion-modal [isOpen]="athletePickerOpen" (didDismiss)="closeAthletePicker()">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar>
+        <ion-title>Selecionar atleta</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="closeAthletePicker()">Fechar</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+      <ion-toolbar>
+        <ion-searchbar
+          [value]="athleteSearch"
+          (ionInput)="onAthleteSearch($any($event.target).value)"
+          debounce="250"
+          placeholder="Buscar atleta lenda ou do app"
+        ></ion-searchbar>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="ion-padding">
+      @if (loadingAthletes) {
+        <ion-spinner name="crescent"></ion-spinner>
+      } @else if (!athleteSuggestions.length) {
+        <ion-note>Nenhum atleta encontrado.</ion-note>
+      } @else {
+        <ion-list>
+          @for (item of athleteSuggestions; track item.id + item.source) {
+            <ion-item button (click)="addAthleteRef(item)">
+              <ion-label>
+                <h2>{{ item.label }}</h2>
+                <p>{{ item.subtitle }}</p>
+              </ion-label>
+            </ion-item>
+          }
+        </ion-list>
+      }
+    </ion-content>
+  </ng-template>
+</ion-modal>

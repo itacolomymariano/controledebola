@@ -1,0 +1,160 @@
+﻿<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()">Voltar</ion-button>
+    </ion-buttons>
+    <ion-title>Criar conta</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <ion-item>
+      <ion-input label="Nome completo" labelPlacement="stacked" formControlName="name"></ion-input>
+    </ion-item>
+    @if (form.get('name')?.touched && form.get('name')?.invalid) {
+      <ion-note color="danger" class="ion-padding-horizontal">Informe o nome completo.</ion-note>
+    }
+
+    <ion-item>
+      <ion-input
+        label="Apelido"
+        labelPlacement="stacked"
+        formControlName="apelido"
+        placeholder="Como voce sera chamado nos eventos"
+      ></ion-input>
+    </ion-item>
+    <ion-note color="medium" class="ion-padding-horizontal">
+      Usado nos eventos. Nao pode repetir o mesmo apelido dentro de um evento.
+    </ion-note>
+    @if (form.get('apelido')?.touched && form.get('apelido')?.invalid) {
+      <ion-note color="danger" class="ion-padding-horizontal">
+        Apelido invalido. Use letras, numeros, espacos, ponto, hifen ou underline (2 a 30 caracteres).
+      </ion-note>
+    }
+
+    <ion-item>
+      <ion-input label="E-mail" labelPlacement="stacked" formControlName="email" type="email"></ion-input>
+    </ion-item>
+    @if (form.get('email')?.touched && form.get('email')?.hasError('invalidEmail')) {
+      <ion-note color="danger" class="ion-padding-horizontal">Informe um e-mail valido.</ion-note>
+    }
+    <ion-item>
+      <ion-input label="Celular (DDD + numero)" labelPlacement="stacked" formControlName="phone" type="tel"></ion-input>
+    </ion-item>
+    @if (form.get('phone')?.touched && form.get('phone')?.hasError('invalidPhone')) {
+      <ion-note color="danger" class="ion-padding-horizontal">
+        Celular invalido. Informe DDD + numero (minimo 10 digitos).
+      </ion-note>
+    }
+    <ion-note color="medium" class="ion-padding-horizontal">Informe e-mail ou celular (um dos dois).</ion-note>
+    @if (form.touched && form.hasError('contactRequired')) {
+      <ion-note color="danger" class="ion-padding-horizontal">Informe e-mail ou celular.</ion-note>
+    }
+
+    <app-birth-date-picker formControlName="birthDate"></app-birth-date-picker>
+    @if (form.get('birthDate')?.touched && form.get('birthDate')?.hasError('incompleteBirthDate')) {
+      <ion-note color="danger" class="ion-padding-horizontal">
+        Selecione dia, mes e ano da data de nascimento.
+      </ion-note>
+    }
+    @if (form.get('birthDate')?.touched && form.get('birthDate')?.hasError('invalidBirthDate')) {
+      <ion-note color="danger" class="ion-padding-horizontal">
+        Data de nascimento invalida.
+      </ion-note>
+    }
+    <ion-note color="medium" class="ion-padding-horizontal">
+      Selecione dia, mes e ano. O ano aparece em lista decrescente para facilitar datas antigas.
+    </ion-note>
+
+    <ion-item>
+      <ion-input
+        label="Senha"
+        labelPlacement="stacked"
+        formControlName="password"
+        [type]="showPassword ? 'text' : 'password'"
+        autocomplete="new-password"
+      ></ion-input>
+      <ion-button
+        fill="clear"
+        slot="end"
+        class="password-toggle"
+        (click)="togglePasswordVisibility()"
+        [attr.aria-label]="showPassword ? 'Ocultar senha' : 'Mostrar senha'"
+      >
+        <ion-icon [name]="showPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+      </ion-button>
+    </ion-item>
+    @if (form.get('password')?.touched && form.get('password')?.invalid) {
+      <ion-note color="danger" class="ion-padding-horizontal">
+        A senha deve ter no minimo 8 caracteres.
+      </ion-note>
+    }
+    <ion-item>
+      <ion-input
+        label="Confirmar senha"
+        labelPlacement="stacked"
+        formControlName="confirmPassword"
+        [type]="showConfirmPassword ? 'text' : 'password'"
+        autocomplete="new-password"
+      ></ion-input>
+      <ion-button
+        fill="clear"
+        slot="end"
+        class="password-toggle"
+        (click)="toggleConfirmPasswordVisibility()"
+        [attr.aria-label]="showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'"
+      >
+        <ion-icon [name]="showConfirmPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+      </ion-button>
+    </ion-item>
+    @if (
+      (form.get('confirmPassword')?.touched || form.get('password')?.touched) &&
+      form.hasError('passwordMismatch')
+    ) {
+      <ion-note color="danger" class="ion-padding-horizontal">As senhas nao conferem.</ion-note>
+    }
+
+    <app-address-form
+      formControlName="address"
+      title="Onde voce mora"
+      (addressChange)="onAddressChanged()"
+    ></app-address-form>
+    @if (form.get('address')?.touched && form.get('address')?.hasError('addressIncomplete')) {
+      <ion-note color="danger" class="ion-padding-horizontal">
+        Selecione seu endereco na lista de sugestoes para validar a localizacao.
+      </ion-note>
+    }
+
+    <ion-item class="signup-honeypot" aria-hidden="true">
+      <ion-input formControlName="signupHoneypot" tabindex="-1" autocomplete="off"></ion-input>
+    </ion-item>
+
+    @if (signupChallengeQuestion) {
+      <ion-item>
+        <ion-input
+          label="{{ signupChallengeQuestion }}"
+          labelPlacement="stacked"
+          formControlName="signupCaptchaAnswer"
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          placeholder="Resposta"
+        ></ion-input>
+      </ion-item>
+      @if (form.get('signupCaptchaAnswer')?.touched && form.get('signupCaptchaAnswer')?.invalid) {
+        <ion-note color="danger" class="ion-padding-horizontal">
+          Responda a verificacao para confirmar que voce e humano.
+        </ion-note>
+      }
+      <ion-note color="medium" class="ion-padding-horizontal">
+        Verificacao simples para evitar cadastros automaticos.
+      </ion-note>
+    }
+
+    <ion-button expand="block" type="submit" class="ion-margin-top" [disabled]="!canSubmit">
+      Salvar
+    </ion-button>
+  </form>
+  <ion-button expand="block" fill="clear" (click)="goLogin()">Ja tenho conta</ion-button>
+</ion-content>

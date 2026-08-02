@@ -1,0 +1,111 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button [defaultHref]="'/event/' + eventId"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Radio do narrador</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <ion-spinner name="crescent"></ion-spinner>
+  }
+
+  @if (!loading) {
+    <ion-note color="medium" class="ion-margin-bottom">
+      Envie narracao e entrevista para o mural do evento. Conteudos anteriores serao substituidos.
+    </ion-note>
+
+    <ion-card class="narrator-section">
+      <ion-card-header>
+        <ion-card-title>Narracao de gol</ion-card-title>
+        <ion-card-subtitle>Gravacao de ate 40 segundos</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-item lines="full">
+          <ion-input label="Titulo da narracao" labelPlacement="stacked" [(ngModel)]="narrationTitle" maxlength="120"></ion-input>
+        </ion-item>
+        <ion-item lines="full">
+          <ion-textarea
+            label="Breve descricao"
+            labelPlacement="stacked"
+            [(ngModel)]="narrationDescription"
+            maxlength="500"
+            autoGrow="true"
+            rows="2"
+          ></ion-textarea>
+        </ion-item>
+
+        <div class="narrator-record-row">
+          <ion-button
+            [color]="narrationRecording ? 'danger' : 'primary'"
+            (click)="narrationRecording ? stopNarrationRecording() : startNarrationRecording()"
+          >
+            <ion-icon slot="start" name="mic-outline"></ion-icon>
+            {{ narrationRecording ? 'Parar' : 'Gravar' }}
+          </ion-button>
+          @if (narrationRecording || narrationRemainingMs < 40000) {
+            <ion-note class="narrator-timer">{{ formatRemaining(narrationRemainingMs) }}</ion-note>
+          }
+        </div>
+
+        <input #narrationFileInput type="file" accept="audio/*" hidden (change)="onNarrationFileSelected($event)" />
+        <ion-button expand="block" fill="outline" (click)="narrationFileInput.click()">
+          <ion-icon slot="start" name="cloud-upload-outline"></ion-icon>
+          Enviar arquivo de audio
+        </ion-button>
+        @if (narrationAudioPreviewUrl) {
+          <audio controls class="ion-margin-top" [src]="narrationAudioPreviewUrl"></audio>
+        }
+
+        <ion-button expand="block" class="ion-margin-top" [disabled]="publishingNarration" (click)="publishNarration()">
+          Enviar narracao ao mural
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card class="narrator-section">
+      <ion-card-header>
+        <ion-card-title>Entrevista</ion-card-title>
+        <ion-card-subtitle>Gravacao de ate 50 segundos</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-item lines="full">
+          <ion-input label="Titulo da entrevista" labelPlacement="stacked" [(ngModel)]="interviewTitle" maxlength="120"></ion-input>
+        </ion-item>
+        <ion-item lines="full">
+          <ion-textarea
+            label="Breve descricao"
+            labelPlacement="stacked"
+            [(ngModel)]="interviewDescription"
+            maxlength="500"
+            autoGrow="true"
+            rows="2"
+          ></ion-textarea>
+        </ion-item>
+
+        <div class="narrator-record-row">
+          <ion-button
+            [color]="interviewRecording ? 'danger' : 'primary'"
+            (click)="interviewRecording ? stopInterviewRecording() : startInterviewRecording()"
+          >
+            <ion-icon slot="start" name="mic-outline"></ion-icon>
+            {{ interviewRecording ? 'Parar' : 'Gravar' }}
+          </ion-button>
+          @if (interviewRecording || interviewRemainingMs < 50000) {
+            <ion-note class="narrator-timer">{{ formatRemaining(interviewRemainingMs) }}</ion-note>
+          }
+        </div>
+
+        <ion-button expand="block" class="ion-margin-top" [disabled]="publishingInterview" (click)="publishInterview()">
+          Enviar entrevista ao mural
+        </ion-button>
+        @if (interviewAudioPreviewUrl) {
+          <audio controls class="ion-margin-top" [src]="interviewAudioPreviewUrl"></audio>
+        }
+      </ion-card-content>
+    </ion-card>
+  }
+</ion-content>

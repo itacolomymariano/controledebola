@@ -1,0 +1,55 @@
+<ng-container [formGroup]="form">
+  @for (field of fields; track field.key) {
+    @if (showField(field)) {
+      @if (field.type === 'boolean') {
+        <ion-item>
+          <ion-toggle slot="start" [formControlName]="field.key"></ion-toggle>
+          <ion-label class="ion-text-wrap">{{ field.label }}</ion-label>
+        </ion-item>
+      } @else if (field.type === 'money') {
+        <ion-item>
+          <ion-input
+            type="number"
+            [label]="field.label"
+            labelPlacement="stacked"
+            [formControlName]="field.key"
+            min="0"
+            step="0.01"
+            inputmode="decimal"
+            placeholder="R$"
+          ></ion-input>
+        </ion-item>
+      } @else if (field.type === 'textarea') {
+        <ion-item>
+          <ion-textarea
+            [label]="field.label"
+            labelPlacement="stacked"
+            [formControlName]="field.key"
+            autoGrow="true"
+            rows="4"
+          ></ion-textarea>
+        </ion-item>
+      } @else if (field.type === 'pix') {
+        <ion-item>
+          <ion-input
+            [label]="field.label"
+            labelPlacement="stacked"
+            [formControlName]="field.key"
+          ></ion-input>
+          <app-pix-copy-button
+            slot="end"
+            [text]="pixFieldValue(field.key)"
+          ></app-pix-copy-button>
+        </ion-item>
+      } @else {
+        <ion-item>
+          <ion-input
+            [label]="field.label"
+            labelPlacement="stacked"
+            [formControlName]="field.key"
+          ></ion-input>
+        </ion-item>
+      }
+    }
+  }
+</ng-container>

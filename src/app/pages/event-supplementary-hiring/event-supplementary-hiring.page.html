@@ -1,0 +1,168 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/inbox"></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ pageTitle }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  @if (!loading && event) {
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>{{ event.name }}</ion-card-title>
+        <ion-card-subtitle>
+          @if (mode === 'flags') {
+            Convide arbitros com bandeiras para auxiliar na partida.
+          } @else {
+            Convide scouts auxiliares para apontamento do evento.
+          }
+        </ion-card-subtitle>
+      </ion-card-header>
+    </ion-card>
+
+    @if (sentInvitations.length) {
+      <h2 class="section-title">Convites enviados</h2>
+      @for (invitation of sentInvitations; track invitation.objectId) {
+        <ion-item lines="full">
+          <app-user-avatar
+            slot="start"
+            [avatarUrl]="invitation.invitedUserAvatarUrl"
+            [alt]="invitation.invitedUserApelido || invitation.invitedUserName"
+            size="md"
+          ></app-user-avatar>
+          <ion-label class="ion-text-wrap">
+            <h3>{{ invitation.invitedUserApelido || invitation.invitedUserName }}</h3>
+            <p>{{ formatCurrency(invitation.offeredAmount) }} · {{ formatInvitationStatus(invitation) }}</p>
+          </ion-label>
+        </ion-item>
+      }
+    }
+
+    <ion-searchbar
+      class="ion-margin-top"
+      [placeholder]="mode === 'flags' ? 'Buscar arbitro com bandeiras' : 'Buscar scout auxiliar'"
+      [(ngModel)]="search"
+      [debounce]="0"
+      (ionInput)="onSearchInput($event)"
+      (ionClear)="onSearchClear()"
+    ></ion-searchbar>
+
+    @if (searchLoading) {
+      <div class="ion-text-center ion-padding">
+        <ion-spinner name="crescent"></ion-spinner>
+      </div>
+    }
+
+    @if (!search.trim() && !selectedCandidate) {
+      <ion-note color="medium">Digite nome ou apelido para buscar candidatos.</ion-note>
+    }
+
+    @if (search.trim() && !displayedCandidates.length && !searchLoading) {
+      <ion-note color="medium">Nenhum resultado para "{{ search }}".</ion-note>
+    }
+
+    @if (search.trim() && displayedCandidates.length) {
+      <ion-list lines="full">
+        @for (candidate of displayedCandidates; track candidate.userId) {
+          <ion-item
+            button
+            detail="false"
+            [class.candidate-selected]="candidate.userId === inviteUserId"
+            (click)="selectCandidate(candidate)"
+          >
+            <app-user-avatar
+              slot="start"
+              [avatarUrl]="candidate.avatarUrl"
+              [alt]="candidate.apelido || candidate.userName"
+              size="md"
+            ></app-user-avatar>
+            <ion-label class="ion-text-wrap">
+              <h2>{{ candidate.apelido || candidate.userName }}</h2>
+              @if (formatCandidateSubtitle(candidate)) {
+                <p>{{ formatCandidateSubtitle(candidate) }}</p>
+              }
+            </ion-label>
+            <ion-button fill="clear" slot="end" (click)="viewProfile(candidate, $event)">
+              Ver perfil
+            </ion-button>
+          </ion-item>
+        }
+      </ion-list>
+    }
+
+    @if (selectedCandidate) {
+      <ion-item lines="full" class="selected-candidate ion-margin-top">
+        <app-user-avatar
+          slot="start"
+          [avatarUrl]="selectedCandidate.avatarUrl"
+          [alt]="selectedCandidate.apelido || selectedCandidate.userName"
+          size="md"
+        ></app-user-avatar>
+        <ion-label class="ion-text-wrap">
+          <h3>{{ selectedCandidate.apelido || selectedCandidate.userName }}</h3>
+          @if (formatCandidateSubtitle(selectedCandidate)) {
+            <p>{{ formatCandidateSubtitle(selectedCandidate) }}</p>
+          }
+        </ion-label>
+        <ion-button fill="clear" slot="end" (click)="clearSelectedCandidate()">Alterar</ion-button>
+      </ion-item>
+
+      <ion-item>
+        <ion-input
+          label="Valor oferecido (R$)"
+          labelPlacement="stacked"
+          type="number"
+          min="0"
+          step="0.01"
+          [(ngModel)]="offeredAmount"
+        ></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-input
+          label="Prazo — data"
+          labelPlacement="stacked"
+          type="date"
+          [(ngModel)]="responseDeadlineDate"
+          [min]="minResponseDeadlineDate"
+        ></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-input
+          label="Prazo — hora"
+          labelPlacement="stacked"
+          type="time"
+          [(ngModel)]="responseDeadlineTime"
+        ></ion-input>
+      </ion-item>
+
+      <ion-button
+        expand="block"
+        class="ion-margin-top"
+        [disabled]="sendingInvite"
+        (click)="sendInvite()"
+      >
+        Enviar convite
+      </ion-button>
+    }
+
+    <ion-button
+      expand="block"
+      fill="outline"
+      color="medium"
+      class="ion-margin-top"
+      [disabled]="completing"
+      (click)="completeWithoutHiring()"
+    >
+      Concluir sem contratar
+    </ion-button>
+  }
+</ion-content>

@@ -1,0 +1,81 @@
+﻿<ion-header>
+  <ion-toolbar>
+    @if (step !== 'welcome') {
+      <ion-buttons slot="start">
+        <ion-button (click)="back()">Voltar</ion-button>
+      </ion-buttons>
+    }
+    @if (step === 'welcome') {
+      <ion-buttons slot="end">
+        <ion-button (click)="skipToRegister()">Pular</ion-button>
+      </ion-buttons>
+    }
+    <ion-title>Controle de Bola</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding wizard-content">
+  @if (step === 'welcome') {
+    <div class="wizard-hero">
+      <ion-icon name="football" class="wizard-icon"></ion-icon>
+      <h1 class="wizard-title">Bem-vindo ao mundo da bola</h1>
+      <p class="wizard-text">
+        Aqui voce organiza peladas, compete com alegria e celebra quem faz o futebol amador especial.
+      </p>
+    </div>
+    <div class="wizard-actions">
+      <ion-button expand="block" size="large" (click)="goToAbout()">Vamos comecar</ion-button>
+    </div>
+  }
+
+  @if (step === 'about') {
+    <div class="wizard-hero">
+      <ion-icon name="person-circle-outline" class="wizard-icon"></ion-icon>
+      <h1 class="wizard-title">Vamos falar sobre voce</h1>
+      <p class="wizard-text">
+        Queremos conhecer como voce atua no futebol para personalizar sua experiencia desde o primeiro
+        minuto.
+      </p>
+    </div>
+    <div class="wizard-actions">
+      <ion-button expand="block" size="large" (click)="goToParticipation()">Continuar</ion-button>
+    </div>
+  }
+
+  @if (step === 'participation') {
+    <div class="wizard-hero">
+      <h1 class="wizard-title">Como voce participa no futebol amador?</h1>
+      <p class="wizard-text">Escolha a opcao que mais combina com voce.</p>
+    </div>
+
+    <ion-card button class="choice-card" (click)="chooseParticipation('pelada')">
+      <ion-card-content>
+        <ion-icon name="football-outline"></ion-icon>
+        <div>
+          <h2>Jogo em pelada/racha</h2>
+          <p>Jogo com amigos em peladas e rachas.</p>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card button class="choice-card" (click)="chooseParticipation('amateur_team')">
+      <ion-card-content>
+        <ion-icon name="people-outline"></ion-icon>
+        <div>
+          <h2>Jogo em time amador</h2>
+          <p>Tenho ou jogo em um time de futebol amador.</p>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card button class="choice-card" (click)="chooseParticipation('other')">
+      <ion-card-content>
+        <ion-icon name="star-outline"></ion-icon>
+        <div>
+          <h2>Participo de outras formas</h2>
+          <p>Juiz, scout, narrador, jornalista e outros perfis do futebol.</p>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  }
+</ion-content>

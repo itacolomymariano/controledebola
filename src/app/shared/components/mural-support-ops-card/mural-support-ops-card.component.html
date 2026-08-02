@@ -1,0 +1,74 @@
+<ion-card>
+  <ion-card-header>
+    <div class="mural-card-header-row">
+      <div>
+        <ion-card-title>Operacao de apoio</ion-card-title>
+        <ion-card-subtitle>Treinador, preparador, massagista e torcida</ion-card-subtitle>
+      </div>
+      <app-mural-share-button
+        [context]="shareContext"
+        cardTitle="Operacao de apoio"
+      ></app-mural-share-button>
+    </div>
+  </ion-card-header>
+  <ion-card-content>
+    @if (loading) {
+      <ion-spinner name="crescent"></ion-spinner>
+    } @else if (!snapshot) {
+      <ion-note>Resumo indisponivel para este evento.</ion-note>
+    } @else {
+      <p>
+        <strong>Treinador:</strong>
+        @if (snapshot.coach.hasBoard && snapshot.coach.checklist) {
+          checklist
+          {{
+            (snapshot.coach.checklist.talkedToTeam ? 1 : 0) +
+              (snapshot.coach.checklist.ledWarmup ? 1 : 0) +
+              (snapshot.coach.checklist.lineupDefined ? 1 : 0)
+          }}/3
+        } @else {
+          sem painel
+        }
+      </p>
+      <p>
+        <strong>Preparador:</strong>
+        @if (snapshot.trainer.hasSession) {
+          {{ snapshot.trainer.athleteCount || 0 }} atletas ·
+          @if (snapshot.trainer.warmupDone) {
+            aquecimento ok
+          } @else if (snapshot.trainer.warmupActive) {
+            aquecimento em andamento
+          } @else {
+            aquecimento pendente
+          }
+        } @else {
+          sem sessao
+        }
+      </p>
+      <p>
+        <strong>Massagista:</strong>
+        {{ snapshot.masseur.treatmentsCount }} atendimentos
+        @if (snapshot.masseur.alertsCount) {
+          · {{ snapshot.masseur.alertsCount }} alerta(s)
+        }
+      </p>
+      <p>
+        <strong>Torcida:</strong>
+        {{ snapshot.fan.checkIns }} check-ins ({{ snapshot.fan.presential }} presencial /
+        {{ snapshot.fan.remote }} remoto)
+      </p>
+
+      @if (snapshot.masseur.alerts.length) {
+        <ion-list-header>
+          <ion-label>Alertas de retorno</ion-label>
+        </ion-list-header>
+        @for (alert of snapshot.masseur.alerts; track alert.objectId) {
+          <p>
+            {{ alert.athleteName }} · {{ alert.returnStatus === 'out' ? 'Fora' : 'Limitado' }} ·
+            {{ alert.bodyRegion }}
+          </p>
+        }
+      }
+    }
+  </ion-card-content>
+</ion-card>

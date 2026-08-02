@@ -1,0 +1,52 @@
+.profile-header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+
+  h1 {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+
+  p {
+    margin: 0.2rem 0;
+  }
+}
+
+ion-segment {
+  margin-bottom: 1rem;
+}
+
+ion-segment-button {
+  --padding-start: 10px;
+  --padding-end: 10px;
+  min-width: fit-content;
+
+  ion-label {
+    white-space: normal;
+    text-transform: none;
+    font-size: 0.78rem;
+    line-height: 1.2;
+  }
+}
+
+.favorite-team-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+
+  p {
+    margin: 0;
+  }
+}
+
+.scout-stat-group {
+  margin-bottom: 0.75rem;
+
+  h3 {
+    margin: 0 0 0.35rem;
+    font-size: 0.95rem;
+  }
+}

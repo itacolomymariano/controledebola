@@ -1,0 +1,10 @@
+.rank-row {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.rank-row span {
+  flex: 1;
+}

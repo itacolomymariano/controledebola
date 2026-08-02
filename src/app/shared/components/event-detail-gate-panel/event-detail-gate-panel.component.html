@@ -1,0 +1,63 @@
+<div id="gate-panel-anchor" class="event-inline-panel ion-margin-top">
+  @if (!showMyGateTicketView) {
+    <ion-button fill="clear" size="small" class="event-panel-back" (click)="back.emit()">
+      <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
+      Voltar
+    </ion-button>
+    <ion-grid class="event-action-grid event-action-grid-nested">
+      @for (row of gateActionTileRows; track $index) {
+        <ion-row>
+          @for (tile of row; track tile.id) {
+            <ion-col size="12" size-sm="6" size-lg="4">
+              <button
+                type="button"
+                class="event-action-tile"
+                [class.event-action-tile-active]="tile.active"
+                (click)="gateAction.emit(tile.id)"
+              >
+                <ion-icon [name]="tile.icon" aria-hidden="true"></ion-icon>
+                <span>{{ tile.label }}</span>
+              </button>
+            </ion-col>
+          }
+        </ion-row>
+      }
+    </ion-grid>
+  } @else {
+    <div id="gate-ticket-panel-anchor" class="gate-ticket-view">
+      <ion-button fill="clear" size="small" class="event-panel-back" (click)="closeTicketView.emit()">
+        <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
+        Voltar
+      </ion-button>
+      @if (loadingGateTicket) {
+        <div class="gate-ticket-loading ion-text-center ion-padding">
+          <ion-spinner name="crescent"></ion-spinner>
+          <p>Carregando ingresso...</p>
+        </div>
+      } @else if (!registrationConfirmed) {
+        <ion-card>
+          <ion-card-content>
+            <ion-note color="warning">
+              Sua inscricao ainda nao foi confirmada. Aguarde a confirmacao do administrador ou do pagamento para visualizar o ingresso.
+            </ion-note>
+          </ion-card-content>
+        </ion-card>
+      } @else if (myGateTicket?.active) {
+        <app-event-gate-ticket-card
+          [ticket]="myGateTicket"
+          [fallbackAdminAvatarUrl]="event.adminAvatarUrl"
+          [eventLocation]="gateTicketLocation"
+          (qrRendered)="qrRendered.emit()"
+        ></app-event-gate-ticket-card>
+      } @else {
+        <ion-card>
+          <ion-card-content>
+            <ion-note color="warning">
+              Ingresso ainda nao foi emitido pelo administrador.
+            </ion-note>
+          </ion-card-content>
+        </ion-card>
+      }
+    </div>
+  }
+</div>

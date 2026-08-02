@@ -1,0 +1,157 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="cancel()">Cancelar</ion-button>
+    </ion-buttons>
+    <ion-title>Inscricao na proxima Pelada</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (checkingEligibility) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  @if (!checkingEligibility && athleteRegistrationFullMessage) {
+    <ion-card color="medium">
+      <ion-card-header>
+        <ion-card-title>Limite de atletas</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <p>{{ athleteRegistrationFullMessage }}</p>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  @if (!checkingEligibility && registrationsClosedMessage) {
+    <ion-card color="warning">
+      <ion-card-header>
+        <ion-card-title>Inscricoes indisponiveis</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <p>{{ registrationsClosedMessage }}</p>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  @if (!checkingEligibility && scheduleConflict) {
+    <ion-card color="warning">
+      <ion-card-header>
+        <ion-card-title>Conflito de horario</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <p>{{ scheduleConflictMessage }}</p>
+        <ion-button expand="block" fill="outline" class="ion-margin-top" (click)="openConflictingEvent()">
+          Ver evento em conflito
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  @if (!checkingEligibility && event) {
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Pagamento</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <p>Valor da participacao: {{ formatParticipationFee(event.participationFee) }}</p>
+        @if (event.participationFee > 0) {
+          <p>Apos a inscricao, realize o pagamento via PIX. O administrador confirmara o recebimento.</p>
+          @for (key of pixKeys; track key; let index = $index) {
+            <div class="pix-key-row">
+              <p>PIX {{ index + 1 }}: {{ key }}</p>
+              <app-pix-copy-button [text]="key"></app-pix-copy-button>
+            </div>
+          }
+        }
+      </ion-card-content>
+    </ion-card>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <ion-list lines="full">
+      <ion-item>
+        <ion-input
+          label="Apelido nesta Pelada"
+          labelPlacement="stacked"
+          formControlName="apelido"
+          placeholder="Como voce sera chamado nesta pelada"
+        ></ion-input>
+      </ion-item>
+      <ion-note color="medium" class="ion-padding-horizontal">
+        Nao pode repetir o mesmo apelido de outro participante neste evento.
+      </ion-note>
+
+      @if (suggestedRoleLabel) {
+        <ion-note color="medium" class="ion-padding-horizontal">
+          Perfil sugerido: {{ suggestedRoleLabel }}. Voce pode alterar abaixo.
+        </ion-note>
+      }
+
+      <ion-item>
+        <ion-select
+          label="Perfil neste evento"
+          labelPlacement="stacked"
+          formControlName="role"
+          (ionChange)="onRoleChange($event.detail.value)"
+        >
+          @for (r of roles; track r.value) {
+            <ion-select-option [value]="r.value">{{ r.label }}</ion-select-option>
+          }
+        </ion-select>
+      </ion-item>
+
+      @if (registeredProfileCount > 0 && !showAllRoleOptions) {
+        <ion-button expand="block" fill="clear" (click)="enableAllRoleOptions()">
+          Inscrever com outro perfil
+        </ion-button>
+      }
+
+      <ion-item>
+        <ion-label class="ion-text-wrap">
+          <p>Vinculo nesta Pelada</p>
+          <h3>{{ membershipTypeLabel }}</h3>
+        </ion-label>
+      </ion-item>
+      <ion-note color="medium" class="ion-padding-horizontal">
+        Definido automaticamente conforme seu cadastro na pelada deste evento.
+      </ion-note>
+
+      @if (selectedRole === 'athlete' && athleteProfile) {
+        <ion-item>
+          <ion-label class="ion-text-wrap">
+            <h3>Perfil de atleta encontrado</h3>
+            <p>{{ athleteProfile.primaryPosition }}</p>
+            <p>Assiduidade: {{ athleteProfile.attendanceScore }}%</p>
+          </ion-label>
+        </ion-item>
+      }
+
+      @if (selectedRole === 'athlete' && showAthleteForm) {
+        <ion-item-divider>
+          <ion-label>Cadastro de atleta (unico)</ion-label>
+        </ion-item-divider>
+
+        <app-athlete-profile-fields [form]="form"></app-athlete-profile-fields>
+      }
+
+      <ion-item>
+        <ion-checkbox formControlName="committed" labelPlacement="end">
+          Comprometo-me a participar deste evento
+        </ion-checkbox>
+      </ion-item>
+    </ion-list>
+
+    <ion-button
+      expand="block"
+      type="submit"
+      class="ion-margin-top"
+      [disabled]="!canSubmit"
+    >
+      Confirmar inscricao
+    </ion-button>
+  </form>
+</ion-content>

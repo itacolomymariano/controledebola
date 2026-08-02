@@ -1,0 +1,63 @@
+﻿<ion-header>
+  <ion-toolbar>
+    <ion-title>Eventos</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  @if (loading) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  @if (!loading && errorMessage) {
+    <ion-card color="warning" class="ion-margin">
+      <ion-card-content>
+        <p>{{ errorMessage }}</p>
+        <ion-button fill="clear" (click)="retry()">Tentar novamente</ion-button>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  @if (!loading && !errorMessage && eventRows.length === 0) {
+    <ion-list>
+      <ion-item>
+        <ion-icon name="calendar-outline" slot="start"></ion-icon>
+        <ion-label>
+          <h2>Nenhum evento cadastrado</h2>
+          <p>Toque no + para criar o primeiro evento.</p>
+        </ion-label>
+      </ion-item>
+    </ion-list>
+  }
+
+  @if (!loading && eventRows.length > 0) {
+    <ion-list>
+      @for (row of eventRows; track row.event.objectId) {
+        <ion-item button (click)="openEvent(row)">
+          <ion-icon name="football-outline" slot="start"></ion-icon>
+          <ion-label>
+            <h2>{{ row.event.name }}</h2>
+            @for (badge of row.badges; track badge.label) {
+              <ion-badge [color]="badge.color">{{ badge.label }}</ion-badge>
+            }
+            <p>{{ row.typeLabel }} · {{ row.dateLabel }} · {{ row.feeLabel }}</p>
+            <p>{{ row.locationLabel }}</p>
+            <p>Admin: {{ row.event.adminName }}</p>
+          </ion-label>
+        </ion-item>
+      }
+    </ion-list>
+  }
+
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+    <ion-fab-button (click)="createEvent()">
+      <ion-icon name="add"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+</ion-content>

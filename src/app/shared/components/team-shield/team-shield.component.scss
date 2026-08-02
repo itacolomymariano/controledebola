@@ -1,0 +1,29 @@
+.team-shield,
+.team-shield-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  object-fit: contain;
+  flex-shrink: 0;
+  background: var(--ion-color-light);
+}
+
+.team-shield-sm,
+.team-shield-fallback.team-shield-sm {
+  width: 24px;
+  height: 24px;
+  font-size: 0.65rem;
+}
+
+.team-shield-md,
+.team-shield-fallback.team-shield-md {
+  width: 32px;
+  height: 32px;
+  font-size: 0.75rem;
+}
+
+.team-shield-fallback {
+  font-weight: 700;
+  color: var(--ion-color-dark);
+}

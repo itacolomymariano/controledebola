@@ -1,0 +1,155 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="cancel()">Voltar</ion-button>
+    </ion-buttons>
+    <ion-title>Lenda — Atleta Profissional</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding legend-form-content">
+  <form id="legendProAthleteForm" [formGroup]="form" (ngSubmit)="submit()">
+    <app-image-picker
+      label="Imagem"
+      hint="Foto do atleta lenda."
+      [previewUrl]="imagePreview"
+      (imageSelected)="onImageSelected($event)"
+    ></app-image-picker>
+
+    <ion-list lines="full">
+      <ion-item>
+        <ion-input label="Nome" labelPlacement="stacked" formControlName="name"></ion-input>
+      </ion-item>
+      @if (form.get('name')?.touched && form.get('name')?.invalid) {
+        <ion-note color="danger" class="ion-padding-horizontal">Informe o nome.</ion-note>
+      }
+      <ion-item>
+        <ion-input label="Apelido" labelPlacement="stacked" formControlName="apelido"></ion-input>
+      </ion-item>
+      @if (form.get('apelido')?.touched && form.get('apelido')?.invalid) {
+        <ion-note color="danger" class="ion-padding-horizontal">Informe o apelido.</ion-note>
+      }
+
+      <app-birth-date-picker label="Data de nascimento" formControlName="birthDate"></app-birth-date-picker>
+      @if (form.get('birthDate')?.touched && form.get('birthDate')?.hasError('incompleteBirthDate')) {
+        <ion-note color="danger" class="ion-padding-horizontal">
+          Selecione dia, mes e ano da data de nascimento.
+        </ion-note>
+      }
+
+      <ion-item>
+        <ion-input
+          type="number"
+          label="Ano que encerrou a carreira"
+          labelPlacement="stacked"
+          formControlName="careerEndYear"
+        ></ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-select label="Posicao que atuou" labelPlacement="stacked" formControlName="position">
+          <ion-select-option value="">Nao informado</ion-select-option>
+          @for (p of positions; track p) {
+            <ion-select-option [value]="p">{{ p }}</ion-select-option>
+          }
+        </ion-select>
+      </ion-item>
+
+      <ion-item-divider>
+        <ion-label>Onde morava</ion-label>
+      </ion-item-divider>
+      <app-address-form [formControl]="$any(form.get('address'))" (addressChange)="onAddressChanged()"></app-address-form>
+      @if (form.get('address')?.touched && form.get('address')?.hasError('addressIncomplete')) {
+        <ion-note color="danger" class="ion-padding-horizontal">
+          Informe e confirme o endereco completo (busque pelo CEP ou mapa).
+        </ion-note>
+      }
+
+      <ion-item-divider>
+        <ion-label>Times profissionais que jogou</ion-label>
+      </ion-item-divider>
+      <ion-item>
+        <ion-label>Selecionar time</ion-label>
+        <ion-button slot="end" type="button" fill="outline" (click)="openTeamPicker()">Selecionar</ion-button>
+      </ion-item>
+      @for (team of proTeams; track team; let i = $index) {
+        <ion-item>
+          <ion-label>{{ team }}</ion-label>
+          <ion-button slot="end" type="button" fill="clear" color="danger" (click)="removeTeam(i)">
+            Remover
+          </ion-button>
+        </ion-item>
+      }
+
+      <ion-item>
+        <ion-select label="Sua relacao com a lenda" labelPlacement="stacked" formControlName="relationship">
+          @for (option of relationshipOptions; track option.value) {
+            <ion-select-option [value]="option.value">{{ option.label }}</ion-select-option>
+          }
+        </ion-select>
+      </ion-item>
+
+      <ion-item>
+        <ion-toggle formControlName="inMemoriam">In memoriam</ion-toggle>
+      </ion-item>
+      @if (form.get('inMemoriam')?.value) {
+        <app-birth-date-picker
+          label="Data da partida(falecimento)"
+          formControlName="memorialDate"
+        ></app-birth-date-picker>
+        @if (form.get('memorialDate')?.touched && form.get('memorialDate')?.hasError('incompleteBirthDate')) {
+          <ion-note color="danger" class="ion-padding-horizontal">
+            Selecione dia, mes e ano da data da partida (falecimento).
+          </ion-note>
+        }
+      }
+    </ion-list>
+  </form>
+</ion-content>
+
+<ion-footer class="legend-form-footer">
+  <ion-toolbar>
+    <ion-button
+      expand="block"
+      type="submit"
+      form="legendProAthleteForm"
+      [disabled]="saving"
+    >
+      {{ saving ? 'Salvando lenda...' : 'Salvar lenda' }}
+    </ion-button>
+  </ion-toolbar>
+</ion-footer>
+
+<ion-modal [isOpen]="teamPickerOpen" (didDismiss)="closeTeamPicker()">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar>
+        <ion-title>Selecionar time profissional</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="closeTeamPicker()">Fechar</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+      <ion-toolbar>
+        <ion-searchbar
+          placeholder="Buscar time"
+          [(ngModel)]="teamSearch"
+          [ngModelOptions]="{ standalone: true }"
+        ></ion-searchbar>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content>
+      @if (!filteredTeamOptions.length) {
+        <ion-note class="ion-padding">Nenhum time profissional encontrado.</ion-note>
+      } @else {
+        <ion-list>
+          @for (team of filteredTeamOptions; track team.slug) {
+            <ion-item button (click)="selectTeam(team)">
+              <ion-label>{{ team.name }}</ion-label>
+            </ion-item>
+          }
+        </ion-list>
+      }
+    </ion-content>
+  </ng-template>
+</ion-modal>

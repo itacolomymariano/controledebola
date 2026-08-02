@@ -1,0 +1,351 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()">
+        <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Detalhe do evento</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  @if (!loading && event && eventOverview) {
+    <app-event-detail-overview [viewModel]="eventOverview">
+      @if (event.peladaName) {
+        <ion-button peladaLink fill="clear" size="small" (click)="openPelada()">
+          Pelada: {{ event.peladaName }}
+        </ion-button>
+      }
+      @if (votingPeriodLabels) {
+        <ion-item votingPeriod>
+          <ion-icon name="star-outline" slot="start"></ion-icon>
+          <ion-label class="ion-text-wrap">
+            <p>Periodo de votacao</p>
+            <h3>{{ votingPeriodLabels.opensAt }} — {{ votingPeriodLabels.closesAt }}</h3>
+            <p>
+              {{ votingPeriodLabels.statusLabel }}
+              @if (votingPeriodLabels.usesDefault) {
+                · Padrao: inicio do evento ate 24h depois
+              }
+            </p>
+          </ion-label>
+        </ion-item>
+      }
+    </app-event-detail-overview>
+
+    @if (isAdmin && goalkeeperShortageWarning) {
+      <ion-card color="warning" class="ion-margin-top">
+        <ion-card-header>
+          <ion-card-title>Goleiros insuficientes</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <p>{{ goalkeeperShortageWarning }}</p>
+          <ion-button fill="outline" size="small" (click)="pinHiringAccordion('athlete')">
+            Abrir Negociacao
+          </ion-button>
+          <ion-button fill="outline" size="small" (click)="promptAddAnonymousParticipant()">
+            Participante anonimo
+          </ion-button>
+        </ion-card-content>
+      </ion-card>
+    }
+
+    @if (isAdmin && event) {
+      <div id="admin-action-buttons" class="event-action-buttons-anchor"></div>
+      <ion-grid
+        class="event-action-grid ion-margin-top"
+        [class.event-action-grid-hidden]="!showAdminActionButtons"
+      >
+        @for (row of adminActionTileRows; track $index) {
+          <ion-row>
+            @for (tile of row; track tile.id) {
+              <ion-col size="12" size-sm="6" size-lg="4">
+                <button
+                  type="button"
+                  class="event-action-tile"
+                  [class.event-action-tile-active]="tile.active"
+                  (click)="handleAdminAction(tile.id)"
+                >
+                  <ion-icon [name]="tile.icon" aria-hidden="true"></ion-icon>
+                  <span>{{ tile.label }}</span>
+                </button>
+              </ion-col>
+            }
+          </ion-row>
+        }
+      </ion-grid>
+
+      @if (showGatePanel && gateTicketControlEnabled) {
+        <app-event-detail-gate-panel
+          [event]="event"
+          [gateActionTileRows]="gateActionTileRows"
+          [showMyGateTicketView]="showMyGateTicketView"
+          [loadingGateTicket]="loadingMyGateTicket"
+          [myGateTicket]="myGateTicket"
+          [gateTicketLocation]="myGateTicket ? formatGateTicketLocation(myGateTicket) : ''"
+          [registrationConfirmed]="!!registration?.isEffectivelyConfirmed"
+          (back)="closeGatePanel()"
+          (closeTicketView)="closeGateTicketView()"
+          (gateAction)="handleGateAction($event)"
+          (qrRendered)="onGateTicketQrRendered()"
+        ></app-event-detail-gate-panel>
+      }
+
+      @if (showAdminPanel) {
+        <app-event-detail-admin-settings-panel
+          [adminForm]="adminForm"
+          [supportsArrivalOrder]="supportsArrivalOrder"
+          [savingAdmin]="savingAdmin"
+          [lockParticipationFee]="lockParticipationFee"
+          (back)="closeAdminSettingsPanel()"
+          (save)="saveAdminSettings()"
+        ></app-event-detail-admin-settings-panel>
+      }
+
+      @if (showHiringPanel) {
+          <ion-card id="hiring-panel-anchor" class="ion-margin-top">
+            <ion-card-header>
+              <div class="event-panel-header">
+                <div>
+                  <ion-card-title>Negociacao/Contratacoes</ion-card-title>
+                  <ion-card-subtitle>
+                    Convide atletas, arbitros, profissionais e torcedores para o evento
+                  </ion-card-subtitle>
+                </div>
+                <ion-button fill="clear" size="small" class="event-panel-back" (click)="closeHiringPanel()">
+                  <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
+                  Voltar
+                </ion-button>
+              </div>
+            </ion-card-header>
+            <ion-card-content>
+              <ion-accordion-group
+                [value]="activeHiringAccordionRole"
+                (ionChange)="onHiringAccordionChange($event)"
+              >
+                @for (role of hireableRoles; track role) {
+                  <app-event-role-hiring-panel
+                    [role]="role"
+                    [event]="event"
+                    [seedInvitationCount]="hiringInvitationCounts[role] ?? 0"
+                    (invitationsChanged)="onHiringInvitationCountsChanged()"
+                    (panelInteraction)="pinHiringAccordion($event)"
+                  ></app-event-role-hiring-panel>
+                }
+              </ion-accordion-group>
+            </ion-card-content>
+          </ion-card>
+        }
+    }
+
+    @if (!isAdmin) {
+      <div id="user-action-buttons" class="event-action-buttons-anchor"></div>
+      <ion-grid
+        class="event-action-grid ion-margin-top"
+        [class.event-action-grid-hidden]="!showUserActionButtons"
+      >
+        @for (row of userActionTileRows; track $index) {
+          <ion-row>
+            @for (tile of row; track tile.id) {
+              <ion-col size="12" size-sm="6" size-lg="4">
+                <button
+                  type="button"
+                  class="event-action-tile"
+                  [class.event-action-tile-active]="tile.active"
+                  (click)="handleUserAction(tile.id)"
+                >
+                  <ion-icon [name]="tile.icon" aria-hidden="true"></ion-icon>
+                  <span>{{ tile.label }}</span>
+                </button>
+              </ion-col>
+            }
+          </ion-row>
+        }
+      </ion-grid>
+
+      @if (showGatePanel && gateTicketControlEnabled) {
+        <app-event-detail-gate-panel
+          [event]="event"
+          [gateActionTileRows]="gateActionTileRows"
+          [showMyGateTicketView]="showMyGateTicketView"
+          [loadingGateTicket]="loadingMyGateTicket"
+          [myGateTicket]="myGateTicket"
+          [gateTicketLocation]="myGateTicket ? formatGateTicketLocation(myGateTicket) : ''"
+          [registrationConfirmed]="!!registration?.isEffectivelyConfirmed"
+          (back)="closeGatePanel()"
+          (closeTicketView)="closeGateTicketView()"
+          (gateAction)="handleGateAction($event)"
+          (qrRendered)="onGateTicketQrRendered()"
+        ></app-event-detail-gate-panel>
+      }
+    }
+
+    @if (showParticipantsPanel && (isAdmin || canShowUserParticipantsButton)) {
+      <app-event-detail-participants-panel
+        [mode]="isAdmin ? 'admin' : 'user'"
+        [event]="event"
+        [registration]="registration"
+        [participantsCount]="participants.length"
+        [filteredParticipants]="filteredParticipants"
+        [confirmedParticipantsCount]="confirmedParticipants.length"
+        [filteredConfirmedParticipants]="filteredConfirmedParticipants"
+        [participantSearch]="participantSearch"
+        [supportsArrivalOrder]="supportsArrivalOrder"
+        [gateTicketControlEnabled]="gateTicketControlEnabled"
+        [cancelling]="cancelling"
+        [updatingPaymentId]="updatingPaymentId"
+        [issuingTicketId]="issuingTicketId"
+        [cancellingTicketId]="cancellingTicketId"
+        [resolvingProfileId]="resolvingProfileId"
+        [activeSocioUserIds]="activeSocioUserIds"
+        (back)="closeParticipantsPanel()"
+        (participantSearchChange)="onParticipantSearchChange($event)"
+        (cancelRegistration)="confirmCancelRegistration()"
+        (arrivalAction)="onArrivalAction($event.participant, $event.action)"
+        (paymentExemptToggle)="onPaymentExemptToggle($event.participant, $event.event)"
+        (paymentToggle)="onPaymentToggle($event.participant, $event.event)"
+        (issueGateTicket)="issueGateTicket($event)"
+        (cancelGateTicket)="cancelGateTicket($event)"
+        (viewProfilePresentation)="onViewProfilePresentation($event)"
+        (approveProfilePresentation)="onApproveProfilePresentation($event)"
+        (rejectProfilePresentation)="onRejectProfilePresentation($event)"
+      ></app-event-detail-participants-panel>
+    }
+
+    @if (showVotingPanel && canShowEventVoting) {
+      <app-event-detail-voting-panel
+        [votingTargets]="votingTargets"
+        [votingPeriodNote]="votingPeriodNote"
+        [loadingVotes]="loadingVotes"
+        [canVote]="canVote"
+        [votesSubmitted]="votesSubmitted"
+        [voteScores]="voteScores"
+        [voteScoreOptions]="voteScoreOptions"
+        [savingVotes]="savingVotes"
+        (back)="closeVotingPanel()"
+        (submitVotes)="submitEventVotes()"
+      ></app-event-detail-voting-panel>
+    }
+
+    @if (showMaterialPanel && (isAdmin || isEventKitman)) {
+      <app-event-detail-material-panel
+        [session]="materialSession"
+        [inventory]="materialInventory"
+        [isAdmin]="isAdmin"
+        [isKitman]="isEventKitman"
+        [busy]="materialBusy"
+        [partialQuantities]="materialPartialQuantities"
+        [blindCounts]="materialBlindCounts"
+        [blindDamagedCounts]="materialBlindDamagedCounts"
+        (back)="closeMaterialPanel()"
+        (sourceChange)="onMaterialSourceChange($event)"
+        (loadAll)="onMaterialLoadAll()"
+        (loadPartial)="onMaterialLoadPartial()"
+        (send)="onMaterialSend()"
+        (receiveReturn)="onMaterialReceiveReturn()"
+        (submitBlindCount)="onMaterialSubmitBlindCount()"
+        (applyLosses)="onMaterialApplyLosses()"
+        (partialQuantityChange)="onMaterialPartialQuantityChange($event)"
+        (blindCountChange)="onMaterialBlindCountChange($event)"
+        (blindDamagedChange)="onMaterialBlindDamagedChange($event)"
+      ></app-event-detail-material-panel>
+    }
+
+    @if (!registration && !event.isReadOnly && !registrationsOpen) {
+      <ion-note color="warning" class="ion-margin-top">
+        As inscricoes para este evento estao {{ registrationStatusLabel.toLowerCase() }}.
+      </ion-note>
+    }
+  }
+</ion-content>
+
+<ion-modal [isOpen]="reviewProfileOpen" (didDismiss)="closeProfilePresentationReview()">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar>
+        <ion-title>Perfil do solicitante</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="closeProfilePresentationReview()">Fechar</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="ion-padding">
+      @if (loadingReviewProfile) {
+        <ion-spinner name="crescent"></ion-spinner>
+      } @else if (reviewProfile) {
+        <h2>{{ reviewProfile.displayName }}</h2>
+        @if (reviewProfile.fullName) {
+          <p><strong>Nome:</strong> {{ reviewProfile.fullName }}</p>
+        }
+        @if (reviewProfile.age != null) {
+          <p><strong>Idade:</strong> {{ reviewProfile.age }} anos</p>
+        }
+        @if (reviewProfile.city || reviewProfile.state) {
+          <p><strong>Local:</strong> {{ formatReviewLocation(reviewProfile) }}</p>
+        }
+        @if (reviewProfile.primaryPosition) {
+          <p><strong>Posicao:</strong> {{ reviewProfile.primaryPosition }}</p>
+        }
+        @if (reviewProfile.favoriteProTeam) {
+          <p><strong>Time do coracao:</strong> {{ reviewProfile.favoriteProTeam }}</p>
+        }
+        @if (reviewProfile.isAthlete) {
+          <p><strong>Pontuacao no App:</strong> {{ (reviewProfile.appScore ?? 0) | number:'1.0-1' }} pts</p>
+          <p>
+            <strong>Cartoes (App):</strong>
+            amarelo {{ reviewProfile.yellowCards ?? 0 }} · vermelho {{ reviewProfile.redCards ?? 0 }}
+          </p>
+          <p><strong>Gols (App):</strong> {{ reviewProfile.goals ?? 0 }}</p>
+        }
+        @if (reviewProfile.sumulaObservations.length) {
+          <h3 class="ion-margin-top">Observacoes de sumulas</h3>
+          <ion-list lines="full">
+            @for (entry of reviewProfile.sumulaObservations; track entry.eventId) {
+              <ion-item>
+                <ion-label>
+                  <h3>{{ entry.eventName }}</h3>
+                  @if (entry.peladaName || entry.eventDate) {
+                    <p>
+                      {{ entry.peladaName }}
+                      @if (entry.eventDate) {
+                        · {{ entry.eventDate | date:'dd/MM/yyyy' }}
+                      }
+                    </p>
+                  }
+                  <p>{{ entry.observation }}</p>
+                  @if (entry.yellowCards || entry.redCards) {
+                    <p>Cartoes: A {{ entry.yellowCards }} · V {{ entry.redCards }}</p>
+                  }
+                </ion-label>
+              </ion-item>
+            }
+          </ion-list>
+        } @else {
+          <p class="ion-margin-top">Nenhuma observacao de sumula registrada no App.</p>
+        }
+      }
+    </ion-content>
+  </ng-template>
+</ion-modal>
+
+@if (!loading && event && !registration && !event.isReadOnly && registrationsOpen && !event.isFinished) {
+  <ion-footer class="participate-footer">
+    <ion-toolbar>
+      <ion-button
+        expand="block"
+        class="participate-footer-button"
+        (click)="participate()"
+      >
+        Participar
+      </ion-button>
+    </ion-toolbar>
+  </ion-footer>
+}

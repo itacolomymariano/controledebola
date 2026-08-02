@@ -1,0 +1,134 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Montando seu perfil</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <ion-spinner name="crescent"></ion-spinner>
+  }
+
+  @if (!loading && wizardPath === 'athlete') {
+    <div class="setup-hero">
+      <ion-icon name="football-outline"></ion-icon>
+      <h2>Perfil de atleta</h2>
+      <p>Conte um pouco sobre como voce joga. Isso ajuda nas peladas e nos rankings.</p>
+    </div>
+
+    <form [formGroup]="athleteForm" (ngSubmit)="saveAthleteProfile()">
+      <ion-list lines="full">
+        <app-athlete-profile-fields [form]="athleteForm"></app-athlete-profile-fields>
+      </ion-list>
+      <ion-button expand="block" type="submit" class="ion-margin-top">Salvar e continuar</ion-button>
+      <ion-button expand="block" fill="clear" (click)="skip()">Completar depois</ion-button>
+    </form>
+  }
+
+  @if (!loading && wizardPath === 'other' && otherStep === 'pick') {
+    <div class="setup-hero">
+      <ion-icon name="star-outline"></ion-icon>
+      <h2>Qual perfil e o seu no futebol?</h2>
+      <p>Escolha como voce atua no mundo do futebol amador.</p>
+    </div>
+
+    @for (role of otherRoles; track role.value) {
+      <ion-card
+        button
+        class="role-card"
+        [class.selected]="selectedRole === role.value"
+        (click)="selectRole(role.value)"
+      >
+        <ion-card-content>
+          <h2>{{ role.label }}</h2>
+        </ion-card-content>
+      </ion-card>
+    }
+
+    <ion-button expand="block" [disabled]="!selectedRole" (click)="continueOtherProfile()">
+      Continuar
+    </ion-button>
+    <ion-button expand="block" fill="clear" (click)="skip()">Completar depois</ion-button>
+  }
+
+  @if (!loading && wizardPath === 'other' && otherStep === 'form' && isProfessionalSelected) {
+    <div class="setup-hero">
+      <ion-icon name="briefcase-outline"></ion-icon>
+      <h2>Perfil de {{ selectedRoleLabel }}</h2>
+      <p>Informe seus valores e chaves Pix para recebimento.</p>
+    </div>
+
+    <form [formGroup]="otherForm" (ngSubmit)="saveOtherProfile()">
+      <ion-list lines="full">
+        <app-role-profile-fields [form]="otherForm" [role]="professionalRole!"></app-role-profile-fields>
+      </ion-list>
+      <ion-button expand="block" type="submit" class="ion-margin-top">Salvar e continuar</ion-button>
+      <ion-button expand="block" fill="outline" (click)="backToRolePick()">Voltar</ion-button>
+      <ion-button expand="block" fill="clear" (click)="skip()">Completar depois</ion-button>
+    </form>
+  }
+
+  @if (!loading && wizardPath === 'other' && otherStep === 'fan') {
+    <div class="setup-hero">
+      <ion-icon name="trophy-outline"></ion-icon>
+      <h2>Perfil de torcedor</h2>
+      <p>
+        Informe seus valores de assistencia e faca palpites antes de cada evento.
+        Times do coracao, idolos e data de nascimento ficam em Meus dados.
+      </p>
+    </div>
+
+    <form [formGroup]="fanForm" (ngSubmit)="saveOtherProfile()">
+      <ion-list lines="full">
+        <ion-item>
+          <ion-input
+            type="number"
+            label="Pelada presencial (R$)"
+            labelPlacement="stacked"
+            formControlName="peladaPresentialRate"
+            min="0"
+            step="0.01"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            type="number"
+            label="Pelada remota (R$)"
+            labelPlacement="stacked"
+            formControlName="peladaRemoteRate"
+            min="0"
+            step="0.01"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            type="number"
+            label="Partida presencial (R$)"
+            labelPlacement="stacked"
+            formControlName="matchPresentialRate"
+            min="0"
+            step="0.01"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            type="number"
+            label="Partida remota (R$)"
+            labelPlacement="stacked"
+            formControlName="matchRemoteRate"
+            min="0"
+            step="0.01"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-toggle formControlName="acceptsPaidCommitments">
+            Aceito compromissos quando contratado e pago
+          </ion-toggle>
+        </ion-item>
+      </ion-list>
+      <ion-button expand="block" type="submit" class="ion-margin-top">Salvar e continuar</ion-button>
+      <ion-button expand="block" fill="outline" (click)="backToRolePick()">Voltar</ion-button>
+      <ion-button expand="block" fill="clear" (click)="skip()">Completar depois</ion-button>
+    </form>
+  }
+</ion-content>

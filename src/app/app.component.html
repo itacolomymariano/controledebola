@@ -1,0 +1,52 @@
+<ion-app>
+  <ion-menu contentId="main-content" menuId="app-menu" type="overlay" (ionWillOpen)="onMenuWillOpen()">
+    <ion-header>
+      <ion-toolbar color="primary">
+        <ion-title>Menu</ion-title>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content>
+      <ion-list lines="full">
+        <ion-item button detail="false" (click)="navigateFromMenu('/tabs/peladas')">
+          <ion-icon name="football-outline" slot="start"></ion-icon>
+          <ion-label>Peladas</ion-label>
+        </ion-item>
+        <ion-item button detail="false" (click)="navigateFromMenu('/tabs/search')">
+          <ion-icon name="search-outline" slot="start"></ion-icon>
+          <ion-label>Buscar</ion-label>
+        </ion-item>
+        <ion-item button detail="false" (click)="navigateFromMenu('/tabs/mural')">
+          <ion-icon name="trophy-outline" slot="start"></ion-icon>
+          <ion-label>Mural</ion-label>
+        </ion-item>
+        <ion-item button detail="false" (click)="navigateFromMenu('/tabs/profile')">
+          <ion-icon name="person-outline" slot="start"></ion-icon>
+          <ion-label>Perfil</ion-label>
+        </ion-item>
+        <ion-item button detail="false" (click)="navigateFromMenu('/inbox')">
+          <ion-icon name="mail-outline" slot="start"></ion-icon>
+          <ion-label>Caixa de entrada</ion-label>
+        </ion-item>
+        <ion-item>
+          <ion-icon name="notifications-outline" slot="start"></ion-icon>
+          <ion-label>
+            <h2>Notificacoes</h2>
+            <p>Eventos, lembretes e convites</p>
+          </ion-label>
+          <ion-toggle
+            slot="end"
+            [checked]="pushNotificationsEnabled"
+            [disabled]="pushToggleBusy"
+            (ionChange)="onPushNotificationsToggle($event)"
+          ></ion-toggle>
+        </ion-item>
+        <ion-item button detail="false" (click)="navigateFromMenu('/about')">
+          <ion-icon name="information-circle-outline" slot="start"></ion-icon>
+          <ion-label>Sobre</ion-label>
+        </ion-item>
+      </ion-list>
+    </ion-content>
+  </ion-menu>
+
+  <ion-router-outlet id="main-content"></ion-router-outlet>
+</ion-app>

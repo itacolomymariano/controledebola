@@ -1,0 +1,208 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()">
+        <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Palpites</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  @if (!loading && event) {
+    <h1>{{ event.name }}</h1>
+    <p>Faca seus palpites antes do inicio do evento.</p>
+
+    @if (closed) {
+      <ion-note color="warning">
+        O evento ja comecou. Palpites nao podem mais ser alterados.
+      </ion-note>
+    }
+
+    @if (athletes.length === 0) {
+      <ion-note color="medium">
+        Ainda nao ha atletas inscritos neste evento para basear os palpites.
+      </ion-note>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      @if (isPeladaType) {
+        <ion-list-header>
+          <ion-label>Palpites da pelada</ion-label>
+        </ion-list-header>
+        <ion-list-header>
+          <ion-label>Qual atleta faz mais gols?</ion-label>
+        </ion-list-header>
+        @if (athletes.length === 0) {
+          <ion-note color="medium" class="ion-padding-horizontal">
+            Nenhum atleta confirmado disponivel para este palpite.
+          </ion-note>
+        } @else {
+          <app-scout-athlete-strip
+            [athletes]="$any(athletes)"
+            [selectedUserId]="selectedTopScorerUserId()"
+            [disabled]="closed"
+            (athleteSelected)="selectTopScorer($event)"
+          ></app-scout-athlete-strip>
+          @if (
+            form.get('topScorerUserId')?.invalid &&
+            form.get('topScorerUserId')?.touched
+          ) {
+            <ion-note color="danger" class="ion-padding-horizontal">
+              Selecione um atleta.
+            </ion-note>
+          }
+        }
+
+        <ion-list-header>
+          <ion-label>Qual goleiro sera menos vazado?</ion-label>
+        </ion-list-header>
+        @if (goalkeepers.length === 0) {
+          <ion-note color="medium" class="ion-padding-horizontal">
+            Nenhum goleiro inscrito com posicao principal cadastrada.
+          </ion-note>
+        } @else {
+          <app-scout-athlete-strip
+            [athletes]="$any(goalkeepers)"
+            [selectedUserId]="selectedKeeperUserId()"
+            [disabled]="closed"
+            (athleteSelected)="selectKeeper($event)"
+          ></app-scout-athlete-strip>
+          @if (!closed && selectedKeeperUserId()) {
+            <ion-button fill="clear" size="small" (click)="clearKeeperSelection()">
+              Limpar selecao
+            </ion-button>
+          }
+        }
+      }
+
+      @if (isTeamMatch) {
+        <ion-list-header>
+          <ion-label>Palpites da partida</ion-label>
+        </ion-list-header>
+
+        <ion-item>
+          <ion-input
+            label="Equipe mandante"
+            labelPlacement="stacked"
+            formControlName="homeTeamName"
+            [readonly]="closed"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            label="Equipe visitante"
+            labelPlacement="stacked"
+            formControlName="awayTeamName"
+            [readonly]="closed"
+          ></ion-input>
+        </ion-item>
+
+        <ion-item>
+          <ion-input
+            type="number"
+            [label]="'Placar - ' + (form.get('homeTeamName')?.value || 'Mandante')"
+            labelPlacement="stacked"
+            formControlName="homeScore"
+            min="0"
+            [readonly]="closed"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            type="number"
+            [label]="'Placar - ' + (form.get('awayTeamName')?.value || 'Visitante')"
+            labelPlacement="stacked"
+            formControlName="awayScore"
+            min="0"
+            [readonly]="closed"
+          ></ion-input>
+        </ion-item>
+
+        <ion-list-header>
+          <ion-label>Goleadores</ion-label>
+        </ion-list-header>
+        @for (row of goalScorers.controls; track $index; let i = $index) {
+          <div [formGroup]="goalScorerGroupAt(i)">
+            <ion-item>
+              <ion-select label="Jogador" labelPlacement="stacked" formControlName="userId" [disabled]="closed">
+                <ion-select-option value="">Selecione</ion-select-option>
+                @for (athlete of athletes; track athlete.userId) {
+                  <ion-select-option [value]="athlete.userId">{{ athlete.userName }}</ion-select-option>
+                }
+              </ion-select>
+            </ion-item>
+            <ion-item>
+              <ion-input
+                type="number"
+                label="Quantidade de gols"
+                labelPlacement="stacked"
+                formControlName="goals"
+                min="1"
+                [readonly]="closed"
+              ></ion-input>
+              @if (!closed) {
+                <ion-button fill="clear" color="danger" slot="end" (click)="removeGoalScorer(i)">
+                  Remover
+                </ion-button>
+              }
+            </ion-item>
+          </div>
+        }
+        @if (!closed) {
+          <ion-button expand="block" fill="outline" (click)="addGoalScorer()">Adicionar goleador</ion-button>
+        }
+
+        <ion-item>
+          <ion-select
+            label="Jogadores expulsos"
+            labelPlacement="stacked"
+            formControlName="expelledUserIds"
+            [multiple]="true"
+            [disabled]="closed || athletes.length === 0"
+          >
+            @for (athlete of athletes; track athlete.userId) {
+              <ion-select-option [value]="athlete.userId">{{ athlete.userName }}</ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
+
+        <ion-item>
+          <ion-select
+            label="Jogadores com cartao amarelo"
+            labelPlacement="stacked"
+            formControlName="yellowCardUserIds"
+            [multiple]="true"
+            [disabled]="closed || athletes.length === 0"
+          >
+            @for (athlete of athletes; track athlete.userId) {
+              <ion-select-option [value]="athlete.userId">{{ athlete.userName }}</ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
+
+        @if (homeAthletes.length || awayAthletes.length) {
+          <ion-note color="medium" class="ion-padding-horizontal">
+            Jogadores listados conforme inscritos no evento.
+            @if (homeAthletes.length && awayAthletes.length) {
+              {{ form.get('homeTeamName')?.value }}: {{ homeAthletes.length }} atletas;
+              {{ form.get('awayTeamName')?.value }}: {{ awayAthletes.length }} atletas.
+            }
+          </ion-note>
+        }
+      }
+
+      @if (!closed) {
+        <ion-button expand="block" type="submit" class="ion-margin-top">Salvar palpites</ion-button>
+      }
+    </form>
+  }
+</ion-content>

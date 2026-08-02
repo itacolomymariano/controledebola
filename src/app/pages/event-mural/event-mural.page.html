@@ -1,0 +1,196 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button [defaultHref]="'/event/' + eventId"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Mural do evento</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <ion-spinner name="crescent"></ion-spinner>
+  }
+
+  @if (!loading && errorMessage) {
+    <ion-card color="warning" class="ion-margin-bottom">
+      <ion-card-content>
+        <p>{{ errorMessage }}</p>
+        @if (loadFailed) {
+          <ion-button fill="clear" (click)="retry()">Tentar novamente</ion-button>
+        }
+      </ion-card-content>
+    </ion-card>
+  }
+
+  @if (!loading && !loadFailed) {
+    @if (!voterQuorumMet) {
+      <ion-note color="medium" class="ion-margin-bottom">
+        Integridade: este evento ainda tem menos de {{ minVotersForHighlights }} votantes
+        distintos. Os rankings continuam visiveis; a media fica mais confiavel com mais votos.
+      </ion-note>
+    }
+
+    <ion-card class="ion-margin-bottom media-hub-card">
+      <ion-card-header>
+        <div class="mural-card-header-row">
+          <div (click)="openMediaHub()">
+            <ion-card-title>Imprensa / Midia</ion-card-title>
+            <ion-card-subtitle>Radio, jornal e video do evento</ion-card-subtitle>
+          </div>
+          <app-mural-share-button
+            [context]="shareContext"
+            cardTitle="Imprensa / Midia"
+          ></app-mural-share-button>
+        </div>
+      </ion-card-header>
+      <ion-card-content>
+        @if (mediaHasJournal || mediaHasRadio || mediaHasVideo) {
+          <div class="media-preview-list">
+            @if (mediaHasJournal) {
+              <ion-item button detail="true" lines="full" (click)="openMediaJournal()">
+                <ion-icon name="newspaper-outline" slot="start"></ion-icon>
+                <ion-label>
+                  <h3>Jornal</h3>
+                  <p>{{ mediaJournalHeadline || 'Conteudo publicado' }}</p>
+                </ion-label>
+              </ion-item>
+            }
+            @if (mediaHasRadio) {
+              <ion-item button detail="true" lines="full" (click)="openMediaRadio()">
+                <ion-icon name="radio-outline" slot="start"></ion-icon>
+                <ion-label>
+                  <h3>Radio</h3>
+                  <p>{{ mediaRadioTitle || 'Conteudo publicado' }}</p>
+                </ion-label>
+              </ion-item>
+            }
+            @if (mediaHasVideo) {
+              <ion-item button detail="true" lines="full" (click)="openMediaVideo()">
+                <ion-icon name="videocam-outline" slot="start"></ion-icon>
+                <ion-label>
+                  <h3>Video</h3>
+                  <p>{{ mediaVideoTitle || 'Melhores momentos' }}</p>
+                </ion-label>
+              </ion-item>
+            }
+          </div>
+        } @else {
+          <ion-note color="medium">Nenhuma cobertura publicada ainda.</ion-note>
+        }
+        <ion-button fill="clear" size="small" class="ion-margin-top" (click)="openMediaHub()">
+          <ion-icon slot="start" name="megaphone-outline"></ion-icon>
+          Abrir cobertura
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+
+    <app-mural-participant-stats
+      [stats]="participantStats"
+      scope="event"
+      [shareContext]="shareContext"
+    ></app-mural-participant-stats>
+
+    <app-mural-highlights-panel
+      [highlights]="muralHighlights"
+      scope="event"
+      [shareContext]="shareContext"
+    ></app-mural-highlights-panel>
+
+    <app-mural-support-ops-card
+      [eventId]="eventId"
+      [shareContext]="shareContext"
+    ></app-mural-support-ops-card>
+
+    <ion-button
+      expand="block"
+      fill="outline"
+      class="ion-margin-bottom"
+      (click)="togglePredictionRankings()"
+    >
+      {{ showPredictionRankings ? 'Ocultar melhores palpites' : 'Ver melhores palpites' }}
+    </ion-button>
+    @if (showPredictionRankings) {
+      <app-mural-prediction-rankings
+        scope="event"
+        [scopeId]="eventId"
+        [shareContext]="shareContext"
+      ></app-mural-prediction-rankings>
+    }
+
+    <app-mural-fan-highlights
+      scope="event"
+      [scopeId]="eventId"
+      [shareContext]="shareContext"
+    ></app-mural-fan-highlights>
+
+    <app-mural-performance-analytics
+      scope="event"
+      [scopeId]="eventId"
+      [shareContext]="shareContext"
+    ></app-mural-performance-analytics>
+
+    @for (section of primaryRankingSections; track section.role) {
+      <ion-card>
+        <ion-card-header>
+          <div class="mural-card-header-row">
+            <ion-card-title>Top 10 — {{ section.title }}</ion-card-title>
+            <app-mural-share-button
+              [context]="shareContext"
+              [cardTitle]="'Top 10 — ' + section.title"
+            ></app-mural-share-button>
+          </div>
+        </ion-card-header>
+        <ion-card-content>
+          @if (!section.entries.length) {
+            <ion-note>Sem dados ainda.</ion-note>
+          }
+          @for (entry of section.entries; track entry.userId; let i = $index) {
+            <div class="rank-row ion-margin-bottom">
+              <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="sm"></app-user-avatar>
+              <span>{{ i + 1 }}. {{ entry.userName }}</span>
+              <ion-badge>{{ entry.badgeLabel }}</ion-badge>
+            </div>
+          }
+        </ion-card-content>
+      </ion-card>
+    }
+
+    <ion-button
+      expand="block"
+      fill="outline"
+      class="ion-margin-bottom"
+      (click)="toggleOtherTop10()"
+    >
+      {{ showOtherTop10 ? 'Ocultar outros TOP 10' : 'Outros TOP 10...' }}
+    </ion-button>
+    @if (showOtherTop10) {
+      @for (section of otherRankingSections; track section.role) {
+        <ion-card>
+          <ion-card-header>
+            <div class="mural-card-header-row">
+              <ion-card-title>Top 10 — {{ section.title }}</ion-card-title>
+              <app-mural-share-button
+                [context]="shareContext"
+                [cardTitle]="'Top 10 — ' + section.title"
+              ></app-mural-share-button>
+            </div>
+          </ion-card-header>
+          <ion-card-content>
+            @if (!section.entries.length) {
+              <ion-note>Sem dados ainda.</ion-note>
+            }
+            @for (entry of section.entries; track entry.userId; let i = $index) {
+              <div class="rank-row ion-margin-bottom">
+                <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="sm"></app-user-avatar>
+                <span>{{ i + 1 }}. {{ entry.userName }}</span>
+                <ion-badge>{{ entry.badgeLabel }}</ion-badge>
+              </div>
+            }
+          </ion-card-content>
+        </ion-card>
+      }
+    }
+  }
+</ion-content>

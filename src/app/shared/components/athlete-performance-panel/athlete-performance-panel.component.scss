@@ -1,0 +1,50 @@
+.perf-bar-row {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr 2rem;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.perf-bar-track {
+  height: 0.75rem;
+  background: var(--ion-color-light);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.perf-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.perf-bar-fill--primary {
+  background: var(--ion-color-primary);
+}
+
+.perf-bar-fill--secondary {
+  background: var(--ion-color-secondary);
+}
+
+.perf-bar-fill--medium {
+  background: var(--ion-color-medium);
+}
+
+.perf-bar-fill--success {
+  background: var(--ion-color-success);
+}
+
+.perf-bar-fill--warning {
+  background: var(--ion-color-warning);
+}
+
+.perf-bar-fill--danger {
+  background: var(--ion-color-danger);
+}
+
+.perf-chart-note {
+  margin: 0.5rem 0 0;
+  color: var(--ion-color-medium);
+  font-size: 0.85rem;
+}

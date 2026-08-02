@@ -1,0 +1,50 @@
+<div class="birth-date-picker">
+  <ion-label class="field-label">{{ label }}</ion-label>
+  <div class="select-row" [formGroup]="form">
+    <ion-item lines="none" class="select-item">
+      <ion-select
+        label="Dia"
+        labelPlacement="stacked"
+        formControlName="day"
+        [interface]="selectInterface"
+        [interfaceOptions]="{ header: 'Selecionar dia' }"
+        placeholder="Dia"
+        (ionBlur)="markAsTouched()"
+      >
+        @for (day of days; track day) {
+          <ion-select-option [value]="day">{{ day }}</ion-select-option>
+        }
+      </ion-select>
+    </ion-item>
+    <ion-item lines="none" class="select-item">
+      <ion-select
+        label="Mes"
+        labelPlacement="stacked"
+        formControlName="month"
+        [interface]="selectInterface"
+        [interfaceOptions]="{ header: 'Selecionar mes' }"
+        placeholder="Mes"
+        (ionBlur)="markAsTouched()"
+      >
+        @for (month of months; track month.value) {
+          <ion-select-option [value]="month.value">{{ month.label }}</ion-select-option>
+        }
+      </ion-select>
+    </ion-item>
+    <ion-item lines="none" class="select-item">
+      <ion-select
+        label="Ano"
+        labelPlacement="stacked"
+        formControlName="year"
+        [interface]="selectInterface"
+        [interfaceOptions]="{ header: 'Selecionar ano' }"
+        placeholder="Ano"
+        (ionBlur)="markAsTouched()"
+      >
+        @for (year of years; track year) {
+          <ion-select-option [value]="year">{{ year }}</ion-select-option>
+        }
+      </ion-select>
+    </ion-item>
+  </div>
+</div>

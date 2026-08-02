@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "228387546437",
+    "project_id": "controledebola-bcd35",
+    "storage_bucket": "controledebola-bcd35.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:228387546437:android:4b396de01600c3a7e10a2c",
+        "android_client_info": {
+          "package_name": "com.minhapelada.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAw0kmZ-i6TO1V9swlntyZUTVV2qDPlI7k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

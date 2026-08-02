@@ -1,0 +1,97 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button [defaultHref]="'/event/' + eventId + '/mural/media'"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Radio do evento</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <ion-spinner name="crescent"></ion-spinner>
+  }
+
+  @if (!loading && loadError) {
+    <ion-card color="warning">
+      <ion-card-content>{{ loadError }}</ion-card-content>
+    </ion-card>
+  }
+
+  @if (!loading && !loadError && dashboard && !dashboard.cloudAvailable) {
+    <ion-card color="warning">
+      <ion-card-content>Conteudo de midia indisponivel no momento.</ion-card-content>
+    </ion-card>
+  }
+
+  @if (!loading && !loadError && dashboard?.cloudAvailable) {
+    <ion-card class="media-article">
+      <ion-card-header>
+        <ion-card-title>Narracao de gol</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        @if (!dashboard?.radioNarration) {
+          <ion-note>Nenhuma narracao publicada ainda.</ion-note>
+        } @else {
+          <h2>{{ dashboard!.radioNarration!.title }}</h2>
+          @if (dashboard!.radioNarration!.description) {
+            <p>{{ dashboard!.radioNarration!.description }}</p>
+          }
+          <audio controls [src]="dashboard!.radioNarration!.audioUrl"></audio>
+          <div class="media-author">
+            <app-user-avatar
+              [avatarUrl]="dashboard!.radioNarration!.authorAvatarUrl"
+              [alt]="dashboard!.radioNarration!.authorName"
+              size="sm"
+            ></app-user-avatar>
+            <div>
+              <strong>{{ dashboard!.radioNarration!.authorName }}</strong>
+              @if (dashboard!.radioNarration!.authorApelido) {
+                <p>{{ dashboard!.radioNarration!.authorApelido }}</p>
+              }
+            </div>
+          </div>
+          <app-event-media-engagement
+            [eventId]="eventId"
+            category="radio_narration"
+          ></app-event-media-engagement>
+        }
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card class="media-article">
+      <ion-card-header>
+        <ion-card-title>Entrevista</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        @if (!dashboard?.radioInterview) {
+          <ion-note>Nenhuma entrevista publicada ainda.</ion-note>
+        } @else {
+          <h2>{{ dashboard!.radioInterview!.title }}</h2>
+          @if (dashboard!.radioInterview!.description) {
+            <p>{{ dashboard!.radioInterview!.description }}</p>
+          }
+          <audio controls [src]="dashboard!.radioInterview!.audioUrl"></audio>
+          <div class="media-author">
+            <app-user-avatar
+              [avatarUrl]="dashboard!.radioInterview!.authorAvatarUrl"
+              [alt]="dashboard!.radioInterview!.authorName"
+              size="sm"
+            ></app-user-avatar>
+            <div>
+              <strong>{{ dashboard!.radioInterview!.authorName }}</strong>
+              @if (dashboard!.radioInterview!.authorApelido) {
+                <p>{{ dashboard!.radioInterview!.authorApelido }}</p>
+              }
+            </div>
+          </div>
+          <app-event-media-engagement
+            [eventId]="eventId"
+            category="radio_interview"
+          ></app-event-media-engagement>
+        }
+      </ion-card-content>
+    </ion-card>
+  }
+</ion-content>

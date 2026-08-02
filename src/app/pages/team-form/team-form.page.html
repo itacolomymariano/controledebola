@@ -1,0 +1,68 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="cancel()">Voltar</ion-button>
+    </ion-buttons>
+    <ion-title>Cadastro do time</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (team) {
+    <ion-note>Seu time ja esta cadastrado (somente leitura).</ion-note>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <ion-list lines="full">
+      <ion-item>
+        <ion-input
+          label="Nome do time"
+          labelPlacement="stacked"
+          formControlName="name"
+        ></ion-input>
+      </ion-item>
+
+      <ion-item-divider>
+        <ion-label>Imagem do time</ion-label>
+      </ion-item-divider>
+      <div class="ion-padding">
+        <app-image-picker
+          label="Selecionar imagem do time"
+          [previewUrl]="teamImagePreview"
+          [disabled]="!!team"
+          (imageSelected)="onTeamImageSelected($event)"
+        ></app-image-picker>
+      </div>
+
+      <ion-item-divider>
+        <ion-label>Imagem do presidente</ion-label>
+      </ion-item-divider>
+      <div class="ion-padding">
+        <app-image-picker
+          label="Selecionar imagem do presidente"
+          [previewUrl]="presidentImagePreview"
+          [disabled]="!!team"
+          (imageSelected)="onPresidentImageSelected($event)"
+        ></app-image-picker>
+      </div>
+
+      <ion-item-divider>
+        <ion-label>Uniforme do time</ion-label>
+      </ion-item-divider>
+      <div class="ion-padding">
+        <app-uniform-picker formControlName="uniformId"></app-uniform-picker>
+        @if (selectedUniform) {
+          <div class="selected-uniform">
+            <app-jersey-preview [colors]="selectedUniform.colors"></app-jersey-preview>
+            <p>Uniforme selecionado: {{ selectedUniform.teamName }}</p>
+          </div>
+        }
+      </div>
+    </ion-list>
+
+    @if (!team) {
+      <ion-button expand="block" type="submit" class="ion-margin-top">Salvar time</ion-button>
+    }
+  </form>
+</ion-content>

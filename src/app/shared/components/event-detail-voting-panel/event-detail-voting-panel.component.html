@@ -1,0 +1,86 @@
+<ion-card id="voting-panel-anchor" class="ion-margin-top">
+  <ion-card-header>
+    <div class="event-panel-header">
+      <div>
+        <ion-card-title>Votacao do evento</ion-card-title>
+        <ion-card-subtitle>Notas de 0 a 10 para cada participante (exceto torcedor)</ion-card-subtitle>
+      </div>
+      <ion-button fill="clear" size="small" class="event-panel-back" (click)="back.emit()">
+        <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
+        Voltar
+      </ion-button>
+    </div>
+  </ion-card-header>
+  <ion-card-content>
+    @if (votingPeriodNote) {
+      <ion-note color="medium" class="ion-padding-bottom">
+        {{ votingPeriodNote }}
+      </ion-note>
+    }
+    @if (loadingVotes) {
+      <ion-spinner name="crescent"></ion-spinner>
+    } @else if (canVote && !votesSubmitted) {
+      <ion-note color="medium" class="ion-padding-bottom">
+        Suas notas alimentam o ranking do mural do evento. Apos confirmar, nao sera possivel alterar.
+      </ion-note>
+      <ion-list lines="full">
+        @for (participant of votingTargets; track participant.objectId) {
+          <ion-item>
+            <app-user-avatar
+              slot="start"
+              [avatarUrl]="participant.avatarUrl"
+              [alt]="participant.apelido"
+              size="md"
+            ></app-user-avatar>
+            <ion-label class="ion-text-wrap">
+              <h3>{{ participant.apelido }}</h3>
+              <p>{{ registrationService.formatRole(participant.role) }}</p>
+            </ion-label>
+            <ion-select
+              slot="end"
+              [name]="'vote-' + participant.objectId"
+              [(ngModel)]="voteScores[participant.objectId]"
+              [ngModelOptions]="{ standalone: true }"
+              interface="popover"
+              placeholder="Nota"
+            >
+              @for (score of voteScoreOptions; track score) {
+                <ion-select-option [value]="score">{{ score }}</ion-select-option>
+              }
+            </ion-select>
+          </ion-item>
+        }
+      </ion-list>
+      <ion-button expand="block" class="ion-margin-top" [disabled]="savingVotes" (click)="submitVotes.emit()">
+        Salvar votacao
+      </ion-button>
+    } @else if (votesSubmitted) {
+      <ion-note color="success" class="ion-padding-bottom">
+        Sua votacao foi registrada. Voce pode consultar suas notas abaixo, mas nao pode altera-las.
+      </ion-note>
+      <ion-list lines="full">
+        @for (participant of votingTargets; track participant.objectId) {
+          @if (voteScores[participant.objectId] != null) {
+            <ion-item>
+              <app-user-avatar
+                slot="start"
+                [avatarUrl]="participant.avatarUrl"
+                [alt]="participant.apelido"
+                size="md"
+              ></app-user-avatar>
+              <ion-label class="ion-text-wrap">
+                <h3>{{ participant.apelido }}</h3>
+                <p>{{ registrationService.formatRole(participant.role) }}</p>
+              </ion-label>
+              <ion-badge slot="end" color="primary">{{ voteScores[participant.objectId] }}</ion-badge>
+            </ion-item>
+          }
+        }
+      </ion-list>
+    } @else {
+      <ion-note color="warning">
+        A votacao nao esta aberta no momento.
+      </ion-note>
+    }
+  </ion-card-content>
+</ion-card>

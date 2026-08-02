@@ -1,0 +1,24 @@
+.profile-header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+
+  h2 {
+    margin: 0;
+  }
+
+  p {
+    margin: 0.25rem 0 0;
+  }
+}
+
+.role-profile-content {
+  --padding-bottom: 24px;
+}
+
+.role-profile-footer ion-toolbar {
+  --padding-top: 8px;
+  --padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  --padding-start: 16px;
+  --padding-end: 16px;
+}

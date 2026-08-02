@@ -1,0 +1,77 @@
+<div [formGroup]="form">
+  <h3 class="ion-padding-top">{{ title }}</h3>
+  <ion-item>
+    <ion-input
+      label="Logradouro / Rua (Digite aqui e selecione na lista)"
+      labelPlacement="stacked"
+      formControlName="streetQuery"
+      placeholder="Ex: Rua das Flores, 100"
+      (ionInput)="onStreetQueryInput($event)"
+      (ionBlur)="markTouched()"
+    ></ion-input>
+    @if (searching) {
+      <ion-spinner slot="end" name="crescent"></ion-spinner>
+    }
+  </ion-item>
+
+  @if (searchError) {
+    <ion-note color="danger" class="ion-padding-horizontal">{{ searchError }}</ion-note>
+  }
+
+  @if (suggestions.length > 0) {
+    <ion-list class="suggestions">
+      @for (item of suggestions; track item.id) {
+        <ion-item button (click)="selectSuggestion(item)">
+          <ion-label class="ion-text-wrap">{{ item.label }}</ion-label>
+        </ion-item>
+      }
+    </ion-list>
+  }
+
+  <ion-item>
+    <ion-input
+      label="Logradouro confirmado"
+      labelPlacement="stacked"
+      formControlName="street"
+      readonly
+    ></ion-input>
+  </ion-item>
+  <ion-item>
+    <ion-input label="Bairro" labelPlacement="stacked" formControlName="neighborhood" readonly></ion-input>
+  </ion-item>
+  <ion-item>
+    <ion-input label="Cidade" labelPlacement="stacked" formControlName="city" readonly></ion-input>
+  </ion-item>
+  <ion-item>
+    <ion-input
+      label="Estado (UF)"
+      labelPlacement="stacked"
+      formControlName="state"
+      maxlength="2"
+      readonly
+    ></ion-input>
+  </ion-item>
+  <ion-item>
+    <ion-input
+      label="CEP"
+      labelPlacement="stacked"
+      formControlName="zipCode"
+      inputmode="numeric"
+      readonly
+    ></ion-input>
+  </ion-item>
+
+  @if (applying) {
+    <ion-note color="medium" class="ion-padding">Completando endereco...</ion-note>
+  }
+
+  @if (!applying && !isComplete && missingFields.length > 0) {
+    <ion-note color="warning" class="ion-padding">
+      Falta preencher: {{ missingFields.join(', ') }}.
+    </ion-note>
+  }
+
+  @if (!applying && isComplete) {
+    <ion-note color="success" class="ion-padding">Endereco validado para localizacao.</ion-note>
+  }
+</div>

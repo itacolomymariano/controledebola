@@ -1,0 +1,19 @@
+.legend-form-content {
+  --padding-bottom: 24px;
+}
+
+.legend-form-content form {
+  padding-bottom: 8px;
+}
+
+.legend-form-footer ion-toolbar {
+  --padding-top: 8px;
+  --padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  --padding-start: 16px;
+  --padding-end: 16px;
+}
+
+.legend-form-validation {
+  display: block;
+  margin: 8px 0 0;
+}

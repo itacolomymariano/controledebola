@@ -1,0 +1,35 @@
+<ion-card>
+  <ion-card-header>
+    <div class="mural-card-header-row">
+      <div>
+        <ion-card-title>Top 10 — Palpites</ion-card-title>
+        <ion-card-subtitle>
+          @if (scope === 'event') {
+            Palpiteiros do evento (pontuacao apos encerramento)
+          } @else {
+            Maiores pontuadores em eventos encerrados
+          }
+        </ion-card-subtitle>
+      </div>
+      <app-mural-share-button
+        [context]="shareContext"
+        cardTitle="Top 10 — Palpites"
+      ></app-mural-share-button>
+    </div>
+  </ion-card-header>
+  <ion-card-content>
+    @if (loading) {
+      <ion-spinner name="crescent"></ion-spinner>
+    } @else if (!loadedEntries.length) {
+      <ion-note>{{ emptyMessage }}</ion-note>
+    } @else {
+      @for (entry of loadedEntries; track entry.userId; let i = $index) {
+        <div class="rank-row ion-margin-bottom">
+          <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="sm"></app-user-avatar>
+          <span>{{ i + 1 }}. {{ entry.userName }}</span>
+          <ion-badge>{{ entry.totalScore }} pts</ion-badge>
+        </div>
+      }
+    }
+  </ion-card-content>
+</ion-card>

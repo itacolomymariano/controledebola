@@ -1,0 +1,196 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()">
+        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Perfil de {{ roleLabel }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  @if (!loading && errorMessage) {
+    <ion-note color="danger">{{ errorMessage }}</ion-note>
+  }
+
+  @if (!loading && profile) {
+    <div class="profile-header">
+      <app-user-avatar
+        [avatarUrl]="profile.avatarUrl"
+        [alt]="profile.displayName"
+        size="lg"
+      ></app-user-avatar>
+      <div>
+        <h1>{{ profile.displayName }}</h1>
+        @if (profile.fullName && profile.fullName !== profile.displayName) {
+          <p>{{ profile.fullName }}</p>
+        }
+        <p>{{ roleLabel }}</p>
+      </div>
+    </div>
+
+    <ion-list lines="full">
+      <ion-item>
+        <ion-label class="ion-text-wrap">
+          <h3>Local</h3>
+          <p>
+            {{ profile.state || '—' }} · {{ profile.city || '—' }} ·
+            {{ profile.neighborhood || '—' }}
+          </p>
+        </ion-label>
+      </ion-item>
+      @if (profile.age != null) {
+        <ion-item>
+          <ion-label>
+            <h3>Idade</h3>
+            <p>{{ profile.age }} anos</p>
+          </ion-label>
+        </ion-item>
+      }
+      @if (profile.favoriteProTeam) {
+        <ion-item>
+          <ion-label>
+            <h3>Time do coracao</h3>
+            <p>{{ profile.favoriteProTeam }}</p>
+          </ion-label>
+        </ion-item>
+      }
+      @if (profile.proFootballIdol) {
+        <ion-item>
+          <ion-label>
+            <h3>Idolo do futebol profissional</h3>
+            <p>{{ profile.proFootballIdol }}</p>
+          </ion-label>
+        </ion-item>
+      }
+      @if (profile.amateurFootballIdol) {
+        <ion-item>
+          <ion-label>
+            <h3>Idolo do futebol amador</h3>
+            <p>{{ profile.amateurFootballIdol }}</p>
+          </ion-label>
+        </ion-item>
+      }
+      @for (field of displayFields; track field.key) {
+        @if (field.type !== 'boolean' || profile.roleProfile?.[field.key]) {
+          <ion-item>
+            <ion-label class="ion-text-wrap">
+              <h3>{{ field.label }}</h3>
+              <p>{{ fieldValue(field) }}</p>
+            </ion-label>
+          </ion-item>
+        }
+      }
+    </ion-list>
+
+    @if (fanStats) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Engajamento da torcida</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <p>Eventos confirmados: {{ fanStats.eventsCount }}</p>
+          <p>Check-ins: {{ fanStats.checkIns }} ({{ fanStats.presentialCheckIns }} presencial / {{ fanStats.remoteCheckIns }} remoto)</p>
+          <p>Score de engajamento: {{ fanStats.engagementScore }}</p>
+        </ion-card-content>
+      </ion-card>
+    }
+
+    @if (coachStats) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Operacao como treinador</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <p>Eventos confirmados: {{ coachStats.eventsCount }}</p>
+          <p>Paineis salvos: {{ coachStats.boardsSaved }}</p>
+          <p>Checklists completos: {{ coachStats.checklistCompleteCount }}</p>
+        </ion-card-content>
+      </ion-card>
+    }
+
+    @if (masseurStats) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Atendimentos</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <p>Eventos confirmados: {{ masseurStats.eventsCount }}</p>
+          <p>Atendimentos: {{ masseurStats.treatmentsCount }}</p>
+          <p>Atletas unicos: {{ masseurStats.uniqueAthletes }}</p>
+          <p>Duracao media: {{ masseurStats.avgDurationMin }} min</p>
+        </ion-card-content>
+      </ion-card>
+    }
+
+    @if (trainerStats) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Preparacao fisica</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <p>Eventos confirmados: {{ trainerStats.eventsCount }}</p>
+          <p>Sessoes registradas: {{ trainerStats.sessionsCount }}</p>
+          <p>Aquecimentos concluidos: {{ trainerStats.warmupsCompleted }}</p>
+          <p>Atletas em eventos: {{ trainerStats.athletesCoachedInEvents }}</p>
+          <p>Atletas com personal: {{ trainerStats.personalAthletesCount }}</p>
+        </ion-card-content>
+      </ion-card>
+    }
+
+    @if (showsPeladaHistory) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Peladas</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          @if (!profile.history.peladas.length) {
+            <ion-note>Nenhuma pelada registrada ainda.</ion-note>
+          }
+          @for (item of profile.history.peladas; track item.id) {
+            <p>{{ item.name }} · Pontuacao: {{ item.score.toFixed(1) }}</p>
+          }
+        </ion-card-content>
+      </ion-card>
+    }
+
+    @if (showsMatchHistory) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Partidas entre equipes amadoras</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          @if (!profile.history.matches.length) {
+            <ion-note>Nenhuma partida registrada ainda.</ion-note>
+          }
+          @for (item of profile.history.matches; track item.id) {
+            <p>{{ item.name }} · Pontuacao: {{ item.score.toFixed(1) }}</p>
+          }
+        </ion-card-content>
+      </ion-card>
+    }
+
+    @if (showsTeamHistory) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Times amadores</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          @if (!profile.history.teams.length) {
+            <ion-note>Nenhum time registrado ainda.</ion-note>
+          }
+          @for (item of profile.history.teams; track item.id) {
+            <p>{{ item.name }} · Pontuacao: {{ item.score.toFixed(1) }}</p>
+          }
+        </ion-card-content>
+      </ion-card>
+    }
+  }
+</ion-content>

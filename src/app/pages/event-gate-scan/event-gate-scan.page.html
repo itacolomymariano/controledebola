@@ -1,0 +1,38 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button [defaultHref]="'/event/' + eventId"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Leitura de ingresso</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div [id]="scannerElementId" class="scanner-box"></div>
+
+  @if (!scanning) {
+    <ion-button expand="block" (click)="startScanner()">Iniciar leitura do QR-Code</ion-button>
+  } @else {
+    <ion-button expand="block" color="medium" (click)="stopScanner()">Parar leitura</ion-button>
+  }
+
+  @if (result) {
+    <ion-card [color]="result.valid ? 'success' : 'danger'" class="ion-margin-top">
+      <ion-card-header>
+        <ion-card-title>{{ result.valid ? 'Ingresso valido' : 'Ingresso invalido' }}</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <p>{{ result.message }}</p>
+        @if (result.participantName || result.participantApelido) {
+          <p><strong>Participante:</strong> {{ result.participantApelido || result.participantName }}</p>
+        }
+        @if (result.entryAt) {
+          <p><strong>Entrada:</strong> {{ formatDateTime(result.entryAt) }}</p>
+        }
+        @if (result.authorizedByAdminName) {
+          <p><strong>Autorizado por:</strong> {{ result.authorizedByAdminName }}</p>
+        }
+      </ion-card-content>
+    </ion-card>
+  }
+</ion-content>

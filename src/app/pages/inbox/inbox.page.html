@@ -1,0 +1,137 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/peladas"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Caixa de entrada</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  @if (!loading && invitations.length === 0 && paymentConfirmations.length === 0 && supplementaryOpportunities.length === 0) {
+    <ion-note color="medium">Nenhum convite pendente no momento.</ion-note>
+    <ion-button expand="block" class="ion-margin-top" fill="outline" (click)="goBack()">
+      Voltar
+    </ion-button>
+  }
+
+  @if (!loading && supplementaryOpportunities.length > 0) {
+    <h2 class="section-title">Negociacao pos-convite</h2>
+    @for (opportunity of supplementaryOpportunities; track opportunity.invitationId) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>{{ supplementaryTitle(opportunity) }}</ion-card-title>
+          <ion-card-subtitle>{{ opportunity.eventName }}</ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          <p>Inicio: {{ formatDate(opportunity.eventStartTime) }}</p>
+          <ion-button
+            expand="block"
+            [disabled]="processingId === opportunity.invitationId"
+            (click)="openSupplementaryHiring(opportunity)"
+          >
+            Contratar / negociar
+          </ion-button>
+          <ion-button
+            expand="block"
+            fill="clear"
+            color="medium"
+            class="ion-margin-top"
+            [disabled]="processingId === opportunity.invitationId"
+            (click)="skipSupplementaryHiring(opportunity)"
+          >
+            Concluir sem contratar
+          </ion-button>
+        </ion-card-content>
+      </ion-card>
+    }
+  }
+
+  @for (invitation of invitations; track invitation.objectId) {
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Convite de {{ invitationRoleLabel(invitation) }}</ion-card-title>
+        <ion-card-subtitle>{{ invitation.eventName }}</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <p>Pelada: {{ invitation.peladaName || '—' }}</p>
+        <p>Inicio: {{ formatDate(invitation.eventStartTime) }}</p>
+        <p>Valor oferecido: <strong>{{ formatCurrency(invitation.offeredAmount) }}</strong></p>
+        @if (invitation.responseDeadline) {
+          <p>Responder ate: <strong>{{ formatDate(invitation.responseDeadline) }}</strong></p>
+        }
+
+        <div class="inviter-row ion-margin-top">
+          <app-user-avatar
+            [avatarUrl]="invitation.invitedByAvatarUrl"
+            [alt]="invitation.invitedByApelido || invitation.invitedByName"
+            size="md"
+          ></app-user-avatar>
+          <div class="inviter-info">
+            <p class="inviter-label">Enviado por</p>
+            <p class="inviter-name">
+              <strong>{{ invitation.invitedByApelido || invitation.invitedByName }}</strong>
+            </p>
+            @if (
+              invitation.invitedByFullName &&
+              invitation.invitedByFullName !== invitation.invitedByApelido
+            ) {
+              <p>{{ invitation.invitedByFullName }}</p>
+            }
+          </div>
+        </div>
+
+        <ion-button expand="block" fill="outline" (click)="openEvent(invitation)">Ver evento</ion-button>
+        <ion-button
+          expand="block"
+          color="success"
+          class="ion-margin-top"
+          [disabled]="processingId === invitation.objectId"
+          (click)="accept(invitation)"
+        >
+          Aceitar valor e inscrever-se
+        </ion-button>
+        <ion-button
+          expand="block"
+          fill="clear"
+          color="danger"
+          [disabled]="processingId === invitation.objectId"
+          (click)="decline(invitation)"
+        >
+          Recusar
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  @if (!loading && paymentConfirmations.length > 0) {
+    <h2 class="section-title">Confirmar recebimento de pagamento</h2>
+    @for (invitation of paymentConfirmations; track invitation.objectId) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Pagamento — {{ invitationRoleLabel(invitation) }}</ion-card-title>
+          <ion-card-subtitle>{{ invitation.eventName }}</ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          <p>Valor: <strong>{{ formatCurrency(invitation.offeredAmount) }}</strong></p>
+          <p>Pelada: {{ invitation.peladaName || '—' }}</p>
+          <ion-button
+            expand="block"
+            color="success"
+            [disabled]="processingId === invitation.objectId"
+            (click)="confirmPaymentReceived(invitation)"
+          >
+            Confirmar pagamento recebido
+          </ion-button>
+        </ion-card-content>
+      </ion-card>
+    }
+  }
+</ion-content>

@@ -1,0 +1,25 @@
+.event-inline-panel {
+  width: 100%;
+  min-height: 120px;
+}
+
+.gate-ticket-view {
+  width: 100%;
+  min-height: 200px;
+}
+
+.gate-ticket-loading {
+  p {
+    margin-top: 0.75rem;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .event-inline-panel {
+    min-height: 96px;
+  }
+
+  .gate-ticket-view {
+    min-height: 160px;
+  }
+}

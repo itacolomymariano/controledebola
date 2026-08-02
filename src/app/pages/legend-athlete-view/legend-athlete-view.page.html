@@ -1,0 +1,102 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/search"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Atleta lenda</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  @if (!loading && errorMessage && !athlete) {
+    <ion-note color="danger">{{ errorMessage }}</ion-note>
+  }
+
+  @if (!loading && athlete) {
+    <div class="profile-header">
+      @if (athlete.imageUrl) {
+        <ion-avatar class="legend-avatar">
+          <img [src]="athlete.imageUrl" [alt]="athlete.apelido" />
+        </ion-avatar>
+      } @else {
+        <app-user-avatar [alt]="athlete.apelido" size="lg"></app-user-avatar>
+      }
+      <div>
+        <h1>{{ athlete.apelido }}</h1>
+        <p>{{ athlete.name }}</p>
+        @if (athlete.inMemoriam) {
+          <ion-badge color="medium">In memoriam</ion-badge>
+        }
+      </div>
+    </div>
+
+    <ion-list lines="full">
+      <ion-item>
+        <ion-label>
+          <h3>Posicao que atuou</h3>
+          <p>{{ athlete.position || 'Nao informada' }}</p>
+        </ion-label>
+      </ion-item>
+      <ion-item>
+        <ion-label>
+          <h3>Data de nascimento</h3>
+          <p>{{ formatDate(athlete.birthDate) }}</p>
+        </ion-label>
+      </ion-item>
+      <ion-item>
+        <ion-label>
+          <h3>Ano que encerrou a carreira</h3>
+          <p>{{ athlete.careerEndYear ?? 'Nao informado' }}</p>
+        </ion-label>
+      </ion-item>
+      @if (athlete.inMemoriam) {
+        <ion-item>
+          <ion-label>
+            <h3>Data da partida</h3>
+            <p>{{ formatDate(athlete.memorialDate) }}</p>
+          </ion-label>
+        </ion-item>
+      }
+      <ion-item>
+        <ion-label class="ion-text-wrap">
+          <h3>Onde morava</h3>
+          <p>
+            {{ athlete.address?.state || '—' }} · {{ athlete.address?.city || '—' }} ·
+            {{ athlete.address?.neighborhood || '—' }}
+          </p>
+        </ion-label>
+      </ion-item>
+      <ion-item>
+        <ion-label class="ion-text-wrap">
+          <h3>Times amadores que jogou</h3>
+          @if (!athlete.amateurTeams.length) {
+            <p>Nenhum time registrado.</p>
+          }
+          @for (team of athlete.amateurTeams; track team) {
+            <p>{{ team }}</p>
+          }
+        </ion-label>
+      </ion-item>
+      <ion-item>
+        <ion-label>
+          <h3>Relacao de quem cadastrou</h3>
+          <p>{{ relationshipLabel(athlete.relationship) }}</p>
+        </ion-label>
+      </ion-item>
+      @if (athlete.registeredByName) {
+        <ion-item>
+          <ion-label>
+            <h3>Cadastrado por</h3>
+            <p>{{ athlete.registeredByName }}</p>
+          </ion-label>
+        </ion-item>
+      }
+    </ion-list>
+  }
+</ion-content>

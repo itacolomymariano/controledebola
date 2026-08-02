@@ -1,0 +1,85 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()">
+        <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Torcida</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  @if (!loading && event) {
+    <h1>{{ event.name }}</h1>
+    <p>Confirme sua presenca na torcida (presencial ou remota) e deixe um recado curto.</p>
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <ion-list>
+        <ion-item>
+          <ion-select
+            label="Modo de presenca"
+            labelPlacement="stacked"
+            formControlName="attendanceMode"
+            interface="popover"
+          >
+            <ion-select-option value="presential">Presencial</ion-select-option>
+            <ion-select-option value="remote">Remoto</ion-select-option>
+          </ion-select>
+        </ion-item>
+        <ion-item>
+          <ion-textarea
+            label="Recado da torcida"
+            labelPlacement="stacked"
+            formControlName="message"
+            maxlength="160"
+            autoGrow="true"
+            placeholder="Ex.: Vamos com tudo!"
+          ></ion-textarea>
+        </ion-item>
+      </ion-list>
+
+      <ion-button
+        expand="block"
+        type="submit"
+        class="ion-margin-top"
+        [disabled]="saving || form.invalid"
+      >
+        {{ myCheckIn ? 'Atualizar check-in' : 'Fazer check-in' }}
+      </ion-button>
+    </form>
+
+    <ion-list-header class="ion-margin-top">
+      <ion-label>Torcida no evento ({{ checkIns.length }})</ion-label>
+    </ion-list-header>
+    @if (!checkIns.length) {
+      <ion-note>Nenhum check-in ainda.</ion-note>
+    }
+    @for (item of checkIns; track item.objectId) {
+      <ion-item>
+        <app-user-avatar
+          slot="start"
+          [avatarUrl]="item.avatarUrl"
+          [alt]="item.userName"
+          size="sm"
+        ></app-user-avatar>
+        <ion-label class="ion-text-wrap">
+          <h3>{{ item.userName }}</h3>
+          <p>
+            {{ item.attendanceMode === 'remote' ? 'Remoto' : 'Presencial' }}
+            @if (item.message) {
+              · {{ item.message }}
+            }
+          </p>
+        </ion-label>
+      </ion-item>
+    }
+  }
+</ion-content>

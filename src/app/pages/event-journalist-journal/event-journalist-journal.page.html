@@ -1,0 +1,92 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button [defaultHref]="'/event/' + eventId"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Jornal do jornalista</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <ion-spinner name="crescent"></ion-spinner>
+  }
+
+  @if (!loading) {
+    <ion-segment [value]="activeSection" (ionChange)="onSectionChange($any($event.detail.value))">
+      <ion-segment-button value="reportage">
+        <ion-label>Reportagem</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="interview">
+        <ion-label>Entrevista</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+
+    @if (activeSection === 'reportage') {
+      <ion-card class="journal-section ion-margin-top">
+        <ion-card-header>
+          <ion-card-title>Reportagem do evento</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <ion-item lines="full">
+            <ion-input label="Manchete" labelPlacement="stacked" [(ngModel)]="reportageHeadline" maxlength="160"></ion-input>
+          </ion-item>
+          <input #reportagePhotoInput type="file" accept="image/*" hidden (change)="onReportagePhotoSelected($event)" />
+          <ion-button expand="block" fill="outline" (click)="reportagePhotoInput.click()">
+            <ion-icon slot="start" name="image-outline"></ion-icon>
+            Selecionar foto da reportagem
+          </ion-button>
+          @if (reportagePhotoPreviewUrl) {
+            <img class="journal-photo-preview" [src]="reportagePhotoPreviewUrl" alt="Foto da reportagem" />
+          }
+          <ion-item lines="full" class="ion-margin-top">
+            <ion-textarea
+              label="Texto / redacao"
+              labelPlacement="stacked"
+              [(ngModel)]="reportageBody"
+              autoGrow="true"
+              rows="8"
+            ></ion-textarea>
+          </ion-item>
+          <ion-button expand="block" [disabled]="publishingReportage" (click)="publishReportage()">
+            Enviar reportagem ao mural
+          </ion-button>
+        </ion-card-content>
+      </ion-card>
+    }
+
+    @if (activeSection === 'interview') {
+      <ion-card class="journal-section ion-margin-top">
+        <ion-card-header>
+          <ion-card-title>Entrevista do evento</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <ion-item lines="full">
+            <ion-input label="Manchete" labelPlacement="stacked" [(ngModel)]="interviewHeadline" maxlength="160"></ion-input>
+          </ion-item>
+          <input #interviewPhotoInput type="file" accept="image/*" hidden (change)="onInterviewPhotoSelected($event)" />
+          <ion-button expand="block" fill="outline" (click)="interviewPhotoInput.click()">
+            <ion-icon slot="start" name="image-outline"></ion-icon>
+            Selecionar foto da entrevista
+          </ion-button>
+          @if (interviewPhotoPreviewUrl) {
+            <img class="journal-photo-preview" [src]="interviewPhotoPreviewUrl" alt="Foto da entrevista" />
+          }
+          <ion-item lines="full" class="ion-margin-top">
+            <ion-textarea
+              label="Perguntas e respostas"
+              labelPlacement="stacked"
+              [(ngModel)]="interviewBody"
+              autoGrow="true"
+              rows="8"
+            ></ion-textarea>
+          </ion-item>
+          <ion-button expand="block" [disabled]="publishingInterview" (click)="publishInterview()">
+            Enviar entrevista ao mural
+          </ion-button>
+        </ion-card-content>
+      </ion-card>
+    }
+  }
+</ion-content>

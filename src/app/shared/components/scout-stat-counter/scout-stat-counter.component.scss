@@ -1,0 +1,56 @@
+.scout-stat-counter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+}
+
+.scout-stat-label {
+  flex: 1;
+  font-size: 0.95rem;
+}
+
+.scout-stat-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.scout-stat-value {
+  min-width: 1.75rem;
+  text-align: center;
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.scout-stat-btn {
+  --padding-start: 0;
+  --padding-end: 0;
+  width: 44px;
+  height: 44px;
+}
+
+.scout-stat-counter--readonly {
+  .scout-stat-value {
+    min-width: 2rem;
+  }
+}
+
+.scout-stat-counter--compact {
+  padding: 0.2rem 0;
+}
+
+.scout-stat-counter--compact .scout-stat-label {
+  font-size: 0.85rem;
+}
+
+.scout-stat-counter--compact .scout-stat-value {
+  font-size: 0.95rem;
+  min-width: 1.5rem;
+}
+
+.scout-stat-counter--compact .scout-stat-btn {
+  width: 36px;
+  height: 36px;
+}

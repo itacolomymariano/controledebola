@@ -1,0 +1,25 @@
+.gate-ticket-card {
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+.qr-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+  width: 100%;
+
+  img {
+    display: block;
+    width: min(280px, calc(100vw - 3rem));
+    height: auto;
+    max-width: 100%;
+    aspect-ratio: 1;
+    object-fit: contain;
+  }
+}
+
+:host {
+  display: block;
+  width: 100%;
+}

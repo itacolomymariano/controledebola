@@ -1,0 +1,125 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/profile"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Contratacao pessoal</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  @if (!loading) {
+    <ion-note color="medium" class="ion-margin-bottom">
+      Escolha preparador fisico e scout pessoais para acompanhar seu desempenho.
+    </ion-note>
+
+    <ion-segment [value]="segment" (ionChange)="onSegmentChange($event)">
+      <ion-segment-button value="trainer">
+        <ion-label>Preparador</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="scout">
+        <ion-label>Scout</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+
+    @if (selectedCandidate) {
+      <ion-item lines="full" class="ion-margin-top selected-candidate">
+        <app-user-avatar
+          slot="start"
+          [avatarUrl]="selectedCandidate.avatarUrl"
+          [alt]="selectedCandidate.apelido || selectedCandidate.userName"
+          size="md"
+        ></app-user-avatar>
+        <ion-label class="ion-text-wrap">
+          <h3>{{ selectedCandidate.apelido || selectedCandidate.userName }}</h3>
+          @if (formatCandidateSubtitle(selectedCandidate)) {
+            <p>{{ formatCandidateSubtitle(selectedCandidate) }}</p>
+          }
+        </ion-label>
+        <ion-button fill="clear" slot="end" (click)="clearSelection()">Alterar</ion-button>
+      </ion-item>
+    }
+
+    <ion-searchbar
+      class="ion-margin-top"
+      [placeholder]="segment === 'trainer' ? 'Buscar preparador' : 'Buscar scout'"
+      [(ngModel)]="search"
+      [debounce]="0"
+      (ionInput)="onSearchInput($event)"
+      (ionClear)="onSearchClear()"
+    ></ion-searchbar>
+
+    @if (searchLoading) {
+      <div class="ion-text-center ion-padding">
+        <ion-spinner name="crescent"></ion-spinner>
+      </div>
+    }
+
+    @if (!search.trim() && !selectedCandidate) {
+      <ion-note color="medium">Digite nome ou apelido para buscar.</ion-note>
+    }
+
+    @if (search.trim() && !displayedCandidates.length && !searchLoading) {
+      <ion-note color="medium">Nenhum resultado para "{{ search }}".</ion-note>
+    }
+
+    @if (search.trim() && displayedCandidates.length) {
+      <ion-list lines="full">
+        @for (candidate of displayedCandidates; track candidate.userId) {
+          <ion-item
+            button
+            detail="false"
+            [class.candidate-selected]="candidate.userId === selectedUserId"
+            (click)="selectCandidate(candidate)"
+          >
+            <app-user-avatar
+              slot="start"
+              [avatarUrl]="candidate.avatarUrl"
+              [alt]="candidate.apelido || candidate.userName"
+              size="md"
+            ></app-user-avatar>
+            <ion-label class="ion-text-wrap">
+              <h2>{{ candidate.apelido || candidate.userName }}</h2>
+              @if (formatCandidateSubtitle(candidate)) {
+                <p>{{ formatCandidateSubtitle(candidate) }}</p>
+              }
+            </ion-label>
+            <ion-button fill="clear" slot="end" (click)="viewProfile(candidate, $event)">
+              Ver perfil
+            </ion-button>
+          </ion-item>
+        }
+      </ion-list>
+    }
+
+    @if (segment === 'scout') {
+      <ion-item class="ion-margin-top">
+        <ion-select
+          label="Fonte em conflito de stats"
+          labelPlacement="stacked"
+          [(ngModel)]="personalStatsConflictSource"
+        >
+          @for (option of conflictOptions; track option.value) {
+            <ion-select-option [value]="option.value">{{ option.label }}</ion-select-option>
+          }
+        </ion-select>
+      </ion-item>
+    }
+
+    <ion-button
+      expand="block"
+      class="ion-margin-top"
+      [disabled]="saving"
+      (click)="save()"
+    >
+      Salvar preferencias
+    </ion-button>
+  }
+</ion-content>

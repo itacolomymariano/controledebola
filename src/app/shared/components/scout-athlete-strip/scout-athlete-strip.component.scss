@@ -1,0 +1,40 @@
+.scout-athlete-strip {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.25rem 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scout-athlete-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 4.5rem;
+  padding: 0.5rem 0.35rem;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: var(--ion-color-light);
+  cursor: pointer;
+}
+
+.scout-athlete-chip.selected {
+  border-color: var(--ion-color-primary);
+  background: rgba(var(--ion-color-primary-rgb), 0.08);
+}
+
+.scout-athlete-chip:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.scout-athlete-chip-label {
+  font-size: 0.75rem;
+  line-height: 1.1;
+  text-align: center;
+  max-width: 4.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

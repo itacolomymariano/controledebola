@@ -1,0 +1,734 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/peladas"></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ pelada?.name ?? 'Pelada' }}</ion-title>
+    @if (isAdmin) {
+      <ion-buttons slot="end">
+        <ion-button (click)="editPelada()">Editar</ion-button>
+      </ion-buttons>
+    }
+  </ion-toolbar>
+  @if (pelada) {
+    <ion-toolbar>
+      <ion-segment class="segment-scroll" scrollable="true" [value]="segment" (ionChange)="onSegmentChange($event)">
+        <ion-segment-button value="eventos">Eventos</ion-segment-button>
+        <ion-segment-button value="socios">Socios</ion-segment-button>
+        <ion-segment-button value="cotinhas">Cotinhas</ion-segment-button>
+        @if (showCaixaTab) {
+          <ion-segment-button value="caixa">Caixa</ion-segment-button>
+        }
+        <ion-segment-button value="mensalidades">Mensalidades</ion-segment-button>
+        <ion-segment-button value="mural">Mural</ion-segment-button>
+        @if (isAdmin) {
+          <ion-segment-button value="configuracoes">Configuracoes</ion-segment-button>
+        }
+      </ion-segment>
+    </ion-toolbar>
+  }
+</ion-header>
+
+<ion-content>
+  @if (loading) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  @if (!loading && errorMessage) {
+    <ion-card color="warning" class="ion-margin">
+      <ion-card-content>{{ errorMessage }}</ion-card-content>
+    </ion-card>
+  }
+
+  @if (!loading && pelada) {
+    <ion-card class="ion-margin">
+      <ion-card-header>
+        <ion-card-title>{{ pelada.name }}</ion-card-title>
+        <ion-card-subtitle>{{ formatSport() }} · {{ formatLocation() }}</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <p>Admin: {{ pelada.adminApelido || pelada.adminName }}</p>
+        @if (pelada.adminApelido && pelada.adminName !== pelada.adminApelido) {
+          <p>{{ pelada.adminName }}</p>
+        }
+        @if (pelada.monthlyFee > 0) {
+          <p>Mensalidade: {{ formatCurrency(pelada.monthlyFee) }}</p>
+        }
+      </ion-card-content>
+    </ion-card>
+
+    <div class="segment-content ion-padding">
+      @if (segment === 'eventos') {
+        @if (isAdmin && (loadingProfileRequests || profilePresentationRequests.length)) {
+          <ion-card>
+            <ion-card-header>
+              <ion-card-title>Solicitacoes de participacao</ion-card-title>
+              <ion-card-subtitle>
+                Primeira participacao em eventos desta pelada — avalie o perfil antes de confirmar
+              </ion-card-subtitle>
+            </ion-card-header>
+            <ion-card-content>
+              @if (loadingProfileRequests) {
+                <ion-spinner name="crescent"></ion-spinner>
+              } @else {
+                <ion-list lines="full">
+                  @for (request of profilePresentationRequests; track request.registrationId) {
+                    <ion-item>
+                      <ion-label>
+                        <h2>{{ request.userDisplayName }}</h2>
+                        <p>
+                          {{ request.eventName }}
+                          @if (request.eventStartTime) {
+                            · {{ formatProfileRequestDate(request.eventStartTime) }}
+                          }
+                        </p>
+                        <p>
+                          {{ formatProfileRequestRole(request.role) }}
+                          · {{ request.membershipType === 'socio' ? 'Socio' : 'Convidado' }}
+                        </p>
+                      </ion-label>
+                      <div slot="end" class="request-actions">
+                        <ion-button
+                          fill="outline"
+                          size="small"
+                          (click)="openProfilePresentationReview(request.userId)"
+                        >
+                          Ver perfil
+                        </ion-button>
+                        <ion-button
+                          color="success"
+                          size="small"
+                          [disabled]="resolvingRequestId === request.registrationId"
+                          (click)="approveProfilePresentationRequest(request)"
+                        >
+                          Aprovar
+                        </ion-button>
+                        <ion-button
+                          color="danger"
+                          fill="outline"
+                          size="small"
+                          [disabled]="resolvingRequestId === request.registrationId"
+                          (click)="rejectProfilePresentationRequest(request)"
+                        >
+                          Recusar
+                        </ion-button>
+                      </div>
+                    </ion-item>
+                  }
+                </ion-list>
+              }
+            </ion-card-content>
+          </ion-card>
+        }
+        @if (events.length === 0) {
+          <ion-note>Nenhum evento nesta pelada.</ion-note>
+        }
+        <ion-list>
+          @for (event of events; track event.objectId) {
+            <ion-item button (click)="openEvent(event)">
+              <ion-label class="ion-text-wrap">
+                <h2>{{ event.name }}</h2>
+                <p>{{ formatDate(event.startTime) }}</p>
+                @if (event.locationComplement?.trim()) {
+                  <p>{{ event.locationComplement.trim() }}</p>
+                }
+                <p>
+                  <ion-chip [color]="event.registrationStatusLabel === 'Inscricoes abertas' ? 'success' : 'warning'" outline="true">
+                    {{ event.registrationStatusLabel }}
+                  </ion-chip>
+                  @if (event.remainingAthleteSpots != null) {
+                    <ion-chip [color]="event.remainingAthleteSpots > 0 ? 'success' : 'danger'" outline="true">
+                      @if (event.remainingAthleteSpots > 0) {
+                        {{ event.remainingAthleteSpots }} vaga(s) restante(s) para atletas
+                      } @else {
+                        Lotado (atletas)
+                      }
+                    </ion-chip>
+                  }
+                  @if (event.isRegistered) {
+                    <ion-chip color="primary" outline="true">Voce inscrito</ion-chip>
+                  }
+                  @if (event.isFinished) {
+                    <ion-chip color="dark" outline="true">Encerrado</ion-chip>
+                  } @else if (event.isPast) {
+                    <ion-chip color="medium" outline="true">Finalizado</ion-chip>
+                  }
+                </p>
+              </ion-label>
+            </ion-item>
+          }
+        </ion-list>
+        @if (isAdmin) {
+          <ion-button expand="block" (click)="createEvent()">Novo evento</ion-button>
+        }
+      }
+
+      @if (segment === 'socios') {
+        @if (!currentMembership && !isAdmin) {
+          <ion-button expand="block" (click)="requestMembership()">
+            ENVIAR SOLICITAÇÃO PARA SER SÓCIO
+          </ion-button>
+        }
+        @if (isAdmin) {
+          <ion-note color="medium" class="ion-padding-horizontal">
+            Marque os participantes de eventos que devem ser socios desta pelada.
+            Se participantes ou checkboxes estiverem incompletos, publique o Cloud Code
+            em Back4App (ver docs/back4app-cloud-functions.md).
+          </ion-note>
+          <ion-searchbar
+            placeholder="Buscar participante de eventos"
+            [(ngModel)]="participantSearch"
+            [ngModelOptions]="{ standalone: true }"
+            [debounce]="0"
+            (ionInput)="onParticipantSearchInput($event)"
+            (ionClear)="onParticipantSearchClear()"
+          ></ion-searchbar>
+          @if (socioListRows.length === 0) {
+            <ion-note class="ion-padding">
+              Nenhum participante encontrado. Inscreva usuarios em eventos desta pelada primeiro.
+            </ion-note>
+          } @else if (!socioSearchHasResults) {
+            <ion-note class="ion-padding">
+              Nenhum resultado para "{{ participantSearch }}".
+            </ion-note>
+          }
+          <ion-list>
+            @for (row of socioListRows; track row.userId) {
+              <ion-item [class.socio-row-hidden]="!socioRowMatchesSearch(row)">
+                <app-user-avatar
+                  slot="start"
+                  [avatarUrl]="row.avatarUrl"
+                  [alt]="row.displayName"
+                  size="md"
+                ></app-user-avatar>
+                <ion-label class="ion-text-wrap">
+                  <h2>{{ row.displayName }}</h2>
+                  @if (row.apelido && row.apelido !== row.displayName) {
+                    <p>{{ row.apelido }}</p>
+                  }
+                  @if (row.fullName && row.fullName !== row.displayName) {
+                    <p>{{ row.fullName }}</p>
+                  }
+                  @if (row.roles.length > 0) {
+                    <p>{{ formatParticipantRoles(row.roles) }}</p>
+                  }
+                  @if (row.membershipStatus === 'pending') {
+                    <p><ion-note color="warning">Solicitacao pendente</ion-note></p>
+                  }
+                </ion-label>
+                <ion-checkbox
+                  slot="end"
+                  [checked]="row.isSocio"
+                  [disabled]="togglingSocioUserId === row.userId"
+                  (ionChange)="toggleSocioMembership(row, $event)"
+                ></ion-checkbox>
+              </ion-item>
+            }
+          </ion-list>
+        }
+        @if (!isAdmin) {
+          <ion-list>
+            @for (member of activeMembersForDisplay; track member.userId) {
+              <ion-item>
+                <app-user-avatar
+                  slot="start"
+                  [avatarUrl]="member.avatarUrl"
+                  [alt]="member.userApelido || member.userName"
+                  size="md"
+                ></app-user-avatar>
+                <ion-label class="ion-text-wrap">
+                  <h2>{{ member.userApelido || member.userName }}</h2>
+                  @if (
+                    member.userFullName &&
+                    member.userFullName !== (member.userApelido || member.userName)
+                  ) {
+                    <p>{{ member.userFullName }}</p>
+                  }
+                  <p>{{ membershipRoleLabel(member.role) }}</p>
+                </ion-label>
+              </ion-item>
+            }
+          </ion-list>
+        }
+      }
+
+      @if (segment === 'cotinhas') {
+        @if (isAdmin) {
+          <form [formGroup]="cotinhaForm" (ngSubmit)="createCotinha()">
+            <ion-item>
+              <ion-input label="Titulo" labelPlacement="stacked" formControlName="title"></ion-input>
+            </ion-item>
+            <ion-item>
+              <ion-input label="Descricao" labelPlacement="stacked" formControlName="description"></ion-input>
+            </ion-item>
+            <ion-item>
+              <ion-input
+                label="Valor alvo"
+                labelPlacement="stacked"
+                type="number"
+                formControlName="targetAmount"
+              ></ion-input>
+            </ion-item>
+            <ion-button expand="block" type="submit">Criar cotinha</ion-button>
+          </form>
+        }
+        <ion-list>
+          @for (cotinha of cotinhas; track cotinha.objectId) {
+            <ion-item button (click)="selectCotinha(cotinha.objectId)">
+              <ion-label>
+                <h2>{{ cotinha.title }}</h2>
+                <p>
+                  {{ formatCurrency(cotinha.confirmedTotal) }} / {{ formatCurrency(cotinha.targetAmount) }}
+                  · {{ cotinha.status }}
+                </p>
+              </ion-label>
+            </ion-item>
+          }
+        </ion-list>
+        @if (selectedCotinhaId) {
+          <ion-note class="ion-padding">Cotinha: {{ selectedCotinhaTitle }}</ion-note>
+          @if (isAdmin) {
+            <form [formGroup]="paymentForm" (ngSubmit)="addCotinhaPayment()">
+              <ion-item>
+                <ion-select label="Participante" labelPlacement="stacked" formControlName="userId">
+                  @for (p of participants; track p.userId) {
+                    <ion-select-option [value]="p.userId">{{ p.userName }} ({{ p.apelido }})</ion-select-option>
+                  }
+                </ion-select>
+              </ion-item>
+              <ion-item>
+                <ion-input label="Valor da contribuicao" labelPlacement="stacked" type="number" formControlName="amount"></ion-input>
+              </ion-item>
+              <ion-item>
+                <ion-input label="Data e hora" labelPlacement="stacked" type="datetime-local" formControlName="paidAt"></ion-input>
+              </ion-item>
+              <ion-button expand="block" type="submit">Registrar contribuicao</ion-button>
+            </form>
+          }
+          <ion-list>
+            @for (payment of cotinhaPayments; track payment.objectId) {
+              <ion-item>
+                <app-user-avatar slot="start" [avatarUrl]="payment.avatarUrl" [alt]="payment.userName" size="md"></app-user-avatar>
+                <ion-label>
+                  <h2>{{ payment.userName }}</h2>
+                  <p>
+                    {{ formatCurrency(payment.amount) }} · {{ formatDate(payment.paidAt) }}
+                    · {{ payment.confirmedByAdmin ? 'Confirmado' : 'Pendente' }}
+                  </p>
+                </ion-label>
+                @if (isAdmin) {
+                  <ion-button size="small" fill="clear" (click)="editCotinhaPayment(payment)">Editar</ion-button>
+                  <ion-button size="small" fill="clear" color="danger" (click)="deleteCotinhaPayment(payment)">
+                    Excluir
+                  </ion-button>
+                  <ion-toggle
+                    [checked]="payment.confirmedByAdmin"
+                    (ionChange)="togglePaymentConfirm(payment)"
+                  ></ion-toggle>
+                }
+              </ion-item>
+            }
+          </ion-list>
+        }
+      }
+
+      @if (segment === 'caixa') {
+        @if (!isMember) {
+          <ion-note>Fluxo de caixa visivel apenas para socios.</ion-note>
+        } @else {
+          <ion-item>
+            <ion-input label="De" labelPlacement="stacked" type="date" [(ngModel)]="cashStartDate"></ion-input>
+          </ion-item>
+          <ion-item>
+            <ion-input label="Ate" labelPlacement="stacked" type="date" [(ngModel)]="cashEndDate"></ion-input>
+          </ion-item>
+          <ion-button expand="block" (click)="loadCashFlow()">Filtrar</ion-button>
+          @if (cashSummary) {
+            <ion-card>
+              <ion-card-content>
+                <p>Entradas: {{ formatCurrency(cashSummary.totalIn) }}</p>
+                <p>Saidas: {{ formatCurrency(cashSummary.totalOut) }}</p>
+                <p><strong>Saldo: {{ formatCurrency(cashSummary.finalBalance) }}</strong></p>
+              </ion-card-content>
+            </ion-card>
+          }
+          @if (isAdmin) {
+            <form [formGroup]="cashForm" (ngSubmit)="addCashEntry()">
+              <ion-item>
+                <ion-input label="Data" labelPlacement="stacked" type="date" formControlName="date"></ion-input>
+              </ion-item>
+              <ion-item>
+                <ion-select label="Tipo" labelPlacement="stacked" formControlName="type">
+                  <ion-select-option value="in">Entrada</ion-select-option>
+                  <ion-select-option value="out">Saida</ion-select-option>
+                </ion-select>
+              </ion-item>
+              <ion-item>
+                <ion-input label="Valor" labelPlacement="stacked" type="number" formControlName="amount"></ion-input>
+              </ion-item>
+              <ion-item>
+                <ion-input label="Descricao" labelPlacement="stacked" formControlName="description"></ion-input>
+              </ion-item>
+              <ion-button expand="block" type="submit">Registrar</ion-button>
+            </form>
+          }
+          <ion-list>
+            @for (entry of cashEntries; track $index) {
+              <ion-item>
+                <ion-label>
+                  <h2>{{ entry.description }}</h2>
+                  <p>{{ formatDate(entry.date) }} · {{ entry.type === 'in' ? 'Entrada' : 'Saida' }}</p>
+                </ion-label>
+                <ion-note slot="end">{{ formatCurrency(entry.amount) }}</ion-note>
+              </ion-item>
+            }
+          </ion-list>
+        }
+      }
+
+      @if (segment === 'mensalidades') {
+        @if (isAdmin) {
+          <ion-item>
+            <ion-input label="Ano" labelPlacement="stacked" type="number" [(ngModel)]="feeYear"></ion-input>
+          </ion-item>
+          <ion-item>
+            <ion-input label="Mes" labelPlacement="stacked" type="number" [(ngModel)]="feeMonth"></ion-input>
+          </ion-item>
+          <ion-button expand="block" (click)="loadMonthlyFees()">Carregar</ion-button>
+          <ion-button expand="block" color="secondary" (click)="generateMonthlyFees()">
+            Gerar mensalidades do mes
+          </ion-button>
+        } @else {
+          <ion-note class="ion-padding">
+            Exibindo sua mensalidade do mes selecionado na pelada.
+          </ion-note>
+        }
+        @if (monthlyFeesLoaded && monthlyFeesEmptyMessage) {
+          <ion-note class="ion-padding">{{ monthlyFeesEmptyMessage }}</ion-note>
+        }
+        <ion-list>
+          @for (fee of monthlyFees; track fee.membershipId) {
+            <ion-item>
+              <app-user-avatar slot="start" [avatarUrl]="fee.avatarUrl" [alt]="fee.userName" size="md"></app-user-avatar>
+              <ion-label>
+                <h2>{{ fee.userName }}</h2>
+                <p>{{ fee.paymentConfirmed ? 'Pago' : 'Pendente' }}</p>
+              </ion-label>
+              @if (isAdmin) {
+                <ion-input
+                  type="number"
+                  label="Valor (R$)"
+                  labelPlacement="stacked"
+                  [value]="getFeeAmount(fee)"
+                  (ionInput)="onFeeAmountChange(fee.membershipId, $any($event).detail.value)"
+                ></ion-input>
+                <ion-toggle [checked]="fee.paymentConfirmed" (ionChange)="toggleMonthlyFee(fee)"></ion-toggle>
+              } @else {
+                <ion-note slot="end">{{ formatCurrency(getFeeAmount(fee)) }}</ion-note>
+              }
+            </ion-item>
+          }
+        </ion-list>
+      }
+
+      @if (segment === 'configuracoes' && isAdmin) {
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Configuracoes da pelada</ion-card-title>
+            <ion-card-subtitle>Apenas o administrador pode alterar estes parametros</ion-card-subtitle>
+          </ion-card-header>
+          <ion-card-content>
+            <form [formGroup]="settingsForm" novalidate (ngSubmit)="saveSettings()">
+              <ion-list lines="full">
+                <ion-item class="item-toggle-wrap">
+                  <ion-toggle formControlName="socioGoodStandingPaymentExempt">
+                    Socio em dia e isento do pagamento do evento?
+                  </ion-toggle>
+                </ion-item>
+                <ion-item>
+                  <ion-input
+                    type="number"
+                    label="Eventos bloqueados apos expulsao"
+                    labelPlacement="stacked"
+                    formControlName="expulsionBanEventCount"
+                    min="0"
+                  ></ion-input>
+                </ion-item>
+                <ion-item class="item-toggle-wrap">
+                  <ion-toggle formControlName="caixaMembersOnly">
+                    A aba Caixa visivel apenas para socios?
+                  </ion-toggle>
+                </ion-item>
+                <ion-item>
+                  <ion-input
+                    type="number"
+                    label="Maximo de socios na pelada (0 = sem limite)"
+                    labelPlacement="stacked"
+                    formControlName="maxSocios"
+                    min="0"
+                  ></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input
+                    type="number"
+                    label="Maximo de atletas por evento (0 = sem limite)"
+                    labelPlacement="stacked"
+                    formControlName="maxAthletesPerEvent"
+                    min="0"
+                  ></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-select
+                    label="Em divergencia entre scout e juiz, prevalece"
+                    labelPlacement="stacked"
+                    formControlName="statsConflictSource"
+                  >
+                    <ion-select-option value="referee">Juiz / Arbitro</ion-select-option>
+                    <ion-select-option value="scout">Scout</ion-select-option>
+                  </ion-select>
+                </ion-item>
+                <ion-item-divider>
+                  <ion-label>Separacao de times</ion-label>
+                </ion-item-divider>
+                <ion-item class="item-toggle-wrap">
+                  <ion-toggle formControlName="allowTeamSplitAfterEventEnd">
+                    A separacao dos times podera ser realizada apos o horario de termino do evento?
+                  </ion-toggle>
+                </ion-item>
+                <ion-note class="ion-padding-horizontal">
+                  Se ativo, o administrador pode registrar a separacao dos times mesmo apos o fim do evento.
+                </ion-note>
+                <ion-item class="item-toggle-wrap">
+                  <ion-toggle formControlName="requireProfilePresentationOnFirstEvent">
+                    Exigir apresentacao do perfil na primeira participacao em eventos desta pelada?
+                  </ion-toggle>
+                </ion-item>
+              </ion-list>
+              <ion-button expand="block" type="button" class="ion-margin-top" [disabled]="savingSettings" (click)="saveSettings()">
+                {{ savingSettings ? 'Salvando...' : 'Salvar configuracoes' }}
+              </ion-button>
+              <ion-button
+                expand="block"
+                fill="outline"
+                type="button"
+                class="ion-margin-top"
+                (click)="openPeladaMaterial()"
+              >
+                Material
+              </ion-button>
+            </form>
+          </ion-card-content>
+        </ion-card>
+
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Solicitacoes de participacao</ion-card-title>
+            <ion-card-subtitle>
+              Primeira participacao em eventos desta pelada — aguardando sua avaliacao
+            </ion-card-subtitle>
+          </ion-card-header>
+          <ion-card-content>
+            @if (loadingProfileRequests) {
+              <ion-spinner name="crescent"></ion-spinner>
+            } @else if (!profilePresentationRequests.length) {
+              <p>Nenhuma solicitacao pendente.</p>
+            } @else {
+              <ion-list lines="full">
+                @for (request of profilePresentationRequests; track request.registrationId) {
+                  <ion-item>
+                    <ion-label>
+                      <h2>{{ request.userDisplayName }}</h2>
+                      <p>
+                        {{ request.eventName }}
+                        @if (request.eventStartTime) {
+                          · {{ formatProfileRequestDate(request.eventStartTime) }}
+                        }
+                      </p>
+                      <p>
+                        {{ formatProfileRequestRole(request.role) }}
+                        · {{ request.membershipType === 'socio' ? 'Socio' : 'Convidado' }}
+                      </p>
+                    </ion-label>
+                    <div slot="end" class="request-actions">
+                      <ion-button
+                        fill="outline"
+                        size="small"
+                        (click)="openProfilePresentationReview(request.userId)"
+                      >
+                        Ver perfil
+                      </ion-button>
+                      <ion-button
+                        color="success"
+                        size="small"
+                        [disabled]="resolvingRequestId === request.registrationId"
+                        (click)="approveProfilePresentationRequest(request)"
+                      >
+                        Aprovar
+                      </ion-button>
+                      <ion-button
+                        color="danger"
+                        fill="outline"
+                        size="small"
+                        [disabled]="resolvingRequestId === request.registrationId"
+                        (click)="rejectProfilePresentationRequest(request)"
+                      >
+                        Recusar
+                      </ion-button>
+                    </div>
+                  </ion-item>
+                }
+              </ion-list>
+            }
+          </ion-card-content>
+        </ion-card>
+      }
+
+      @if (segment === 'mural') {
+        <app-mural-participant-stats
+          [stats]="participantStats"
+          scope="pelada"
+          [shareContext]="muralShareContext"
+        ></app-mural-participant-stats>
+
+        <app-mural-highlights-panel
+          [highlights]="muralHighlights"
+          [shareContext]="muralShareContext"
+        ></app-mural-highlights-panel>
+
+        <app-mural-prediction-rankings
+          scope="pelada"
+          [scopeId]="peladaId"
+          [shareContext]="muralShareContext"
+        ></app-mural-prediction-rankings>
+        <app-mural-fan-highlights
+          scope="pelada"
+          [scopeId]="peladaId"
+          [shareContext]="muralShareContext"
+        ></app-mural-fan-highlights>
+
+        <app-mural-media-top-card
+          scope="pelada"
+          [peladaId]="peladaId"
+          kind="video"
+          [shareContext]="muralShareContext"
+        ></app-mural-media-top-card>
+        <app-mural-media-top-card
+          scope="pelada"
+          [peladaId]="peladaId"
+          kind="radio"
+          [shareContext]="muralShareContext"
+        ></app-mural-media-top-card>
+        <app-mural-media-top-card
+          scope="pelada"
+          [peladaId]="peladaId"
+          kind="journal"
+          [shareContext]="muralShareContext"
+        ></app-mural-media-top-card>
+
+        <app-mural-performance-analytics
+          scope="pelada"
+          [scopeId]="peladaId"
+          [shareContext]="muralShareContext"
+        ></app-mural-performance-analytics>
+
+        @for (role of muralRoles; track role) {
+          <ion-card>
+            <ion-card-header>
+              <div class="mural-card-header-row">
+                <ion-card-title>Top 10 — {{ roleLabel(role) }}</ion-card-title>
+                <app-mural-share-button
+                  [context]="muralShareContext"
+                  [cardTitle]="'Top 10 — ' + roleLabel(role)"
+                ></app-mural-share-button>
+              </div>
+            </ion-card-header>
+            <ion-card-content>
+              @if (!muralRankings[role]?.length) {
+                <ion-note>Sem dados ainda.</ion-note>
+              }
+              @for (entry of muralRankings[role]; track entry.userId; let i = $index) {
+                <div class="rank-row ion-margin-bottom">
+                  <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="sm"></app-user-avatar>
+                  <span>{{ i + 1 }}. {{ entry.userName }}</span>
+                  <ion-badge>{{ rankingBadgeLabel(role, entry) }}</ion-badge>
+                </div>
+              }
+            </ion-card-content>
+          </ion-card>
+        }
+      }
+    </div>
+  }
+</ion-content>
+
+<ion-modal [isOpen]="reviewProfileOpen" (didDismiss)="closeProfilePresentationReview()">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar>
+        <ion-title>Perfil do solicitante</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="closeProfilePresentationReview()">Fechar</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="ion-padding">
+      @if (loadingReviewProfile) {
+        <ion-spinner name="crescent"></ion-spinner>
+      } @else if (reviewProfile) {
+        <h2>{{ reviewProfile.displayName }}</h2>
+        @if (reviewProfile.fullName) {
+          <p><strong>Nome:</strong> {{ reviewProfile.fullName }}</p>
+        }
+        @if (reviewProfile.age != null) {
+          <p><strong>Idade:</strong> {{ reviewProfile.age }} anos</p>
+        }
+        @if (reviewProfile.city || reviewProfile.state) {
+          <p><strong>Local:</strong> {{ formatReviewLocation(reviewProfile) }}</p>
+        }
+        @if (reviewProfile.primaryPosition) {
+          <p><strong>Posicao:</strong> {{ reviewProfile.primaryPosition }}</p>
+        }
+        @if (reviewProfile.favoriteProTeam) {
+          <p><strong>Time do coracao:</strong> {{ reviewProfile.favoriteProTeam }}</p>
+        }
+        @if (reviewProfile.isAthlete) {
+          <p><strong>Pontuacao no App:</strong> {{ (reviewProfile.appScore ?? 0) | number:'1.0-1' }} pts</p>
+          <p>
+            <strong>Cartoes (App):</strong>
+            amarelo {{ reviewProfile.yellowCards ?? 0 }} · vermelho {{ reviewProfile.redCards ?? 0 }}
+          </p>
+          <p><strong>Gols (App):</strong> {{ reviewProfile.goals ?? 0 }}</p>
+        }
+        @if (reviewProfile.sumulaObservations.length) {
+          <h3 class="ion-margin-top">Observacoes de sumulas</h3>
+          <ion-list lines="full">
+            @for (entry of reviewProfile.sumulaObservations; track entry.eventId) {
+              <ion-item>
+                <ion-label>
+                  <h3>{{ entry.eventName }}</h3>
+                  @if (entry.peladaName || entry.eventDate) {
+                    <p>
+                      {{ entry.peladaName }}
+                      @if (entry.eventDate) {
+                        · {{ entry.eventDate | date:'dd/MM/yyyy' }}
+                      }
+                    </p>
+                  }
+                  <p>{{ entry.observation }}</p>
+                  @if (entry.yellowCards || entry.redCards) {
+                    <p>Cartoes: A {{ entry.yellowCards }} · V {{ entry.redCards }}</p>
+                  }
+                </ion-label>
+              </ion-item>
+            }
+          </ion-list>
+        } @else {
+          <p class="ion-margin-top">Nenhuma observacao de sumula registrada no App.</p>
+        }
+      }
+    </ion-content>
+  </ng-template>
+</ion-modal>

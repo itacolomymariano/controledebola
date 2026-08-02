@@ -1,0 +1,340 @@
+﻿<ion-header>
+
+  <ion-toolbar>
+
+    <ion-title>Buscar</ion-title>
+
+  </ion-toolbar>
+
+  <ion-toolbar>
+
+    <ion-segment [(ngModel)]="segment" (ionChange)="onSegmentChange()">
+
+      <ion-segment-button value="eventos">Eventos</ion-segment-button>
+
+      <ion-segment-button value="perfis">Perfis</ion-segment-button>
+
+    </ion-segment>
+
+  </ion-toolbar>
+
+</ion-header>
+
+
+
+<ion-content class="ion-padding">
+
+  @if (segment === 'eventos') {
+
+    <ion-list lines="full">
+
+      <ion-item>
+
+        <ion-select
+
+          label="Tipo de evento"
+
+          labelPlacement="stacked"
+
+          [(ngModel)]="selectedEventType"
+
+          (ionChange)="onEventTypeChange()"
+
+        >
+
+          @for (t of eventTypes; track t.value) {
+
+            <ion-select-option [value]="t.value">{{ t.label }}</ion-select-option>
+
+          }
+
+        </ion-select>
+
+      </ion-item>
+
+    </ion-list>
+
+
+
+    <ion-searchbar
+
+      [placeholder]="'Buscar ' + selectedEventTypeLabel.toLowerCase() + ' por nome...'"
+
+      [(ngModel)]="eventQuery"
+
+      [debounce]="0"
+
+      (ionInput)="onEventSearchInput($event)"
+
+      (ionClear)="onEventSearchClear()"
+
+    ></ion-searchbar>
+
+  }
+
+
+
+  @if (segment === 'perfis') {
+
+    <ion-list lines="full">
+
+      <ion-item>
+
+        <ion-select
+
+          label="Tipo de perfil"
+
+          labelPlacement="stacked"
+
+          [(ngModel)]="selectedProfileKind"
+
+          (ionChange)="onProfileKindChange()"
+
+        >
+
+          @for (option of profileKindOptions; track option.role) {
+
+            <ion-select-option [value]="option.role">{{ option.label }}</ion-select-option>
+
+          }
+
+        </ion-select>
+
+      </ion-item>
+
+    </ion-list>
+
+
+
+    <ion-searchbar
+
+      [placeholder]="'Buscar ' + selectedProfileKindLabel.toLowerCase() + ' por nome ou apelido...'"
+
+      [(ngModel)]="profileQuery"
+
+      [debounce]="0"
+
+      (ionInput)="onProfileSearchInput($event)"
+
+      (ionClear)="onProfileSearchClear()"
+
+    ></ion-searchbar>
+
+  }
+
+
+
+  @if (loading) {
+
+    <div class="ion-text-center ion-padding">
+
+      <ion-spinner name="crescent"></ion-spinner>
+
+    </div>
+
+  }
+
+
+
+  @if (!loading && errorMessage) {
+    <ion-card color="warning" class="ion-margin-bottom">
+      <ion-card-content>
+        <p>{{ errorMessage }}</p>
+        <ion-button fill="clear" (click)="retrySearch()">Tentar novamente</ion-button>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  @if (searched && !loading && !errorMessage && segment === 'eventos' && eventRows.length === 0) {
+    <p class="ion-text-center ion-padding">Nenhum evento encontrado.</p>
+  }
+
+  @if (searched && !loading && !errorMessage && segment === 'perfis' && !isLegendSearch && profileResults.length === 0) {
+
+    <p class="ion-text-center ion-padding">Nenhum perfil encontrado.</p>
+
+  }
+
+
+
+  @if (showCreateLegendPrompt) {
+
+    <ion-card>
+
+      <ion-card-content>
+
+        <p>
+
+          Nenhum cadastro em <strong>{{ selectedProfileKindLabel }}</strong> para "{{ profileQuery.trim() }}".
+
+        </p>
+
+        @if (selectedProfileKind === 'legend_athlete') {
+
+          <ion-button expand="block" (click)="goCreateLegendAthlete()">
+
+            Cadastrar lenda "{{ profileQuery.trim() }}"
+
+          </ion-button>
+
+        } @else {
+
+          <ion-button expand="block" (click)="goCreateLegendTeam()">
+
+            Cadastrar lenda "{{ profileQuery.trim() }}"
+
+          </ion-button>
+
+        }
+
+      </ion-card-content>
+
+    </ion-card>
+
+  }
+
+
+
+  @if (!loading && segment === 'eventos' && eventRows.length > 0) {
+    <ion-list>
+      @for (row of eventRows; track row.event.objectId) {
+        <ion-item button (click)="openEvent(row)">
+          <ion-label>
+            <h2>{{ row.event.name }}</h2>
+            <p>{{ row.typeLabel }} · {{ row.dateLabel }}</p>
+            <p>{{ row.locationLabel }}</p>
+          </ion-label>
+        </ion-item>
+      }
+    </ion-list>
+  }
+
+
+
+  @if (!loading && segment === 'perfis' && profileResults.length > 0) {
+
+    <ion-list>
+
+      @for (profile of profileResults; track profile.userId) {
+
+        <ion-item button (click)="openProfile(profile)">
+
+          <app-user-avatar
+
+            slot="start"
+
+            [avatarUrl]="profile.avatarUrl"
+
+            [alt]="profile.displayName"
+
+            size="md"
+
+          ></app-user-avatar>
+
+          <ion-label>
+
+            <h2>{{ profile.displayName }}</h2>
+
+            @if (profile.subtitle) {
+
+              <p>{{ profile.subtitle }}</p>
+
+            }
+
+            @if (profile.city || profile.state) {
+
+              <p>{{ profile.city || '—' }} - {{ profile.state || '—' }}</p>
+
+            }
+
+          </ion-label>
+
+        </ion-item>
+
+      }
+
+    </ion-list>
+
+  }
+
+
+
+  @if (!loading && segment === 'perfis' && legendAthleteResults.length > 0) {
+
+    <ion-list>
+
+      @for (legend of legendAthleteResults; track legend.id) {
+
+        <ion-item button (click)="openLegendAthlete(legend)">
+
+          @if (legend.imageUrl) {
+
+            <ion-avatar slot="start">
+
+              <img [src]="legend.imageUrl" [alt]="legend.apelido" />
+
+            </ion-avatar>
+
+          }
+
+          <ion-label>
+
+            <h2>{{ legend.apelido }}</h2>
+
+            <p>{{ legend.name }}</p>
+
+            @if (legend.inMemoriam) {
+
+              <ion-note color="medium">In memoriam</ion-note>
+
+            }
+
+          </ion-label>
+
+        </ion-item>
+
+      }
+
+    </ion-list>
+
+  }
+
+
+
+  @if (!loading && segment === 'perfis' && legendTeamResults.length > 0) {
+
+    <ion-list>
+
+      @for (legend of legendTeamResults; track legend.id) {
+
+        <ion-item>
+
+          @if (legend.imageUrl) {
+
+            <ion-avatar slot="start">
+
+              <img [src]="legend.imageUrl" [alt]="legend.apelido || legend.name" />
+
+            </ion-avatar>
+
+          }
+
+          <ion-label>
+
+            <h2>{{ legend.apelido || legend.name }}</h2>
+
+            <p>{{ legend.name }}</p>
+
+          </ion-label>
+
+        </ion-item>
+
+      }
+
+    </ion-list>
+
+  }
+
+</ion-content>
+
+

@@ -1,0 +1,111 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()">
+        <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Preparacao fisica</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  @if (!loading && event) {
+    <h1>{{ event.name }}</h1>
+    <p>Plano pre-jogo, aquecimento e atletas presentes na sessao.</p>
+    @if (!canEditPreparation) {
+      <ion-note color="warning" class="ion-padding-horizontal">
+        O evento ja iniciou — preparacao fisica em modo consulta.
+      </ion-note>
+    }
+
+    <form [formGroup]="form">
+      <ion-list>
+        <ion-item>
+          <ion-select
+            label="Foco do plano"
+            labelPlacement="stacked"
+            formControlName="planFocus"
+            interface="popover"
+          >
+            @for (key of focusLabels | keyvalue; track key.key) {
+              <ion-select-option [value]="key.key">{{ key.value }}</ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            type="number"
+            label="Duracao estimada (min)"
+            labelPlacement="stacked"
+            formControlName="planDurationMin"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-textarea
+            label="Notas do plano"
+            labelPlacement="stacked"
+            formControlName="planNotes"
+            autoGrow="true"
+          ></ion-textarea>
+        </ion-item>
+        <ion-item>
+          <ion-select
+            label="Atletas na sessao"
+            labelPlacement="stacked"
+            formControlName="athleteUserIds"
+            multiple="true"
+            interface="popover"
+          >
+            @for (athlete of athletes; track athlete.userId) {
+              <ion-select-option [value]="athlete.userId">
+                {{ athlete.apelido || athlete.userName }}
+              </ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
+        <ion-item>
+          <ion-checkbox formControlName="cooldownDone" labelPlacement="end" justify="start">
+            Volta a calma concluida
+          </ion-checkbox>
+        </ion-item>
+      </ion-list>
+    </form>
+
+    <ion-note class="ion-padding-horizontal">{{ warmupLabel }}</ion-note>
+
+    <ion-button
+      expand="block"
+      class="ion-margin-top"
+      [disabled]="saving || form.invalid || !canEditPreparation"
+      (click)="save()"
+    >
+      Salvar plano
+    </ion-button>
+    <ion-button
+      expand="block"
+      fill="outline"
+      class="ion-margin-top"
+      [disabled]="saving || !canEditPreparation || !!session?.warmupStartedAt"
+      (click)="startWarmup()"
+    >
+      Iniciar aquecimento
+    </ion-button>
+    <ion-button
+      expand="block"
+      fill="outline"
+      class="ion-margin-top"
+      [disabled]="saving || !canEditPreparation || !session?.warmupStartedAt || !!session?.warmupEndedAt"
+      (click)="endWarmup()"
+    >
+      Encerrar aquecimento
+    </ion-button>
+  }
+</ion-content>

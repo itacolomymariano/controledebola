@@ -1,0 +1,31 @@
+<div class="showcase-entry">
+  <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.displayName" size="md"></app-user-avatar>
+  <div class="showcase-details">
+    <h4>{{ entry.displayName }}</h4>
+    <p><strong>Perfil:</strong> {{ entry.profileLabel }}</p>
+    @if (entry.favoriteProTeam) {
+      <p class="showcase-team-row">
+        <strong>Time profissional do coração:</strong>
+        <span class="showcase-team">
+          <app-team-shield [teamName]="entry.favoriteProTeam" size="sm"></app-team-shield>
+          {{ entry.favoriteProTeam }}
+        </span>
+      </p>
+    }
+    @if (entry.favoriteAmateurTeam) {
+      <p><strong>Time amador do coração:</strong> {{ entry.favoriteAmateurTeam }}</p>
+    }
+    @if (entry.proFootballIdol) {
+      <p><strong>Ídolo do futebol profissional:</strong> {{ entry.proFootballIdol }}</p>
+    }
+    @if (entry.amateurFootballIdol) {
+      <p><strong>Ídolo do futebol amador:</strong> {{ entry.amateurFootballIdol }}</p>
+    }
+    @if (entry.score !== undefined) {
+      <p><strong>{{ entry.scoreLabel || 'Pontuacao' }}:</strong> {{ formatScore(entry.score) }}</p>
+    }
+    @if (entry.age !== undefined) {
+      <p><strong>Idade:</strong> {{ entry.age }} anos</p>
+    }
+  </div>
+</div>

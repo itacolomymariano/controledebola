@@ -1,0 +1,199 @@
+@if (highlights) {
+  <ion-card>
+    <ion-card-header>
+      <div class="mural-card-header-row">
+        <ion-card-title>{{ craqueTitle }}</ion-card-title>
+        <app-mural-share-button [context]="shareContext" [cardTitle]="craqueTitle"></app-mural-share-button>
+      </div>
+    </ion-card-header>
+    <ion-card-content>
+      @if (scope === 'event') {
+        @if (eventCraque; as entry) {
+          <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
+        } @else {
+          <ion-note>Sem votos registrados para atletas.</ion-note>
+        }
+      } @else {
+        @for (band of ageBands; track band) {
+          <div class="highlight-block">
+            <h3>{{ ageBandHeading(band, winnerForBand(highlights.craque, band)) }}</h3>
+            @if (winnerForBand(highlights.craque, band); as entry) {
+              <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
+            } @else {
+              <ion-note>Sem dados para esta faixa etaria.</ion-note>
+            }
+          </div>
+        }
+      }
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card>
+    <ion-card-header>
+      <div class="mural-card-header-row">
+        <ion-card-title>{{ goleadorTitle }}</ion-card-title>
+        <app-mural-share-button [context]="shareContext" [cardTitle]="goleadorTitle"></app-mural-share-button>
+      </div>
+    </ion-card-header>
+    <ion-card-content>
+      @if (scope === 'app' && highlights.goleadorOverall; as overall) {
+        <div class="highlight-block highlight-block--overall">
+          <h3>Maior goleador</h3>
+          <app-mural-showcase-entry [entry]="overall"></app-mural-showcase-entry>
+        </div>
+      }
+      @if (scope === 'event') {
+        @if (eventGoleador; as entry) {
+          <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
+        } @else {
+          <ion-note>Sem gols registrados no apontamento.</ion-note>
+        }
+      } @else {
+        @if (scope === 'app' || scope === 'pelada') {
+          <h3 class="highlight-section-title">Por faixa etaria</h3>
+        }
+        @for (band of ageBands; track band) {
+          <div class="highlight-block">
+            <h3>{{ ageBandHeading(band, winnerForBand(highlights.goleador, band)) }}</h3>
+            @if (winnerForBand(highlights.goleador, band); as entry) {
+              <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
+            } @else {
+              <ion-note>Sem dados para esta faixa etaria.</ion-note>
+            }
+          </div>
+        }
+      }
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card>
+    <ion-card-header>
+      <div class="mural-card-header-row">
+        <ion-card-title>{{ melhorGoleiroTitle }}</ion-card-title>
+        <app-mural-share-button
+          [context]="shareContext"
+          [cardTitle]="melhorGoleiroTitle"
+        ></app-mural-share-button>
+      </div>
+    </ion-card-header>
+    <ion-card-content>
+      @if (scope === 'event') {
+        @if (eventMelhorGoleiro; as entry) {
+          <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
+        } @else {
+          <ion-note>Sem votos registrados para goleiros.</ion-note>
+        }
+      } @else {
+        @for (band of ageBands; track band) {
+          <div class="highlight-block">
+            <h3>{{ ageBandHeading(band, winnerForBand(highlights.melhorGoleiro, band)) }}</h3>
+            @if (winnerForBand(highlights.melhorGoleiro, band); as entry) {
+              <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
+            } @else {
+              <ion-note>Sem dados para esta faixa etaria.</ion-note>
+            }
+          </div>
+        }
+      }
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card>
+    <ion-card-header>
+      <div class="mural-card-header-row">
+        <ion-card-title>Time mais amado</ion-card-title>
+        <app-mural-share-button
+          [context]="shareContext"
+          cardTitle="Time mais amado"
+        ></app-mural-share-button>
+      </div>
+    </ion-card-header>
+    <ion-card-content>
+      @if (highlights.timeMaisAmado; as team) {
+        <div class="favorite-team-entry">
+          <app-team-shield [teamName]="team.teamName" size="md"></app-team-shield>
+          <div>
+            <h4>{{ team.teamName }}</h4>
+            <p>{{ team.count }} {{ team.count === 1 ? 'torcedor' : 'torcedores' }}</p>
+          </div>
+        </div>
+      } @else {
+        <ion-note>Sem times de coracao registrados.</ion-note>
+      }
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card>
+    <ion-card-header>
+      <div class="mural-card-header-row">
+        <ion-card-title>Promessa e Master</ion-card-title>
+        <app-mural-share-button
+          [context]="shareContext"
+          cardTitle="Promessa e Master"
+        ></app-mural-share-button>
+      </div>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="highlight-block">
+        <h3>Promessa (mais novo)</h3>
+        @if (highlights.promessa) {
+          <app-mural-showcase-entry [entry]="highlights.promessa"></app-mural-showcase-entry>
+        } @else {
+          <ion-note>Sem data de nascimento registrada.</ion-note>
+        }
+      </div>
+      <div class="highlight-block">
+        <h3>Master (mais velho)</h3>
+        @if (highlights.master) {
+          <app-mural-showcase-entry [entry]="highlights.master"></app-mural-showcase-entry>
+        } @else {
+          <ion-note>Sem data de nascimento registrada.</ion-note>
+        }
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  @if (showBirthdays) {
+    <ion-card>
+      <ion-card-header>
+        <div class="mural-card-header-row">
+          <ion-card-title>Aniversariantes do mês</ion-card-title>
+          <app-mural-share-button
+            [context]="shareContext"
+            cardTitle="Aniversariantes do mes"
+          ></app-mural-share-button>
+        </div>
+      </ion-card-header>
+      <ion-card-content>
+        @if (!highlights.birthdays.length) {
+          <ion-note>Nenhum aniversariante neste mes.</ion-note>
+        }
+        @for (entry of highlights.birthdays; track entry.userId) {
+          <div class="highlight-block">
+            <h3>Dia {{ entry.birthdayDay }}</h3>
+            <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
+          </div>
+        }
+      </ion-card-content>
+    </ion-card>
+  }
+
+  <ion-card>
+    <ion-card-header>
+      <div class="mural-card-header-row">
+        <ion-card-title>{{ melhorJuizTitle }}</ion-card-title>
+        <app-mural-share-button
+          [context]="shareContext"
+          [cardTitle]="melhorJuizTitle"
+        ></app-mural-share-button>
+      </div>
+    </ion-card-header>
+    <ion-card-content>
+      @if (highlights.melhorJuiz) {
+        <app-mural-showcase-entry [entry]="highlights.melhorJuiz"></app-mural-showcase-entry>
+      } @else {
+        <ion-note>Sem votos ou desempenho registrado.</ion-note>
+      }
+    </ion-card-content>
+  </ion-card>
+}

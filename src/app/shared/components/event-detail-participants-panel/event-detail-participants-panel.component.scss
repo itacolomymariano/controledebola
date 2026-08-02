@@ -1,0 +1,82 @@
+.participants-section-title {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.participant-admin-list {
+  padding: 0;
+  background: transparent;
+}
+
+.participant-admin-card {
+  margin: 0 0 12px;
+
+  ion-card-content {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}
+
+.participant-admin-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.participant-admin-summary {
+  flex: 1;
+  min-width: 0;
+
+  h3 {
+    margin: 0 0 4px;
+    font-size: 1rem;
+  }
+
+  p {
+    margin: 0 0 4px;
+    word-break: break-word;
+  }
+}
+
+.participant-admin-actions {
+  flex-shrink: 0;
+}
+
+.participant-admin-controls {
+  margin-top: 8px;
+  border-top: 1px solid var(--ion-color-step-150, #eee);
+}
+
+.participant-admin-gate {
+  margin-top: 8px;
+}
+
+.participant-admin-profile-review {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.participant-admin-profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 360px) {
+  .participant-admin-header {
+    flex-wrap: wrap;
+  }
+
+  .participant-admin-actions {
+    width: 100%;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .participant-admin-card ion-card-content {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+}

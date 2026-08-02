@@ -1,0 +1,18 @@
+@if (shieldUrl) {
+  <img
+    class="team-shield"
+    [class.team-shield-sm]="size === 'sm'"
+    [class.team-shield-md]="size === 'md'"
+    [src]="shieldUrl"
+    [alt]="team?.name || teamName"
+    (error)="onImageError()"
+  />
+} @else {
+  <span
+    class="team-shield-fallback"
+    [class.team-shield-sm]="size === 'sm'"
+    [class.team-shield-md]="size === 'md'"
+  >
+    {{ initials }}
+  </span>
+}

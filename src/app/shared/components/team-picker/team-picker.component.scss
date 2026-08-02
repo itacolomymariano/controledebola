@@ -1,0 +1,11 @@
+.selected-team {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  min-height: 2rem;
+}
+
+.placeholder {
+  color: var(--ion-color-medium);
+}

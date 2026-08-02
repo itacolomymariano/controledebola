@@ -1,0 +1,29 @@
+---
+description: Cache de atividades dos agents — ler/atualizar para produtividade
+alwaysApply: true
+---
+
+# Cache de atividades do agente
+
+Antes de explorar o codigo do zero, leia `docs/AGENT-ACTIVITY-CACHE.md`.
+
+## Quando consultar
+
+- Inicio de tarefa complexa (perfis, evento, Cloud Code, mural, portaria)
+- Antes de procurar rotas/servicos ja mapeados no cache
+- Ao priorizar bugs/melhorias ja registrados
+
+## Quando atualizar
+
+Apos concluir trabalho relevante, acrescente em `docs/AGENT-ACTIVITY-CACHE.md`:
+
+1. Data (ISO) e resumo em 1 linha
+2. Arquivos/dominios tocados
+3. Achados (bugs, gotchas, decisoes)
+4. Pendencias abertas
+
+## Regras
+
+- Manter secoes curtas; nao duplicar o guia completo
+- Preferir links para arquivos (`path/to/file`) em vez de colar codigo longo
+- Nao gravar segredos, chaves ou `environment.local.ts`

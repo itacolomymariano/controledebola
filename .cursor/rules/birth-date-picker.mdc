@@ -1,0 +1,16 @@
+---
+description: Anti-regressao — data de nascimento deve usar app-birth-date-picker, nunca type=date
+globs:
+  - src/app/pages/account-edit/**
+  - src/app/pages/register/**
+  - src/app/pages/legend-*/**
+  - src/app/shared/components/birth-date-picker/**
+alwaysApply: false
+---
+
+# Data de nascimento
+
+- **Proibido:** `type="date"`, `ion-datetime` ou calendario nativo para nascimento/fundacao em perfil.
+- **Obrigatorio:** `<app-birth-date-picker formControlName="birthDate">`
+- Persistencia: `parseBirthDateIso` / `birthDateToIsoString` (`birth-date.util.ts`)
+- Detalhes: `docs/UI-DATAS-NASCIMENTO.md` e `AGENTS.md`

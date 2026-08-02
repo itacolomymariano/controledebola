@@ -1,0 +1,7 @@
+// Copie este arquivo para environment.local.ts e preencha com suas chaves do Back4App.
+// Dashboard: App Settings > Security & Keys > Application ID e JavaScript Key
+
+export const parseLocal = {
+  appId: 'TP4WTmQnMbEdlJE0oDfwKafDNVEuj7a3ETj5Tver',
+  javascriptKey: 'Dc08Vls5pN109u9z6nlsbMiIAEE9Fau9QGeXsXOO',
+};

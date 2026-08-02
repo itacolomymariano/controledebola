@@ -1,0 +1,17 @@
+.setup-hero {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.setup-hero ion-icon {
+  font-size: 48px;
+  color: var(--ion-color-primary);
+}
+
+.role-card {
+  margin-bottom: 12px;
+}
+
+.role-card.selected {
+  border: 2px solid var(--ion-color-primary);
+}

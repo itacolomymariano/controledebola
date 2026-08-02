@@ -1,0 +1,109 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="cancel()">Voltar</ion-button>
+    </ion-buttons>
+    <ion-title>Perfil de {{ roleLabel }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding role-profile-content">
+  @if (role) {
+    <ion-card>
+      <ion-card-content class="profile-header">
+        <app-user-avatar [avatarUrl]="avatarUrl" [alt]="displayName" size="lg"></app-user-avatar>
+        <div>
+          <h2>{{ displayName }}</h2>
+          @if (apelido && apelido !== displayName) {
+            <p>{{ apelido }}</p>
+          }
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    @if (hasProfile) {
+      <ion-note class="ion-margin-bottom">
+        Atualize seus dados profissionais abaixo.
+      </ion-note>
+    }
+
+    <form id="roleProfileForm" [formGroup]="form" (ngSubmit)="submit()">
+      <ion-list lines="full">
+        <app-role-profile-fields [form]="form" [role]="role"></app-role-profile-fields>
+        <ion-note color="medium">
+          Times do coracao, idolos e data de nascimento sao editados em Meus dados.
+        </ion-note>
+      </ion-list>
+
+      @if (showsPeladaHistory) {
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Peladas</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            @if (!history.peladas.length) {
+              <ion-note>Nenhuma pelada registrada ainda.</ion-note>
+            }
+            @for (item of peladaHistoryPreview; track item.id) {
+              <p>{{ item.name }} · Pontuacao: {{ item.score.toFixed(1) }}</p>
+            }
+          </ion-card-content>
+        </ion-card>
+      }
+
+      @if (showsMatchHistory) {
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Partidas entre equipes amadoras</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            @if (!history.matches.length) {
+              <ion-note>Nenhuma partida registrada ainda.</ion-note>
+            }
+            @for (item of matchHistoryPreview; track item.id) {
+              <p>{{ item.name }} · Pontuacao: {{ item.score.toFixed(1) }}</p>
+            }
+          </ion-card-content>
+        </ion-card>
+      }
+
+      @if (showsTeamHistory) {
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Times amadores</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            @if (!history.teams.length) {
+              <ion-note>Nenhum time registrado ainda.</ion-note>
+            }
+            @for (item of teamHistoryPreview; track item.id) {
+              <p>{{ item.name }} · Pontuacao: {{ item.score.toFixed(1) }}</p>
+            }
+          </ion-card-content>
+        </ion-card>
+      }
+    </form>
+  }
+</ion-content>
+
+@if (role) {
+  <ion-footer class="role-profile-footer">
+    <ion-toolbar>
+      <ion-button
+        expand="block"
+        type="submit"
+        form="roleProfileForm"
+        [disabled]="saving"
+      >
+        {{
+          saving
+            ? 'Salvando...'
+            : hasProfile
+              ? 'Salvar alteracoes'
+              : 'Salvar perfil'
+        }}
+      </ion-button>
+    </ion-toolbar>
+  </ion-footer>
+}

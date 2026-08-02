@@ -1,0 +1,18 @@
+<div class="scout-athlete-strip">
+  @for (athlete of athletes; track athlete.userId) {
+    <button
+      type="button"
+      class="scout-athlete-chip"
+      [class.selected]="athlete.userId === selectedUserId"
+      [disabled]="disabled"
+      (click)="selectAthlete(athlete.userId)"
+    >
+      <app-user-avatar
+        [avatarUrl]="athlete.avatarUrl"
+        [alt]="athlete.apelido"
+        size="sm"
+      ></app-user-avatar>
+      <span class="scout-athlete-chip-label">{{ athlete.apelido }}</span>
+    </button>
+  }
+</div>

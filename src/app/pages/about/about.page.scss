@@ -1,0 +1,45 @@
+.about-content {
+  text-align: center;
+}
+
+.about-logo-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 1.5rem 0;
+}
+
+.about-logo {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  border-radius: 24px;
+}
+
+.about-list {
+  text-align: left;
+  margin-bottom: 1.5rem;
+}
+
+.about-section {
+  text-align: left;
+  margin-top: 1.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--ion-color-light-shade);
+
+  h2 {
+    margin: 0 0 0.35rem;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+}
+
+.about-link {
+  color: var(--ion-color-primary);
+  text-decoration: none;
+  font-size: 0.95rem;
+
+  &:hover,
+  &:focus {
+    text-decoration: underline;
+  }
+}

@@ -1,0 +1,298 @@
+@if (loading) {
+  <div class="ion-text-center ion-padding">
+    <ion-spinner name="crescent"></ion-spinner>
+  </div>
+} @else if (loadedAnalytics) {
+  <ion-card>
+    <ion-card-header>
+      <div class="mural-card-header-row">
+        <ion-card-title>Desempenho — qualitativos</ion-card-title>
+        <app-mural-share-button
+          [context]="shareContext"
+          cardTitle="Desempenho — qualitativos"
+        ></app-mural-share-button>
+      </div>
+    </ion-card-header>
+    <ion-card-content>
+      <h3>Top 3 finalizacoes no alvo</h3>
+      @if (!loadedAnalytics.qualitative.shotsOnTarget.length) {
+        <ion-note color="medium">Sem dados.</ion-note>
+      }
+      @for (entry of loadedAnalytics.qualitative.shotsOnTarget; track entry.userId; let i = $index) {
+        <div class="top-entry">
+          <span class="top-rank">{{ i + 1 }}</span>
+          <app-user-avatar
+            [avatarUrl]="entry.avatarUrl"
+            [alt]="displayName(entry)"
+            size="md"
+          ></app-user-avatar>
+          <div class="top-info">
+            <strong>{{ displayName(entry) }}</strong>
+            <p>{{ entry.primaryPosition || '—' }} · {{ formatFoot(entry) }}</p>
+          </div>
+          <ion-badge color="primary">{{ entry.total }}</ion-badge>
+        </div>
+      }
+
+      <h3 class="ion-margin-top">Top 3 maiores finalizadores</h3>
+      @if (!loadedAnalytics.qualitative.totalShots.length) {
+        <ion-note color="medium">Sem dados.</ion-note>
+      }
+      @for (entry of loadedAnalytics.qualitative.totalShots; track entry.userId; let i = $index) {
+        <div class="top-entry">
+          <span class="top-rank">{{ i + 1 }}</span>
+          <app-user-avatar
+            [avatarUrl]="entry.avatarUrl"
+            [alt]="displayName(entry)"
+            size="md"
+          ></app-user-avatar>
+          <div class="top-info">
+            <strong>{{ displayName(entry) }}</strong>
+            <p>{{ entry.primaryPosition || '—' }} · {{ formatFoot(entry) }}</p>
+          </div>
+          <ion-badge color="primary">{{ entry.total }}</ion-badge>
+        </div>
+      }
+
+      <h3 class="ion-margin-top">Top 3 assistencias</h3>
+      @if (!loadedAnalytics.qualitative.assists.length) {
+        <ion-note color="medium">Sem dados.</ion-note>
+      }
+      @for (entry of loadedAnalytics.qualitative.assists; track entry.userId; let i = $index) {
+        <div class="top-entry">
+          <span class="top-rank">{{ i + 1 }}</span>
+          <app-user-avatar
+            [avatarUrl]="entry.avatarUrl"
+            [alt]="displayName(entry)"
+            size="md"
+          ></app-user-avatar>
+          <div class="top-info">
+            <strong>{{ displayName(entry) }}</strong>
+            <p>{{ entry.primaryPosition || '—' }} · {{ formatFoot(entry) }}</p>
+          </div>
+          <ion-badge color="primary">{{ entry.total }}</ion-badge>
+        </div>
+      }
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card>
+    <ion-card-header>
+      <div class="mural-card-header-row">
+        <ion-card-title>Desempenho — quantitativos</ion-card-title>
+        <app-mural-share-button
+          [context]="shareContext"
+          cardTitle="Desempenho — quantitativos"
+        ></app-mural-share-button>
+      </div>
+    </ion-card-header>
+    <ion-card-content>
+      <h3>Top 3 maiores finalizadores</h3>
+      @if (!loadedAnalytics.quantitative.totalShots.length) {
+        <ion-note color="medium">Sem dados.</ion-note>
+      }
+      @for (entry of loadedAnalytics.quantitative.totalShots; track entry.userId; let i = $index) {
+        <div class="top-entry">
+          <span class="top-rank">{{ i + 1 }}</span>
+          <app-user-avatar
+            [avatarUrl]="entry.avatarUrl"
+            [alt]="displayName(entry)"
+            size="md"
+          ></app-user-avatar>
+          <div class="top-info">
+            <strong>{{ displayName(entry) }}</strong>
+            <p>{{ entry.primaryPosition || '—' }} · {{ formatFoot(entry) }}</p>
+          </div>
+          <ion-badge color="secondary">{{ entry.total }}</ion-badge>
+        </div>
+      }
+
+      <h3 class="ion-margin-top">Top 3 passes certos</h3>
+      @if (!loadedAnalytics.quantitative.passesCompleted.length) {
+        <ion-note color="medium">Sem dados.</ion-note>
+      }
+      @for (entry of loadedAnalytics.quantitative.passesCompleted; track entry.userId; let i = $index) {
+        <div class="top-entry">
+          <span class="top-rank">{{ i + 1 }}</span>
+          <app-user-avatar
+            [avatarUrl]="entry.avatarUrl"
+            [alt]="displayName(entry)"
+            size="md"
+          ></app-user-avatar>
+          <div class="top-info">
+            <strong>{{ displayName(entry) }}</strong>
+            <p>{{ entry.primaryPosition || '—' }} · {{ formatFoot(entry) }}</p>
+          </div>
+          <ion-badge color="secondary">{{ entry.total }}</ion-badge>
+        </div>
+      }
+
+      <h3 class="ion-margin-top">Top 3 que mais sofre faltas</h3>
+      @if (!loadedAnalytics.quantitative.foulsSuffered.length) {
+        <ion-note color="medium">Sem dados.</ion-note>
+      }
+      @for (entry of loadedAnalytics.quantitative.foulsSuffered; track entry.userId; let i = $index) {
+        <div class="top-entry">
+          <span class="top-rank">{{ i + 1 }}</span>
+          <app-user-avatar
+            [avatarUrl]="entry.avatarUrl"
+            [alt]="displayName(entry)"
+            size="md"
+          ></app-user-avatar>
+          <div class="top-info">
+            <strong>{{ displayName(entry) }}</strong>
+            <p>{{ entry.primaryPosition || '—' }} · {{ formatFoot(entry) }}</p>
+          </div>
+          <ion-badge color="secondary">{{ entry.total }}</ion-badge>
+        </div>
+      }
+
+      <h3 class="ion-margin-top">Top 3 quem mais comete faltas</h3>
+      @if (!loadedAnalytics.quantitative.foulsCommitted.length) {
+        <ion-note color="medium">Sem dados.</ion-note>
+      }
+      @for (entry of loadedAnalytics.quantitative.foulsCommitted; track entry.userId; let i = $index) {
+        <div class="top-entry">
+          <span class="top-rank">{{ i + 1 }}</span>
+          <app-user-avatar
+            [avatarUrl]="entry.avatarUrl"
+            [alt]="displayName(entry)"
+            size="md"
+          ></app-user-avatar>
+          <div class="top-info">
+            <strong>{{ displayName(entry) }}</strong>
+            <p>{{ entry.primaryPosition || '—' }} · {{ formatFoot(entry) }}</p>
+          </div>
+          <ion-badge color="secondary">{{ entry.total }}</ion-badge>
+        </div>
+      }
+
+      <h3 class="ion-margin-top">Top 3 passes errados</h3>
+      @if (!loadedAnalytics.quantitative.passesMissed.length) {
+        <ion-note color="medium">Sem dados.</ion-note>
+      }
+      @for (entry of loadedAnalytics.quantitative.passesMissed; track entry.userId; let i = $index) {
+        <div class="top-entry">
+          <span class="top-rank">{{ i + 1 }}</span>
+          <app-user-avatar
+            [avatarUrl]="entry.avatarUrl"
+            [alt]="displayName(entry)"
+            size="md"
+          ></app-user-avatar>
+          <div class="top-info">
+            <strong>{{ displayName(entry) }}</strong>
+            <p>{{ entry.primaryPosition || '—' }} · {{ formatFoot(entry) }}</p>
+          </div>
+          <ion-badge color="secondary">{{ entry.total }}</ion-badge>
+        </div>
+      }
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card>
+    <ion-card-header>
+      <div class="mural-card-header-row">
+        <ion-card-title>Graficos de desempenho</ion-card-title>
+        <app-mural-share-button
+          [context]="shareContext"
+          cardTitle="Graficos de desempenho"
+        ></app-mural-share-button>
+      </div>
+    </ion-card-header>
+    <ion-card-content>
+      <h3>Finalizacoes no alvo x fora</h3>
+      <div class="perf-bar-row">
+        <span>No alvo</span>
+        <div class="perf-bar-track">
+          <div
+            class="perf-bar-fill perf-bar-fill--primary"
+            [style.width]="barWidth(loadedAnalytics.charts.shotsOnTarget, chartMax())"
+          ></div>
+        </div>
+        <span>{{ loadedAnalytics.charts.shotsOnTarget }}</span>
+      </div>
+      <div class="perf-bar-row">
+        <span>Fora</span>
+        <div class="perf-bar-track">
+          <div
+            class="perf-bar-fill perf-bar-fill--medium"
+            [style.width]="barWidth(loadedAnalytics.charts.shotsOffTarget, chartMax())"
+          ></div>
+        </div>
+        <span>{{ loadedAnalytics.charts.shotsOffTarget }}</span>
+      </div>
+
+      <h3 class="ion-margin-top">Total de finalizacoes x gols</h3>
+      <div class="perf-bar-row">
+        <span>Finalizacoes</span>
+        <div class="perf-bar-track">
+          <div
+            class="perf-bar-fill perf-bar-fill--secondary"
+            [style.width]="barWidth(loadedAnalytics.charts.totalShots, chartMax())"
+          ></div>
+        </div>
+        <span>{{ loadedAnalytics.charts.totalShots }}</span>
+      </div>
+      <div class="perf-bar-row">
+        <span>Gols</span>
+        <div class="perf-bar-track">
+          <div
+            class="perf-bar-fill perf-bar-fill--success"
+            [style.width]="barWidth(loadedAnalytics.charts.goals, chartMax())"
+          ></div>
+        </div>
+        <span>{{ loadedAnalytics.charts.goals }}</span>
+      </div>
+
+      <h3 class="ion-margin-top">Aproveitamento finalizacao no alvo → gol</h3>
+      <div class="perf-pct-row">
+        <div class="perf-pct-track">
+          <div
+            class="perf-bar-fill perf-bar-fill--success"
+            [style.width]="loadedAnalytics.charts.goalConversionPct + '%'"
+          ></div>
+        </div>
+        <strong>{{ loadedAnalytics.charts.goalConversionPct }}%</strong>
+      </div>
+      <p class="perf-chart-note">
+        {{ loadedAnalytics.charts.goals }} gols em {{ loadedAnalytics.charts.shotsOnTarget }} finalizacoes no alvo
+      </p>
+
+      <h3 class="ion-margin-top">Acerto de passes</h3>
+      <div class="perf-pct-row">
+        <div class="perf-pct-track">
+          <div
+            class="perf-bar-fill perf-bar-fill--primary"
+            [style.width]="loadedAnalytics.charts.passAccuracyPct + '%'"
+          ></div>
+        </div>
+        <strong>{{ loadedAnalytics.charts.passAccuracyPct }}%</strong>
+      </div>
+      <p class="perf-chart-note">
+        {{ loadedAnalytics.charts.passesCompleted }} certos de {{ loadedAnalytics.charts.totalPasses }} passes
+      </p>
+
+      <h3 class="ion-margin-top">Faltas cometidas x atletas</h3>
+      <div class="perf-bar-row">
+        <span>Faltas</span>
+        <div class="perf-bar-track">
+          <div
+            class="perf-bar-fill perf-bar-fill--warning"
+            [style.width]="barWidth(loadedAnalytics.charts.foulsCommitted, foulChartMax())"
+          ></div>
+        </div>
+        <span>{{ loadedAnalytics.charts.foulsCommitted }}</span>
+      </div>
+      <div class="perf-bar-row">
+        <span>Atletas</span>
+        <div class="perf-bar-track">
+          <div
+            class="perf-bar-fill perf-bar-fill--tertiary"
+            [style.width]="barWidth(loadedAnalytics.charts.athleteCount, foulChartMax())"
+          ></div>
+        </div>
+        <span>{{ loadedAnalytics.charts.athleteCount }}</span>
+      </div>
+    </ion-card-content>
+  </ion-card>
+}

@@ -1,0 +1,124 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button [defaultHref]="ownerType === 'pelada' && peladaId ? '/pelada/' + peladaId : '/tabs/profile'"></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ pageTitle }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  } @else {
+    <ion-note class="ion-margin-bottom">
+      Cadastre a quantidade total utilizavel. "Avariadas" apenas qualifica defeitos — o material continua disponivel
+      para eventos. Itens com cor permitem varias linhas (ex.: camisas vermelhas e azuis).
+    </ion-note>
+
+    <h2>Uniforme</h2>
+    @for (def of uniformTypes; track def.type) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>{{ def.label }}</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <div
+            class="material-grid material-grid-header"
+            [class.material-grid-colored]="def.hasColor"
+          >
+            @if (def.hasColor) {
+              <span>Cor</span>
+            }
+            <span>Qtd</span>
+            <span>Avariadas</span>
+            <span></span>
+          </div>
+          @for (row of rowsFor(def.type); track $index) {
+            <div class="material-grid" [class.material-grid-colored]="def.hasColor">
+              @if (def.hasColor) {
+                <ion-select
+                  [(ngModel)]="row.color"
+                  interface="popover"
+                  placeholder="Cor"
+                  fill="outline"
+                  okText="OK"
+                  cancelText="Cancelar"
+                >
+                  @for (color of colorOptionsFor(row); track color) {
+                    <ion-select-option [value]="color">{{ color }}</ion-select-option>
+                  }
+                </ion-select>
+              }
+              <ion-input
+                type="number"
+                [(ngModel)]="row.quantity"
+                min="0"
+                fill="outline"
+              ></ion-input>
+              <ion-input
+                type="number"
+                [(ngModel)]="row.damagedQuantity"
+                min="0"
+                fill="outline"
+              ></ion-input>
+              <ion-button
+                class="material-delete-btn"
+                fill="clear"
+                color="danger"
+                aria-label="Excluir linha"
+                (click)="removeRow(def.type, $index)"
+              >
+                <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+              </ion-button>
+            </div>
+          }
+          @if (def.hasColor) {
+            <ion-button expand="block" fill="outline" size="small" (click)="addRow(def.type)">
+              Adicionar variacao de cor
+            </ion-button>
+          }
+        </ion-card-content>
+      </ion-card>
+    }
+
+    <h2>Equipamentos</h2>
+    @for (def of equipmentTypes; track def.type) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>{{ def.label }}</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <div class="material-grid material-grid-header">
+            <span>Qtd</span>
+            <span>Avariadas</span>
+            <span></span>
+          </div>
+          @for (row of rowsFor(def.type); track $index) {
+            <div class="material-grid">
+              <ion-input
+                type="number"
+                [(ngModel)]="row.quantity"
+                min="0"
+                fill="outline"
+              ></ion-input>
+              <ion-input
+                type="number"
+                [(ngModel)]="row.damagedQuantity"
+                min="0"
+                fill="outline"
+              ></ion-input>
+              <span></span>
+            </div>
+          }
+        </ion-card-content>
+      </ion-card>
+    }
+
+    <ion-button expand="block" class="ion-margin-top" [disabled]="saving" (click)="saveAll()">
+      {{ saving ? 'Salvando...' : 'Salvar material' }}
+    </ion-button>
+  }
+</ion-content>

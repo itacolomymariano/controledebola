@@ -1,0 +1,111 @@
+@if (loading) {
+  <div class="ion-text-center ion-padding">
+    <ion-spinner name="crescent"></ion-spinner>
+  </div>
+} @else if (!dashboard) {
+  <ion-note>Sem dados de desempenho.</ion-note>
+} @else {
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Numeros</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-list lines="none">
+        @for (row of statRows(); track row.label) {
+          <ion-item>
+            <ion-label>{{ row.label }}</ion-label>
+            <ion-badge slot="end">{{ row.value }}</ion-badge>
+          </ion-item>
+        }
+      </ion-list>
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Finalizacoes no alvo x fora</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="perf-bar-row">
+        <span>No alvo</span>
+        <div class="perf-bar-track">
+          <div
+            class="perf-bar-fill perf-bar-fill--primary"
+            [style.width]="barWidth(dashboard.charts.shotsOnTarget, chartMax())"
+          ></div>
+        </div>
+        <span>{{ dashboard.charts.shotsOnTarget }}</span>
+      </div>
+      <div class="perf-bar-row">
+        <span>Fora</span>
+        <div class="perf-bar-track">
+          <div
+            class="perf-bar-fill perf-bar-fill--medium"
+            [style.width]="barWidth(dashboard.charts.shotsOffTarget, chartMax())"
+          ></div>
+        </div>
+        <span>{{ dashboard.charts.shotsOffTarget }}</span>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Gols x finalizacoes</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="perf-bar-row">
+        <span>Finalizacoes</span>
+        <div class="perf-bar-track">
+          <div
+            class="perf-bar-fill perf-bar-fill--secondary"
+            [style.width]="barWidth(dashboard.charts.shotsOnTarget + dashboard.charts.shotsOffTarget, chartMax() * 2)"
+          ></div>
+        </div>
+        <span>{{ dashboard.charts.shotsOnTarget + dashboard.charts.shotsOffTarget }}</span>
+      </div>
+      <div class="perf-bar-row">
+        <span>Gols</span>
+        <div class="perf-bar-track">
+          <div
+            class="perf-bar-fill perf-bar-fill--success"
+            [style.width]="barWidth(dashboard.charts.goals, chartMax())"
+          ></div>
+        </div>
+        <span>{{ dashboard.charts.goals }}</span>
+      </div>
+      <p class="perf-chart-note">
+        Aproveitamento alvo→gol: {{ dashboard.charts.goalConversionPct }}%
+      </p>
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Passes e faltas</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p class="perf-chart-note">Acerto de passes: {{ dashboard.charts.passAccuracyPct }}%</p>
+      <div class="perf-bar-row">
+        <span>Faltas cometidas</span>
+        <div class="perf-bar-track">
+          <div
+            class="perf-bar-fill perf-bar-fill--warning"
+            [style.width]="barWidth(dashboard.charts.foulsCommitted, foulChartMax())"
+          ></div>
+        </div>
+        <span>{{ dashboard.charts.foulsCommitted }}</span>
+      </div>
+      <div class="perf-bar-row">
+        <span>Faltas sofridas</span>
+        <div class="perf-bar-track">
+          <div
+            class="perf-bar-fill perf-bar-fill--danger"
+            [style.width]="barWidth(dashboard.charts.foulsSuffered, foulChartMax())"
+          ></div>
+        </div>
+        <span>{{ dashboard.charts.foulsSuffered }}</span>
+      </div>
+    </ion-card-content>
+  </ion-card>
+}

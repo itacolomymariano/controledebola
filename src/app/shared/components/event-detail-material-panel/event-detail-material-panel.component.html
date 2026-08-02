@@ -1,0 +1,260 @@
+<ion-card id="material-panel-anchor" class="ion-margin-top">
+  <ion-card-header>
+    <div class="event-panel-header">
+      <div>
+        <ion-card-title>Material do evento</ion-card-title>
+        <ion-card-subtitle>
+          Controle de envio, recebimento e conferencia com o ropeiro
+        </ion-card-subtitle>
+      </div>
+      <ion-button fill="clear" size="small" class="event-panel-back" (click)="back.emit()">
+        <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
+        Voltar
+      </ion-button>
+    </div>
+  </ion-card-header>
+
+  <ion-card-content>
+    @if (!session) {
+      <ion-note>Carregando sessao de material...</ion-note>
+    } @else {
+      <h3>Usar qual material?</h3>
+      <div class="source-actions">
+        <ion-button
+          size="small"
+          [fill]="source === 'pelada' ? 'solid' : 'outline'"
+          [disabled]="busy || !isAdmin"
+          (click)="onSourceSelect('pelada')"
+        >
+          Proprio (Pelada)
+        </ion-button>
+        <ion-button
+          size="small"
+          [fill]="source === 'kitman' ? 'solid' : 'outline'"
+          [disabled]="!canSelectKitmanSource"
+          (click)="onSourceSelect('kitman')"
+        >
+          Do Ropeiro
+        </ion-button>
+        <ion-button
+          size="small"
+          [fill]="source === 'none' ? 'solid' : 'outline'"
+          [disabled]="!canSelectNoneSource"
+          (click)="onSourceSelect('none')"
+        >
+          Nao controla
+        </ion-button>
+      </div>
+
+      @if (sourceLockedForKitman) {
+        <ion-note color="warning">
+          O administrador definiu uso do material da pelada neste evento. Voce nao pode selecionar material proprio.
+        </ion-note>
+      }
+
+      @if (session.counterpartyName) {
+        <ion-note color="medium">Ropeiro do evento: {{ session.counterpartyName }}</ion-note>
+      }
+
+      @if (showMissingPeladaInventoryHint) {
+        <ion-note color="warning">
+          Material da pelada ainda nao cadastrado. Cadastre o inventario em Configuracoes desta Pelada
+          (botao Material).
+        </ion-note>
+      } @else if (showMissingKitmanHint) {
+        <ion-note color="warning">
+          Nenhum ropeiro contratado neste evento. Negocie/contrate um ropeiro para enviar o material.
+        </ion-note>
+      }
+
+      @if (source === 'none') {
+        <p class="ion-margin-top">Controle de material desativado neste evento.</p>
+      } @else {
+        <p class="ion-margin-top">
+          Status:
+          <ion-text color="primary">{{ statusLabel(session.status) }}</ion-text>
+        </p>
+
+        @if (source === 'kitman' && isKitman && hasEmptyInventory) {
+          <ion-note color="warning" class="ion-margin-top">
+            Seu material de ropeiro ainda nao foi cadastrado. Cadastre em Perfil → Material do Ropeiro.
+          </ion-note>
+        }
+
+        @if (canLoad) {
+          <h3>Carregar material para o evento</h3>
+          <ion-button expand="block" [disabled]="busy" (click)="loadAll.emit()">
+            Todo o material disponivel
+          </ion-button>
+
+          @if (inventory.length) {
+            <div class="load-grid-header ion-margin-top">
+              <span>Material</span>
+              <span>Qtd.Evento</span>
+            </div>
+            <ion-list lines="full">
+              @for (item of inventory; track item.objectId) {
+                <ion-item>
+                  <ion-label>
+                    <h3>{{ lineLabel(item.itemType, item.color) }}</h3>
+                    <p>
+                      Disponivel: {{ item.availableQuantity }}
+                      @if (item.damagedQuantity > 0) {
+                        · Avariadas: {{ item.damagedQuantity }} (utilizavel)
+                      }
+                    </p>
+                  </ion-label>
+                  <ion-input
+                    slot="end"
+                    type="number"
+                    min="0"
+                    [max]="item.availableQuantity"
+                    label="Qtd.Evento"
+                    labelPlacement="stacked"
+                    [value]="eventQtyFor(item)"
+                    (ionInput)="onPartialInput(item.objectId, $event)"
+                    style="max-width: 100px"
+                  ></ion-input>
+                </ion-item>
+              }
+            </ion-list>
+            <ion-button
+              expand="block"
+              fill="outline"
+              [disabled]="busy"
+              (click)="loadPartial.emit()"
+            >
+              Carregar selecao (Qtd.Evento)
+            </ion-button>
+          }
+        }
+
+        @if (session.lines.length) {
+          <h3 class="ion-margin-top">Material carregado / enviado</h3>
+          <ion-list lines="full">
+            @for (line of session.lines; track lineKey(line.itemType, line.color)) {
+              <ion-item>
+                <ion-label>
+                  <h3>{{ lineLabel(line.itemType, line.color) }}</h3>
+                  <p>
+                    Carregado {{ line.quantityLoaded }}
+                    · Enviado {{ line.quantitySent }}
+                    · Devolvido/contado {{ line.quantityReturned || line.quantityBlindCounted || '-' }}
+                  </p>
+                </ion-label>
+              </ion-item>
+            }
+          </ion-list>
+        }
+
+        @if (session.status === 'loaded' && source === 'pelada' && isAdmin && !hasKitmanCounterparty) {
+          <ion-note color="warning" class="ion-margin-top">
+            Botao de envio liberado somente apos contratar um ropeiro no evento.
+          </ion-note>
+        }
+
+        @if (canSend) {
+          <ion-button expand="block" color="success" [disabled]="busy" (click)="send.emit()">
+            {{ sendButtonLabel }}
+          </ion-button>
+        }
+
+        @if (showConferenceInputs) {
+          <h3 class="ion-margin-top">
+            {{ canBlindCount ? 'Contagem cega (conferencia)' : 'Conferencia da devolucao' }}
+          </h3>
+          <ion-note color="medium" class="ion-margin-bottom">
+            Informe a quantidade recebida e, se houver, quantas unidades com avaria (ainda utilizaveis).
+          </ion-note>
+          <ion-list lines="full">
+            @for (line of session.lines; track lineKey(line.itemType, line.color)) {
+              <ion-item>
+                <ion-label>
+                  <h3>{{ lineLabel(line.itemType, line.color) }}</h3>
+                  @if (canBlindCount) {
+                    <p>Quantidade contada (sem consultar o enviado)</p>
+                  } @else {
+                    <p>Quantidade devolvida</p>
+                  }
+                </ion-label>
+                <div slot="end" class="conference-inputs">
+                  <ion-input
+                    type="number"
+                    min="0"
+                    placeholder="Qtd"
+                    [value]="blindCounts[lineKey(line.itemType, line.color)] ?? ''"
+                    (ionInput)="onBlindInput(lineKey(line.itemType, line.color), $event)"
+                  ></ion-input>
+                  <ion-input
+                    type="number"
+                    min="0"
+                    placeholder="Avariadas"
+                    [value]="blindDamagedCounts[lineKey(line.itemType, line.color)] ?? ''"
+                    (ionInput)="onBlindDamagedInput(lineKey(line.itemType, line.color), $event)"
+                  ></ion-input>
+                </div>
+              </ion-item>
+            }
+          </ion-list>
+          @if (canBlindCount) {
+            <ion-button expand="block" [disabled]="busy" (click)="submitBlindCount.emit()">
+              Registrar contagem cega
+            </ion-button>
+          }
+        }
+
+        @if (canReceiveReturn) {
+          <ion-button
+            expand="block"
+            color="tertiary"
+            class="ion-margin-top"
+            [disabled]="busy"
+            (click)="receiveReturn.emit()"
+          >
+            Receber devolucao do Ropeiro
+          </ion-button>
+          <ion-note color="medium">
+            Use a conferencia acima (ou a contagem do ropeiro) para fechar a devolucao e registrar avarias.
+          </ion-note>
+        }
+
+        <h3 class="ion-margin-top">Lista de divergencias</h3>
+        @if (!session.divergences.length) {
+          <ion-note>Nenhuma divergencia registrada.</ion-note>
+        } @else {
+          <ion-list lines="full">
+            @for (row of session.divergences; track row.label + row.delta) {
+              <ion-item>
+                <ion-label>
+                  <h3>{{ row.label }}</h3>
+                  <p>
+                    Esperado {{ row.expected }} · Contado {{ row.counted }} ·
+                    <ion-text [color]="row.delta < 0 ? 'danger' : 'success'">
+                      {{ row.delta > 0 ? '+' : '' }}{{ row.delta }}
+                    </ion-text>
+                  </p>
+                </ion-label>
+              </ion-item>
+            }
+          </ion-list>
+        }
+
+        @if (canApplyLosses) {
+          <ion-button
+            expand="block"
+            color="danger"
+            class="ion-margin-top"
+            [disabled]="busy"
+            (click)="applyLosses.emit()"
+          >
+            Aplicar baixas no material da pelada
+          </ion-button>
+        }
+
+        @if (session.lossesApplied) {
+          <ion-note color="success">Baixas ja aplicadas no inventario da pelada.</ion-note>
+        }
+      }
+    }
+  </ion-card-content>
+</ion-card>

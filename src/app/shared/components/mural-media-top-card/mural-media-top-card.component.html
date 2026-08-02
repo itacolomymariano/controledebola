@@ -1,0 +1,40 @@
+<ion-card class="media-top-card" button [disabled]="!item" (click)="openItem()">
+  <ion-card-header>
+    <div class="mural-card-header-row">
+      <ion-card-title>{{ title }}</ion-card-title>
+      <app-mural-share-button
+        [context]="shareContext"
+        [cardTitle]="title"
+      ></app-mural-share-button>
+    </div>
+  </ion-card-header>
+  <ion-card-content>
+    @if (loading) {
+      <ion-spinner name="crescent"></ion-spinner>
+    } @else if (!item) {
+      <ion-note color="medium">Nenhum conteudo publicado ainda.</ion-note>
+    } @else {
+      <h3>{{ item.title }}</h3>
+      @if (item.description) {
+        <p class="media-top-card__desc">{{ item.description }}</p>
+      }
+      <p>
+        <strong>{{ item.authorName || 'Autor' }}</strong>
+        · {{ item.viewCount }} visualizacao{{ item.viewCount === 1 ? '' : 's' }}
+      </p>
+      @if (item.eventName || item.peladaName) {
+        <ion-note color="medium">
+          @if (item.peladaName) {
+            {{ item.peladaName }}
+          }
+          @if (item.peladaName && item.eventName) {
+            ·
+          }
+          @if (item.eventName) {
+            {{ item.eventName }}
+          }
+        </ion-note>
+      }
+    }
+  </ion-card-content>
+</ion-card>

@@ -1,0 +1,52 @@
+---
+description: Antes de intervir, o agente classifica a tarefa (simples vs complexa) e le a documentacao correspondente
+alwaysApply: true
+---
+
+# Leitura obrigatoria antes de intervir (autoavaliacao do agente)
+
+Este projeto e mantido quase exclusivamente por agentes. **Voce** deve classificar a propria intervencao antes de editar codigo, Cloud Code ou configuracao.
+
+## Passo 0 — Classificar a tarefa
+
+| Nivel | Quando usar | Documentacao |
+|-------|-------------|--------------|
+| **Simples** | Alteracao localizada, baixo risco, sem mudar fluxos de negocio ou backend | Ler `AGENTS.md` |
+| **Complexa** | Qualquer caso da lista abaixo ou duvida | Ler `AGENTS.md` **e** `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` |
+
+**Em caso de duvida, trate como complexa.**
+
+### Intervencao COMPLEXA (guia completo obrigatorio)
+
+- Editar ou adicionar Cloud Code (`cloud/source/`, publicar `main.js`)
+- Tocar auth, sessao, cadastro ou `profile-setup`
+- Inscricoes, pagamento, `isEffectivelyConfirmed`, portaria/ingressos QR
+- Contratacao/convites (`RefereeInvitation`), inbox, conflito de agenda
+- Pelada: socios, mensalidades, caixa, cotinhas, apresentacao de perfil
+- Evento: criacao, admin, chegada, team split, votacao, scout, sumula, palpites
+- Mural, rankings, votos, desempenho, imprensa (radio/jornal)
+- Novo fluxo, nova rota, novo servico em `core/services/`, ou refactor multi-arquivo
+- Alterar modelos Parse (`core/models/`) ou contratos Cloud Function
+- Mudanca que afeta mais de um dominio (ex.: pagina + servico + cloud)
+
+### Intervencao SIMPLES (AGENTS.md basta)
+
+- Ajuste visual isolado (SCSS/HTML) em uma pagina ou componente
+- Texto, label ou mensagem de validacao em um unico arquivo
+- Correcao pontual sem alterar servicos, modelos ou Cloud Code
+- Apenas documentacao Markdown
+- Build/deploy sem mudanca de logica
+
+## Passo 1 — Ler antes de editar
+
+1. **Sempre** leia [AGENTS.md](../../AGENTS.md) (regras criticas, comandos, checklist).
+2. Se **complexa**, leia tambem [docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md](../../docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md) — ou use `@docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` no chat.
+3. So entao localize pagina + servico + classe Parse / Cloud function afetados e implemente.
+
+## Passo 2 — Declarar brevemente (opcional mas recomendado)
+
+No inicio da resposta ou antes da primeira edicao, indique em uma linha:
+
+`Documentacao: [simples — AGENTS.md | complexa — AGENTS.md + guia]`
+
+Isso ajuda revisores humanos a confirmar que a leitura correta foi feita.

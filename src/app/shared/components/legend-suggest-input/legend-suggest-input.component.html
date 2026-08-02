@@ -1,0 +1,144 @@
+@if (inlineSearch) {
+  <div class="legend-inline-search">
+    <ion-item>
+      <ion-input
+        [label]="label"
+        labelPlacement="stacked"
+        [formControl]="control"
+        [placeholder]="placeholder"
+        [readonly]="disabled"
+        (ionInput)="onInlineInput($any($event.target).value)"
+        (ionFocus)="onInlineFocus()"
+        (ionBlur)="onInlineBlur()"
+      ></ion-input>
+    </ion-item>
+
+    @if (showInlinePanel) {
+      <div class="legend-inline-panel" (mousedown)="$event.preventDefault()">
+        @if (loading) {
+          <div class="legend-inline-panel__loading">
+            <ion-spinner name="crescent"></ion-spinner>
+          </div>
+        } @else if (showInlineCreatePrompt) {
+          <ion-card>
+            <ion-card-content>
+              <p>{{ inlineNotFoundMessage }}</p>
+              <ion-button expand="block" size="small" (click)="goCreateLegend()">
+                {{ inlineCreateButtonLabel }}
+              </ion-button>
+            </ion-card-content>
+          </ion-card>
+        } @else {
+          <ion-list lines="full">
+            @for (item of suggestions; track item.id + item.source) {
+              <ion-item button (click)="selectSuggestion(item)">
+                @if (item.imageUrl) {
+                  <ion-avatar slot="start">
+                    <img [src]="item.imageUrl" [alt]="item.label" />
+                  </ion-avatar>
+                }
+                <ion-label>
+                  <h2>{{ item.label }}</h2>
+                  @if (item.subtitle) {
+                    <p>{{ item.subtitle }}</p>
+                  }
+                </ion-label>
+              </ion-item>
+            }
+          </ion-list>
+        }
+      </div>
+    } @else if (search.trim().length > 0 && search.trim().length < 2) {
+      <ion-note class="legend-inline-hint">Digite ao menos 2 caracteres para buscar.</ion-note>
+    }
+  </div>
+} @else {
+  <ion-item>
+    <ion-input
+      [label]="label"
+      labelPlacement="stacked"
+      [formControl]="control"
+      [placeholder]="placeholder"
+      [readonly]="disabled"
+    ></ion-input>
+    <ion-button slot="end" fill="clear" size="small" [disabled]="disabled" (click)="openModal()">
+      Pesquisar
+    </ion-button>
+  </ion-item>
+
+  <ion-modal [isOpen]="modalOpen" (didDismiss)="closeModal()">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>{{ label }}</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeModal()">Fechar</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+        <ion-toolbar>
+          <ion-searchbar
+            [value]="search"
+            (ionInput)="onSearchInput($any($event.target).value)"
+            debounce="0"
+            placeholder="Buscar..."
+          ></ion-searchbar>
+        </ion-toolbar>
+        <ion-toolbar>
+          <ion-segment scrollable="true" [value]="sourceFilter" (ionChange)="onFilterChange($any($event.detail.value))">
+            <ion-segment-button value="all">
+              <ion-label>Todos</ion-label>
+            </ion-segment-button>
+            <ion-segment-button value="legend">
+              <ion-label>{{ legendFilterLabel }}</ion-label>
+            </ion-segment-button>
+            <ion-segment-button value="app">
+              <ion-label>{{ appFilterLabel }}</ion-label>
+            </ion-segment-button>
+          </ion-segment>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        @if (loading) {
+          <ion-spinner name="crescent"></ion-spinner>
+        } @else if (showCreateLegendPrompt) {
+          <ion-card>
+            <ion-card-content>
+              <p>
+                Nenhum cadastro em <strong>{{ legendFilterLabel }}</strong> para "{{ search.trim() }}".
+              </p>
+              <ion-button expand="block" (click)="goCreateLegend()">
+                Cadastrar lenda "{{ search.trim() }}"
+              </ion-button>
+            </ion-card-content>
+          </ion-card>
+        } @else if (!filteredSuggestions.length) {
+          <ion-note>Nenhuma sugestao encontrada.</ion-note>
+        } @else {
+          <ion-list>
+            @for (item of filteredSuggestions; track item.id + item.source) {
+              <ion-item button (click)="selectSuggestion(item)">
+                @if (item.imageUrl) {
+                  <ion-avatar slot="start">
+                    <img [src]="item.imageUrl" [alt]="item.label" />
+                  </ion-avatar>
+                }
+                <ion-label>
+                  <h2>{{ item.label }}</h2>
+                  @if (item.subtitle) {
+                    <p>{{ item.subtitle }}</p>
+                  }
+                </ion-label>
+              </ion-item>
+            }
+          </ion-list>
+        }
+
+        @if (search.trim() && !showCreateLegendPrompt) {
+          <ion-button expand="block" fill="outline" class="ion-margin-top" (click)="useTypedValue()">
+            Usar "{{ search.trim() }}"
+          </ion-button>
+        }
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+}

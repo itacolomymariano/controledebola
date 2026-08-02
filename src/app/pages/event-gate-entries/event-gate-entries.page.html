@@ -1,0 +1,29 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button [defaultHref]="'/event/' + eventId"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Entradas no evento</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <ion-spinner name="crescent"></ion-spinner>
+  } @else if (!entries.length) {
+    <ion-note color="medium">Nenhum participante ingressou na area do evento ainda.</ion-note>
+  } @else {
+    <ion-list lines="full">
+      @for (entry of entries; track entry.registrationId) {
+        <ion-item>
+          <ion-label class="ion-text-wrap">
+            <h2>{{ entry.participantApelido || entry.participantName }}</h2>
+            <p>{{ registrationService.formatRole($any(entry.role)) }}</p>
+            <p>Entrada: {{ formatDateTime(entry.entryAt) }}</p>
+            <p>Autorizado por: {{ entry.authorizedByAdminName }}</p>
+          </ion-label>
+        </ion-item>
+      }
+    </ion-list>
+  }
+</ion-content>

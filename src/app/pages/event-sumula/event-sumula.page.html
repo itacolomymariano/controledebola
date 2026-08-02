@@ -1,0 +1,92 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button [defaultHref]="'/event/' + eventId"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Sumula do evento</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding sumula-content">
+  @if (loading) {
+    <ion-spinner name="crescent"></ion-spinner>
+  }
+
+  @if (!loading && board && board.eventId === eventId) {
+    <div class="sumula-header">
+      <h1>{{ board.eventName }}</h1>
+      <div class="sumula-meta">
+        <ion-chip color="primary">Sumula</ion-chip>
+        @if (syncLabel) {
+          <ion-note [color]="syncStatus === 'error' ? 'danger' : 'medium'">{{ syncLabel }}</ion-note>
+        }
+      </div>
+      @if (isLocked) {
+        <ion-note color="warning">{{ lockMessage }}</ion-note>
+      }
+    </div>
+
+    @if (!isLocked) {
+      <ion-button
+        expand="block"
+        color="primary"
+        class="ion-margin-bottom"
+        [disabled]="saving || !dirty"
+        (click)="saveSumula()"
+      >
+        SALVAR SUMULA
+      </ion-button>
+    }
+
+    <ion-searchbar
+      placeholder="Buscar atleta por apelido"
+      [value]="searchTerm"
+      (ionInput)="onSearchChange($any($event.target).value)"
+      debounce="150"
+    ></ion-searchbar>
+
+    @if (!filteredAthletes.length) {
+      <ion-note>Nenhum atleta confirmado para a sumula.</ion-note>
+    } @else {
+      @for (athlete of filteredAthletes; track athlete.userId) {
+        <ion-card class="sumula-athlete-card">
+          <ion-card-content>
+            <div class="sumula-athlete-header">
+              <app-user-avatar
+                [avatarUrl]="athlete.avatarUrl"
+                [alt]="athlete.apelido"
+                size="md"
+              ></app-user-avatar>
+              <div>
+                <h2>{{ athlete.apelido }}</h2>
+                <p>{{ athlete.primaryPosition || 'Sem posicao registrada' }}</p>
+              </div>
+            </div>
+
+            @for (field of statFields; track field) {
+              <app-scout-stat-counter
+                [label]="statLabels[field]"
+                [value]="statValue(athlete, field)"
+                [disabled]="isLocked"
+                (increment)="adjustStat(athlete, field, 1)"
+                (decrement)="adjustStat(athlete, field, -1)"
+              ></app-scout-stat-counter>
+            }
+
+            <ion-item class="sumula-observation-item">
+              <ion-textarea
+                label="Observacao sobre o atleta"
+                labelPlacement="stacked"
+                [value]="athlete.stats.observation"
+                [readonly]="isLocked"
+                autoGrow="true"
+                (ionInput)="onObservationChange(athlete, $any($event.target).value)"
+              ></ion-textarea>
+            </ion-item>
+          </ion-card-content>
+        </ion-card>
+      }
+    }
+  }
+</ion-content>

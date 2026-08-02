@@ -1,0 +1,97 @@
+.scout-apontamento-content {
+  --padding-bottom: 1.5rem;
+}
+
+.scout-apontamento-header h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+}
+
+.scout-apontamento-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.scout-mode-segment {
+  margin-bottom: 0.75rem;
+}
+
+.scout-back-btn {
+  margin-bottom: 0.25rem;
+}
+
+.scout-general-athlete-card {
+  margin-top: 0.75rem;
+}
+
+.scout-general-athlete-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.scout-general-athlete-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.scout-general-athlete-header p {
+  margin: 0.2rem 0 0;
+  color: var(--ion-color-medium);
+  font-size: 0.85rem;
+}
+
+.scout-athlete-panel {
+  margin-top: 1rem;
+}
+
+.scout-athlete-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.scout-athlete-panel-header h2 {
+  margin: 0;
+}
+
+.scout-athlete-panel-header p {
+  margin: 0.25rem 0 0;
+  color: var(--ion-color-medium);
+}
+
+.scout-stat-group {
+  margin-top: 1rem;
+}
+
+.scout-stat-group h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  color: var(--ion-color-medium);
+}
+
+.scout-goal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.5rem 0;
+}
+
+.scout-goal-actions--compact {
+  margin: 0.35rem 0 0.5rem;
+}
+
+.scout-goal-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-top: 0.35rem;
+}
+
+.scout-goal-breakdown--compact {
+  margin-bottom: 0.5rem;
+}

@@ -1,0 +1,95 @@
+<ng-container [formGroup]="form">
+  <ion-item>
+    <ion-select label="Posicao principal" labelPlacement="stacked" formControlName="primaryPosition">
+      @for (p of positions; track p) {
+        <ion-select-option [value]="p">{{ p }}</ion-select-option>
+      }
+    </ion-select>
+  </ion-item>
+  <ion-item>
+    <ion-select label="Posicao secundaria" labelPlacement="stacked" formControlName="secondaryPosition">
+      <ion-select-option value="">Nenhuma</ion-select-option>
+      @for (p of positions; track p) {
+        <ion-select-option [value]="p">{{ p }}</ion-select-option>
+      }
+    </ion-select>
+  </ion-item>
+  <ion-item>
+    <ion-select label="Terceira posicao" labelPlacement="stacked" formControlName="thirdPosition">
+      <ion-select-option value="">Nenhuma</ion-select-option>
+      @for (p of positions; track p) {
+        <ion-select-option [value]="p">{{ p }}</ion-select-option>
+      }
+    </ion-select>
+  </ion-item>
+
+  <ion-item>
+    <ion-select label="Numero da chuteira" labelPlacement="stacked" formControlName="shoeSize">
+      @for (size of shoeSizes; track size) {
+        <ion-select-option [value]="size">{{ size }}</ion-select-option>
+      }
+    </ion-select>
+  </ion-item>
+
+  <ion-item>
+    <ion-select label="Altura - metros" labelPlacement="stacked" formControlName="heightMeter">
+      @for (m of heightMeters; track m) {
+        <ion-select-option [value]="m">{{ m }} m</ion-select-option>
+      }
+    </ion-select>
+  </ion-item>
+  <ion-item>
+    <ion-select label="Altura - centimetros" labelPlacement="stacked" formControlName="heightCm">
+      @for (cm of heightCentimeters; track cm) {
+        <ion-select-option [value]="cm">{{ formatCm(cm) }} cm</ion-select-option>
+      }
+    </ion-select>
+  </ion-item>
+
+  <ion-item>
+    <ion-select label="Peso (kg)" labelPlacement="stacked" formControlName="weight">
+      @for (w of weights; track w) {
+        <ion-select-option [value]="w">{{ w }} kg</ion-select-option>
+      }
+    </ion-select>
+  </ion-item>
+
+  <ion-item>
+    <ion-select label="Pe dominante" labelPlacement="stacked" formControlName="footPreference">
+      <ion-select-option value="">Nao informado</ion-select-option>
+      @for (option of footOptions; track option.value) {
+        <ion-select-option [value]="option.value">{{ option.label }}</ion-select-option>
+      }
+    </ion-select>
+  </ion-item>
+
+  <ion-item>
+    <ion-select label="Estado civil" labelPlacement="stacked" formControlName="maritalStatus">
+      <ion-select-option value="">Nao informado</ion-select-option>
+      @for (option of maritalOptions; track option.value) {
+        <ion-select-option [value]="option.value">{{ option.label }}</ion-select-option>
+      }
+    </ion-select>
+  </ion-item>
+
+  <ion-item>
+    <ion-input
+      label="Por quanto participa de uma pelada (R$)"
+      labelPlacement="stacked"
+      type="number"
+      min="0"
+      step="0.01"
+      formControlName="peladaRate"
+    ></ion-input>
+  </ion-item>
+  <ion-item>
+    <ion-input
+      label="Por quanto participa de jogo entre times amadores (R$)"
+      labelPlacement="stacked"
+      type="number"
+      min="0"
+      step="0.01"
+      formControlName="teamMatchRate"
+    ></ion-input>
+  </ion-item>
+</ng-container>

@@ -1,0 +1,27 @@
+<ion-toolbar class="user-bar" color="light">
+  <ion-buttons slot="start" class="user-bar-avatar">
+    <app-user-avatar
+      [avatarUrl]="avatarUrl"
+      alt="Foto de perfil"
+      size="sm"
+    ></app-user-avatar>
+  </ion-buttons>
+  <ion-title class="apelido-title">{{ apelido }}</ion-title>
+  <ion-buttons slot="end">
+    <ion-button (click)="openMenu()" aria-label="Abrir menu">
+      <ion-icon name="menu-outline" slot="icon-only"></ion-icon>
+    </ion-button>
+    <ion-button (click)="openHome()" aria-label="Ir para inicio">
+      <ion-icon name="home-outline" slot="icon-only"></ion-icon>
+    </ion-button>
+    <ion-button class="inbox-button" (click)="openInbox()" [attr.aria-label]="'Caixa de entrada'">
+      <ion-icon name="mail-outline" slot="icon-only"></ion-icon>
+      @if (pendingInvitations > 0) {
+        <ion-badge color="danger" class="inbox-badge">{{ pendingInvitations }}</ion-badge>
+      }
+    </ion-button>
+    <ion-button (click)="logout()" aria-label="Sair do App">
+      <ion-icon name="log-out-outline" slot="icon-only"></ion-icon>
+    </ion-button>
+  </ion-buttons>
+</ion-toolbar>

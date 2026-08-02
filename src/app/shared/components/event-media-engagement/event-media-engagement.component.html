@@ -1,0 +1,114 @@
+@if (loading && !engagement) {
+  <ion-spinner name="crescent"></ion-spinner>
+}
+
+@if (engagement) {
+  <div class="media-engagement">
+    <p class="media-engagement__views">
+      {{ engagement.viewCount }} visualizacao{{ engagement.viewCount === 1 ? '' : 's' }}
+      <ion-note color="medium">(1 por usuario)</ion-note>
+    </p>
+
+    <div class="media-engagement__reactions">
+      @for (option of reactionOptions; track option.value) {
+        <button
+          type="button"
+          class="media-reaction-btn"
+          [class.media-reaction-btn--active]="engagement.reactions.myReaction === option.value"
+          [disabled]="saving"
+          (click)="selectReaction(option.value)"
+        >
+          <span aria-hidden="true">{{ option.emoji }}</span>
+          <span>{{ engagement.reactions.counts[option.value] || 0 }}</span>
+        </button>
+      }
+    </div>
+
+    @if (replyingTo) {
+      <div class="media-engagement__replying">
+        <ion-note>Respondendo a {{ replyingTo.userName }}</ion-note>
+        <ion-button fill="clear" size="small" (click)="cancelReply()">Cancelar</ion-button>
+      </div>
+    }
+
+    <ion-item lines="full" class="media-engagement__comment-input">
+      <ion-textarea
+        label="Seu comentario"
+        labelPlacement="stacked"
+        [(ngModel)]="commentDraft"
+        maxlength="280"
+        autoGrow="true"
+        rows="2"
+        [placeholder]="replyingTo ? 'Escreva uma resposta' : 'Escreva um comentario breve'"
+      ></ion-textarea>
+    </ion-item>
+    <ion-note color="medium" class="media-engagement__discipline-note">
+      Mantenha a disciplina: sem palavroes ou baixo calao.
+    </ion-note>
+    <ion-button expand="block" fill="outline" [disabled]="saving" (click)="saveComment()">
+      Enviar comentario
+    </ion-button>
+
+    @if (topLevelComments.length) {
+      <div class="media-engagement__comments">
+        <h3>Comentarios</h3>
+        @for (comment of topLevelComments; track comment.objectId) {
+          <article class="media-comment">
+            <div class="media-comment__header">
+              <strong>{{ comment.userName }}</strong>
+              @if (comment.createdAt || comment.updatedAt) {
+                <ion-note>{{ formatDate(comment.createdAt || comment.updatedAt) }}</ion-note>
+              }
+            </div>
+            <p>{{ comment.text }}</p>
+
+            <div class="media-engagement__reactions media-engagement__reactions--comment">
+              @for (option of reactionOptions; track option.value) {
+                <button
+                  type="button"
+                  class="media-reaction-btn"
+                  [class.media-reaction-btn--active]="comment.reactions.myReaction === option.value"
+                  [disabled]="saving"
+                  (click)="selectCommentReaction(comment, option.value)"
+                >
+                  <span aria-hidden="true">{{ option.emoji }}</span>
+                  <span>{{ comment.reactions.counts[option.value] || 0 }}</span>
+                </button>
+              }
+            </div>
+            <ion-button fill="clear" size="small" (click)="startReply(comment)">Responder</ion-button>
+
+            @for (reply of repliesFor(comment.objectId); track reply.objectId) {
+              <article class="media-comment media-comment--reply">
+                <div class="media-comment__header">
+                  <strong>{{ reply.userName }}</strong>
+                  @if (reply.createdAt || reply.updatedAt) {
+                    <ion-note>{{ formatDate(reply.createdAt || reply.updatedAt) }}</ion-note>
+                  }
+                </div>
+                <p>{{ reply.text }}</p>
+                <div class="media-engagement__reactions media-engagement__reactions--comment">
+                  @for (option of reactionOptions; track option.value) {
+                    <button
+                      type="button"
+                      class="media-reaction-btn"
+                      [class.media-reaction-btn--active]="reply.reactions.myReaction === option.value"
+                      [disabled]="saving"
+                      (click)="selectCommentReaction(reply, option.value)"
+                    >
+                      <span aria-hidden="true">{{ option.emoji }}</span>
+                      <span>{{ reply.reactions.counts[option.value] || 0 }}</span>
+                    </button>
+                  }
+                </div>
+                <ion-button fill="clear" size="small" (click)="startReply(comment)">
+                  Responder
+                </ion-button>
+              </article>
+            }
+          </article>
+        }
+      </div>
+    }
+  </div>
+}

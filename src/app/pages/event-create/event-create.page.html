@@ -1,0 +1,168 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="cancel()">Cancelar</ion-button>
+    </ion-buttons>
+    <ion-title>Novo evento</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+    <form [formGroup]="form" novalidate (ngSubmit)="submit()">
+    <ion-list lines="full">
+      <ion-item>
+        <ion-input label="Nome do evento" labelPlacement="stacked" formControlName="name"></ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-select label="Tipo" labelPlacement="stacked" formControlName="type">
+          @for (t of eventTypes; track t.value) {
+            <ion-select-option [value]="t.value">{{ t.label }}</ion-select-option>
+          }
+        </ion-select>
+      </ion-item>
+
+      @if (form.get('type')?.value === 'team_match') {
+        <ion-item>
+          <ion-input
+            label="Nome da equipe mandante"
+            labelPlacement="stacked"
+            formControlName="homeTeamName"
+            placeholder="Ex.: Time Azul"
+            (ionInput)="onFieldChange()"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            label="Nome da equipe visitante"
+            labelPlacement="stacked"
+            formControlName="awayTeamName"
+            placeholder="Ex.: Time Vermelho"
+            (ionInput)="onFieldChange()"
+          ></ion-input>
+        </ion-item>
+      }
+
+      <ion-item>
+        <ion-input
+          type="date"
+          label="Data de inicio"
+          labelPlacement="stacked"
+          formControlName="startDate"
+          (ionInput)="onFieldChange()"
+        ></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-input
+          type="time"
+          label="Hora de inicio"
+          labelPlacement="stacked"
+          formControlName="startTime"
+          (ionInput)="onFieldChange()"
+        ></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-input
+          type="date"
+          label="Data de termino"
+          labelPlacement="stacked"
+          formControlName="endDate"
+          (ionInput)="onFieldChange()"
+        ></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-input
+          type="time"
+          label="Hora de termino"
+          labelPlacement="stacked"
+          formControlName="endTime"
+          (ionInput)="onFieldChange()"
+        ></ion-input>
+      </ion-item>
+    </ion-list>
+
+    <app-address-form
+      formControlName="address"
+      title="Local do evento"
+      (addressChange)="onAddressChanged()"
+    ></app-address-form>
+
+    <ion-list lines="full">
+      <ion-item>
+        <ion-input
+          label="Complemento do local"
+          labelPlacement="stacked"
+          formControlName="locationComplement"
+          placeholder="Ex.: Campo 2, Quadra 2"
+          (ionInput)="onFieldChange()"
+        ></ion-input>
+      </ion-item>
+      <ion-note color="medium" class="ion-padding-horizontal">
+        Opcional. Use para diferenciar campos ou quadras no mesmo endereco.
+      </ion-note>
+
+      <ion-item-divider>
+        <ion-label>Pagamento</ion-label>
+      </ion-item-divider>
+      <ion-item>
+        <ion-input
+          type="number"
+          label="Valor da participacao (R$)"
+          labelPlacement="stacked"
+          formControlName="participationFee"
+          min="0"
+          step="0.01"
+          (ionInput)="onFieldChange()"
+        ></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-input
+          label="Chave PIX 1"
+          labelPlacement="stacked"
+          formControlName="pixKey1"
+          (ionInput)="onFieldChange()"
+        ></ion-input>
+        <app-pix-copy-button slot="end" [text]="form.get('pixKey1')?.value ?? ''"></app-pix-copy-button>
+      </ion-item>
+      <ion-item>
+        <ion-input
+          label="Chave PIX 2"
+          labelPlacement="stacked"
+          formControlName="pixKey2"
+          (ionInput)="onFieldChange()"
+        ></ion-input>
+        <app-pix-copy-button slot="end" [text]="form.get('pixKey2')?.value ?? ''"></app-pix-copy-button>
+      </ion-item>
+      <ion-item>
+        <ion-input
+          label="Chave PIX 3"
+          labelPlacement="stacked"
+          formControlName="pixKey3"
+          (ionInput)="onFieldChange()"
+        ></ion-input>
+        <app-pix-copy-button slot="end" [text]="form.get('pixKey3')?.value ?? ''"></app-pix-copy-button>
+      </ion-item>
+      <ion-note color="medium" class="ion-padding-horizontal">
+        Se o valor for maior que zero, informe ao menos uma chave PIX.
+      </ion-note>
+
+      <ion-item-divider>
+        <ion-label>Portaria</ion-label>
+      </ion-item-divider>
+      <ion-item>
+        <ion-toggle formControlName="gateTicketControlEnabled" labelPlacement="end">
+          Havera controle de ingresso na portaria de entrada no evento?
+        </ion-toggle>
+      </ion-item>
+    </ion-list>
+
+    @if (invalidHint) {
+      <ion-note color="warning" class="ion-padding-top">{{ invalidHint }}</ion-note>
+    }
+
+    <ion-button expand="block" type="button" class="ion-margin-top" [disabled]="!canSubmit" (click)="submit()">
+      Criar evento
+    </ion-button>
+  </form>
+</ion-content>

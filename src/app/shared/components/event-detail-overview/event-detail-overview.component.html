@@ -1,0 +1,63 @@
+<h1>{{ viewModel.name }}</h1>
+<p>{{ viewModel.typeLabel }}</p>
+
+@if (viewModel.peladaName) {
+  <ng-content select="[peladaLink]"></ng-content>
+}
+
+@for (chip of viewModel.chips; track chip.label) {
+  <ion-chip [color]="chip.color">{{ chip.label }}</ion-chip>
+}
+
+<ion-list lines="none" class="ion-margin-top">
+  @for (row of viewModel.rows; track row.icon + row.title) {
+    <ion-item>
+      <ion-icon [name]="row.icon" slot="start"></ion-icon>
+      <ion-label class="ion-text-wrap">
+        <p>{{ row.title }}</p>
+        <h3>{{ row.value }}</h3>
+        @if (row.detail) {
+          <p>{{ row.detail }}</p>
+        }
+        @for (line of row.detailLines ?? []; track line) {
+          <p>{{ line }}</p>
+        }
+      </ion-label>
+    </ion-item>
+  }
+
+  @if (viewModel.pixKeys.length > 0) {
+    <ion-item lines="none">
+      <ion-icon name="qr-code-outline" slot="start"></ion-icon>
+      <ion-label>
+        <p>Chaves PIX</p>
+      </ion-label>
+    </ion-item>
+    @for (key of viewModel.pixKeys; track key; let index = $index) {
+      <ion-item class="pix-key-item">
+        <ion-label class="ion-text-wrap">
+          <h3>PIX {{ index + 1 }}: {{ key }}</h3>
+        </ion-label>
+        <app-pix-copy-button slot="end" [text]="key"></app-pix-copy-button>
+      </ion-item>
+    }
+  }
+
+  <ion-item>
+    <app-user-avatar
+      slot="start"
+      [avatarUrl]="viewModel.adminAvatarUrl"
+      [alt]="viewModel.adminName"
+      size="md"
+    ></app-user-avatar>
+    <ion-label>
+      <p>Administrador</p>
+      <h3>{{ viewModel.adminApelido || viewModel.adminName }}</h3>
+      @if (viewModel.adminApelido && viewModel.adminName !== viewModel.adminApelido) {
+        <p>{{ viewModel.adminName }}</p>
+      }
+    </ion-label>
+  </ion-item>
+
+  <ng-content select="[votingPeriod]"></ng-content>
+</ion-list>

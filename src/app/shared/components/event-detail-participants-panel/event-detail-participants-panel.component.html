@@ -1,0 +1,274 @@
+<ion-card id="participants-panel-anchor" class="ion-margin-top">
+  <ion-card-header>
+    <div class="event-panel-header">
+      <div>
+        @if (isAdminMode) {
+          <ion-card-title>Participantes ({{ participantsCount }})</ion-card-title>
+          <ion-card-subtitle>Confirme pagamento, isencao e chegada dos atletas</ion-card-subtitle>
+        } @else {
+          <ion-card-title>Participantes</ion-card-title>
+        }
+      </div>
+      <ion-button fill="clear" size="small" class="event-panel-back" (click)="back.emit()">
+        <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
+        Voltar
+      </ion-button>
+    </div>
+  </ion-card-header>
+  <ion-card-content>
+    @if (registration) {
+      <ion-card [color]="cardColor(registration)" class="ion-margin-bottom">
+        <ion-card-header>
+          <ion-card-title>
+            {{ cardTitle(registration) }}
+          </ion-card-title>
+          <ion-card-subtitle>
+            {{ registration.apelido }} · {{ registrationService.formatRole(registration.role) }}
+            · {{ registration.membershipType === 'socio' ? 'Socio' : 'Convidado' }}
+          </ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          <p>{{ effectiveConfirmationLabel(registration) }}</p>
+          @if (showParticipationPaymentRequest(registration)) {
+            <p>Realize o pagamento de {{ formatParticipationFee(event.participationFee) }} via PIX.</p>
+          }
+        </ion-card-content>
+      </ion-card>
+
+      @if (!event.isReadOnly) {
+        <ion-button
+          expand="block"
+          fill="outline"
+          color="danger"
+          class="ion-margin-bottom"
+          [disabled]="cancelling"
+          (click)="cancelRegistration.emit()"
+        >
+          Cancelar inscricao
+        </ion-button>
+      }
+    }
+
+    @if (isAdminMode) {
+      @if (participantsCount === 0) {
+        <ion-note>Nenhum participante inscrito ainda.</ion-note>
+      } @else {
+        <ion-searchbar
+          placeholder="Buscar participante"
+          [value]="participantSearch"
+          [debounce]="0"
+          (ionInput)="onSearchInput($event)"
+        ></ion-searchbar>
+        @if (filteredParticipants.length === 0) {
+          <ion-note color="medium">Nenhum participante encontrado para "{{ participantSearch }}".</ion-note>
+        }
+        <ion-list lines="none" class="participant-admin-list">
+          @for (participant of filteredParticipants; track participant.objectId) {
+            <ion-card class="participant-admin-card">
+              <ion-card-content>
+                <div class="participant-admin-header">
+                  <app-user-avatar
+                    [avatarUrl]="participant.avatarUrl"
+                    [alt]="participant.apelido"
+                    size="md"
+                  ></app-user-avatar>
+                  <div class="participant-admin-summary">
+                    <h3>{{ participant.apelido }}</h3>
+                    <p>
+                      {{ participant.userName }} · {{ registrationService.formatRole(participant.role) }}
+                      @if (participant.isAnonymous) {
+                        · Anonimo
+                      }
+                      @if (participant.primaryPosition) {
+                        · {{ participant.primaryPosition }}
+                      }
+                    </p>
+                    <p>
+                      {{ participant.isEffectivelyConfirmed ? 'Confirmado' : 'Pendente' }}
+                      @if (hasPendingProfilePresentation(participant)) {
+                        · <ion-text color="warning">Apresentacao de perfil pendente</ion-text>
+                      }
+                      · {{ participantMembershipLabel(participant) }}
+                      @if (participant.paymentExempt) {
+                        · Isento
+                      } @else if (hasPositiveParticipationFee(event.participationFee)) {
+                        · Pagamento: {{ participant.paymentConfirmed ? 'Sim' : 'Nao' }}
+                      }
+                      @if (gateTicketControlEnabled && participant.isEffectivelyConfirmed) {
+                        ·
+                        <ion-text [color]="participant.gateTicketActive ? 'success' : 'warning'">
+                          Ingresso: {{ participant.gateTicketActive ? 'Enviado' : 'Nao enviado' }}
+                        </ion-text>
+                      }
+                      @if (participant.role === 'athlete' && supportsArrivalOrder && event.useArrivalOrderForTeams) {
+                        @if (participant.arrivalOrder != null) {
+                          · Chegada: {{ participant.arrivalOrder }}º
+                          @if (participant.arrivedAt) {
+                            ({{ registrationService.formatArrivedAt(participant.arrivedAt) }})
+                          }
+                        } @else {
+                          · Aguardando chegada
+                        }
+                      }
+                    </p>
+                  </div>
+                  @if (
+                    supportsArrivalOrder &&
+                    event.useArrivalOrderForTeams &&
+                    participant.role === 'athlete' &&
+                    !event.isReadOnly
+                  ) {
+                    <div class="participant-admin-actions">
+                      @if (hasArrived(participant)) {
+                        <ion-button
+                          fill="outline"
+                          color="medium"
+                          size="small"
+                          [disabled]="updatingPaymentId === participant.objectId"
+                          (click)="arrivalAction.emit({ participant, action: 'undo' })"
+                        >
+                          Desfazer chegada
+                        </ion-button>
+                      } @else {
+                        <ion-button
+                          size="small"
+                          [disabled]="updatingPaymentId === participant.objectId"
+                          (click)="arrivalAction.emit({ participant, action: 'check_in' })"
+                        >
+                          Chegou
+                        </ion-button>
+                      }
+                    </div>
+                  }
+                </div>
+
+                @if (hasPendingProfilePresentation(participant)) {
+                  <div class="participant-admin-profile-review ion-margin-top">
+                    <ion-note color="warning">
+                      Primeira participacao nesta pelada — avalie o perfil antes de confirmar.
+                    </ion-note>
+                    <div class="participant-admin-profile-actions">
+                      <ion-button
+                        fill="outline"
+                        size="small"
+                        (click)="viewProfilePresentation.emit(participant)"
+                      >
+                        Ver perfil
+                      </ion-button>
+                      <ion-button
+                        color="success"
+                        size="small"
+                        [disabled]="resolvingProfileId === participant.objectId"
+                        (click)="approveProfilePresentation.emit(participant)"
+                      >
+                        Aprovar
+                      </ion-button>
+                      <ion-button
+                        color="danger"
+                        fill="outline"
+                        size="small"
+                        [disabled]="resolvingProfileId === participant.objectId"
+                        (click)="rejectProfilePresentation.emit(participant)"
+                      >
+                        Recusar
+                      </ion-button>
+                    </div>
+                  </div>
+                }
+
+                @if (showPaymentAdminControlsFor(participant)) {
+                  <ion-list lines="full" class="participant-admin-controls">
+                    <ion-item>
+                      <ion-toggle
+                        [checked]="participant.paymentExempt"
+                        [disabled]="updatingPaymentId === participant.objectId"
+                        (ionChange)="paymentExemptToggle.emit({ participant, event: $event })"
+                      >
+                        Isento de pagamento
+                      </ion-toggle>
+                    </ion-item>
+                    <ion-item>
+                      <ion-toggle
+                        [checked]="participant.paymentConfirmed"
+                        [disabled]="updatingPaymentId === participant.objectId || participant.paymentExempt"
+                        (ionChange)="paymentToggle.emit({ participant, event: $event })"
+                      >
+                        Pagamento confirmado
+                      </ion-toggle>
+                    </ion-item>
+                  </ion-list>
+                } @else if (showPaymentAdminControls && isContractHired(participant)) {
+                  <ion-note color="medium">
+                    Contratado — sem taxa de participacao. Pague o profissional apos confirmar a presenca.
+                  </ion-note>
+                }
+
+                @if (gateTicketControlEnabled && participant.isEffectivelyConfirmed) {
+                  <div class="participant-admin-gate">
+                    @if (participant.gateTicketActive) {
+                      <ion-button
+                        expand="block"
+                        fill="outline"
+                        color="danger"
+                        [disabled]="cancellingTicketId === participant.objectId"
+                        (click)="cancelGateTicket.emit(participant)"
+                      >
+                        Cancelar ingresso
+                      </ion-button>
+                    } @else {
+                      <ion-button
+                        expand="block"
+                        fill="outline"
+                        [disabled]="issuingTicketId === participant.objectId"
+                        (click)="issueGateTicket.emit(participant)"
+                      >
+                        Enviar ingresso
+                      </ion-button>
+                    }
+                  </div>
+                }
+              </ion-card-content>
+            </ion-card>
+          }
+        </ion-list>
+        @if (supportsArrivalOrder && event.useArrivalOrderForTeams) {
+          <ion-note color="medium" class="ion-padding-top">
+            Toque em <strong>Chegou</strong> quando o atleta chegar ao local. O administrador
+            sempre fica em 1º. Socios da pelada ficam na frente dos convidados e, entre si,
+            seguem a ordem de chegada (o administrador nao entra nessa fila de socios).
+          </ion-note>
+        }
+      }
+    } @else if (confirmedParticipantsCount > 0) {
+      <h3 class="participants-section-title">Participantes confirmados ({{ confirmedParticipantsCount }})</h3>
+      <ion-searchbar
+        placeholder="Buscar participante"
+        [value]="participantSearch"
+        [debounce]="0"
+        (ionInput)="onSearchInput($event)"
+      ></ion-searchbar>
+      @if (filteredConfirmedParticipants.length === 0) {
+        <ion-note color="medium">Nenhum participante encontrado para "{{ participantSearch }}".</ion-note>
+      }
+      <ion-list lines="full">
+        @for (participant of filteredConfirmedParticipants; track participant.objectId) {
+          <ion-item>
+            <app-user-avatar
+              slot="start"
+              [avatarUrl]="participant.avatarUrl"
+              [alt]="participant.apelido"
+              size="md"
+            ></app-user-avatar>
+            <ion-label>
+              <h3>{{ participant.apelido }}</h3>
+              <p>{{ registrationService.formatRole(participant.role) }}</p>
+              @if (participant.primaryPosition) {
+                <p>Posicao: {{ participant.primaryPosition }}</p>
+              }
+            </ion-label>
+          </ion-item>
+        }
+      </ion-list>
+    }
+  </ion-card-content>
+</ion-card>

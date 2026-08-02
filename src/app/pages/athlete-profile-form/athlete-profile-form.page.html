@@ -1,0 +1,53 @@
+<ion-header>
+
+  <app-user-bar></app-user-bar>
+
+  <ion-toolbar>
+
+    <ion-buttons slot="start">
+
+      <ion-button (click)="cancel()">Voltar</ion-button>
+
+    </ion-buttons>
+
+    <ion-title>Perfil de atleta</ion-title>
+
+  </ion-toolbar>
+
+</ion-header>
+
+
+
+<ion-content class="ion-padding">
+
+  @if (hasProfile) {
+
+    <ion-note>
+
+      Atualize seus dados de atleta e valores de participacao abaixo.
+
+    </ion-note>
+
+  }
+
+
+
+  <form [formGroup]="form" (ngSubmit)="submit()">
+
+    <ion-list lines="full">
+
+      <app-athlete-profile-fields [form]="form"></app-athlete-profile-fields>
+
+    </ion-list>
+
+
+
+    <ion-button expand="block" type="submit" class="ion-margin-top">
+
+      {{ hasProfile ? 'Salvar alteracoes' : 'Salvar perfil' }}
+
+    </ion-button>
+
+  </form>
+
+</ion-content>

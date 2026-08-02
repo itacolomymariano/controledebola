@@ -1,0 +1,67 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button [defaultHref]="'/event/' + eventId + '/mural/media'"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Video do evento</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <ion-spinner name="crescent"></ion-spinner>
+  }
+
+  @if (!loading && loadError) {
+    <ion-card color="warning">
+      <ion-card-content>{{ loadError }}</ion-card-content>
+    </ion-card>
+  }
+
+  @if (!loading && !loadError && dashboard && !dashboard.cloudAvailable) {
+    <ion-card color="warning">
+      <ion-card-content>Conteudo de midia indisponivel no momento.</ion-card-content>
+    </ion-card>
+  }
+
+  @if (!loading && !loadError && dashboard; as dash) {
+    @if (dash.cloudAvailable) {
+      @if (!dash.highlightVideo) {
+        <ion-note>Nenhum video de melhores momentos publicado ainda.</ion-note>
+      } @else {
+        @let video = dash.highlightVideo;
+        <ion-card class="media-article">
+          <ion-card-content>
+            <video class="media-highlight-video" controls playsinline [src]="video.videoUrl"></video>
+
+            <h2>{{ video.title }}</h2>
+            <p>{{ video.description }}</p>
+
+            <div class="media-author">
+              <app-user-avatar
+                [avatarUrl]="video.authorAvatarUrl"
+                [alt]="video.authorName"
+                size="sm"
+              ></app-user-avatar>
+              <div>
+                <strong>{{ video.authorName }}</strong>
+                @if (video.authorApelido) {
+                  <p>{{ video.authorApelido }}</p>
+                }
+                @if (video.updatedAt) {
+                  <ion-note>{{ formatDate(video.updatedAt) }}</ion-note>
+                }
+              </div>
+            </div>
+
+            <app-event-media-engagement
+              [eventId]="eventId"
+              category="highlight_video"
+            ></app-event-media-engagement>
+          </ion-card-content>
+        </ion-card>
+      }
+    }
+  }
+</ion-content>

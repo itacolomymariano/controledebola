@@ -1,0 +1,49 @@
+.material-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 48px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.material-grid.material-grid-colored {
+  /* Cor ocupa o espaco restante; Qtd/Avariadas ficam compactas para o nome da cor caber. */
+  grid-template-columns: minmax(0, 1fr) 56px 64px 48px;
+}
+
+.material-grid.material-grid-colored ion-select {
+  --padding-start: 6px;
+  --padding-end: 4px;
+}
+
+.material-grid-header {
+  font-size: 0.8rem;
+  color: var(--ion-color-medium);
+  margin-bottom: 4px;
+}
+
+ion-card .material-grid:not(.material-grid-header) ion-input,
+ion-card .material-grid:not(.material-grid-header) ion-select {
+  --padding-start: 8px;
+  --padding-end: 8px;
+  min-height: 40px;
+  width: 100%;
+  min-width: 0;
+}
+
+.material-delete-btn {
+  margin: 0;
+  width: 48px;
+  height: 40px;
+  --padding-start: 0;
+  --padding-end: 0;
+}
+
+.material-delete-btn ion-icon {
+  font-size: 22px;
+}
+
+h2 {
+  margin: 16px 0 8px;
+  font-size: 1.1rem;
+}

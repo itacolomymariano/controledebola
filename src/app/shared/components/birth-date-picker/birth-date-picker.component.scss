@@ -1,0 +1,23 @@
+.birth-date-picker {
+  margin-bottom: 8px;
+}
+
+.field-label {
+  display: block;
+  padding: 0 16px 8px;
+  font-size: 0.875rem;
+  color: var(--ion-color-medium);
+}
+
+.select-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 0 8px;
+}
+
+.select-item {
+  --padding-start: 4px;
+  --inner-padding-end: 4px;
+  --min-height: 72px;
+}

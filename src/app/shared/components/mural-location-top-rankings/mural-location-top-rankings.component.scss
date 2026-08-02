@@ -1,0 +1,46 @@
+.drilldown-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.drilldown-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.drilldown-card {
+  margin: 0;
+
+  ion-card-title {
+    font-size: 1.05rem;
+  }
+
+  ion-card-subtitle {
+    margin-top: 0.25rem;
+  }
+}
+
+.location-role-block {
+  margin-bottom: 1rem;
+
+  h3 {
+    margin: 0 0 0.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+}
+
+.rank-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+
+  span {
+    flex: 1;
+  }
+}

@@ -1,0 +1,72 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button [defaultHref]="'/event/' + eventId"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Cobertura</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <ion-spinner name="crescent"></ion-spinner>
+  }
+
+  @if (!loading) {
+    <ion-note color="medium" class="ion-margin-bottom">
+      Envie um video dos melhores momentos (max. 5 minutos) para o mural do evento. Se ja existir video,
+      o anterior sera substituido.
+    </ion-note>
+
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Melhores momentos</ion-card-title>
+        <ion-card-subtitle>Cinegrafista contratado</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-item lines="full">
+          <ion-input
+            label="Titulo do video"
+            labelPlacement="stacked"
+            [(ngModel)]="title"
+            maxlength="120"
+          ></ion-input>
+        </ion-item>
+        <ion-item lines="full">
+          <ion-textarea
+            label="Breve descricao"
+            labelPlacement="stacked"
+            [(ngModel)]="description"
+            maxlength="500"
+            autoGrow="true"
+            rows="3"
+          ></ion-textarea>
+        </ion-item>
+
+        <input #videoInput type="file" accept="video/*" hidden (change)="onVideoSelected($event)" />
+        <ion-button expand="block" fill="outline" class="ion-margin-top" (click)="videoInput.click()">
+          <ion-icon slot="start" name="videocam-outline"></ion-icon>
+          Selecionar video
+        </ion-button>
+
+        @if (videoPreviewUrl) {
+          <video class="coverage-preview" controls [src]="videoPreviewUrl"></video>
+          @if (durationSec) {
+            <ion-note>Duracao: {{ formatDuration(durationSec) }}</ion-note>
+          }
+        }
+
+        @if (existing && !videoFile) {
+          <ion-note color="medium" class="ion-margin-top">
+            Ha um video publicado. Selecione outro arquivo para substituir, ou reenvie com novo titulo/descricao.
+          </ion-note>
+        }
+
+        <ion-button expand="block" class="ion-margin-top" [disabled]="publishing" (click)="publish()">
+          Enviar video ao mural
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+  }
+</ion-content>

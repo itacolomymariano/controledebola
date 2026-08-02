@@ -1,0 +1,134 @@
+@if (rankings) {
+  <ion-list-header>
+    <ion-label>Top 3 por localizacao</ion-label>
+    <app-mural-share-button
+      [context]="shareContext"
+      cardTitle="Top 3 por localizacao"
+      [target]="locationShareRoot"
+    ></app-mural-share-button>
+  </ion-list-header>
+
+  <div #locationShareRoot>
+  <div class="drilldown-header">
+    @if (level !== 'states') {
+      <ion-button fill="clear" size="small" (click)="backLevel()">Voltar</ion-button>
+    }
+    <ion-note>{{ breadcrumb }}</ion-note>
+  </div>
+
+  @if (level === 'states') {
+    @if (!stateGroups.length) {
+      <ion-note color="medium">Sem Top 3 por estado disponivel.</ion-note>
+    }
+    <div class="drilldown-grid">
+      @for (group of stateGroups; track group.label) {
+        @if (hasAnyRankings(group)) {
+          <ion-card button class="drilldown-card" (click)="openState(group.label)">
+            <ion-card-header>
+              <ion-card-title>{{ group.label }}</ion-card-title>
+              <ion-card-subtitle>{{ group.participantCount }} participantes</ion-card-subtitle>
+            </ion-card-header>
+          </ion-card>
+        }
+      }
+    </div>
+  }
+
+  @if (level === 'stateDetail' && selectedStateGroup) {
+    <ng-container
+      *ngTemplateOutlet="rankingsBlock; context: { $implicit: selectedStateGroup }"
+    ></ng-container>
+    @if (cityGroupsForState.length) {
+      <ion-button expand="block" fill="outline" class="ion-margin-top" (click)="openCitiesList()">
+        Ver Top 3 por cidades de {{ selectedState }}
+      </ion-button>
+    }
+  }
+
+  @if (level === 'cities') {
+    @if (!cityGroupsForState.length) {
+      <ion-note color="medium">Sem Top 3 por cidade neste estado.</ion-note>
+    }
+    <div class="drilldown-grid">
+      @for (group of cityGroupsForState; track group.label) {
+        <ion-card button class="drilldown-card" (click)="openCity(group.label)">
+          <ion-card-header>
+            <ion-card-title>{{ cityDisplayName(group.label) }}</ion-card-title>
+            <ion-card-subtitle>{{ group.participantCount }} participantes</ion-card-subtitle>
+          </ion-card-header>
+        </ion-card>
+      }
+    </div>
+  }
+
+  @if (level === 'cityDetail' && selectedCityGroup) {
+    <ng-container
+      *ngTemplateOutlet="rankingsBlock; context: { $implicit: selectedCityGroup }"
+    ></ng-container>
+    @if (neighborhoodGroupsForCity.length) {
+      <ion-button expand="block" fill="outline" class="ion-margin-top" (click)="openNeighborhoodsList()">
+        Ver Top 3 por bairros de {{ cityDisplayName(selectedCityLabel) }}
+      </ion-button>
+    }
+  }
+
+  @if (level === 'neighborhoods') {
+    @if (!neighborhoodGroupsForCity.length) {
+      <ion-note color="medium">Sem Top 3 por bairro nesta cidade.</ion-note>
+    }
+    <div class="drilldown-grid">
+      @for (group of neighborhoodGroupsForCity; track group.label) {
+        <ion-card button class="drilldown-card" (click)="openNeighborhood(group.label)">
+          <ion-card-header>
+            <ion-card-title>{{ neighborhoodDisplayName(group.label) }}</ion-card-title>
+            <ion-card-subtitle>{{ group.participantCount }} participantes</ion-card-subtitle>
+          </ion-card-header>
+        </ion-card>
+      }
+    </div>
+  }
+
+  @if (level === 'neighborhoodDetail' && selectedNeighborhoodGroup) {
+    <ng-container
+      *ngTemplateOutlet="rankingsBlock; context: { $implicit: selectedNeighborhoodGroup }"
+    ></ng-container>
+  }
+  </div>
+}
+
+<ng-template #rankingsBlock let-group>
+  <ion-card>
+    <ion-card-header>
+      <div class="mural-card-header-row">
+        <div>
+          <ion-card-title>{{ group.label }}</ion-card-title>
+          <ion-card-subtitle>{{ group.participantCount }} participantes</ion-card-subtitle>
+        </div>
+        <app-mural-share-button
+          [context]="shareContext"
+          [cardTitle]="'Top 3 — ' + group.label"
+        ></app-mural-share-button>
+      </div>
+    </ion-card-header>
+    <ion-card-content>
+      @for (role of muralRoles; track role) {
+        @if (group.rankings[role]?.length) {
+          <div class="location-role-block">
+            <h3>Top 3 — {{ roleLabel(role) }}</h3>
+            @for (entry of group.rankings[role]; track entry.userId; let i = $index) {
+              <div class="rank-row ion-margin-bottom">
+                <app-user-avatar
+                  [avatarUrl]="entry.avatarUrl"
+                  [alt]="entry.userName"
+                  size="sm"
+                ></app-user-avatar>
+                <span>{{ i + 1 }}. {{ entry.userName }}</span>
+                <ion-badge>{{ rankingScore(entry).toFixed(1) }}</ion-badge>
+              </div>
+            }
+          </div>
+        }
+      }
+    </ion-card-content>
+  </ion-card>
+</ng-template>

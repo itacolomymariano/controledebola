@@ -1,0 +1,89 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="cancel()">Voltar</ion-button>
+    </ion-buttons>
+    <ion-title>{{ isEdit ? 'Editar pelada' : 'Nova pelada' }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <ion-list lines="full">
+      <ion-item>
+        <ion-input label="Nome da pelada" labelPlacement="stacked" formControlName="name"></ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-select label="Esporte" labelPlacement="stacked" formControlName="sport">
+          @for (s of sports; track s.value) {
+            <ion-select-option [value]="s.value">{{ s.label }}</ion-select-option>
+          }
+        </ion-select>
+      </ion-item>
+
+      <ion-item>
+        <ion-input
+          label="Quantidade de socios (meta)"
+          labelPlacement="stacked"
+          type="number"
+          formControlName="memberCount"
+        ></ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-input
+          label="Mensalidade padrao (R$)"
+          labelPlacement="stacked"
+          type="number"
+          formControlName="monthlyFee"
+        ></ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-input
+          label="Data de fundacao"
+          labelPlacement="stacked"
+          type="date"
+          formControlName="foundedDate"
+        ></ion-input>
+      </ion-item>
+
+      <ion-item-divider>
+        <ion-label>Endereco do local</ion-label>
+      </ion-item-divider>
+      <app-address-form
+        formControlName="address"
+        title="Local da pelada"
+        (addressChange)="onAddressChanged()"
+      ></app-address-form>
+
+      <ion-item-divider>
+        <ion-label>Foto do admin</ion-label>
+      </ion-item-divider>
+      <div class="pelada-form-photos">
+        <app-image-picker
+          label="Foto do administrador"
+          [previewUrl]="adminPhotoPreview"
+          (imageSelected)="onAdminPhotoSelected($event)"
+        ></app-image-picker>
+      </div>
+
+      <ion-item-divider>
+        <ion-label>Foto do local</ion-label>
+      </ion-item-divider>
+      <div class="pelada-form-photos">
+        <app-image-picker
+          label="Foto do local"
+          [previewUrl]="locationPhotoPreview"
+          (imageSelected)="onLocationPhotoSelected($event)"
+        ></app-image-picker>
+      </div>
+    </ion-list>
+
+    <ion-button expand="block" type="submit" [disabled]="form.invalid" class="ion-margin-top">
+      {{ isEdit ? 'Salvar' : 'Criar pelada' }}
+    </ion-button>
+  </form>
+</ion-content>

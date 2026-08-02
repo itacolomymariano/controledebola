@@ -1,0 +1,7 @@
+{
+  "name": "controle-de-bola",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}

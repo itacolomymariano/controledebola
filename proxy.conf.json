@@ -1,0 +1,10 @@
+{
+  "/parse": {
+    "target": "https://parseapi.back4app.com",
+    "secure": true,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/parse": ""
+    }
+  }
+}

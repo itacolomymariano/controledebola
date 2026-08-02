@@ -1,0 +1,49 @@
+.wizard-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  justify-content: center;
+}
+
+.wizard-hero {
+  text-align: center;
+  padding: 24px 16px;
+}
+
+.wizard-icon {
+  font-size: 64px;
+  color: var(--ion-color-primary);
+  margin-bottom: 16px;
+}
+
+.wizard-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.wizard-text {
+  color: var(--ion-color-medium);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.choice-card {
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.choice-card ion-card-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.choice-card ion-icon {
+  font-size: 32px;
+  color: var(--ion-color-primary);
+}
+
+.wizard-actions {
+  padding: 16px;
+}

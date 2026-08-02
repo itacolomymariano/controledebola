@@ -1,0 +1,89 @@
+﻿<ion-header>
+  <ion-toolbar>
+    <ion-title>{{ passwordResetEnabled && forgotPasswordMode ? 'Redefinir senha' : 'Entrar' }}</ion-title>
+    @if (passwordResetEnabled && forgotPasswordMode) {
+      <ion-buttons slot="start">
+        <ion-button (click)="backToLogin()">
+          <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-buttons>
+    }
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (!passwordResetEnabled || !forgotPasswordMode) {
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <ion-item>
+        <ion-input
+          label="E-mail ou celular"
+          labelPlacement="stacked"
+          formControlName="identifier"
+          type="text"
+          autocomplete="username"
+        ></ion-input>
+      </ion-item>
+      @if (form.get('identifier')?.invalid && form.get('identifier')?.touched) {
+        <ion-note color="danger" class="ion-padding-horizontal">Informe e-mail ou celular.</ion-note>
+      }
+      <ion-item>
+        <ion-input
+          label="Senha"
+          labelPlacement="stacked"
+          formControlName="password"
+          [type]="showPassword ? 'text' : 'password'"
+          autocomplete="current-password"
+        ></ion-input>
+        <ion-button
+          fill="clear"
+          slot="end"
+          class="password-toggle"
+          (click)="togglePasswordVisibility()"
+          [attr.aria-label]="showPassword ? 'Ocultar senha' : 'Mostrar senha'"
+        >
+          <ion-icon [name]="showPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+        </ion-button>
+      </ion-item>
+      @if (form.get('password')?.invalid && form.get('password')?.touched) {
+        <ion-note color="danger" class="ion-padding-horizontal">Informe sua senha.</ion-note>
+      }
+      <ion-button expand="block" type="submit" class="ion-margin-top">Entrar</ion-button>
+    </form>
+
+    @if (biometricEnabled) {
+      <ion-button expand="block" fill="outline" class="ion-margin-top" (click)="loginWithBiometric()">
+        Entrar com biometria / sessao salva
+      </ion-button>
+    }
+
+    @if (passwordResetEnabled) {
+      <ion-button expand="block" fill="clear" (click)="openForgotPassword()">
+        Esqueci minha senha
+      </ion-button>
+    }
+    <ion-button expand="block" fill="clear" (click)="goRegister()">Criar conta</ion-button>
+  } @else if (passwordResetEnabled) {
+    <p class="reset-hint">
+      Informe o e-mail cadastrado no app. Voce recebera um link para redefinir sua senha.
+    </p>
+
+    <form [formGroup]="resetForm" (ngSubmit)="submitPasswordReset()">
+      <ion-item>
+        <ion-input
+          label="E-mail cadastrado"
+          labelPlacement="stacked"
+          formControlName="email"
+          type="email"
+          autocomplete="email"
+        ></ion-input>
+      </ion-item>
+      @if (resetForm.get('email')?.invalid && resetForm.get('email')?.touched) {
+        <ion-note color="danger" class="ion-padding-horizontal">Informe um e-mail valido.</ion-note>
+      }
+
+      <ion-button expand="block" type="submit" class="ion-margin-top" [disabled]="resetForm.invalid">
+        Enviar link de redefinicao
+      </ion-button>
+    </form>
+  }
+</ion-content>

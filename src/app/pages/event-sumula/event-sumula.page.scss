@@ -1,0 +1,43 @@
+.sumula-content {
+  --padding-bottom: 1.5rem;
+}
+
+.sumula-header h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+}
+
+.sumula-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.sumula-athlete-card {
+  margin-top: 0.75rem;
+}
+
+.sumula-athlete-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.sumula-athlete-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.sumula-athlete-header p {
+  margin: 0.2rem 0 0;
+  color: var(--ion-color-medium);
+  font-size: 0.85rem;
+}
+
+.sumula-observation-item {
+  margin-top: 0.5rem;
+  --padding-start: 0;
+  --inner-padding-end: 0;
+}

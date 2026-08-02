@@ -1,0 +1,39 @@
+:host {
+  display: block;
+}
+
+.hiring-invite-form {
+  margin: 12px 0 0;
+  border: 1px solid var(--ion-color-primary-tint);
+}
+
+.hiring-invitations-section {
+  margin: 12px 0;
+}
+
+.hiring-invitations-list {
+  border: 1px solid var(--ion-color-light-shade);
+  border-radius: 8px;
+}
+
+.candidate-results {
+  margin-bottom: 12px;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--ion-color-light-shade);
+  border-radius: 8px;
+}
+
+.candidate-results ion-item {
+  --min-height: 56px;
+}
+
+.candidate-selected {
+  --background: rgba(var(--ion-color-primary-rgb), 0.08);
+}
+
+.selected-candidate {
+  margin-bottom: 8px;
+  border: 1px solid var(--ion-color-primary);
+  border-radius: 8px;
+}

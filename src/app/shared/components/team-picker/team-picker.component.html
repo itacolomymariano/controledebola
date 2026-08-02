@@ -1,0 +1,57 @@
+<ion-item button detail="false" (click)="openModal()" [disabled]="disabled">
+  <ion-label position="stacked">Time de coracao (profissional)</ion-label>
+  <div class="selected-team">
+    @if (selectedTeam) {
+      <app-team-shield [team]="selectedTeam" size="md"></app-team-shield>
+      <span>{{ selectedTeam.name }}</span>
+    } @else {
+      <span class="placeholder">Selecione um time</span>
+    }
+  </div>
+  @if (selectedTeam && !disabled) {
+    <ion-button slot="end" fill="clear" size="small" (click)="clearSelection(); $event.stopPropagation()">
+      Limpar
+    </ion-button>
+  }
+</ion-item>
+
+<ion-modal [isOpen]="modalOpen" (didDismiss)="closeModal()">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar>
+        <ion-title>Time de coracao</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="closeModal()">Fechar</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+      <ion-toolbar>
+        <ion-searchbar
+          placeholder="Buscar time"
+          [(ngModel)]="search"
+          [ngModelOptions]="{ standalone: true }"
+        ></ion-searchbar>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content>
+      @if (!hasResults()) {
+        <ion-note class="ion-padding">Nenhum time encontrado.</ion-note>
+      }
+      @for (serie of series; track serie) {
+        @if (teamsForSerie(serie).length > 0) {
+          <ion-list-header>{{ serieLabel(serie) }}</ion-list-header>
+          <ion-list>
+            @for (team of teamsForSerie(serie); track team.slug) {
+              <ion-item button (click)="selectTeam(team)">
+                <app-team-shield slot="start" [team]="team" size="md"></app-team-shield>
+                <ion-label>{{ team.name }}</ion-label>
+                @if (control.value === team.name) {
+                  <ion-icon slot="end" name="checkmark-circle" color="primary"></ion-icon>
+                }
+              </ion-item>
+            }
+          </ion-list>
+        }
+      }
+    </ion-content>
+  </ng-template>
+</ion-modal>

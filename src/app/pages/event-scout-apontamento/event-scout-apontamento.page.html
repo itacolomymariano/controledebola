@@ -1,0 +1,261 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button [defaultHref]="'/event/' + eventId"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Apontamento scout</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding scout-apontamento-content">
+  @if (loading) {
+    <ion-spinner name="crescent"></ion-spinner>
+  }
+
+  @if (!loading && board) {
+    <div class="scout-apontamento-header">
+      <h1>{{ board.eventName }}</h1>
+      <div class="scout-apontamento-meta">
+        <ion-chip color="primary">Apontamento</ion-chip>
+        @if (syncLabel) {
+          <ion-note [color]="syncStatus === 'error' ? 'danger' : 'medium'">{{ syncLabel }}</ion-note>
+        }
+      </div>
+      @if (isLocked) {
+        <ion-note color="warning">
+          {{ isViewOnly ? 'Consulta do apontamento scout — somente leitura.' : 'Evento encerrado — apontamento bloqueado.' }}
+        </ion-note>
+      }
+      @if (board.assignedAthleteUserId) {
+        <ion-note color="medium">Atleta atribuido: {{ assignedAthleteLabel }}</ion-note>
+      }
+    </div>
+
+    @if (!isViewOnly) {
+      <ion-segment
+        class="scout-mode-segment"
+        [value]="markingMode"
+        (ionChange)="onMarkingModeChange($any($event.detail.value))"
+      >
+        <ion-segment-button value="individual">
+          <ion-label>Individual</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="general">
+          <ion-label>Geral</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    }
+
+    @if (markingMode === 'individual' && needsAssignment) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Selecione seu atleta</ion-card-title>
+          <ion-card-subtitle>
+            No modo Individual, cada scout aponta um unico atleta por evento. Atletas ja atribuidos a outro scout nao
+            aparecem. Use o modo Geral para apontar estatisticas simples de todos os atletas.
+          </ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          <ion-searchbar
+            placeholder="Buscar atleta por apelido"
+            [value]="searchTerm"
+            (ionInput)="onSearchChange($any($event.target).value)"
+            debounce="150"
+          ></ion-searchbar>
+
+          @if (!filteredAthletes.length) {
+            <ion-note>Nenhum atleta disponivel para atribuicao.</ion-note>
+          } @else {
+            <app-scout-athlete-strip
+              [athletes]="filteredAthletes"
+              [selectedUserId]="selectedUserId"
+              (athleteSelected)="selectAthlete($event)"
+            ></app-scout-athlete-strip>
+
+            <ion-button
+              expand="block"
+              class="ion-margin-top"
+              [disabled]="!selectedUserId || assigning"
+              (click)="assignSelectedAthlete()"
+            >
+              Confirmar atleta para apontamento
+            </ion-button>
+          }
+        </ion-card-content>
+      </ion-card>
+    } @else if (markingMode === 'individual') {
+        @if (!showIndividualPanel) {
+          <ion-searchbar
+            placeholder="Buscar atleta por apelido"
+            [value]="searchTerm"
+            (ionInput)="onSearchChange($any($event.target).value)"
+            debounce="150"
+          ></ion-searchbar>
+
+          @if (!filteredAthletes.length) {
+            <ion-note>Nenhum atleta confirmado para apontamento.</ion-note>
+          } @else {
+            <app-scout-athlete-strip
+              [athletes]="filteredAthletes"
+              [selectedUserId]="selectedUserId"
+              [disabled]="isLocked"
+              (athleteSelected)="selectAthlete($event)"
+            ></app-scout-athlete-strip>
+          }
+        } @else if (selectedAthlete; as athlete) {
+          <ion-button fill="clear" size="small" class="scout-back-btn" (click)="backToAthleteSelection()">
+            <ion-icon name="arrow-back-outline" slot="start"></ion-icon>
+            Voltar
+          </ion-button>
+
+          <ion-card class="scout-athlete-panel">
+            <ion-card-content>
+              <div class="scout-athlete-panel-header">
+                <app-user-avatar
+                  [avatarUrl]="athlete.avatarUrl"
+                  [alt]="athlete.apelido"
+                  size="lg"
+                ></app-user-avatar>
+                <div>
+                  <h2>{{ athlete.apelido }}</h2>
+                  <p>{{ athlete.primaryPosition || 'Sem posicao registrada' }}</p>
+                </div>
+              </div>
+
+              @for (group of statGroupsForAthlete(athlete); track group.title) {
+                <div class="scout-stat-group">
+                  <h3>{{ group.title }}</h3>
+                  @if (group.title === 'Gols a favor') {
+                    <app-scout-stat-counter
+                      [label]="statLabels['goals']"
+                      [value]="statValue(athlete, 'goals')"
+                      [readonly]="true"
+                    ></app-scout-stat-counter>
+                    <div class="scout-goal-actions">
+                      <ion-button
+                        size="small"
+                        expand="block"
+                        [disabled]="isLocked"
+                        (click)="promptRegisterGoalForSelected()"
+                      >
+                        Registrar gol convertido
+                      </ion-button>
+                      @if (statValue(athlete, 'goals') > 0) {
+                        <ion-button
+                          size="small"
+                          expand="block"
+                          fill="outline"
+                          color="medium"
+                          [disabled]="isLocked"
+                          (click)="promptRemoveGoalForSelected()"
+                        >
+                          Remover gol
+                        </ion-button>
+                      }
+                    </div>
+                    @if (goalTypeBreakdown(athlete).length) {
+                      <div class="scout-goal-breakdown">
+                        @for (row of goalTypeBreakdown(athlete); track row.field) {
+                          <ion-note>{{ row.label }}: {{ row.count }}</ion-note>
+                        }
+                      </div>
+                    }
+                  } @else {
+                    @for (field of group.fields; track field) {
+                      <app-scout-stat-counter
+                        [label]="statLabels[field]"
+                        [value]="statValue(athlete, field)"
+                        [disabled]="isLocked"
+                        [readonly]="isReadOnlyStatField(field)"
+                        (increment)="adjustStat(field, 1)"
+                        (decrement)="adjustStat(field, -1)"
+                      ></app-scout-stat-counter>
+                    }
+                  }
+                </div>
+              }
+            </ion-card-content>
+          </ion-card>
+        }
+      } @else {
+        <ion-searchbar
+          placeholder="Buscar atleta por apelido"
+          [value]="searchTerm"
+          (ionInput)="onSearchChange($any($event.target).value)"
+          debounce="150"
+        ></ion-searchbar>
+
+        @if (!filteredAthletes.length) {
+          <ion-note>Nenhum atleta confirmado para apontamento.</ion-note>
+        } @else {
+          @for (athlete of filteredAthletes; track athlete.userId) {
+            <ion-card class="scout-general-athlete-card">
+              <ion-card-content>
+                <div class="scout-general-athlete-header">
+                  <app-user-avatar
+                    [avatarUrl]="athlete.avatarUrl"
+                    [alt]="athlete.apelido"
+                    size="md"
+                  ></app-user-avatar>
+                  <div>
+                    <h2>{{ athlete.apelido }}</h2>
+                    <p>{{ athlete.primaryPosition || 'Sem posicao registrada' }}</p>
+                  </div>
+                </div>
+
+                <app-scout-stat-counter
+                  [label]="generalStatLabels['goals']"
+                  [value]="statValue(athlete, 'goals')"
+                  [readonly]="true"
+                  [compact]="true"
+                ></app-scout-stat-counter>
+
+                <div class="scout-goal-actions scout-goal-actions--compact">
+                  <ion-button
+                    size="small"
+                    expand="block"
+                    [disabled]="isLocked"
+                    (click)="promptRegisterGoal(athlete)"
+                  >
+                    Registrar gol
+                  </ion-button>
+                  @if (statValue(athlete, 'goals') > 0) {
+                    <ion-button
+                      size="small"
+                      expand="block"
+                      fill="outline"
+                      color="medium"
+                      [disabled]="isLocked"
+                      (click)="promptRemoveGoal(athlete)"
+                    >
+                      Remover gol
+                    </ion-button>
+                  }
+                </div>
+
+                @if (goalTypeBreakdown(athlete).length) {
+                  <div class="scout-goal-breakdown scout-goal-breakdown--compact">
+                    @for (row of goalTypeBreakdown(athlete); track row.field) {
+                      <ion-note>{{ row.label }}: {{ row.count }}</ion-note>
+                    }
+                  </div>
+                }
+
+                @for (field of generalStatFields; track field) {
+                  <app-scout-stat-counter
+                    [label]="generalStatLabels[field]"
+                    [value]="athlete.stats[field]"
+                    [disabled]="isLocked"
+                    [compact]="true"
+                    (increment)="adjustStatForAthlete(athlete, field, 1)"
+                    (decrement)="adjustStatForAthlete(athlete, field, -1)"
+                  ></app-scout-stat-counter>
+                }
+              </ion-card-content>
+            </ion-card>
+          }
+        }
+      }
+  }
+</ion-content>

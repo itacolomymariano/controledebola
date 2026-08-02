@@ -1,0 +1,28 @@
+<div class="scout-stat-counter" [class.scout-stat-counter--compact]="compact" [class.scout-stat-counter--readonly]="readonly">
+  <span class="scout-stat-label">{{ label }}</span>
+  <div class="scout-stat-controls">
+    @if (!readonly) {
+      <ion-button
+        fill="outline"
+        size="small"
+        class="scout-stat-btn"
+        [disabled]="disabled || value <= 0"
+        (click)="onDecrement()"
+      >
+        <ion-icon name="remove-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    }
+    <span class="scout-stat-value">{{ value }}</span>
+    @if (!readonly) {
+      <ion-button
+        fill="solid"
+        size="small"
+        class="scout-stat-btn"
+        [disabled]="disabled"
+        (click)="onIncrement()"
+      >
+        <ion-icon name="add-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    }
+  </div>
+</div>

@@ -1,0 +1,52 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/peladas"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Sobre</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding about-content">
+  <div class="about-logo-wrap">
+    <img [src]="logoPath" alt="Controle de Bola" class="about-logo" />
+  </div>
+
+  <ion-list lines="full" class="about-list">
+    <ion-item>
+      <ion-label>
+        <h3>Versao do build</h3>
+        <p>{{ appVersion }} ({{ buildNumber }})</p>
+      </ion-label>
+    </ion-item>
+    <ion-item>
+      <ion-label>
+        <h3>Release do app</h3>
+        <p>{{ appRelease }}</p>
+      </ion-label>
+    </ion-item>
+    <ion-item>
+      <ion-label>
+        <h3>Plataforma</h3>
+        <p>{{ platformLabel }}</p>
+      </ion-label>
+    </ion-item>
+    <ion-item>
+      <ion-label class="ion-text-wrap">
+        <h3>Desenvolvido por</h3>
+        <p>{{ companyName }}</p>
+        <ion-note color="medium">Autoria intelectual</ion-note>
+      </ion-label>
+    </ion-item>
+  </ion-list>
+
+  <div class="about-section">
+    <h2>Site</h2>
+    <a [href]="siteUrl" target="_blank" rel="noopener noreferrer" class="about-link">{{ siteLabel }}</a>
+  </div>
+
+  <div class="about-section">
+    <h2>Redes sociais</h2>
+    <ion-note color="medium">Em breve</ion-note>
+  </div>
+</ion-content>

@@ -1,0 +1,80 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Peladas</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  @if (loading) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  @if (!loading && errorMessage) {
+    <ion-card color="warning" class="ion-margin">
+      <ion-card-content>
+        <p>{{ errorMessage }}</p>
+        <ion-button fill="clear" (click)="retry()">Tentar novamente</ion-button>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  @if (!loading && !errorMessage) {
+    <ion-card class="ion-margin peladas-orientation">
+      <ion-card-content>
+        <p>
+          Use o botao <strong>Buscar</strong> para encontrar sua pelada, clique em cima da pelada para
+          participar ou clique em <strong>+</strong> para criar sua propria Pelada.
+        </p>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  @if (!loading && !errorMessage && peladaRows.length === 0) {
+    <ion-list>
+      <ion-item>
+        <ion-icon name="people-outline" slot="start"></ion-icon>
+        <ion-label>
+          <h2>Nenhuma pelada cadastrada</h2>
+          <p>Toque no + para criar a primeira pelada.</p>
+        </ion-label>
+      </ion-item>
+    </ion-list>
+  }
+
+  @if (!loading && peladaRows.length > 0) {
+    <ion-list>
+      @for (row of peladaRows; track row.pelada.objectId) {
+        <ion-item button (click)="openPelada(row)">
+          <ion-icon name="football-outline" slot="start"></ion-icon>
+          <ion-label class="ion-text-wrap">
+            <h2>{{ row.pelada.name }}</h2>
+            @if (row.pelada.isCurrentUserAdmin) {
+              <p class="pelada-admin-flag">Voce e o Admin</p>
+            }
+            @if (row.pelada.nearby) {
+              <p class="pelada-nearby-flag">Perto de voce</p>
+            }
+            <p>{{ row.sportLabel }} · {{ row.locationLabel }}</p>
+            <p>
+              {{ row.pelada.heldEventCount ?? 0 }}
+              {{ (row.pelada.heldEventCount ?? 0) === 1 ? 'evento realizado' : 'eventos realizados' }}
+            </p>
+            <p>Admin: {{ row.pelada.adminName }}</p>
+          </ion-label>
+        </ion-item>
+      }
+    </ion-list>
+  }
+
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+    <ion-fab-button (click)="createPelada()">
+      <ion-icon name="add"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+</ion-content>

@@ -1,0 +1,291 @@
+<ion-accordion value="{{ role }}" (ionExpand)="onExpand()">
+  <ion-item slot="header" color="light">
+    <ion-label>{{ roleLabel }}</ion-label>
+    @if (invitationBadgeCount) {
+      <ion-badge slot="end">{{ invitationBadgeCount }}</ion-badge>
+    }
+  </ion-item>
+  <div slot="content" class="ion-padding hiring-panel-content" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()" (touchstart)="$event.stopPropagation()">
+    <div [id]="searchAnchorId" class="hiring-role-search-anchor">
+      <ion-searchbar
+        [placeholder]="'Buscar ' + roleLabel.toLowerCase()"
+        [(ngModel)]="search"
+        [ngModelOptions]="{ standalone: true }"
+        [debounce]="0"
+        (ionInput)="onSearchInput($event)"
+        (ionClear)="onSearchClear()"
+      ></ion-searchbar>
+    </div>
+
+    @if (loading && !dataLoaded) {
+      <div class="ion-text-center ion-padding">
+        <ion-spinner name="crescent"></ion-spinner>
+        <ion-note color="medium">Carregando candidatos...</ion-note>
+      </div>
+    }
+
+    @if (searchLoading) {
+      <div class="ion-text-center ion-padding">
+        <ion-spinner name="crescent"></ion-spinner>
+      </div>
+    }
+
+    @if (!dataLoaded && !loading) {
+      <ion-note color="medium">Carregando candidatos...</ion-note>
+    } @else if (dataLoaded && !search.trim() && !selectedCandidate) {
+      <ion-note color="medium">
+        Digite nome ou apelido para buscar {{ roleLabel.toLowerCase() }}.
+      </ion-note>
+    } @else if (search.trim() && !displayedCandidates.length && !searchLoading) {
+      <ion-note color="medium">Nenhum resultado para "{{ search }}".</ion-note>
+    }
+
+    @if (search.trim() && displayedCandidates.length) {
+      <ion-list lines="full" class="candidate-results">
+        @for (candidate of displayedCandidates; track candidate.userId) {
+          <ion-item
+            detail="false"
+            [class.candidate-selected]="candidate.userId === inviteUserId"
+            (click)="onCandidateClick(candidate, $event)"
+          >
+            <app-user-avatar
+              slot="start"
+              [avatarUrl]="candidate.avatarUrl"
+              [alt]="candidate.apelido || candidate.userName"
+              size="md"
+            ></app-user-avatar>
+            <ion-label class="ion-text-wrap">
+              <h2>{{ candidate.apelido || candidate.userName }}</h2>
+              @if (candidate.fullName && candidate.apelido && candidate.fullName !== candidate.apelido) {
+                <p>{{ candidate.fullName }}</p>
+              } @else if (candidate.userName && candidate.apelido && candidate.apelido !== candidate.userName) {
+                <p>{{ candidate.userName }}</p>
+              }
+              @if (formatCandidateSubtitle(candidate)) {
+                <p>{{ formatCandidateSubtitle(candidate) }}</p>
+              }
+            </ion-label>
+            <ion-button
+              fill="clear"
+              slot="end"
+              (click)="viewCandidateProfile(candidate, $event)"
+            >
+              Ver perfil
+            </ion-button>
+          </ion-item>
+        }
+      </ion-list>
+    }
+
+    @if (showAttendanceMode) {
+      <ion-item>
+        <ion-select
+          label="Forma de assistencia"
+          labelPlacement="stacked"
+          [(ngModel)]="attendanceMode"
+          [ngModelOptions]="{ standalone: true }"
+          (ionChange)="onCandidateChange(inviteUserId)"
+        >
+          <ion-select-option value="in_person">Presencial</ion-select-option>
+          <ion-select-option value="remote">Remota</ion-select-option>
+        </ion-select>
+      </ion-item>
+    }
+
+    @if (selectedCandidate) {
+      <ion-item lines="full" class="selected-candidate">
+        <app-user-avatar
+          slot="start"
+          [avatarUrl]="selectedCandidate.avatarUrl"
+          [alt]="selectedCandidate.apelido || selectedCandidate.userName"
+          size="md"
+        ></app-user-avatar>
+        <ion-label class="ion-text-wrap">
+          <h3>{{ selectedCandidate.apelido || selectedCandidate.userName }}</h3>
+          @if (formatCandidateSubtitle(selectedCandidate)) {
+            <p>{{ formatCandidateSubtitle(selectedCandidate) }}</p>
+          }
+        </ion-label>
+        <ion-button fill="clear" slot="end" (click)="clearSelectedCandidate()">
+          Alterar
+        </ion-button>
+      </ion-item>
+    }
+
+    <section [id]="invitationsAnchorId" class="hiring-invitations-section">
+      @if (!invitations.length) {
+        <ion-note class="ion-padding-top">Nenhum convite enviado ainda.</ion-note>
+      } @else {
+        <ion-list lines="full" class="hiring-invitations-list">
+          @for (invitation of invitations; track invitation.objectId) {
+            <ion-item>
+              <app-user-avatar
+                slot="start"
+                [avatarUrl]="invitation.invitedUserAvatarUrl"
+                [alt]="invitation.invitedUserApelido || invitation.invitedUserName"
+                size="md"
+              ></app-user-avatar>
+              <ion-label class="ion-text-wrap">
+                <h3>{{ invitation.invitedUserApelido || invitation.invitedUserName }}</h3>
+                <p>Valor: {{ formatCurrency(invitation.offeredAmount) }}</p>
+                @if (invitation.attendanceMode) {
+                  <p>
+                    Assistencia:
+                    {{ invitation.attendanceMode === 'remote' ? 'Remota' : 'Presencial' }}
+                  </p>
+                }
+                <p>{{ formatInvitationStatus(invitation) }}</p>
+              </ion-label>
+            </ion-item>
+
+            @if (invitation.status === 'accepted') {
+              @if (invitation.attendanceMode === 'remote' && !invitation.presenceConfirmed) {
+                <ion-button
+                  expand="block"
+                  fill="outline"
+                  class="ion-margin-horizontal"
+                  [disabled]="updatingInvitationId === invitation.objectId"
+                  (click)="confirmRemotePresence(invitation)"
+                >
+                  Confirmar assistencia remota
+                </ion-button>
+              }
+
+              @if (invitation.attendanceMode !== 'remote' && !invitation.presenceConfirmed) {
+                <ion-item>
+                  <ion-input
+                    type="date"
+                    label="Data da chegada"
+                    labelPlacement="stacked"
+                    [(ngModel)]="getArrivalDraft(invitation).date"
+                    [ngModelOptions]="{ standalone: true }"
+                  ></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input
+                    type="time"
+                    label="Hora da chegada"
+                    labelPlacement="stacked"
+                    [(ngModel)]="getArrivalDraft(invitation).time"
+                    [ngModelOptions]="{ standalone: true }"
+                  ></ion-input>
+                </ion-item>
+                <ion-button
+                  expand="block"
+                  fill="outline"
+                  class="ion-margin-horizontal"
+                  [disabled]="updatingInvitationId === invitation.objectId"
+                  (click)="confirmPresence(invitation)"
+                >
+                  Confirmar presenca
+                </ion-button>
+              } @else if (invitation.presenceConfirmed) {
+                <ion-item>
+                  <ion-label class="ion-text-wrap">
+                    <p>Chegada/assistencia: {{ formatDate(invitation.arrivalAt!) }}</p>
+                  </ion-label>
+                  @if (invitation.attendanceMode !== 'remote') {
+                    <ion-toggle
+                      slot="end"
+                      [checked]="true"
+                      [disabled]="updatingInvitationId === invitation.objectId || invitation.paymentReleased"
+                      (ionChange)="onPresenceToggle(invitation, $event)"
+                    ></ion-toggle>
+                  }
+                </ion-item>
+              }
+
+              <ion-item>
+                <ion-toggle
+                  [checked]="invitation.excusedFault"
+                  [disabled]="updatingInvitationId === invitation.objectId || invitation.paymentReleased"
+                  (ionChange)="onExcusedFaultToggle(invitation, $event)"
+                >
+                  Falta justificada (admin decide pagamento)
+                </ion-toggle>
+              </ion-item>
+
+              <ion-item>
+                <ion-toggle
+                  [checked]="invitation.paymentConfirmedByAdmin"
+                  [disabled]="
+                    updatingInvitationId === invitation.objectId ||
+                    invitation.paymentReleased ||
+                    (!invitation.presenceConfirmed && !invitation.excusedFault)
+                  "
+                  (ionChange)="onPaymentToggle(invitation, $event)"
+                >
+                  Pagamento enviado
+                </ion-toggle>
+              </ion-item>
+            }
+          }
+        </ion-list>
+      }
+    </section>
+
+    <ion-card
+      id="{{ inviteFormAnchorId }}"
+      class="hiring-invite-form"
+      (click)="onInviteFormInteraction(); $event.stopPropagation()"
+      (mousedown)="$event.stopPropagation()"
+      (touchstart)="$event.stopPropagation()"
+      (focusin)="onInviteFormInteraction()"
+    >
+      <ion-card-header>
+        <ion-card-title>Dados do convite</ion-card-title>
+        <ion-card-subtitle>Informe valor e prazo limite para resposta</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-item>
+          <ion-input
+            type="text"
+            inputmode="decimal"
+            label="Valor da contratacao (R$)"
+            labelPlacement="stacked"
+            [value]="offeredAmountDisplay"
+            (ionInput)="onOfferedAmountInput($event)"
+            (ionFocus)="onInviteFormInteraction()"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            type="date"
+            label="Resposta ate (data)"
+            labelPlacement="stacked"
+            [(ngModel)]="responseDeadlineDate"
+            [ngModelOptions]="{ standalone: true }"
+            [min]="minResponseDeadlineDate"
+            (ionFocus)="onInviteFormInteraction()"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            type="time"
+            label="Resposta ate (hora)"
+            labelPlacement="stacked"
+            [(ngModel)]="responseDeadlineTime"
+            [ngModelOptions]="{ standalone: true }"
+            (ionFocus)="onInviteFormInteraction()"
+          ></ion-input>
+        </ion-item>
+        @if (responseDeadlineInvalid) {
+          <ion-note color="danger" class="ion-padding-start">
+            O prazo para resposta deve ser uma data e hora futuras.
+          </ion-note>
+        }
+        <ion-button
+          expand="block"
+          class="ion-margin-top"
+          [disabled]="sendingInvite || !inviteUserId"
+          (click)="sendInvite()"
+        >
+          {{ sendingInvite ? 'Enviando convite...' : 'Enviar convite' }}
+        </ion-button>
+        @if (!inviteUserId) {
+          <ion-note color="medium">Selecione um candidato na lista acima para enviar o convite.</ion-note>
+        }
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-accordion>

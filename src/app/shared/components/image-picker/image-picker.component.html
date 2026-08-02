@@ -1,0 +1,30 @@
+<div class="image-picker">
+  <button
+    type="button"
+    class="preview"
+    [class.has-image]="previewUrl"
+    [class.clickable]="!disabled"
+    [disabled]="disabled"
+    (click)="openPicker()"
+  >
+    @if (previewUrl) {
+      <img [src]="previewUrl" [alt]="label" />
+    } @else {
+      <ion-icon name="image-outline"></ion-icon>
+    }
+  </button>
+  <ion-button expand="block" fill="outline" [disabled]="disabled" (click)="openPicker()">
+    {{ label }}
+  </ion-button>
+  <input
+    #fileInput
+    class="file-input"
+    type="file"
+    accept="image/*"
+    [disabled]="disabled"
+    (change)="onFileChange($event)"
+  />
+  @if (hint) {
+    <ion-note>{{ hint }}</ion-note>
+  }
+</div>

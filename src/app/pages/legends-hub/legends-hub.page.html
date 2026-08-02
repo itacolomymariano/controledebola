@@ -1,0 +1,76 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="back()">Voltar</ion-button>
+    </ion-buttons>
+    <ion-title>Lendas do futebol amador</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-note class="ion-margin-bottom">
+    Cadastre atletas e times que marcaram a historia do futebol amador. Eles aparecem como sugestao nos perfis.
+  </ion-note>
+
+  <ion-searchbar
+    placeholder="Buscar lendas"
+    [value]="search"
+    (ionInput)="onSearchChange($any($event.target).value)"
+    debounce="300"
+  ></ion-searchbar>
+
+  <div class="legend-actions">
+    <ion-button expand="block" (click)="openAthleteForm()">Cadastrar lenda (atleta)</ion-button>
+    <ion-button expand="block" fill="outline" (click)="openTeamForm()">Cadastrar lenda (time)</ion-button>
+  </div>
+
+  @if (loading) {
+    <ion-spinner name="crescent"></ion-spinner>
+  } @else {
+    <h2>Atletas lendas</h2>
+    @if (!athletes.length) {
+      <ion-note>Nenhuma lenda de atleta cadastrada.</ion-note>
+    } @else {
+      <ion-list>
+        @for (athlete of athletes; track athlete.id) {
+          <ion-item button (click)="openAthlete(athlete)">
+            @if (athlete.imageUrl) {
+              <ion-avatar slot="start">
+                <img [src]="athlete.imageUrl" [alt]="athlete.apelido" />
+              </ion-avatar>
+            }
+            <ion-label>
+              <h2>{{ athlete.apelido }}</h2>
+              <p>{{ athlete.name }}</p>
+              @if (athlete.inMemoriam) {
+                <ion-note color="medium">In memoriam</ion-note>
+              }
+            </ion-label>
+          </ion-item>
+        }
+      </ion-list>
+    }
+
+    <h2 class="ion-margin-top">Times lendas</h2>
+    @if (!teams.length) {
+      <ion-note>Nenhuma lenda de time cadastrada.</ion-note>
+    } @else {
+      <ion-list>
+        @for (team of teams; track team.id) {
+          <ion-item>
+            @if (team.imageUrl) {
+              <ion-avatar slot="start">
+                <img [src]="team.imageUrl" [alt]="team.apelido" />
+              </ion-avatar>
+            }
+            <ion-label>
+              <h2>{{ team.apelido || team.name }}</h2>
+              <p>{{ team.name }}</p>
+            </ion-label>
+          </ion-item>
+        }
+      </ion-list>
+    }
+  }
+</ion-content>

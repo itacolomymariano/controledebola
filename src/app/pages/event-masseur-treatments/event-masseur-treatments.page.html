@@ -1,0 +1,116 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()">
+        <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Atendimentos</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  @if (!loading && event) {
+    <h1>{{ event.name }}</h1>
+    <p>Registre atendimentos rapidos de apoio (nao e prontuario medico).</p>
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <ion-list>
+        <ion-item>
+          <ion-select
+            label="Atleta"
+            labelPlacement="stacked"
+            formControlName="athleteUserId"
+            interface="popover"
+          >
+            @for (athlete of athletes; track athlete.userId) {
+              <ion-select-option [value]="athlete.userId">
+                {{ athlete.apelido || athlete.userName }}
+              </ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
+        <ion-item>
+          <ion-select label="Momento" labelPlacement="stacked" formControlName="phase" interface="popover">
+            <ion-select-option value="pre">Pre-jogo</ion-select-option>
+            <ion-select-option value="halftime">Intervalo</ion-select-option>
+            <ion-select-option value="post">Pos-jogo</ion-select-option>
+          </ion-select>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            label="Regiao do corpo"
+            labelPlacement="stacked"
+            formControlName="bodyRegion"
+            placeholder="Ex.: panturrilha"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            label="Tipo de atendimento"
+            labelPlacement="stacked"
+            formControlName="treatmentType"
+            placeholder="Ex.: liberacao, gelo, alongamento"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            type="number"
+            label="Duracao (min)"
+            labelPlacement="stacked"
+            formControlName="durationMin"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-select
+            label="Retorno ao jogo"
+            labelPlacement="stacked"
+            formControlName="returnStatus"
+            interface="popover"
+          >
+            <ion-select-option value="cleared">Liberado</ion-select-option>
+            <ion-select-option value="limited">Limitado</ion-select-option>
+            <ion-select-option value="out">Fora</ion-select-option>
+          </ion-select>
+        </ion-item>
+        <ion-item>
+          <ion-textarea
+            label="Observacao"
+            labelPlacement="stacked"
+            formControlName="notes"
+            autoGrow="true"
+          ></ion-textarea>
+        </ion-item>
+      </ion-list>
+
+      <ion-button expand="block" type="submit" class="ion-margin-top" [disabled]="saving || form.invalid">
+        Registrar atendimento
+      </ion-button>
+    </form>
+
+    <ion-list-header class="ion-margin-top">
+      <ion-label>Fila / historico ({{ treatments.length }})</ion-label>
+    </ion-list-header>
+    @if (!treatments.length) {
+      <ion-note>Nenhum atendimento neste evento.</ion-note>
+    }
+    @for (item of treatments; track item.objectId) {
+      <ion-item [color]="item.returnStatus === 'cleared' ? undefined : 'warning'">
+        <ion-label class="ion-text-wrap">
+          <h3>{{ item.athleteName }} · {{ phaseLabel(item.phase) }}</h3>
+          <p>
+            {{ item.bodyRegion }} · {{ item.treatmentType }} · {{ item.durationMin }} min ·
+            {{ returnLabel(item.returnStatus) }}
+          </p>
+        </ion-label>
+      </ion-item>
+    }
+  }
+</ion-content>

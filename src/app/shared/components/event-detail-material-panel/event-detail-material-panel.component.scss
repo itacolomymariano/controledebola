@@ -1,0 +1,46 @@
+.event-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.source-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.load-grid-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px 4px;
+  font-size: 0.8rem;
+  color: var(--ion-color-medium);
+}
+
+.load-grid-header span:last-child {
+  min-width: 100px;
+  text-align: right;
+}
+
+h3 {
+  margin: 16px 0 8px;
+  font-size: 1rem;
+}
+
+.conference-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 88px;
+}
+
+.conference-inputs ion-input {
+  max-width: 96px;
+  --padding-start: 6px;
+  --padding-end: 6px;
+  min-height: 36px;
+}
