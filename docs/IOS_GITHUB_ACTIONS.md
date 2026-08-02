@@ -126,3 +126,6 @@ No Windows, `npx cap add ios` / `xcodebuild` **nao** funcionam; use sempre o Git
 2. Primeiro IPA → TestFlight (testers internos).
 3. Ficha App Store (screenshots, privacidade, conta demo).
 4. Depois: APNs / push iOS; upload automatico TestFlight; eventualmente versionar `ios/` se precisar customizar nativo.
+
+<!-- ci-trigger 2026-08-02 13:44 -->
+
