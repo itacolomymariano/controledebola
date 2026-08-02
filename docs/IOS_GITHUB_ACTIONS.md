@@ -112,12 +112,16 @@ No Windows, `npx cap add ios` / `xcodebuild` **nao** funcionam; use sempre o Git
 
 ## 7. Troubleshooting
 
+### Run falha em 0s (sem jobs / sem botao Re-run)
+
+Falha de **validacao do YAML** (nao do Xcode). Tipico: usar `inputs.*` em eventos `push`. Nesses casos so aparece **Create status badge**. Corrija o workflow e faca **novo push** (Re-run de run antigo nao ajuda).
+
 | Erro | Acao |
 |------|------|
 | `ENVIRONMENT_LOCAL_TS ausente` | Cadastrar o secret com o conteudo de `environment.local.ts` |
 | Code signing / provisioning | Conferir os tres secrets `IOS_DISTRIBUTION_*` e Bundle ID `com.minhapelada.app` |
 | `cap add ios` / CocoaPods | Reexecutar; runner usa `macos-15` + CocoaPods 1.16.2 |
-| Run falha em 0s | YAML invalido; ver log de validacao do workflow no GitHub |
+| Run falha em 0s / 0 jobs | Corrigir YAML e push novo na `main` |
 | IPA nao aparece no artifact | Abrir log do step `Build iOS (Release IPA)`; conferir Team ID do perfil |
 
 ## 8. Proximos passos (fora deste workflow)

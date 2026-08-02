@@ -49,7 +49,8 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 90
     env:
-      BUILD_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.build_target || 'simulator' }}
+      # Usar github.event.inputs (nao inputs.*) — em push o contexto inputs invalida o YAML (0 jobs).
+      BUILD_TARGET: ${{ github.event.inputs.build_target || 'simulator' }}
 
     steps:
       - name: Checkout
