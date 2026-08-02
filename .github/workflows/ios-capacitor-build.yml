@@ -235,7 +235,7 @@ jobs:
 
       - name: Upload Simulator app artifact
         if: env.BUILD_TARGET == 'simulator'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ios-simulator-build
           path: |
@@ -245,7 +245,7 @@ jobs:
 
       - name: Upload IPA artifact
         if: env.BUILD_TARGET == 'release-ipa'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ios-release-ipa
           path: |
