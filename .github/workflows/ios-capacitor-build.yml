@@ -172,25 +172,37 @@ jobs:
           EXPORT_PATH="$RUNNER_TEMP/ipa"
           EXPORT_PLIST="$RUNNER_TEMP/ExportOptions.plist"
 
-          cat > "$EXPORT_PLIST" <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>method</key>
-  <string>app-store-connect</string>
-  <key>signingStyle</key>
-  <string>manual</string>
-  <key>teamID</key>
-  <string>${DEVELOPMENT_TEAM}</string>
-  <key>provisioningProfiles</key>
-  <dict>
-    <key>${BUNDLE_ID}</key>
-    <string>${PROVISIONING_PROFILE_NAME}</string>
-  </dict>
-</dict>
-</plist>
-EOF
+          # Nao usar heredoc com linhas na coluna 0 - quebra o YAML do workflow (0 jobs).
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          plist = Path(os.environ["RUNNER_TEMP"]) / "ExportOptions.plist"
+          team = os.environ["DEVELOPMENT_TEAM"]
+          bundle = os.environ["BUNDLE_ID"]
+          profile = os.environ["PROVISIONING_PROFILE_NAME"]
+          plist.write_text(
+              f"""<?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>teamID</key>
+            <string>{team}</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>{bundle}</key>
+              <string>{profile}</string>
+            </dict>
+          </dict>
+          </plist>
+          """,
+              encoding="utf-8",
+          )
+          print(f"ExportOptions escrito: {plist}")
+          PY
 
           xcodebuild \
             -workspace ios/App/App.xcworkspace \
