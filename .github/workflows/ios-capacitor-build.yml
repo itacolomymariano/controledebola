@@ -86,34 +86,33 @@ jobs:
       - name: Build web (production → www/)
         run: npm run build -- --configuration production
 
-      - name: Setup CocoaPods
+      - name: Add Capacitor iOS platform (SPM)
         run: |
           set -euo pipefail
-          export LANG=en_US.UTF-8
-          export LC_ALL=en_US.UTF-8
-          export COCOAPODS_DISABLE_STATS=true
-          sudo gem install cocoapods -v 1.16.2 -N --no-document
-          pod --version
-          pod repo add-cdn trunk https://cdn.cocoapods.org/ || true
-
-      - name: Add Capacitor iOS platform
-        env:
-          LANG: en_US.UTF-8
-          LC_ALL: en_US.UTF-8
-          COCOAPODS_DISABLE_STATS: true
-        run: |
-          set -euo pipefail
+          # Capacitor 8 cria iOS com Swift Package Manager por padrao (sem Podfile).
           if [ ! -d ios ]; then
-            npx cap add ios
+            npx cap add ios --packagemanager SPM
           fi
           npx cap sync ios
+          echo "Estrutura ios/:"
+          find ios -maxdepth 3 \( -name '*.xcodeproj' -o -name '*.xcworkspace' -o -name Podfile -o -name Package.swift -o -name CapApp-SPM \) -print
 
-      - name: Pod install
-        working-directory: ios/App
-        env:
-          LANG: en_US.UTF-8
-          LC_ALL: en_US.UTF-8
-        run: pod install || (sleep 30 && pod install)
+      - name: Resolve Xcode project (SPM vs CocoaPods)
+        run: |
+          set -euo pipefail
+          if [ -f ios/App/Podfile ]; then
+            echo "XCODE_PROJECT_FLAG=-workspace" >> "$GITHUB_ENV"
+            echo "XCODE_PROJECT_PATH=ios/App/App.xcworkspace" >> "$GITHUB_ENV"
+            echo "Usando CocoaPods workspace."
+          elif [ -d ios/App/App.xcodeproj ]; then
+            echo "XCODE_PROJECT_FLAG=-project" >> "$GITHUB_ENV"
+            echo "XCODE_PROJECT_PATH=ios/App/App.xcodeproj" >> "$GITHUB_ENV"
+            echo "Usando Xcode project (SPM)."
+          else
+            echo "::error::Nem Podfile nem App.xcodeproj encontrados em ios/App."
+            ls -la ios ios/App || true
+            exit 1
+          fi
 
       - name: Validate signing secrets (release-ipa)
         if: env.BUILD_TARGET == 'release-ipa'
@@ -155,7 +154,11 @@ jobs:
         run: |
           set -euo pipefail
           xcodebuild \
-            -workspace ios/App/App.xcworkspace \
+            "${XCODE_PROJECT_FLAG}" "${XCODE_PROJECT_PATH}" \
+            -scheme App \
+            -resolvePackageDependencies
+          xcodebuild \
+            "${XCODE_PROJECT_FLAG}" "${XCODE_PROJECT_PATH}" \
             -scheme App \
             -configuration Debug \
             -sdk iphonesimulator \
@@ -205,7 +208,11 @@ jobs:
           PY
 
           xcodebuild \
-            -workspace ios/App/App.xcworkspace \
+            "${XCODE_PROJECT_FLAG}" "${XCODE_PROJECT_PATH}" \
+            -scheme App \
+            -resolvePackageDependencies
+          xcodebuild \
+            "${XCODE_PROJECT_FLAG}" "${XCODE_PROJECT_PATH}" \
             -scheme App \
             -configuration Release \
             -destination 'generic/platform=iOS' \
