@@ -56,6 +56,16 @@ Exige [Apple Developer Program](https://developer.apple.com/programs/enroll/) (~
 | `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD` | Senha do `.p12` |
 | `IOS_PROVISIONING_PROFILE_BASE64` | Perfil **App Store** (`.mobileprovision`) em Base64 |
 
+### TestFlight (upload automatico no `release-ipa`)
+
+| Secret | Descricao |
+|--------|-----------|
+| `APP_STORE_CONNECT_KEY_ID` | Key ID da chave de API (App Store Connect → Integracoes → API) |
+| `APP_STORE_CONNECT_ISSUER_ID` | Issuer ID da mesma tela |
+| `APP_STORE_CONNECT_API_KEY` | Conteudo **inteiro** do arquivo `.p8` (incluindo `BEGIN/END PRIVATE KEY`) |
+
+Sem esses tres secrets o IPA ainda e gerado (artefato), mas o envio ao TestFlight e pulado.
+
 Bundle ID do app: **`com.minhapelada.app`** (igual ao Android / `capacitor.config.ts`).
 
 PowerShell para gerar Base64 (no Windows):
@@ -92,7 +102,7 @@ Apos o job, em **Summary → Artifacts**:
 - `ios-simulator-build` — `.app` de simulador (teste de compile; ~14 dias)
 - `ios-release-ipa` — IPA assinado (se secrets de signing OK; ~30 dias)
 
-Upload para **TestFlight** ainda e manual: baixe o IPA → [Transporter](https://apps.apple.com/app/transporter/id1450874784) (Mac) ou App Store Connect API (workflow futuro).
+Com os secrets `APP_STORE_CONNECT_*`, o job `release-ipa` envia o IPA ao TestFlight automaticamente. Sem eles, baixe o artefato `ios-release-ipa` e faca upload manual (Transporter no Mac). No Windows 10 o Transporter oficial nao e suportado e ainda exige `AppStoreInfo.plist`.
 
 ## 5. Script local / CI
 

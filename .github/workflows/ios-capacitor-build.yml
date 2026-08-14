@@ -194,6 +194,8 @@ jobs:
             <string>manual</string>
             <key>teamID</key>
             <string>{team}</string>
+            <key>generateAppStoreInformation</key>
+            <true/>
             <key>provisioningProfiles</key>
             <dict>
               <key>{bundle}</key>
@@ -211,6 +213,10 @@ jobs:
             "${XCODE_PROJECT_FLAG}" "${XCODE_PROJECT_PATH}" \
             -scheme App \
             -resolvePackageDependencies
+          IOS_BUILD=$(node -p "require('./.app-release-state.json').versionCode")
+          IOS_MARKETING=$(node -p "require('./.app-release-state.json').label")
+          echo "iOS version $IOS_MARKETING ($IOS_BUILD)"
+
           xcodebuild \
             "${XCODE_PROJECT_FLAG}" "${XCODE_PROJECT_PATH}" \
             -scheme App \
@@ -221,6 +227,8 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             PROVISIONING_PROFILE="$PROVISIONING_PROFILE_UUID" \
+            MARKETING_VERSION="$IOS_MARKETING" \
+            CURRENT_PROJECT_VERSION="$IOS_BUILD" \
             archive
 
           mkdir -p "$EXPORT_PATH"
@@ -252,3 +260,31 @@ jobs:
             ios/build/ipa/*.ipa
           if-no-files-found: warn
           retention-days: 30
+
+      - name: Upload IPA to TestFlight
+        if: env.BUILD_TARGET == 'release-ipa'
+        env:
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ASC_KEY_P8:-}" ] || [ -z "${ASC_KEY_ID:-}" ] || [ -z "${ASC_ISSUER_ID:-}" ]; then
+            echo "::warning::Secrets APP_STORE_CONNECT_KEY_ID / ISSUER_ID / API_KEY ausentes. IPA gerado; upload TestFlight pulado."
+            exit 0
+          fi
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          KEY_FILE="$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s\n' "$ASC_KEY_P8" > "$KEY_FILE"
+          chmod 600 "$KEY_FILE"
+          IPA=$(ls ios/build/ipa/*.ipa | head -n 1)
+          echo "Enviando $IPA para o TestFlight..."
+          if [ ! -x /Applications/Transporter.app/Contents/itms/bin/iTMSTransporter ]; then
+            brew install --cask transporter
+          fi
+          /Applications/Transporter.app/Contents/itms/bin/iTMSTransporter \
+            -m upload \
+            -assetFile "$IPA" \
+            -apiKey "$ASC_KEY_ID" \
+            -apiIssuer "$ASC_ISSUER_ID" \
+            -v informational
