@@ -284,64 +284,13 @@ jobs:
           IPA=$(ls ios/build/ipa/*.ipa | head -n 1)
           echo "Enviando $IPA para o TestFlight..."
 
-          find_transporter() {
-            local candidate
-            for candidate in \
-              /usr/local/itms/bin/iTMSTransporter \
-              /Applications/Transporter.app/Contents/itms/bin/iTMSTransporter
-            do
-              if [ -x "$candidate" ]; then
-                printf '%s' "$candidate"
-                return 0
-              fi
-            done
-            if command -v xcrun >/dev/null 2>&1; then
-              candidate="$(xcrun --find iTMSTransporter 2>/dev/null || true)"
-              if [ -n "$candidate" ] && [ -x "$candidate" ]; then
-                printf '%s' "$candidate"
-                return 0
-              fi
-            fi
-            return 1
-          }
-
-          TRANSPORTER="$(find_transporter || true)"
-          if [ -z "${TRANSPORTER:-}" ]; then
-            echo "Baixando iTMSTransporter oficial (macOS)..."
-            curl -fsSL -o /tmp/transporter_osx.bin \
-              "https://itunesconnect.apple.com/WebObjects/iTunesConnect.woa/ra/resources/download/public/Transporter__OSX/bin"
-            file /tmp/transporter_osx.bin
-            KIND="$(file -b /tmp/transporter_osx.bin || true)"
-            if echo "$KIND" | grep -Eqi 'xar|installer|package'; then
-              sudo installer -pkg /tmp/transporter_osx.bin -target /
-            elif echo "$KIND" | grep -qi zip; then
-              mkdir -p /tmp/transporter_extract
-              unzip -o /tmp/transporter_osx.bin -d /tmp/transporter_extract
-              PKG="$(find /tmp/transporter_extract -name '*.pkg' | head -n 1)"
-              if [ -z "$PKG" ]; then
-                echo "::error::ZIP do Transporter sem .pkg"
-                exit 1
-              fi
-              sudo installer -pkg "$PKG" -target /
-            else
-              echo "::error::Pacote Transporter em formato inesperado: $KIND"
-              exit 1
-            fi
-            TRANSPORTER="$(find_transporter || true)"
-          fi
-
-          if [ -n "${TRANSPORTER:-}" ]; then
-            echo "Usando $TRANSPORTER"
-            "$TRANSPORTER" \
-              -m upload \
-              -assetFile "$IPA" \
-              -apiKey "$KEY_ID" \
-              -apiIssuer "$ISSUER" \
-              -v informational
-            exit 0
-          fi
-
-          echo "Transporter nao encontrado; fallback fastlane pilot."
+          # O iTMSTransporter do Xcode 16 e um stub (erro -10814 / app nao encontrado).
+          # Usar so o binario standalone ou Fastlane.
+          echo "Enviando via fastlane pilot + altool (evita stub iTMSTransporter do Xcode)."
           gem install fastlane --no-document
           python3 -c 'import json,os,pathlib; k=os.environ["ASC_KEY_P8"].strip().replace("\\n","\n"); pathlib.Path("fastlane-api-key.json").write_text(json.dumps({"key_id":os.environ["ASC_KEY_ID"].strip(),"issuer_id":os.environ["ASC_ISSUER_ID"].strip(),"key":k}),encoding="utf-8")'
-          fastlane pilot upload --ipa "$IPA" --api_key_path ./fastlane-api-key.json --skip_waiting_for_build_processing
+          fastlane pilot upload \
+            --ipa "$IPA" \
+            --api_key_path ./fastlane-api-key.json \
+            --skip_waiting_for_build_processing \
+            --use_altool true
