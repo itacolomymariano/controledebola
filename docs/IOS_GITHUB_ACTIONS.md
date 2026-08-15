@@ -2,7 +2,7 @@
 
 Workflow: [`.github/workflows/ios-capacitor-build.yml`](../.github/workflows/ios-capacitor-build.yml)
 
-Executa em **macos-15** (Xcode 16+): build Angular/Ionic → Capacitor `ios/` (SPM, padrao Capacitor 8) → `xcodebuild`.
+Executa em **macos-26** (Xcode 26 / iOS 26 SDK — exigencia App Store Connect desde 2026): build Angular/Ionic → Capacitor `ios/` (SPM, padrao Capacitor 8) → `xcodebuild`.
 
 Nao e necessario Mac local para compilar. A pasta `ios/` e gerada no runner (esta no `.gitignore`). **Nao** usa CocoaPods/`pod install` no fluxo padrao.
 
@@ -131,7 +131,9 @@ Falha de **validacao do YAML** (nao do Xcode). Tipico: usar `inputs.*` em evento
 | `ENVIRONMENT_LOCAL_TS ausente` | Cadastrar o secret com o conteudo de `environment.local.ts` |
 | Code signing / provisioning | Conferir os tres secrets `IOS_DISTRIBUTION_*` e Bundle ID `com.minhapelada.app` |
 | `No Podfile found` | Capacitor 8 usa SPM; o workflow nao deve chamar `pod install` |
-| `cap add ios` / Xcode | Reexecutar; runner `macos-15` (Xcode 16+) |
+| `cap add ios` / Xcode | Reexecutar; runner `macos-26` (Xcode 26 / iOS 26 SDK) |
+| `CFBundleShortVersionString` invalida | Marketing version iOS e `package.json` (`0.0.1`); build number e `versionCode` |
+| SDK version issue / iOS 18.5 | O runner precisa ser `macos-26` (nao `macos-15`, que usa Xcode 16.4) |
 | Run falha em 0s / 0 jobs | Corrigir YAML e push novo na `main` |
 | IPA nao aparece no artifact | Abrir log do step `Build iOS (Release IPA)`; conferir Team ID do perfil |
 

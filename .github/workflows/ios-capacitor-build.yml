@@ -45,7 +45,7 @@ env:
 jobs:
   build-ios:
     name: Build iOS Capacitor
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 90
     env:
       # Usar github.event.inputs (nao inputs.*) — em push o contexto inputs invalida o YAML (0 jobs).
@@ -213,8 +213,9 @@ jobs:
             "${XCODE_PROJECT_FLAG}" "${XCODE_PROJECT_PATH}" \
             -scheme App \
             -resolvePackageDependencies
+          # CFBundleShortVersionString: no maximo 3 inteiros (nao usar o label 2026.08.15.0079).
           IOS_BUILD=$(node -p "require('./.app-release-state.json').versionCode")
-          IOS_MARKETING=$(node -p "require('./.app-release-state.json').label")
+          IOS_MARKETING=$(node -p "require('./package.json').version")
           echo "iOS version $IOS_MARKETING ($IOS_BUILD)"
 
           xcodebuild \

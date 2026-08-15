@@ -56,7 +56,7 @@ npm run build:android:aab    # AAB para Google Play Console (teste interno / pro
 npm run build:ios:ci
 ```
 
-Workflow: `.github/workflows/ios-capacitor-build.yml` (runner `macos-15`). Guia completo: [docs/IOS_GITHUB_ACTIONS.md](docs/IOS_GITHUB_ACTIONS.md). Bundle ID: `com.minhapelada.app`. Secrets: `ENVIRONMENT_LOCAL_TS` (obrigatorio); `IOS_DISTRIBUTION_*` so para IPA.
+Workflow: `.github/workflows/ios-capacitor-build.yml` (runner `macos-26`, Xcode 26). Guia completo: [docs/IOS_GITHUB_ACTIONS.md](docs/IOS_GITHUB_ACTIONS.md). Bundle ID: `com.minhapelada.app`. Secrets: `ENVIRONMENT_LOCAL_TS` (obrigatorio); `IOS_DISTRIBUTION_*` so para IPA.
 
 ---
 
@@ -123,6 +123,13 @@ splash → (onboarding?) → login/register → (profile-setup?) → tabs/pelada
 | Perfis | `profile`, `profile-setup`, `role-profile-form` | `athlete/role/fan-profile.service` |
 | Portaria | `event-gate-scan`, `event-gate-entries` | `event-gate-ticket.service` |
 | Apoio (treinador/PF/massagista/torcida) | `event-coach-board`, `event-physical-trainer`, `event-masseur-treatments`, `event-fan-checkin` | `support-role-tools.service` |
+| Convite / App Links | Menu, Perfil, Sobre (`Convidar Amigos`) | `app-invite-share.service`, `deep-link.service` |
+
+**Deep links / convite:** "Convidar Amigos" compartilha o link de **teste interno** da Play
+(`https://play.google.com/apps/internaltest/...`) enquanto nao houver listagem publica.
+App Links do dominio: [docs/DEEP-LINKS-APP-LINKS.md](docs/DEEP-LINKS-APP-LINKS.md). Site: repo `controledebolasite`.
+
+**Android / Play:** `compileSdk` e `targetSdk` = **36** (`android/variables.gradle`) — requisito Play a partir de 31/08/2026. AAB: `npm run build:android:aab`.
 
 ---
 
@@ -189,6 +196,7 @@ Apos deploy: rodar `configureMuralClassPermissions`, `configureMaterialClassPerm
 - Regressoes: preferir Cloud Functions para listas admin; recarregar dados em `ionViewWillEnter`; rodar smoke test antes de instalar.
 - **Cache de atividades:** `docs/AGENT-ACTIVITY-CACHE.md` (mapa de perfis, gotchas, sessoes). Consultar no inicio de tarefas; atualizar apos intervencoes relevantes. Regra: `.cursor/rules/agent-activity-cache.mdc`.
 - **Plano de testes por perfil:** `docs/PLANO-TESTES-PERFIS.md`.
+- **Fluxo sequencial (ciclo de vida):** `docs/FLUXO-TESTES-CICLO-DE-VIDA.md` — cadastros → pelada → evento → dia do jogo → mural.
 
 ---
 
@@ -200,3 +208,6 @@ Apos deploy: rodar `configureMuralClassPermissions`, `configureMaterialClassPerm
 - [docs/BACK4APP-CLOUD-FUNCTIONS-CONSOLE.md](docs/BACK4APP-CLOUD-FUNCTIONS-CONSOLE.md) — rodar Cloud Functions no API Console (REST + Master Key)
 - [docs/back4app-fase1.md](docs/back4app-fase1.md) … [fase6](docs/back4app-fase6-referee-invitations.md)
 - [docs/IOS_GITHUB_ACTIONS.md](docs/IOS_GITHUB_ACTIONS.md) — build iOS na nuvem (GitHub Actions)
+- [docs/FLUXO-TESTES-CICLO-DE-VIDA.md](docs/FLUXO-TESTES-CICLO-DE-VIDA.md) — roteiro sequencial de testes (cadastros e ciclo de vida)
+- [docs/SMOKE-TEST-PRE-INSTALL.md](docs/SMOKE-TEST-PRE-INSTALL.md) — smoke curto pre-instalacao
+- [docs/PLANO-TESTES-PERFIS.md](docs/PLANO-TESTES-PERFIS.md) — matriz por perfil
