@@ -282,15 +282,10 @@ jobs:
           chmod 600 "$KEY_FILE"
 
           IPA=$(ls ios/build/ipa/*.ipa | head -n 1)
-          echo "Enviando $IPA para o TestFlight..."
-
-          # O iTMSTransporter do Xcode 16 e um stub (erro -10814 / app nao encontrado).
-          # Usar so o binario standalone ou Fastlane.
-          echo "Enviando via fastlane pilot + altool (evita stub iTMSTransporter do Xcode)."
-          gem install fastlane --no-document
-          python3 -c 'import json,os,pathlib; k=os.environ["ASC_KEY_P8"].strip().replace("\\n","\n"); pathlib.Path("fastlane-api-key.json").write_text(json.dumps({"key_id":os.environ["ASC_KEY_ID"].strip(),"issuer_id":os.environ["ASC_ISSUER_ID"].strip(),"key":k}),encoding="utf-8")'
-          fastlane pilot upload \
-            --ipa "$IPA" \
-            --api_key_path ./fastlane-api-key.json \
-            --skip_waiting_for_build_processing \
-            --use_altool true
+          echo "Enviando $IPA para o TestFlight via altool..."
+          # Evita o stub iTMSTransporter do Xcode 16 (-10814) e o cask inexistente.
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$IPA" \
+            --apiKey "$KEY_ID" \
+            --apiIssuer "$ISSUER"
