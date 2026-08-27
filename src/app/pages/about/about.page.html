@@ -46,6 +46,17 @@
   </div>
 
   <div class="about-section">
+    <h2>Divulgar</h2>
+    <ion-button expand="block" [disabled]="inviteShareBusy" (click)="inviteFriends()">
+      <ion-icon name="share-social-outline" slot="start"></ion-icon>
+      Convidar Amigos
+    </ion-button>
+    <ion-note color="medium" class="ion-margin-top">
+      Compartilhe o link de instalacao nas redes sociais.
+    </ion-note>
+  </div>
+
+  <div class="about-section">
     <h2>Redes sociais</h2>
     <ion-note color="medium">Em breve</ion-note>
   </div>

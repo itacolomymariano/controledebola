@@ -35,7 +35,7 @@
       <ion-icon name="person-circle-outline" slot="start"></ion-icon>
       <ion-label>
         <h2>Meus dados</h2>
-        <p>Nome, apelido, e-mail, celular e endereco</p>
+        <p>Nome, apelido, e-mail e dados opcionais</p>
       </ion-label>
     </ion-item>
     <ion-item button (click)="openInbox()">
@@ -127,6 +127,20 @@
     <ion-item>
       <ion-label>Login por biometria</ion-label>
       <ion-toggle [checked]="biometricEnabled" (ionChange)="toggleBiometric($event)"></ion-toggle>
+    </ion-item>
+    <ion-item button [disabled]="inviteShareBusy" (click)="inviteFriends()">
+      <ion-icon name="share-social-outline" slot="start"></ion-icon>
+      <ion-label>
+        <h2>Convidar Amigos</h2>
+        <p>Divulgar o Controle de Bola nas redes</p>
+      </ion-label>
+    </ion-item>
+    <ion-item button (click)="openAccountEdit()">
+      <ion-icon name="trash-outline" slot="start" color="danger"></ion-icon>
+      <ion-label>
+        <h2>Excluir conta</h2>
+        <p>Apagar definitivamente seus dados pessoais</p>
+      </ion-label>
     </ion-item>
     <ion-item button color="danger" (click)="logout()">
       <ion-icon name="log-out-outline" slot="start"></ion-icon>

@@ -2,7 +2,7 @@
 import { Subject } from 'rxjs';
 import Parse from 'parse';
 import { MIN_PASSWORD_LENGTH } from '../constants/auth.constants';
-import { Address, isAddressComplete } from '../models/address.model';
+import { Address, emptyAddress, isAddressComplete, isAddressEmpty } from '../models/address.model';
 import { ProfileRole } from '../models/profile-role.model';
 import {
   isInvalidCloudFunctionError,
@@ -262,12 +262,14 @@ export class AuthService {
   }
 
   resolveUsername(email?: string, phone?: string): string {
+    if (email?.trim() && this.isEmail(email)) {
+      return email.trim().toLowerCase();
+    }
     if (phone?.trim()) {
       const stored = this.normalizePhoneForStorage(phone);
       if (stored.length >= 10) return stored;
     }
-    if (email?.trim()) return email.trim().toLowerCase();
-    throw new Error('Informe e-mail ou celular.');
+    throw new Error('Informe um e-mail valido.');
   }
 
   async register(payload: RegisterPayload): Promise<Parse.User> {
@@ -282,12 +284,12 @@ export class AuthService {
       throw new Error('Informe um apelido (minimo 2 caracteres).');
     }
 
-    if (!isAddressComplete(payload.address)) {
-      throw new Error('Selecione seu endereco na lista para validar a localizacao.');
+    if (!payload.email?.trim() || !this.isEmail(payload.email)) {
+      throw new Error('Informe um e-mail valido.');
     }
 
-    if (payload.email?.trim() && !this.isEmail(payload.email)) {
-      throw new Error('E-mail invalido.');
+    if (!isAddressEmpty(payload.address) && !isAddressComplete(payload.address)) {
+      throw new Error('Se informar o endereco, selecione-o na lista para validar a localizacao.');
     }
 
     if (payload.phone?.trim() && this.normalizePhoneForStorage(payload.phone).length < 10) {
@@ -301,7 +303,7 @@ export class AuthService {
         email: payload.email?.trim() || undefined,
         phone: payload.phone?.trim() || undefined,
         password: payload.password,
-        address: payload.address,
+        address: isAddressEmpty(payload.address) ? emptyAddress() : payload.address,
         birthDate: payload.birthDate ?? undefined,
         signupChallengeId: payload.signupChallengeId,
         signupCaptchaAnswer: payload.signupCaptchaAnswer,
@@ -335,7 +337,9 @@ export class AuthService {
     user.set('password', payload.password);
     user.set('name', name);
     user.set('apelido', apelido);
-    user.set('address', payload.address);
+    if (!isAddressEmpty(payload.address)) {
+      user.set('address', payload.address);
+    }
 
     if (email) {
       user.set('email', email);
@@ -484,11 +488,11 @@ export class AuthService {
     if (apelido.length < 2) {
       throw new Error('Informe um apelido (minimo 2 caracteres).');
     }
-    if (!payload.email?.trim() && !payload.phone?.trim()) {
-      throw new Error('Informe e-mail ou celular.');
+    if (!payload.email?.trim() || !this.isEmail(payload.email)) {
+      throw new Error('Informe um e-mail valido.');
     }
-    if (!isAddressComplete(payload.address)) {
-      throw new Error('Selecione seu endereco na lista para validar a localizacao.');
+    if (!isAddressEmpty(payload.address) && !isAddressComplete(payload.address)) {
+      throw new Error('Se informar o endereco, selecione-o na lista para validar a localizacao.');
     }
 
     try {
@@ -497,7 +501,7 @@ export class AuthService {
         apelido,
         email: payload.email?.trim() || undefined,
         phone: payload.phone?.trim() || undefined,
-        address: payload.address,
+        address: isAddressEmpty(payload.address) ? emptyAddress() : payload.address,
         birthDate: payload.birthDate ? payload.birthDate.toISOString() : null,
         proFootballIdol: payload.proFootballIdol?.trim() ?? '',
         amateurFootballIdol: payload.amateurFootballIdol?.trim() ?? '',
@@ -512,6 +516,25 @@ export class AuthService {
     } catch (error: unknown) {
       throw new Error(parseErrorMessage(error));
     }
+  }
+
+  async deleteAccount(password: string): Promise<void> {
+    if (!this.getCurrentUser()) {
+      throw new Error('Faca login para excluir sua conta.');
+    }
+    const current = password.trim();
+    if (!current) {
+      throw new Error('Informe sua senha para confirmar a exclusao.');
+    }
+
+    try {
+      await Parse.Cloud.run('deleteMyAccount', { password: current });
+    } catch (error: unknown) {
+      throw new Error(parseErrorMessage(error));
+    }
+
+    await this.clearLocalSession();
+    this.profileChanged$.next();
   }
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {

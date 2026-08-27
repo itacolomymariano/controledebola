@@ -25,6 +25,8 @@ on:
       - 'angular.json'
       - 'package.json'
       - 'package-lock.json'
+      - 'ios-config/**'
+      - 'scripts/apply-ios-review-config.js'
       - '.github/workflows/ios-capacitor-build.yml'
   pull_request:
     branches:
@@ -94,6 +96,7 @@ jobs:
             npx cap add ios --packagemanager SPM
           fi
           npx cap sync ios
+          node scripts/apply-ios-review-config.js
           echo "Estrutura ios/:"
           find ios -maxdepth 3 \( -name '*.xcodeproj' -o -name '*.xcworkspace' -o -name Podfile -o -name Package.swift -o -name CapApp-SPM \) -print
 

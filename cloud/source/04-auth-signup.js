@@ -111,26 +111,23 @@ Parse.Cloud.define('registerUser', async (request) => {
   if (password.length < 8) {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'A senha deve ter no minimo 8 caracteres.');
   }
-  if (!emailInput && !phoneInput) {
-    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe e-mail ou celular.');
-  }
-  if (emailInput && !isEmailValue(emailInput)) {
+  if (!emailInput || !isEmailValue(emailInput)) {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe um e-mail valido.');
   }
   if (phoneInput && normalizePhoneForStorage(phoneInput).length < 10) {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe um celular valido (DDD + numero).');
   }
-  if (!isAddressCompleteForUpdate(address)) {
+  if (!isAddressEmptyForUpdate(address) && !isAddressCompleteForUpdate(address)) {
     throw new Parse.Error(
       Parse.Error.VALIDATION_ERROR,
-      'Selecione seu endereco na lista para validar a localizacao.'
+      'Se informar o endereco, selecione-o na lista para validar a localizacao.'
     );
   }
 
   const normalizedPhone = phoneInput ? normalizePhoneForStorage(phoneInput) : '';
   const username = resolveUsernameFromContact(emailInput, normalizedPhone);
   if (!username) {
-    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe e-mail ou celular valido.');
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe um e-mail valido.');
   }
 
   await assertContactAvailable({
@@ -144,7 +141,9 @@ Parse.Cloud.define('registerUser', async (request) => {
   user.set('password', password);
   user.set('name', name);
   user.set('apelido', apelido);
-  user.set('address', address);
+  if (!isAddressEmptyForUpdate(address)) {
+    user.set('address', address);
+  }
 
   if (emailInput) {
     user.set('email', emailInput);

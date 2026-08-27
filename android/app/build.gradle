@@ -13,8 +13,8 @@ android {
         applicationId "com.minhapelada.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 78
-        versionName "2026.07.30.0078"
+        versionCode 91
+        versionName "2026.08.17.0091"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

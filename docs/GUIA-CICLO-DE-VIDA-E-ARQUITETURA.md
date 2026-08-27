@@ -2,8 +2,8 @@
 
 Documento de referencia para manutencao e inovacao tecnologica. Leia **antes** de alterar codigo, Cloud Code ou fluxos de negocio.
 
-**Versao do projeto:** `minhapelada@0.0.1`  
-**Ultima revisao deste guia:** julho/2026
+**Versao do projeto:** `minhapelada@1.0.1`  
+**Ultima revisao deste guia:** agosto/2026
 
 ---
 
@@ -236,7 +236,9 @@ Todas as demais rotas em `src/app/app-routing.module.ts`, incluindo:
 | Metodo | Comportamento |
 |--------|---------------|
 | `login()` | Tenta variantes de email/telefone; fallback Cloud `resolveLoginUsername` |
-| `register()` | Cloud `registerUser` → login; fallback client-side `signUp` |
+| `register()` | Cloud `registerUser` → login; fallback client-side `signUp`. E-mail obrigatorio; celular, nascimento e endereco opcionais (Apple 5.1.1) |
+| `updateUserAccount()` | Mesma regra de campos; endereco so e gravado se completo |
+| `deleteAccount()` | Cloud `deleteMyAccount` (senha + exclusao permanente) + limpa sessao local |
 | `validateSession()` | `user.fetch()` no servidor; em erro de rede nao desloga |
 | `clearLocalSession()` | Unregister push + `Parse.User.logOut()` |
 | `handleApiError()` | Se sessao invalida → limpa sessao, retorna `true` (caller redireciona `/login`) |
@@ -492,7 +494,7 @@ flowchart LR
 
 ### Cloud Functions por categoria (principais)
 
-**Auth:** `prepareSignupChallenge`, `registerUser`, `resolveLoginUsername`, `updateUserAccount`, `changeUserPassword`
+**Auth:** `prepareSignupChallenge`, `registerUser`, `resolveLoginUsername`, `updateUserAccount`, `changeUserPassword`, `deleteMyAccount`
 
 **Eventos/Inscricoes:** `listEventParticipantsForVoting`, `updateEventRegistrationPayment`, `createAnonymousEventRegistration`, `registerEventAthleteArrival`, `ensureEventArrivalOrders`, `getEventTeamSplit`, `saveEventTeamSplit`, `checkInviteeScheduleConflict`, `createSupplementaryEventInvitation`
 

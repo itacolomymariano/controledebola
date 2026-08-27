@@ -1,5 +1,10 @@
 <div [formGroup]="form">
   <h3 class="ion-padding-top">{{ title }}</h3>
+  @if (!required) {
+    <ion-note color="medium" class="ion-padding-horizontal">
+      Opcional. Se preencher, selecione o endereco na lista para validar a localizacao.
+    </ion-note>
+  }
   <ion-item>
     <ion-input
       label="Logradouro / Rua (Digite aqui e selecione na lista)"
@@ -65,7 +70,7 @@
     <ion-note color="medium" class="ion-padding">Completando endereco...</ion-note>
   }
 
-  @if (!applying && !isComplete && missingFields.length > 0) {
+  @if (showIncompleteHint) {
     <ion-note color="warning" class="ion-padding">
       Falta preencher: {{ missingFields.join(', ') }}.
     </ion-note>

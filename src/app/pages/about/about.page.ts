@@ -2,6 +2,10 @@ import { Component } from '@angular/core';
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { APP_RELEASE } from '../../core/constants/app-release';
+import {
+  APP_SITE_URL,
+  AppInviteShareService,
+} from '../../core/services/app-invite-share.service';
 
 @Component({
   selector: 'app-about',
@@ -14,13 +18,26 @@ export class AboutPage {
   buildNumber = '—';
   appRelease = APP_RELEASE.label;
   platformLabel = 'Web';
+  inviteShareBusy = false;
   readonly companyName = 'NSN SOLUCOES DE DESENVOLVIMENTO EM TI LTDA';
   readonly logoPath = 'assets/icon/logo_controle_de_bola.png';
-  readonly siteUrl = 'https://controledebola.com';
+  readonly siteUrl = APP_SITE_URL;
   readonly siteLabel = 'controledebola.com';
+
+  constructor(private readonly appInviteShare: AppInviteShareService) {}
 
   ionViewWillEnter(): void {
     void this.loadAppInfo();
+  }
+
+  async inviteFriends(): Promise<void> {
+    if (this.inviteShareBusy) return;
+    this.inviteShareBusy = true;
+    try {
+      await this.appInviteShare.shareInvite();
+    } finally {
+      this.inviteShareBusy = false;
+    }
   }
 
   private async loadAppInfo(): Promise<void> {

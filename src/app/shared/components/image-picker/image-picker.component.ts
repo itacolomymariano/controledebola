@@ -18,15 +18,24 @@ export class ImagePickerComponent {
 
   openPicker(): void {
     if (this.disabled) return;
-    this.fileInput?.nativeElement.click();
+    try {
+      this.fileInput?.nativeElement.click();
+    } catch {
+      // Sem permissao nativa o SO pode recusar o clique; o caller trata o erro do upload.
+    }
   }
 
   onFileChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
-    if (!file) return;
-    this.previewUrl = URL.createObjectURL(file);
-    this.imageSelected.emit(file);
     input.value = '';
+    if (!file) return;
+
+    try {
+      this.previewUrl = URL.createObjectURL(file);
+      this.imageSelected.emit(file);
+    } catch {
+      this.imageSelected.emit(file);
+    }
   }
 }

@@ -16,7 +16,8 @@
   }
 
   <ion-note class="ion-margin-bottom">
-    E-mail e celular sao usados para login. O botao Salvar alteracoes so e habilitado quando houver mudancas.
+    O e-mail e obrigatorio para entrar no app. Celular, data de nascimento e endereco sao opcionais.
+    O botao Salvar alteracoes so e habilitado quando houver mudancas.
   </ion-note>
 
   @if (!showPasswordSection) {
@@ -44,16 +45,24 @@
         <ion-item>
           <ion-input label="E-mail" labelPlacement="stacked" formControlName="email" type="email"></ion-input>
         </ion-item>
+        @if (form.get('email')?.touched && form.get('email')?.hasError('required')) {
+          <ion-note color="danger" class="ion-padding-horizontal">Informe um e-mail.</ion-note>
+        }
+        @if (form.get('email')?.touched && form.get('email')?.hasError('invalidEmail')) {
+          <ion-note color="danger" class="ion-padding-horizontal">Informe um e-mail valido.</ion-note>
+        }
         <ion-item>
           <ion-input
-            label="Celular (DDD + numero)"
+            label="Celular (opcional)"
             labelPlacement="stacked"
             formControlName="phone"
             type="tel"
           ></ion-input>
         </ion-item>
-        @if (form.hasError('contactRequired') && (form.get('email')?.touched || form.get('phone')?.touched)) {
-          <ion-note color="danger" class="ion-padding-horizontal">Informe e-mail ou celular.</ion-note>
+        @if (form.get('phone')?.touched && form.get('phone')?.hasError('invalidPhone')) {
+          <ion-note color="danger" class="ion-padding-horizontal">
+            Celular invalido. Informe DDD + numero (minimo 10 digitos).
+          </ion-note>
         }
 
         <ion-item-divider>
@@ -75,7 +84,10 @@
 
         <!-- NUNCA usar type="date" aqui: calendário nativo inviável para anos antigos.
              Usar app-birth-date-picker (dia/mês/ano). Ver AGENTS.md e docs/UI-DATAS-NASCIMENTO.md -->
-        <app-birth-date-picker formControlName="birthDate"></app-birth-date-picker>
+        <app-birth-date-picker
+          formControlName="birthDate"
+          label="Data de nascimento (opcional)"
+        ></app-birth-date-picker>
         <app-team-picker [control]="$any(form.get('favoriteProTeam'))"></app-team-picker>
         <app-legend-suggest-input
           [control]="$any(form.get('proFootballIdol'))"
@@ -106,7 +118,8 @@
 
       <app-address-form
         formControlName="address"
-        title="Onde voce mora"
+        title="Onde voce mora (opcional)"
+        [required]="false"
         (addressChange)="onAddressChanged()"
       ></app-address-form>
     </form>
@@ -204,6 +217,9 @@
       </ion-button>
       <ion-button expand="block" fill="outline" type="button" (click)="togglePasswordSection()">
         Alterar senha
+      </ion-button>
+      <ion-button expand="block" fill="clear" color="danger" type="button" (click)="requestAccountDeletion()">
+        Excluir conta
       </ion-button>
       <ion-button expand="block" fill="clear" type="button" (click)="cancel()">Voltar</ion-button>
     } @else {

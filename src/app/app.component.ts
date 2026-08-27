@@ -3,6 +3,8 @@ import { Router } from '@angular/router';
 import { MenuController, ToastController } from '@ionic/angular';
 import Parse from 'parse';
 import { parseErrorMessage } from './core/utils/parse-error.util';
+import { AppInviteShareService } from './core/services/app-invite-share.service';
+import { DeepLinkService } from './core/services/deep-link.service';
 import { PushNotificationService } from './core/services/push-notification.service';
 
 @Component({
@@ -14,9 +16,12 @@ import { PushNotificationService } from './core/services/push-notification.servi
 export class AppComponent implements OnInit {
   pushNotificationsEnabled = true;
   pushToggleBusy = false;
+  inviteShareBusy = false;
 
   constructor(
     private readonly pushNotificationService: PushNotificationService,
+    private readonly deepLinkService: DeepLinkService,
+    private readonly appInviteShare: AppInviteShareService,
     private readonly menuCtrl: MenuController,
     private readonly router: Router,
     private readonly toastCtrl: ToastController
@@ -24,6 +29,7 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     void this.pushNotificationService.initialize();
+    void this.deepLinkService.start();
   }
 
   async onMenuWillOpen(): Promise<void> {
@@ -76,6 +82,17 @@ export class AppComponent implements OnInit {
       await toast.present();
     } finally {
       this.pushToggleBusy = false;
+    }
+  }
+
+  async inviteFriendsFromMenu(): Promise<void> {
+    if (this.inviteShareBusy) return;
+    this.inviteShareBusy = true;
+    try {
+      await this.menuCtrl.close('app-menu');
+      await this.appInviteShare.shareInvite();
+    } finally {
+      this.inviteShareBusy = false;
     }
   }
 

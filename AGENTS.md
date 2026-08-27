@@ -124,6 +124,7 @@ splash → (onboarding?) → login/register → (profile-setup?) → tabs/pelada
 | Portaria | `event-gate-scan`, `event-gate-entries` | `event-gate-ticket.service` |
 | Apoio (treinador/PF/massagista/torcida) | `event-coach-board`, `event-physical-trainer`, `event-masseur-treatments`, `event-fan-checkin` | `support-role-tools.service` |
 | Convite / App Links | Menu, Perfil, Sobre (`Convidar Amigos`) | `app-invite-share.service`, `deep-link.service` |
+| Conta | `register`, `account-edit`, Perfil (`Excluir conta`) | `auth.service` — e-mail obrigatorio; celular, nascimento e endereco opcionais. Exclusao permanente via Cloud `deleteMyAccount` |
 
 **Deep links / convite:** "Convidar Amigos" compartilha o link de **teste interno** da Play
 (`https://play.google.com/apps/internaltest/...`) enquanto nao houver listagem publica.
@@ -158,7 +159,7 @@ Inscreva no construtor, recarregue em `ionViewWillEnter`, `unsubscribe` em `ngOn
 | `01-phone-helpers.js` | Telefone BR |
 | `01b-comment-discipline.js` | Filtro de palavroes em comentarios |
 | `01c-integrity-helpers.js` | Anti auto-voto / quorum / midia TOP |
-| `02-core.js` | Conta, login |
+| `02-core.js` | Conta, login, exclusao de conta (`deleteMyAccount`) |
 | `03-push-notifications.js` | Push |
 | `04-auth-signup.js` | Cadastro anti-bot |
 | `05-legends.js` | Lendas |
@@ -208,6 +209,7 @@ Apos deploy: rodar `configureMuralClassPermissions`, `configureMaterialClassPerm
 - [docs/BACK4APP-CLOUD-FUNCTIONS-CONSOLE.md](docs/BACK4APP-CLOUD-FUNCTIONS-CONSOLE.md) — rodar Cloud Functions no API Console (REST + Master Key)
 - [docs/back4app-fase1.md](docs/back4app-fase1.md) … [fase6](docs/back4app-fase6-referee-invitations.md)
 - [docs/IOS_GITHUB_ACTIONS.md](docs/IOS_GITHUB_ACTIONS.md) — build iOS na nuvem (GitHub Actions)
+- [docs/APP-STORE-REVIEW.md](docs/APP-STORE-REVIEW.md) — rejeicoes Apple e procedimentos no App Store Connect
 - [docs/FLUXO-TESTES-CICLO-DE-VIDA.md](docs/FLUXO-TESTES-CICLO-DE-VIDA.md) — roteiro sequencial de testes (cadastros e ciclo de vida)
 - [docs/SMOKE-TEST-PRE-INSTALL.md](docs/SMOKE-TEST-PRE-INSTALL.md) — smoke curto pre-instalacao
 - [docs/PLANO-TESTES-PERFIS.md](docs/PLANO-TESTES-PERFIS.md) — matriz por perfil

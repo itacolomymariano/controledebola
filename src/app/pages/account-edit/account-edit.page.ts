@@ -4,6 +4,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
 import { Subscription, merge } from 'rxjs';
 import { Address, emptyAddress } from '../../core/models/address.model';
+import {
+  emailFormatValidator,
+  phoneFormatValidator,
+} from '../../core/utils/contact-validation.util';
 import { MIN_PASSWORD_LENGTH } from '../../core/constants/auth.constants';
 import { AuthService } from '../../core/services/auth.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
@@ -23,12 +27,6 @@ interface AccountSnapshot {
   showPhoneInProfile: boolean;
   showEmailInProfile: boolean;
   address: Address;
-}
-
-function emailOrPhoneValidator(control: AbstractControl): ValidationErrors | null {
-  const email = control.get('email')?.value?.trim();
-  const phone = control.get('phone')?.value?.trim();
-  return email || phone ? null : { contactRequired: true };
 }
 
 function passwordsMatchValidator(control: AbstractControl): ValidationErrors | null {
@@ -70,8 +68,8 @@ export class AccountEditPage implements OnInit, OnDestroy {
           Validators.pattern(/^[a-zA-Z0-9\u00C0-\u017F\s._-]+$/),
         ],
       ],
-      email: [''],
-      phone: [''],
+      email: ['', [Validators.required, emailFormatValidator]],
+      phone: ['', phoneFormatValidator],
       birthDate: [''],
       proFootballIdol: [''],
       amateurFootballIdol: [''],
@@ -80,8 +78,7 @@ export class AccountEditPage implements OnInit, OnDestroy {
       showPhoneInProfile: [false],
       showEmailInProfile: [false],
       address: [emptyAddress()],
-    },
-    { validators: [emailOrPhoneValidator] }
+    }
   );
 
   passwordForm = this.fb.group(
@@ -157,6 +154,69 @@ export class AccountEditPage implements OnInit, OnDestroy {
 
   cancel(): void {
     void this.router.navigateByUrl('/tabs/profile');
+  }
+
+  async requestAccountDeletion(): Promise<void> {
+    const intro = await this.alertCtrl.create({
+      header: 'Excluir conta',
+      message:
+        'Esta acao e permanente. Seus dados pessoais serao apagados e voce nao podera mais entrar com esta conta. Peladas e eventos que voce organizou permanecem para os outros participantes.',
+      buttons: [
+        { text: 'Cancelar', role: 'cancel' },
+        {
+          text: 'Continuar',
+          role: 'destructive',
+          handler: () => {
+            void this.confirmAccountDeletion();
+          },
+        },
+      ],
+    });
+    await intro.present();
+  }
+
+  private async confirmAccountDeletion(): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: 'Confirme com a senha',
+      message: 'Digite sua senha para excluir a conta definitivamente.',
+      inputs: [{ name: 'password', type: 'password', placeholder: 'Senha da conta' }],
+      buttons: [
+        { text: 'Cancelar', role: 'cancel' },
+        {
+          text: 'Excluir definitivamente',
+          role: 'destructive',
+          handler: (data) => {
+            void this.doDeleteAccount(String(data?.password || ''));
+            return false;
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  private async doDeleteAccount(password: string): Promise<void> {
+    if (!password.trim()) {
+      await this.showError('Informe sua senha para confirmar a exclusao.');
+      return;
+    }
+
+    const loading = await this.loadingCtrl.create({ message: 'Excluindo conta...' });
+    await loading.present();
+    try {
+      await this.auth.deleteAccount(password);
+      const done = await this.alertCtrl.create({
+        header: 'Conta excluida',
+        message: 'Sua conta foi excluida. Voce ja pode fechar o app ou criar uma nova conta.',
+        buttons: ['OK'],
+      });
+      await done.present();
+      await this.router.navigateByUrl('/login', { replaceUrl: true });
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error));
+    } finally {
+      await loading.dismiss();
+    }
   }
 
   async submit(): Promise<void> {

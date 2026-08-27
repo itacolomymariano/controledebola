@@ -36,23 +36,33 @@
     <ion-item>
       <ion-input label="E-mail" labelPlacement="stacked" formControlName="email" type="email"></ion-input>
     </ion-item>
+    @if (form.get('email')?.touched && form.get('email')?.hasError('required')) {
+      <ion-note color="danger" class="ion-padding-horizontal">Informe um e-mail. Ele e usado para entrar no app.</ion-note>
+    }
     @if (form.get('email')?.touched && form.get('email')?.hasError('invalidEmail')) {
       <ion-note color="danger" class="ion-padding-horizontal">Informe um e-mail valido.</ion-note>
     }
     <ion-item>
-      <ion-input label="Celular (DDD + numero)" labelPlacement="stacked" formControlName="phone" type="tel"></ion-input>
+      <ion-input
+        label="Celular (opcional)"
+        labelPlacement="stacked"
+        formControlName="phone"
+        type="tel"
+      ></ion-input>
     </ion-item>
     @if (form.get('phone')?.touched && form.get('phone')?.hasError('invalidPhone')) {
       <ion-note color="danger" class="ion-padding-horizontal">
         Celular invalido. Informe DDD + numero (minimo 10 digitos).
       </ion-note>
     }
-    <ion-note color="medium" class="ion-padding-horizontal">Informe e-mail ou celular (um dos dois).</ion-note>
-    @if (form.touched && form.hasError('contactRequired')) {
-      <ion-note color="danger" class="ion-padding-horizontal">Informe e-mail ou celular.</ion-note>
-    }
+    <ion-note color="medium" class="ion-padding-horizontal">
+      O celular e opcional. Voce pode informa-lo depois em Meus dados.
+    </ion-note>
 
-    <app-birth-date-picker formControlName="birthDate"></app-birth-date-picker>
+    <app-birth-date-picker
+      formControlName="birthDate"
+      label="Data de nascimento (opcional)"
+    ></app-birth-date-picker>
     @if (form.get('birthDate')?.touched && form.get('birthDate')?.hasError('incompleteBirthDate')) {
       <ion-note color="danger" class="ion-padding-horizontal">
         Selecione dia, mes e ano da data de nascimento.
@@ -64,7 +74,7 @@
       </ion-note>
     }
     <ion-note color="medium" class="ion-padding-horizontal">
-      Selecione dia, mes e ano. O ano aparece em lista decrescente para facilitar datas antigas.
+      Opcional. Se preencher, selecione dia, mes e ano. O ano aparece em lista decrescente.
     </ion-note>
 
     <ion-item>
@@ -117,12 +127,13 @@
 
     <app-address-form
       formControlName="address"
-      title="Onde voce mora"
+      title="Onde voce mora (opcional)"
+      [required]="false"
       (addressChange)="onAddressChanged()"
     ></app-address-form>
     @if (form.get('address')?.touched && form.get('address')?.hasError('addressIncomplete')) {
       <ion-note color="danger" class="ion-padding-horizontal">
-        Selecione seu endereco na lista de sugestoes para validar a localizacao.
+        Se informar o endereco, selecione-o na lista de sugestoes para validar a localizacao.
       </ion-note>
     }
 

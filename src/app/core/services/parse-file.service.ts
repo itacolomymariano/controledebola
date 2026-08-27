@@ -23,7 +23,12 @@ export class ParseFileService {
       throw new Error('A imagem deve ter no maximo 5 MB.');
     }
 
-    const optimizedFile = await compressImageForUpload(file);
+    let optimizedFile: File;
+    try {
+      optimizedFile = await compressImageForUpload(file);
+    } catch {
+      optimizedFile = file;
+    }
     const extension = optimizedFile.name.split('.').pop() || 'jpg';
     const parseFile = new Parse.File(`${fileName}.${extension}`, optimizedFile);
 

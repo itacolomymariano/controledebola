@@ -55,6 +55,19 @@ export function normalizeAddress(address: Address): Address {
   };
 }
 
+export function isAddressEmpty(address: Address | null | undefined): boolean {
+  if (!address) return true;
+  return (
+    !address.street?.trim() &&
+    !address.neighborhood?.trim() &&
+    !address.city?.trim() &&
+    !normalizeBrazilUf(address.state) &&
+    !normalizeZipCode(address.zipCode) &&
+    typeof address.latitude !== 'number' &&
+    typeof address.longitude !== 'number'
+  );
+}
+
 export function isAddressComplete(address: Address | null | undefined): boolean {
   if (!address) return false;
   const zip = normalizeZipCode(address.zipCode);

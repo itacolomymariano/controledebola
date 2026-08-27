@@ -73,13 +73,13 @@ function normalizePhoneForStorage(phone) {
 }
 
 function resolveUsernameFromContact(email, phone) {
-  const normalizedPhone = normalizePhoneForStorage(phone);
-  if (normalizedPhone.length >= 10) {
-    return normalizedPhone;
-  }
   const normalizedEmail = String(email || '').trim().toLowerCase();
   if (normalizedEmail && isEmailValue(normalizedEmail)) {
     return normalizedEmail;
+  }
+  const normalizedPhone = normalizePhoneForStorage(phone);
+  if (normalizedPhone.length >= 10) {
+    return normalizedPhone;
   }
   return null;
 }
@@ -98,6 +98,21 @@ function isAddressCompleteForUpdate(address) {
     typeof address.longitude === 'number' &&
     !Number.isNaN(address.latitude) &&
     !Number.isNaN(address.longitude)
+  );
+}
+
+function isAddressEmptyForUpdate(address) {
+  if (!address || typeof address !== 'object') return true;
+  const zip = String(address.zipCode || '').replace(/\D/g, '');
+  const state = String(address.state || '').trim();
+  return (
+    !String(address.street || '').trim() &&
+    !String(address.neighborhood || '').trim() &&
+    !String(address.city || '').trim() &&
+    !state &&
+    !zip &&
+    typeof address.latitude !== 'number' &&
+    typeof address.longitude !== 'number'
   );
 }
 
@@ -311,26 +326,23 @@ Parse.Cloud.define('updateUserAccount', async (request) => {
   if (apelido.length < 2) {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe um apelido (minimo 2 caracteres).');
   }
-  if (!emailInput && !phoneInput) {
-    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe e-mail ou celular.');
-  }
-  if (emailInput && !isEmailValue(emailInput)) {
+  if (!emailInput || !isEmailValue(emailInput)) {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe um e-mail valido.');
   }
   if (phoneInput && normalizePhoneForStorage(phoneInput).length < 10) {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe um celular valido (DDD + numero).');
   }
-  if (!isAddressCompleteForUpdate(address)) {
+  if (!isAddressEmptyForUpdate(address) && !isAddressCompleteForUpdate(address)) {
     throw new Parse.Error(
       Parse.Error.VALIDATION_ERROR,
-      'Selecione seu endereco na lista para validar a localizacao.'
+      'Se informar o endereco, selecione-o na lista para validar a localizacao.'
     );
   }
 
   const normalizedPhone = phoneInput ? normalizePhoneForStorage(phoneInput) : '';
   const nextUsername = resolveUsernameFromContact(emailInput, normalizedPhone);
   if (!nextUsername) {
-    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe e-mail ou celular valido.');
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe um e-mail valido.');
   }
 
   await assertContactAvailable({
@@ -342,7 +354,11 @@ Parse.Cloud.define('updateUserAccount', async (request) => {
 
   user.set('name', name);
   user.set('apelido', apelido);
-  user.set('address', address);
+  if (isAddressEmptyForUpdate(address)) {
+    user.unset('address');
+  } else {
+    user.set('address', address);
+  }
 
   if (emailInput) {
     user.set('email', emailInput);
@@ -433,5 +449,49 @@ Parse.Cloud.define('changeUserPassword', async (request) => {
   user.set('password', newPassword);
   await user.save(null, { useMasterKey: true });
 
+  return { ok: true };
+});
+
+async function destroyAllByUserField(className, fieldName, user) {
+  const query = new Parse.Query(className);
+  query.equalTo(fieldName, user);
+  query.limit(1000);
+  const rows = await query.find({ useMasterKey: true });
+  if (rows.length) {
+    await Parse.Object.destroyAll(rows, { useMasterKey: true });
+  }
+}
+
+Parse.Cloud.define('deleteMyAccount', async (request) => {
+  const sessionUser = request.user;
+  if (!sessionUser) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+
+  const password = String(request.params.password || '');
+  if (!password) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe sua senha para excluir a conta.');
+  }
+
+  const user = await new Parse.Query(Parse.User).get(sessionUser.id, { useMasterKey: true });
+  const passwordOk = await verifyCurrentPassword(user, password);
+  if (!passwordOk) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Senha atual incorreta.');
+  }
+
+  await destroyAllByUserField('AthleteProfile', 'user', user);
+  await destroyAllByUserField('RoleProfile', 'user', user);
+  await destroyAllByUserField('FanProfile', 'user', user);
+  await destroyAllByUserField('AmateurTeam', 'president', user);
+  await destroyAllByUserField('FanPrediction', 'user', user);
+  await destroyAllByUserField('MuralVote', 'user', user);
+  await destroyAllByUserField('EventRegistration', 'user', user);
+  await destroyAllByUserField('PeladaMembership', 'user', user);
+  await destroyAllByUserField('RefereeInvitation', 'invitedUser', user);
+  await destroyAllByUserField('EventPerformance', 'user', user);
+  await destroyAllByUserField('_Session', 'user', user);
+  await destroyAllByUserField('_Installation', 'user', user);
+
+  await user.destroy({ useMasterKey: true });
   return { ok: true };
 });

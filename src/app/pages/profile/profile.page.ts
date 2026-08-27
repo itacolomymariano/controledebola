@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
+import { AppInviteShareService } from '../../core/services/app-invite-share.service';
 import { AppStorageService } from '../../core/services/app-storage.service';
 import { PROFILE_ROLE_LABELS, ProfileRole } from '../../core/models/profile-role.model';
 import { PROFESSIONAL_ROLES, ProfessionalRole } from '../../core/models/role-profile.model';
@@ -30,6 +31,7 @@ export class ProfilePage implements OnInit, OnDestroy {
   primaryRole: ProfileRole | null = null;
   primaryRoleLabel = '';
   pendingInvitations = 0;
+  inviteShareBusy = false;
 
   readonly professionalRoles = PROFESSIONAL_ROLES;
   roleProfileRegistered: Record<ProfessionalRole, boolean> = {
@@ -55,6 +57,7 @@ export class ProfilePage implements OnInit, OnDestroy {
     private readonly teamService: TeamService,
     private readonly fanProfileService: FanProfileService,
     private readonly refereeInvitationService: RefereeInvitationService,
+    private readonly appInviteShare: AppInviteShareService,
     private readonly storage: AppStorageService,
     private readonly router: Router,
     private readonly alertCtrl: AlertController,
@@ -115,6 +118,16 @@ export class ProfilePage implements OnInit, OnDestroy {
 
   openInbox(): void {
     void this.router.navigateByUrl('/inbox');
+  }
+
+  async inviteFriends(): Promise<void> {
+    if (this.inviteShareBusy) return;
+    this.inviteShareBusy = true;
+    try {
+      await this.appInviteShare.shareInvite();
+    } finally {
+      this.inviteShareBusy = false;
+    }
   }
 
   async onAvatarSelected(file: File): Promise<void> {

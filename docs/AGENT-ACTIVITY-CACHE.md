@@ -2,7 +2,7 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-07-27 (doc API Console Cloud Functions)
+**Ultima atualizacao:** 2026-08-27 (App Store Review: icones, PII opcional, foto iOS, exclusao de conta)
 
 ---
 
@@ -72,11 +72,22 @@ Rotas: `src/app/app-routing.module.ts`. Labels: `src/app/core/models/profile-rol
 
 ---
 
+### 2026-08-27 — Rejeicao App Store (1.0/79)
+
+- Icones: `resources/icon.png` + `ios-config/AppIcon.appiconset`; CI `scripts/apply-ios-review-config.js`.
+- Cadastro/Meus dados: e-mail obrigatorio; celular, nascimento e endereco opcionais (`registerUser`, `updateUserAccount`).
+- Foto de perfil: textos de camera/galeria no Info.plist iOS; compressao HEIC sem crash.
+- Exclusao permanente: UI em Perfil/Meus dados + Cloud `deleteMyAccount`.
+- Procedimentos (screenshots iOS + video): `docs/APP-STORE-REVIEW.md`.
+- Marketing version iOS: `package.json` `1.0.1`.
+
 ## Pendencias abertas
 
+- [ ] Publicar `cloud/main.js` no Back4App (inclui `deleteMyAccount` e campos opcionais)
+- [ ] Actions `release-ipa` + screenshots iOS + video de exclusao no App Store Connect
 - [x] Consolidar achados dos 13 agents → `docs/AUDITORIA-PERFIS-RESULTADOS.md`
 - [x] Correcoes P0/P1 iniciais (porteiro, material, scout, juiz accept, midia, palpites, hiring remoto cameraman/narrador, CTAs gandula/cinegrafista)
-- [ ] Publicar `cloud/main.js` no Back4App (votacao por usuario, sumula periodo, PF pre-inicio, hiring search, etc.)
+- [ ] Publicar tambem Cloud pendente anterior (votacao por usuario, sumula periodo, PF pre-inicio, hiring search, etc.)
 - [x] Voto por `_User` (nao por perfil): ballot atomico + agregacoes dedupe + midia sem re-voto
 - [x] Sumula: edicao so no periodo juiz; consulta apos encerramento para qualquer perfil
 - [x] PF: `savePhysicalTrainerSession` so antes de `startTime`

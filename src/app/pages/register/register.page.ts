@@ -2,7 +2,7 @@
 import { AbstractControl, FormBuilder, ValidationErrors, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
-import { emptyAddress } from '../../core/models/address.model';
+import { emptyAddress, isAddressEmpty } from '../../core/models/address.model';
 import { MIN_PASSWORD_LENGTH } from '../../core/constants/auth.constants';
 import { Subscription, merge } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
@@ -15,12 +15,6 @@ import {
   emailFormatValidator,
   phoneFormatValidator,
 } from '../../core/utils/contact-validation.util';
-
-function emailOrPhoneValidator(control: AbstractControl): ValidationErrors | null {
-  const email = control.get('email')?.value?.trim();
-  const phone = control.get('phone')?.value?.trim();
-  return email || phone ? null : { contactRequired: true };
-}
 
 function passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
   const password = control.get('password')?.value;
@@ -66,7 +60,7 @@ export class RegisterPage implements OnInit, OnDestroy {
           Validators.pattern(/^[a-zA-Z0-9\u00C0-\u017F\s._-]+$/),
         ],
       ],
-      email: ['', emailFormatValidator],
+      email: ['', [Validators.required, emailFormatValidator]],
       phone: ['', phoneFormatValidator],
       password: ['', [Validators.required, Validators.minLength(MIN_PASSWORD_LENGTH)]],
       confirmPassword: ['', Validators.required],
@@ -76,7 +70,7 @@ export class RegisterPage implements OnInit, OnDestroy {
       signupCaptchaAnswer: ['', signupCaptchaValidator],
       signupHoneypot: [''],
     },
-    { validators: [emailOrPhoneValidator, passwordMatchValidator] }
+    { validators: [passwordMatchValidator] }
   );
 
   constructor(
@@ -194,7 +188,9 @@ export class RegisterPage implements OnInit, OnDestroy {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       if (this.form.get('address')?.hasError('addressIncomplete')) {
-        await this.showError('Selecione seu endereco na lista de sugestoes para validar a localizacao.');
+        await this.showError(
+          'Se informar o endereco, selecione-o na lista de sugestoes para validar a localizacao.'
+        );
       }
       return;
     }
@@ -216,7 +212,7 @@ export class RegisterPage implements OnInit, OnDestroy {
         email: v.email || undefined,
         phone: v.phone || undefined,
         password: v.password!,
-        address: v.address!,
+        address: v.address && !isAddressEmpty(v.address) ? v.address : emptyAddress(),
         birthDate: v.birthDate ? parseBirthDateIso(v.birthDate) ?? undefined : undefined,
         signupChallengeId: v.signupChallengeId || undefined,
         signupCaptchaAnswer: v.signupCaptchaAnswer ? Number(v.signupCaptchaAnswer) : undefined,

@@ -20,6 +20,7 @@ import {
   formatZipCode,
   getMissingAddressFields,
   isAddressComplete,
+  isAddressEmpty,
   normalizeBrazilUf,
   normalizeZipCode,
 } from '../../../core/models/address.model';
@@ -45,6 +46,7 @@ import { AddressGeocodingService } from '../../../core/services/address-geocodin
 })
 export class AddressFormComponent implements OnInit, OnDestroy, ControlValueAccessor, Validator {
   @Input() title = 'Endereco';
+  @Input() required = true;
   @Output() readonly addressChange = new EventEmitter<void>();
 
   form = this.fb.group({
@@ -179,7 +181,11 @@ export class AddressFormComponent implements OnInit, OnDestroy, ControlValueAcce
   }
 
   validate(): ValidationErrors | null {
-    return isAddressComplete(this.readAddress()) ? null : { addressIncomplete: true };
+    const address = this.readAddress();
+    if (!this.required && isAddressEmpty(address)) {
+      return null;
+    }
+    return isAddressComplete(address) ? null : { addressIncomplete: true };
   }
 
   selectSuggestion(suggestion: AddressSuggestion): void {
@@ -221,6 +227,12 @@ export class AddressFormComponent implements OnInit, OnDestroy, ControlValueAcce
 
   get isComplete(): boolean {
     return isAddressComplete(this.readAddress());
+  }
+
+  get showIncompleteHint(): boolean {
+    if (this.applying || this.isComplete) return false;
+    if (!this.required && isAddressEmpty(this.readAddress())) return false;
+    return this.missingFields.length > 0;
   }
 
   get missingFields(): string[] {

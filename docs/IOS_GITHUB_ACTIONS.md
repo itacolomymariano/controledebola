@@ -117,7 +117,7 @@ No Windows, `npx cap add ios` / `xcodebuild` **nao** funcionam; use sempre o Git
 
 - Sem Mac local: use este workflow.
 - Push notifications no iPhone (APNs / Firebase iOS) **ainda nao** estao neste passo — o app Android ja usa FCM; iOS push e fase seguinte.
-- Pasta `ios/` nao versionada; gerada a cada run.
+- Pasta `ios/` nao versionada; gerada a cada run. Depois do `cap sync`, o CI roda `scripts/apply-ios-review-config.js`: icone de marca (`ios-config/AppIcon.appiconset`), entitlements e textos de camera/galeria no `Info.plist`.
 - Conta Apple Developer obrigatoria apenas para `release-ipa` / TestFlight / App Store.
 
 ## 7. Troubleshooting
@@ -132,7 +132,7 @@ Falha de **validacao do YAML** (nao do Xcode). Tipico: usar `inputs.*` em evento
 | Code signing / provisioning | Conferir os tres secrets `IOS_DISTRIBUTION_*` e Bundle ID `com.minhapelada.app` |
 | `No Podfile found` | Capacitor 8 usa SPM; o workflow nao deve chamar `pod install` |
 | `cap add ios` / Xcode | Reexecutar; runner `macos-26` (Xcode 26 / iOS 26 SDK) |
-| `CFBundleShortVersionString` invalida | Marketing version iOS e `package.json` (`0.0.1`); build number e `versionCode` |
+| `CFBundleShortVersionString` invalida | Marketing version iOS e `package.json` (`1.0.1`); build number e `versionCode` |
 | SDK version issue / iOS 18.5 | O runner precisa ser `macos-26` (nao `macos-15`, que usa Xcode 16.4) |
 | Run falha em 0s / 0 jobs | Corrigir YAML e push novo na `main` |
 | IPA nao aparece no artifact | Abrir log do step `Build iOS (Release IPA)`; conferir Team ID do perfil |
