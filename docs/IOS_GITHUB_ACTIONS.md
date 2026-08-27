@@ -136,6 +136,7 @@ Falha de **validacao do YAML** (nao do Xcode). Tipico: usar `inputs.*` em evento
 | SDK version issue / iOS 18.5 | O runner precisa ser `macos-26` (nao `macos-15`, que usa Xcode 16.4) |
 | Run falha em 0s / 0 jobs | Corrigir YAML e push novo na `main` |
 | IPA nao aparece no artifact | Abrir log do step `Build iOS (Release IPA)`; conferir Team ID do perfil |
+| `Node.js 20 is deprecated` em `import-codesign-certs` | Aviso, nao falha. O workflow ja usa `@v7` (Node 24). Nao precisa gerar outro IPA so por isso |
 
 ## 8. Proximos passos (fora deste workflow)
 
