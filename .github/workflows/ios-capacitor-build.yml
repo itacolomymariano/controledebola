@@ -27,6 +27,7 @@ on:
       - 'package-lock.json'
       - 'ios-config/**'
       - 'scripts/apply-ios-review-config.js'
+      - 'scripts/apply-ios-app-target-signing.js'
       - '.github/workflows/ios-capacitor-build.yml'
   pull_request:
     branches:
@@ -221,6 +222,10 @@ jobs:
           IOS_MARKETING=$(node -p "require('./package.json').version")
           echo "iOS version $IOS_MARKETING ($IOS_BUILD)"
 
+          # Nao passar PROVISIONING_PROFILE no xcodebuild: o Xcode aplica a todos os
+          # targets SPM (IONCameraLib) e o archive falha.
+          node scripts/apply-ios-app-target-signing.js
+
           xcodebuild \
             "${XCODE_PROJECT_FLAG}" "${XCODE_PROJECT_PATH}" \
             -scheme App \
@@ -228,9 +233,6 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath "$ARCHIVE_PATH" \
             DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE="$PROVISIONING_PROFILE_UUID" \
             MARKETING_VERSION="$IOS_MARKETING" \
             CURRENT_PROJECT_VERSION="$IOS_BUILD" \
             archive

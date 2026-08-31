@@ -2,7 +2,7 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-08-31 (App Store: Apple reviu 1.0/79 de novo; preparar 1.0.2)
+**Ultima atualizacao:** 2026-08-31 (CI iOS: IONCameraLib nao aceita PROVISIONING_PROFILE global)
 
 ---
 
@@ -71,6 +71,12 @@ Rotas: `src/app/app-routing.module.ts`. Labels: `src/app/core/models/profile-rol
 - Resultados consolidados: ver `docs/AUDITORIA-PERFIS-RESULTADOS.md` (apos agents).
 
 ---
+
+### 2026-08-31 — Archive IPA falha em IONCameraLib
+
+- Causa: `xcodebuild archive` com `PROVISIONING_PROFILE=UUID` aplica o perfil App Store a todos os targets SPM. `IONCameraLib` (dependencia de `@capacitor/camera`) nao aceita perfil.
+- Fix: nao passar `PROVISIONING_PROFILE` / `CODE_SIGN_STYLE=Manual` no comando; `scripts/apply-ios-app-target-signing.js` assina so o target App. Export continua no `ExportOptions.plist`.
+- Reexecutar **novo** `release-ipa` (nao Re-run do job antigo).
 
 ### 2026-08-31 — Segunda rejeicao ainda na 1.0 (79)
 
