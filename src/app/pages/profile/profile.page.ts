@@ -154,6 +154,25 @@ export class ProfilePage implements OnInit, OnDestroy {
     this.biometricEnabled = !!event.detail.checked;
   }
 
+  async requestAccountDeletion(): Promise<void> {
+    const intro = await this.alertCtrl.create({
+      header: 'Excluir conta',
+      message:
+        'Esta acao e permanente. Seus dados pessoais serao apagados e voce nao podera mais entrar com esta conta. Peladas e eventos que voce organizou permanecem para os outros participantes.',
+      buttons: [
+        { text: 'Cancelar', role: 'cancel' },
+        {
+          text: 'Continuar',
+          role: 'destructive',
+          handler: () => {
+            void this.confirmAccountDeletion();
+          },
+        },
+      ],
+    });
+    await intro.present();
+  }
+
   async logout(): Promise<void> {
     const alert = await this.alertCtrl.create({
       header: 'Sair do App',
@@ -191,6 +210,60 @@ export class ProfilePage implements OnInit, OnDestroy {
 
     for (const role of PROFESSIONAL_ROLES) {
       this.roleProfileRegistered[role] = !!(await this.roleProfileService.getForRole(role));
+    }
+  }
+
+  private async confirmAccountDeletion(): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: 'Confirme com a senha',
+      message: 'Digite sua senha para excluir a conta definitivamente.',
+      inputs: [{ name: 'password', type: 'password', placeholder: 'Senha da conta' }],
+      buttons: [
+        { text: 'Cancelar', role: 'cancel' },
+        {
+          text: 'Excluir definitivamente',
+          role: 'destructive',
+          handler: (data) => {
+            void this.doDeleteAccount(String(data?.password || ''));
+            return false;
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  private async doDeleteAccount(password: string): Promise<void> {
+    if (!password.trim()) {
+      const alert = await this.alertCtrl.create({
+        header: 'Erro',
+        message: 'Informe sua senha para confirmar a exclusao.',
+        buttons: ['OK'],
+      });
+      await alert.present();
+      return;
+    }
+
+    const loading = await this.loadingCtrl.create({ message: 'Excluindo conta...' });
+    await loading.present();
+    try {
+      await this.auth.deleteAccount(password);
+      const done = await this.alertCtrl.create({
+        header: 'Conta excluida',
+        message: 'Sua conta foi excluida. Voce ja pode fechar o app ou criar uma nova conta.',
+        buttons: ['OK'],
+      });
+      await done.present();
+      await this.router.navigateByUrl('/login', { replaceUrl: true });
+    } catch (error: unknown) {
+      const alert = await this.alertCtrl.create({
+        header: 'Erro',
+        message: parseErrorMessage(error),
+        buttons: ['OK'],
+      });
+      await alert.present();
+    } finally {
+      await loading.dismiss();
     }
   }
 

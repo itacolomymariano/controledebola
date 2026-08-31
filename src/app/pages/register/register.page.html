@@ -127,13 +127,16 @@
 
     <app-address-form
       formControlName="address"
-      title="Onde voce mora (opcional)"
-      [required]="false"
+      title="Onde voce mora"
+      [required]="true"
       (addressChange)="onAddressChanged()"
     ></app-address-form>
+    <ion-note color="medium" class="ion-padding-horizontal">
+      Necessario para sugerir eventos proximos e para os rankings do mural por bairro, cidade e estado.
+    </ion-note>
     @if (form.get('address')?.touched && form.get('address')?.hasError('addressIncomplete')) {
       <ion-note color="danger" class="ion-padding-horizontal">
-        Se informar o endereco, selecione-o na lista de sugestoes para validar a localizacao.
+        Selecione seu endereco na lista de sugestoes para validar a localizacao.
       </ion-note>
     }
 

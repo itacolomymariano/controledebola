@@ -1,6 +1,6 @@
 /**
  * Cloud Code — gerado por npm run build:cloud
- * Gerado em: 2026-08-27T11:37:15.702Z
+ * Gerado em: 2026-08-31T09:34:12.744Z
  * Copie o conteudo deste arquivo no Back4App (Server Settings > Cloud Code).
  * Fontes modulares em cloud/source/
  * NAO edite este arquivo direto — edite cloud/source/ e rode npm run build:cloud
@@ -595,10 +595,10 @@ Parse.Cloud.define('updateUserAccount', async (request) => {
   if (phoneInput && normalizePhoneForStorage(phoneInput).length < 10) {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe um celular valido (DDD + numero).');
   }
-  if (!isAddressEmptyForUpdate(address) && !isAddressCompleteForUpdate(address)) {
+  if (!isAddressCompleteForUpdate(address)) {
     throw new Parse.Error(
       Parse.Error.VALIDATION_ERROR,
-      'Se informar o endereco, selecione-o na lista para validar a localizacao.'
+      'Informe seu endereco na lista. Ele e usado para sugerir eventos proximos e rankings por bairro, cidade e estado.'
     );
   }
 
@@ -617,11 +617,7 @@ Parse.Cloud.define('updateUserAccount', async (request) => {
 
   user.set('name', name);
   user.set('apelido', apelido);
-  if (isAddressEmptyForUpdate(address)) {
-    user.unset('address');
-  } else {
-    user.set('address', address);
-  }
+  user.set('address', address);
 
   if (emailInput) {
     user.set('email', emailInput);
@@ -2096,10 +2092,10 @@ Parse.Cloud.define('registerUser', async (request) => {
   if (phoneInput && normalizePhoneForStorage(phoneInput).length < 10) {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe um celular valido (DDD + numero).');
   }
-  if (!isAddressEmptyForUpdate(address) && !isAddressCompleteForUpdate(address)) {
+  if (!isAddressCompleteForUpdate(address)) {
     throw new Parse.Error(
       Parse.Error.VALIDATION_ERROR,
-      'Se informar o endereco, selecione-o na lista para validar a localizacao.'
+      'Informe seu endereco na lista. Ele e usado para sugerir eventos proximos e rankings por bairro, cidade e estado.'
     );
   }
 
@@ -2120,9 +2116,7 @@ Parse.Cloud.define('registerUser', async (request) => {
   user.set('password', password);
   user.set('name', name);
   user.set('apelido', apelido);
-  if (!isAddressEmptyForUpdate(address)) {
-    user.set('address', address);
-  }
+  user.set('address', address);
 
   if (emailInput) {
     user.set('email', emailInput);

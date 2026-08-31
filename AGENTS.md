@@ -124,7 +124,7 @@ splash → (onboarding?) → login/register → (profile-setup?) → tabs/pelada
 | Portaria | `event-gate-scan`, `event-gate-entries` | `event-gate-ticket.service` |
 | Apoio (treinador/PF/massagista/torcida) | `event-coach-board`, `event-physical-trainer`, `event-masseur-treatments`, `event-fan-checkin` | `support-role-tools.service` |
 | Convite / App Links | Menu, Perfil, Sobre (`Convidar Amigos`) | `app-invite-share.service`, `deep-link.service` |
-| Conta | `register`, `account-edit`, Perfil (`Excluir conta`) | `auth.service` — e-mail obrigatorio; celular, nascimento e endereco opcionais. Exclusao permanente via Cloud `deleteMyAccount` |
+| Conta | `register`, `account-edit`, Perfil (`Excluir conta`) | `auth.service` — e-mail e endereco obrigatorios (eventos proximos e rankings por localidade); celular e nascimento opcionais. Exclusao permanente via Cloud `deleteMyAccount` |
 
 **Deep links / convite:** "Convidar Amigos" compartilha o link de **teste interno** da Play
 (`https://play.google.com/apps/internaltest/...`) enquanto nao houver listagem publica.

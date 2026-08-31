@@ -16,7 +16,8 @@
   }
 
   <ion-note class="ion-margin-bottom">
-    O e-mail e obrigatorio para entrar no app. Celular, data de nascimento e endereco sao opcionais.
+    O e-mail e obrigatorio para entrar no app. O endereco e obrigatorio para eventos proximos e rankings
+    por bairro, cidade e estado. Celular e data de nascimento sao opcionais.
     O botao Salvar alteracoes so e habilitado quando houver mudancas.
   </ion-note>
 
@@ -118,8 +119,8 @@
 
       <app-address-form
         formControlName="address"
-        title="Onde voce mora (opcional)"
-        [required]="false"
+        title="Onde voce mora"
+        [required]="true"
         (addressChange)="onAddressChanged()"
       ></app-address-form>
     </form>

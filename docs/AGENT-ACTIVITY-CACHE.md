@@ -2,7 +2,7 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-08-27 (App Store Review: icones, PII opcional, foto iOS, exclusao de conta)
+**Ultima atualizacao:** 2026-08-31 (App Store: Apple reviu 1.0/79 de novo; preparar 1.0.2)
 
 ---
 
@@ -71,6 +71,13 @@ Rotas: `src/app/app-routing.module.ts`. Labels: `src/app/core/models/profile-rol
 - Resultados consolidados: ver `docs/AUDITORIA-PERFIS-RESULTADOS.md` (apos agents).
 
 ---
+
+### 2026-08-31 — Segunda rejeicao ainda na 1.0 (79)
+
+- Apple reviu o **mesmo** Submission ID / binary 1.0 (79), nao a 1.0.1 (92).
+- Ajustes para 1.0.2: endereco **obrigatorio** (eventos proximos + rankings locais, com texto na UI e justificativa a Apple); foto via `@capacitor/camera`; exclusao direto no Perfil.
+- Reenvio: selecionar compilacao 1.0.2 na ficha; video nas Notes; icone 1024 na metadata.
+- Procedimento: `docs/APP-STORE-REVIEW.md`.
 
 ### 2026-08-27 — Rejeicao App Store (1.0/79)
 

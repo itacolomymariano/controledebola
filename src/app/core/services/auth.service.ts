@@ -288,8 +288,10 @@ export class AuthService {
       throw new Error('Informe um e-mail valido.');
     }
 
-    if (!isAddressEmpty(payload.address) && !isAddressComplete(payload.address)) {
-      throw new Error('Se informar o endereco, selecione-o na lista para validar a localizacao.');
+    if (!isAddressComplete(payload.address)) {
+      throw new Error(
+        'Selecione seu endereco na lista. Ele e usado para eventos proximos e rankings por localidade.'
+      );
     }
 
     if (payload.phone?.trim() && this.normalizePhoneForStorage(payload.phone).length < 10) {
@@ -303,7 +305,7 @@ export class AuthService {
         email: payload.email?.trim() || undefined,
         phone: payload.phone?.trim() || undefined,
         password: payload.password,
-        address: isAddressEmpty(payload.address) ? emptyAddress() : payload.address,
+        address: payload.address,
         birthDate: payload.birthDate ?? undefined,
         signupChallengeId: payload.signupChallengeId,
         signupCaptchaAnswer: payload.signupCaptchaAnswer,
@@ -491,8 +493,10 @@ export class AuthService {
     if (!payload.email?.trim() || !this.isEmail(payload.email)) {
       throw new Error('Informe um e-mail valido.');
     }
-    if (!isAddressEmpty(payload.address) && !isAddressComplete(payload.address)) {
-      throw new Error('Se informar o endereco, selecione-o na lista para validar a localizacao.');
+    if (!isAddressComplete(payload.address)) {
+      throw new Error(
+        'Selecione seu endereco na lista. Ele e usado para eventos proximos e rankings por localidade.'
+      );
     }
 
     try {
@@ -501,7 +505,7 @@ export class AuthService {
         apelido,
         email: payload.email?.trim() || undefined,
         phone: payload.phone?.trim() || undefined,
-        address: isAddressEmpty(payload.address) ? emptyAddress() : payload.address,
+        address: payload.address,
         birthDate: payload.birthDate ? payload.birthDate.toISOString() : null,
         proFootballIdol: payload.proFootballIdol?.trim() ?? '',
         amateurFootballIdol: payload.amateurFootballIdol?.trim() ?? '',

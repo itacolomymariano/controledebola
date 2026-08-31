@@ -2,7 +2,7 @@
 import { AbstractControl, FormBuilder, ValidationErrors, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
-import { emptyAddress, isAddressEmpty } from '../../core/models/address.model';
+import { emptyAddress } from '../../core/models/address.model';
 import { MIN_PASSWORD_LENGTH } from '../../core/constants/auth.constants';
 import { Subscription, merge } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
@@ -189,7 +189,7 @@ export class RegisterPage implements OnInit, OnDestroy {
       this.form.markAllAsTouched();
       if (this.form.get('address')?.hasError('addressIncomplete')) {
         await this.showError(
-          'Se informar o endereco, selecione-o na lista de sugestoes para validar a localizacao.'
+          'Selecione seu endereco na lista de sugestoes. Ele e usado para eventos proximos e rankings por bairro, cidade e estado.'
         );
       }
       return;
@@ -212,7 +212,7 @@ export class RegisterPage implements OnInit, OnDestroy {
         email: v.email || undefined,
         phone: v.phone || undefined,
         password: v.password!,
-        address: v.address && !isAddressEmpty(v.address) ? v.address : emptyAddress(),
+        address: v.address!,
         birthDate: v.birthDate ? parseBirthDateIso(v.birthDate) ?? undefined : undefined,
         signupChallengeId: v.signupChallengeId || undefined,
         signupCaptchaAnswer: v.signupCaptchaAnswer ? Number(v.signupCaptchaAnswer) : undefined,
