@@ -2,7 +2,7 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-08-31 (CI iOS: IONCameraLib nao aceita PROVISIONING_PROFILE global)
+**Ultima atualizacao:** 2026-09-01 (iOS iPhone-only para nao exigir screenshot de iPad)
 
 ---
 
@@ -72,6 +72,13 @@ Rotas: `src/app/app-routing.module.ts`. Labels: `src/app/core/models/profile-rol
 
 ---
 
+### 2026-09-01 — Rejeicao 2.3.3 (screenshots) + iPhone-only
+
+- Apple reviu **1.0 (92)** no iPad Air 11" (M3). Recusou screenshots 6.5" e 13" (nao mostram o app em uso).
+- Sem Mac/iPad: binario **iPhone-only** (`TARGETED_DEVICE_FAMILY = 1` em `scripts/apply-ios-review-config.js`). Connect deixa de exigir slot 13".
+- Proximo IPA: **1.0.3 (93)**. Reenviar so com 5 prints reais do iPhone (Peladas, evento, Mural, Buscar, Perfil).
+- No iPad o app abre em modo compatibilidade.
+
 ### 2026-08-31 — Archive IPA falha em IONCameraLib
 
 - Causa: `xcodebuild archive` com `PROVISIONING_PROFILE=UUID` aplica o perfil App Store a todos os targets SPM. `IONCameraLib` (dependencia de `@capacitor/camera`) nao aceita perfil.
@@ -97,7 +104,8 @@ Rotas: `src/app/app-routing.module.ts`. Labels: `src/app/core/models/profile-rol
 ## Pendencias abertas
 
 - [ ] Publicar `cloud/main.js` no Back4App (inclui `deleteMyAccount` e campos opcionais)
-- [ ] Actions `release-ipa` + screenshots iOS + video de exclusao no App Store Connect
+- [ ] App Store 2.3.3: IPA 1.0.3 iPhone-only + 5 screenshots reais do iPhone; so entao Submit
+- [x] Actions `release-ipa` 1.0 (92) no TestFlight / revisao 01/09
 - [x] Consolidar achados dos 13 agents → `docs/AUDITORIA-PERFIS-RESULTADOS.md`
 - [x] Correcoes P0/P1 iniciais (porteiro, material, scout, juiz accept, midia, palpites, hiring remoto cameraman/narrador, CTAs gandula/cinegrafista)
 - [ ] Publicar tambem Cloud pendente anterior (votacao por usuario, sumula periodo, PF pre-inicio, hiring search, etc.)

@@ -117,7 +117,7 @@ No Windows, `npx cap add ios` / `xcodebuild` **nao** funcionam; use sempre o Git
 
 - Sem Mac local: use este workflow.
 - Push notifications no iPhone (APNs / Firebase iOS) **ainda nao** estao neste passo — o app Android ja usa FCM; iOS push e fase seguinte.
-- Pasta `ios/` nao versionada; gerada a cada run. Depois do `cap sync`, o CI roda `scripts/apply-ios-review-config.js`: icone de marca (`ios-config/AppIcon.appiconset`), entitlements e textos de camera/galeria no `Info.plist`.
+- Pasta `ios/` nao versionada; gerada a cada run. Depois do `cap sync`, o CI roda `scripts/apply-ios-review-config.js`: icone de marca, entitlements, textos de camera/galeria e `TARGETED_DEVICE_FAMILY = 1` (iPhone-only, sem screenshot de iPad).
 - Conta Apple Developer obrigatoria apenas para `release-ipa` / TestFlight / App Store.
 
 ## 7. Troubleshooting

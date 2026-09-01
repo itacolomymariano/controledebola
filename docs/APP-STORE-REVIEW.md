@@ -1,56 +1,88 @@
 # App Store Review — Controle de Bola
 
-## Atencao: a Apple reviu a compilacao ERRADA
+## Status atual (01/09/2026) — **nao reenviar ainda**
 
-Em 31/08/2026 a Apple rejeitou de novo a versao **1.0 (79)** — o mesmo envio `b7990a57-c342-4ab4-8af4-e8cd234b66fc` de agosto. Essa binary **nao tem** as correcoes.
+A Apple reviu a **1.0 (92)** e rejeitou so as screenshots (2.3.3): iPhone 6.5" e iPad 13" nao mostravam o app em uso.
 
-O proximo envio **tem** que usar a compilacao **1.0.2** (ou mais nova). Nao reenvie a 1.0 (79). Nao deixe a versao da ficha apontando para a 79.
+Sem Mac e sem iPad, o binario passa a ser **somente iPhone** (`TARGETED_DEVICE_FAMILY = 1`). Assim o Connect **nao exige** screenshot de iPad. No iPad o app ainda abre no modo "feito para iPhone".
 
-## O que o codigo ja corrige (1.0.2+)
+Proximo IPA: **1.0.3 (93)**.
 
-| Guideline | Problema | No app |
-|-----------|----------|--------|
-| 5.1.1(v) endereco | Endereco obrigatorio | Mantido: e essencial para eventos proximos e rankings por bairro/cidade/estado. A tela explica o motivo. Justificativa na resposta a App Review |
-| 2.3.8 | Icone placeholder | Logo Controle de Bola no binario (CI + `ios-config/AppIcon.appiconset`). Tambem envie o PNG 1024 na ficha da App Store |
-| 5.1.1(v) exclusao | Sem exclusao | **Meu Perfil → Excluir conta** (fluxo completo na hora). Tambem em Meus dados |
-| 2.1(a) | Crash na foto de perfil | Capacitor Camera + textos de camera/galeria no `Info.plist` |
+**Pode reenviar** somente depois de:
 
-## Checklist do reenvio (obrigatorio)
+1. Commit/push + **novo** `release-ipa` (1.0.3 / 93).
+2. TestFlight processar a 93.
+3. Media Manager: **apagar** as imagens de iPad 13" e as antigas de iPhone 6.5".
+4. Enviar **5 capturas reais do iPhone** (TestFlight, ja logado). Ver lista abaixo.
+5. Responder a thread com o texto 2.3.3 e **Submit for Review**.
 
-1. Commit/push destas alteracoes e **novo** `release-ipa` (1.0.2).
-2. TestFlight interno: gravar no iPhone fisico criar conta (com endereco) → Perfil → Excluir conta ate o login.
-3. App Store Connect → a **versao** (nao o TestFlight) → **Compilacao** → escolher **1.0.2**, nunca 1.0 (79).
-4. **App Icon** da ficha: enviar `ios-config/AppIcon.appiconset/AppIcon-1024.png` (logo final, nao o icone Capacitor).
-5. Video da exclusao em **App Review Information → Notes**.
-6. Responder a thread (texto abaixo) e so entao **Submit for Review**.
+---
 
-## Texto para a thread da App Review
+## 2.3.3 — Screenshots so no iPhone
+
+### O que a Apple recusa
+
+- Banner, mockup, texto promocional
+- Splash, onboarding e **login**
+- Captura de **Android**
+- Print de iPhone no slot de iPad (esse slot some no binario iPhone-only)
+
+### As 5 telas (no seu iPhone, TestFlight 1.0.3)
+
+| # | Tela | Como chegar |
+|---|------|-------------|
+| 1 | Lista de peladas | Tabs → **Peladas** (com peladas na lista) |
+| 2 | Detalhe de um evento | Abrir um evento com data, local e inscricao |
+| 3 | Mural / rankings | Tabs → **Mural** |
+| 4 | Busca | Tabs → **Buscar** com resultados |
+| 5 | Perfil com papeis | Tabs → **Perfil** (nao a tela de excluir conta) |
+
+### Onde enviar
+
+1. [Ficha da versao](https://appstoreconnect.apple.com/apps/6801505260/distribution/ios/version/inflight)
+2. **Compilacao** → escolher **1.0.3 (93)**, nao a 92 nem a 79
+3. **View All Sizes in Media Manager**
+4. **6.5" Display:** apagar tudo; enviar as 5 capturas
+5. **13" Display (iPad):** apagar tudo. Se o Connect ainda pedir iPad antes da 93, espere o binario iPhone-only processar
+
+Tamanho iPhone 6.5": **1242 × 2688** ou **1284 × 2778**. PNG da captura nativa (volume + power). Se o Connect recusar o tamanho do seu aparelho, envie tambem no slot **6.9"** (o Connect costuma aceitar 1290 × 2796 / 1320 × 2868).
+
+---
+
+## Texto para a thread (2.3.3) — so depois das imagens e da compilacao 93
 
 ```
 Ola,
 
-A revisao de 31/08/2026 analisou a compilacao 1.0 (79), que e o binario antigo. As correcoes estao na compilacao 1.0.2, agora selecionada nesta versao.
+A compilacao agora e a 1.0.3 (93), somente iPhone. Por isso nao ha mais screenshots de iPad.
 
-5.1.1(v) Endereco
-O endereco e necessario para a funcionalidade central do Controle de Bola, nao para marketing:
-- sugerir peladas e eventos mais proximos do usuario;
-- identificar participantes por bairro, cidade e estado;
-- montar no mural os rankings e o Top 10 por bairro, cidade e estado.
+As screenshots de iPhone 6.5" foram substituidas por capturas reais da interface, ja autenticado:
 
-Sem localizacao essas funcoes ficam inoperantes. Pedimos apenas o endereco validado na lista (bairro, cidade, UF e coordenadas). Celular e data de nascimento continuam opcionais.
+- lista de peladas;
+- detalhe de evento (inscricao e local);
+- mural / rankings;
+- busca;
+- perfil com papeis.
 
-2.3.8 Icones
-O icone desta compilacao e o logotipo final do Controle de Bola (chuteira e bola), nao o placeholder do Capacitor. O mesmo icone 1024 foi enviado na ficha.
-
-2.1(a) Foto de perfil
-A foto usa a camera nativa do iOS, com as descricoes de uso de camera e galeria. O fluxo nao deve mais encerrar o app.
-
-5.1.1(v) Exclusao de conta
-Em Meu Perfil ha o item Excluir conta. O usuario confirma, informa a senha e a conta e apagada de forma permanente. O video gravado em iPhone fisico esta nas Notes da revisao.
+Nao ha splash, login nem material promocional.
 
 Conta de demonstracao:
 E-mail: [preencha]
 Senha: [preencha]
 ```
 
-Cole em: App Store Connect → app → aviso de problemas nao resolvidos → **Resolve** → **Reply to App Review**.
+Cole em: App Store Connect → **Reply to App Review**. Depois **Submit for Review**.
+
+---
+
+## Historico — ja no binario 92 (nao voltaram nesta rejeicao)
+
+| Guideline | Situacao |
+|-----------|----------|
+| 5.1.1 endereco | Obrigatorio: eventos proximos e rankings locais |
+| 2.3.8 icone | Logo no IPA |
+| 5.1.1 exclusao | **Meu Perfil → Excluir conta** |
+| 2.1(a) foto | Capacitor Camera |
+| 2.3.3 iPad | Resolvido tornando o app iPhone-only na 1.0.3 |
+
+CI: `scripts/apply-ios-review-config.js` define `TARGETED_DEVICE_FAMILY = 1` apos `cap add ios`.

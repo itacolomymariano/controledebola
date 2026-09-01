@@ -75,7 +75,21 @@ function main() {
   }
   fs.writeFileSync(plistPath, plist, 'utf8');
 
-  console.log('iOS review config aplicado: icone de marca, entitlements e textos de camera/galeria.');
+  // Universal (iPhone+iPad) obriga screenshot 13" no Connect. Sem Mac/iPad,
+  // o binario fica iPhone-only; no iPad o app abre em compatibilidade.
+  const pbxPath = path.join(root, 'ios', 'App', 'App.xcodeproj', 'project.pbxproj');
+  mustExist(pbxPath, 'project.pbxproj');
+  let pbx = fs.readFileSync(pbxPath, 'utf8');
+  if (!/TARGETED_DEVICE_FAMILY = /.test(pbx)) {
+    throw new Error('TARGETED_DEVICE_FAMILY nao encontrado no project.pbxproj.');
+  }
+  pbx = pbx.replace(/TARGETED_DEVICE_FAMILY = [^;]+;/g, 'TARGETED_DEVICE_FAMILY = 1;');
+  if (pbx.includes('TARGETED_DEVICE_FAMILY = "1,2"') || !pbx.includes('TARGETED_DEVICE_FAMILY = 1;')) {
+    throw new Error('Nao foi possivel restringir o target a iPhone.');
+  }
+  fs.writeFileSync(pbxPath, pbx, 'utf8');
+
+  console.log('iOS review config aplicado: icone, entitlements, textos de camera/galeria, iPhone-only.');
 }
 
 main();
