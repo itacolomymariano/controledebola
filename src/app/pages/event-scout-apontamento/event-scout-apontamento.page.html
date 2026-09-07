@@ -9,6 +9,11 @@
 </ion-header>
 
 <ion-content class="ion-padding scout-apontamento-content">
+  <app-coach-hint
+    tipId="scout"
+    titleKey="coach.hint.scoutTitle"
+    bodyKey="coach.hint.scoutBody"
+  />
   @if (loading) {
     <ion-spinner name="crescent"></ion-spinner>
   }

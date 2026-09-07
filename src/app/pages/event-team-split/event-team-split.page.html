@@ -11,6 +11,11 @@
 </ion-header>
 
 <ion-content class="ion-padding" [class.with-assignment-dock]="showTeamAssignmentDock">
+  <app-coach-hint
+    tipId="team-split"
+    titleKey="coach.hint.teamSplitTitle"
+    bodyKey="coach.hint.teamSplitBody"
+  />
   @if (loading) {
     <div class="ion-text-center ion-padding">
       <ion-spinner name="crescent"></ion-spinner>

@@ -8,6 +8,9 @@ import { formatPeladaLocation, PeladaListItem } from '../../core/models/pelada.m
 import { AuthService } from '../../core/services/auth.service';
 import { ParseService } from '../../core/services/parse.service';
 import { PeladaService } from '../../core/services/pelada.service';
+import { CoachService, CoachTip } from '../../core/services/coach.service';
+import { AppGuideService } from '../../core/services/app-guide.service';
+import { I18nService } from '../../core/services/i18n.service';
 
 interface PeladaListRow {
   pelada: PeladaListItem;
@@ -27,23 +30,30 @@ export class PeladasPage implements OnDestroy {
   loading = true;
   errorMessage = '';
   parseConfigured = false;
+  coachTip: CoachTip | null = null;
 
   private peladasSub?: Subscription;
+  private localeSub?: Subscription;
 
   constructor(
     private readonly auth: AuthService,
     private readonly peladaService: PeladaService,
     private readonly parseService: ParseService,
     private readonly router: Router,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly coach: CoachService,
+    private readonly appGuide: AppGuideService,
+    private readonly i18n: I18nService
   ) {
     this.peladasSub = this.peladaService.onPeladasChanged.subscribe(() => {
       void this.loadPeladas();
     });
+    this.localeSub = this.i18n.locale$.subscribe(() => this.cdr.markForCheck());
   }
 
   ngOnDestroy(): void {
     this.peladasSub?.unsubscribe();
+    this.localeSub?.unsubscribe();
   }
 
   ionViewWillEnter(): void {
@@ -61,6 +71,15 @@ export class PeladasPage implements OnDestroy {
 
   retry(): void {
     void this.loadPeladas();
+  }
+
+  followCoach(): void {
+    if (!this.coachTip) return;
+    void this.router.navigateByUrl(this.coachTip.route);
+  }
+
+  openGuide(): void {
+    this.appGuide.openManual();
   }
 
   async refresh(event: RefresherCustomEvent): Promise<void> {
@@ -91,13 +110,18 @@ export class PeladasPage implements OnDestroy {
         sportLabel: this.peladaService.formatSport(pelada.sport),
         locationLabel: formatPeladaLocation(pelada),
       }));
+      try {
+        this.coachTip = await this.coach.suggest(peladas);
+      } catch {
+        this.coachTip = null;
+      }
     } catch (error: unknown) {
       if (await this.auth.handleApiError(error)) {
         await this.router.navigateByUrl('/login', { replaceUrl: true });
         return;
       }
       this.errorMessage =
-        error instanceof Error ? error.message : 'Nao foi possivel carregar as peladas.';
+        error instanceof Error ? error.message : this.i18n.t('peladas.loadError');
     } finally {
       this.loading = false;
       this.cdr.markForCheck();

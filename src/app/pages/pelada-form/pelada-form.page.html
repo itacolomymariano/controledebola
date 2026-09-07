@@ -9,6 +9,19 @@
 </ion-header>
 
 <ion-content class="ion-padding">
+  @if (isEdit) {
+    <app-coach-hint
+      tipId="pelada-config"
+      titleKey="coach.hint.peladaConfigTitle"
+      bodyKey="coach.hint.peladaConfigBody"
+    />
+  } @else {
+    <app-coach-hint
+      tipId="pelada-create"
+      titleKey="coach.hint.peladaCreateTitle"
+      bodyKey="coach.hint.peladaCreateBody"
+    />
+  }
   <form [formGroup]="form" (ngSubmit)="submit()">
     <ion-list lines="full">
       <ion-item>

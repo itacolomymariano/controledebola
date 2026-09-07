@@ -3,7 +3,7 @@
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/tabs/peladas"></ion-back-button>
     </ion-buttons>
-    <ion-title>Meu Perfil</ion-title>
+    <ion-title>{{ 'profile.title' | t }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -110,6 +110,43 @@
       <ion-label class="ion-text-wrap">
         <h2>Perfil de torcedor</h2>
         <p>{{ hasFanProfile ? 'Cadastrado' : 'Cadastrar agora' }} · Palpites antes de cada evento</p>
+      </ion-label>
+    </ion-item>
+
+    <ion-item-divider>
+      <ion-label>{{ 'profile.language' | t }} / {{ 'profile.palette' | t }}</ion-label>
+    </ion-item-divider>
+    <ion-item>
+      <ion-select
+        [label]="'profile.language' | t"
+        labelPlacement="stacked"
+        interface="action-sheet"
+        [value]="currentLocale"
+        (ionChange)="onLocaleChange($event)"
+      >
+        @for (loc of locales; track loc) {
+          <ion-select-option [value]="loc">{{ localeLabels[loc] }}</ion-select-option>
+        }
+      </ion-select>
+    </ion-item>
+    <ion-item>
+      <ion-select
+        [label]="'profile.palette' | t"
+        labelPlacement="stacked"
+        interface="action-sheet"
+        [value]="currentPalette"
+        (ionChange)="onPaletteChange($event)"
+      >
+        @for (id of paletteIds; track id) {
+          <ion-select-option [value]="id">{{ paletteLabelKeys[id] | t }}</ion-select-option>
+        }
+      </ion-select>
+    </ion-item>
+    <ion-item button (click)="openGuide()">
+      <ion-icon name="book-outline" slot="start"></ion-icon>
+      <ion-label>
+        <h2>{{ 'profile.guideTitle' | t }}</h2>
+        <p>{{ 'profile.guideBody' | t }}</p>
       </ion-label>
     </ion-item>
 

@@ -37,6 +37,8 @@ import { PixCopyButtonComponent } from './components/pix-copy-button/pix-copy-bu
 import { EventMediaEngagementComponent } from './components/event-media-engagement/event-media-engagement.component';
 import { MuralMediaTopCardComponent } from './components/mural-media-top-card/mural-media-top-card.component';
 import { MuralShareButtonComponent } from './components/mural-share-button/mural-share-button.component';
+import { TranslatePipe } from './pipes/translate.pipe';
+import { CoachHintComponent } from './components/coach-hint/coach-hint.component';
 
 @NgModule({
   declarations: [
@@ -75,6 +77,8 @@ import { MuralShareButtonComponent } from './components/mural-share-button/mural
     EventMediaEngagementComponent,
     MuralMediaTopCardComponent,
     MuralShareButtonComponent,
+    CoachHintComponent,
+    TranslatePipe,
   ],
   imports: [CommonModule, FormsModule, ReactiveFormsModule, IonicModule],
   exports: [
@@ -113,6 +117,8 @@ import { MuralShareButtonComponent } from './components/mural-share-button/mural
     EventMediaEngagementComponent,
     MuralMediaTopCardComponent,
     MuralShareButtonComponent,
+    CoachHintComponent,
+    TranslatePipe,
   ],
 })
 export class SharedModule {}

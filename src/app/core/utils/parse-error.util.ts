@@ -49,33 +49,33 @@ export function parseErrorMessage(error: unknown): string {
       if (/invalid\s+username|username\/password|password/i.test(message)) {
         return 'E-mail/celular ou senha incorretos.';
       }
-      return message || 'Registro nao encontrado ou sem permissao de acesso.';
+      return message || 'Registro não encontrado ou sem permissão de acesso.';
     case 202:
-      return 'Nome de usuario ja cadastrado. Use outro e-mail ou celular.';
+      return 'Nome de usuário já cadastrado. Use outro e-mail ou celular.';
     case 203:
-      return 'E-mail ja cadastrado.';
+      return 'E-mail já cadastrado.';
     case 205:
-      return 'Nenhum usuario encontrado com este e-mail.';
+      return 'Nenhum usuário encontrado com este e-mail.';
     case 125:
-      return 'E-mail invalido.';
+      return 'E-mail inválido.';
     case 142:
       if (isNameFieldValidationMessage(message)) {
-        return 'Informe o nome completo (minimo 2 caracteres).';
+        return 'Informe o nome completo (mínimo 2 caracteres).';
       }
       if (/^email\b/i.test(message) || /\bemail\s+(is\s+)?required/i.test(message)) {
-        return 'Informe um e-mail valido.';
+        return 'Informe um e-mail válido.';
       }
-      return message || 'Dados invalidos. Verifique os campos.';
+      return message || 'Dados inválidos. Verifique os campos.';
     case 137:
-      return 'Apelido ja utilizado neste evento. Escolha outro.';
+      return 'Apelido já utilizado neste evento. Escolha outro.';
     case 209:
-      return 'Sessao expirada. Faca login novamente.';
+      return 'Sessão expirada. Faça login novamente.';
     default:
       break;
   }
 
   if (isInvalidSessionError(error)) {
-    return 'Sessao expirada. Faca login novamente.';
+    return 'Sessão expirada. Faça login novamente.';
   }
 
   if (/invalid\s+username|username\/password/i.test(message)) {
@@ -84,8 +84,8 @@ export function parseErrorMessage(error: unknown): string {
 
   if (/permission denied|needs to be authenticated/i.test(message)) {
     return (
-      'Cadastro indisponivel no servidor. Publique o Cloud Code (cloud/main.js) no Back4App ' +
-      'ou libere Create em _User para usuarios nao autenticados.'
+      'Cadastro indisponível no servidor. Publique o Cloud Code (cloud/main.js) no Back4App ' +
+      'ou libere Create em _User para usuários não autenticados.'
     );
   }
 
@@ -98,16 +98,16 @@ export function parseErrorMessage(error: unknown): string {
     /failed to execute 'json' on 'response'/i.test(message)
   ) {
     return (
-      'Resposta invalida do servidor ao concluir o cadastro. ' +
-      'Verifique sua conexao e tente novamente em alguns instantes.'
+      'Resposta inválida do servidor ao concluir o cadastro. ' +
+      'Verifique sua conexão e tente novamente em alguns instantes.'
     );
   }
 
   if (isNameFieldValidationMessage(message)) {
-    return 'Informe o nome completo (minimo 2 caracteres).';
+    return 'Informe o nome completo (mínimo 2 caracteres).';
   }
 
-  return message || 'Nao foi possivel concluir a operacao.';
+  return message || 'Não foi possível concluir a operação.';
 }
 
 export function isNetworkError(error: unknown): boolean {
@@ -124,8 +124,8 @@ function extractErrorMessage(error: unknown): string {
 
 function networkConnectivityMessage(): string {
   return (
-    'Sem conexao com a internet ou falha ao acessar o servidor. ' +
-    'Verifique Wi-Fi/dados moveis, desative VPN ou DNS privado (Samsung: Conexoes > DNS privado > Automatico) e tente novamente.'
+    'Sem conexão com a internet ou falha ao acessar o servidor. ' +
+    'Verifique Wi-Fi/dados móveis, desative VPN ou DNS privado (Samsung: Conexões > DNS privado > Automático) e tente novamente.'
   );
 }
 

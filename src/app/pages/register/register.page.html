@@ -1,50 +1,50 @@
 ﻿<ion-header>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button (click)="goBack()">Voltar</ion-button>
+      <ion-button (click)="goBack()">{{ 'register.back' | t }}</ion-button>
     </ion-buttons>
-    <ion-title>Criar conta</ion-title>
+    <ion-title>{{ 'register.title' | t }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
   <form [formGroup]="form" (ngSubmit)="submit()">
     <ion-item>
-      <ion-input label="Nome completo" labelPlacement="stacked" formControlName="name"></ion-input>
+      <ion-input [label]="'register.name' | t" labelPlacement="stacked" formControlName="name"></ion-input>
     </ion-item>
     @if (form.get('name')?.touched && form.get('name')?.invalid) {
-      <ion-note color="danger" class="ion-padding-horizontal">Informe o nome completo.</ion-note>
+      <ion-note color="danger" class="ion-padding-horizontal">{{ 'register.nameError' | t }}</ion-note>
     }
 
     <ion-item>
       <ion-input
-        label="Apelido"
+        [label]="'register.nickname' | t"
         labelPlacement="stacked"
         formControlName="apelido"
         placeholder="Como voce sera chamado nos eventos"
       ></ion-input>
     </ion-item>
     <ion-note color="medium" class="ion-padding-horizontal">
-      Usado nos eventos. Nao pode repetir o mesmo apelido dentro de um evento.
+      {{ 'register.nicknameHint' | t }}
     </ion-note>
     @if (form.get('apelido')?.touched && form.get('apelido')?.invalid) {
       <ion-note color="danger" class="ion-padding-horizontal">
-        Apelido invalido. Use letras, numeros, espacos, ponto, hifen ou underline (2 a 30 caracteres).
+        {{ 'register.nicknameError' | t }}
       </ion-note>
     }
 
     <ion-item>
-      <ion-input label="E-mail" labelPlacement="stacked" formControlName="email" type="email"></ion-input>
+      <ion-input [label]="'register.email' | t" labelPlacement="stacked" formControlName="email" type="email"></ion-input>
     </ion-item>
     @if (form.get('email')?.touched && form.get('email')?.hasError('required')) {
-      <ion-note color="danger" class="ion-padding-horizontal">Informe um e-mail. Ele e usado para entrar no app.</ion-note>
+      <ion-note color="danger" class="ion-padding-horizontal">{{ 'register.emailRequired' | t }}</ion-note>
     }
     @if (form.get('email')?.touched && form.get('email')?.hasError('invalidEmail')) {
-      <ion-note color="danger" class="ion-padding-horizontal">Informe um e-mail valido.</ion-note>
+      <ion-note color="danger" class="ion-padding-horizontal">{{ 'register.emailInvalid' | t }}</ion-note>
     }
     <ion-item>
       <ion-input
-        label="Celular (opcional)"
+        [label]="'register.phone' | t"
         labelPlacement="stacked"
         formControlName="phone"
         type="tel"
@@ -52,11 +52,11 @@
     </ion-item>
     @if (form.get('phone')?.touched && form.get('phone')?.hasError('invalidPhone')) {
       <ion-note color="danger" class="ion-padding-horizontal">
-        Celular invalido. Informe DDD + numero (minimo 10 digitos).
+        {{ 'register.phoneError' | t }}
       </ion-note>
     }
     <ion-note color="medium" class="ion-padding-horizontal">
-      O celular e opcional. Voce pode informa-lo depois em Meus dados.
+      {{ 'register.phoneHint' | t }}
     </ion-note>
 
     <app-birth-date-picker
@@ -79,7 +79,7 @@
 
     <ion-item>
       <ion-input
-        label="Senha"
+        [label]="'register.password' | t"
         labelPlacement="stacked"
         formControlName="password"
         [type]="showPassword ? 'text' : 'password'"
@@ -97,12 +97,12 @@
     </ion-item>
     @if (form.get('password')?.touched && form.get('password')?.invalid) {
       <ion-note color="danger" class="ion-padding-horizontal">
-        A senha deve ter no minimo 8 caracteres.
+        {{ 'register.passwordError' | t }}
       </ion-note>
     }
     <ion-item>
       <ion-input
-        label="Confirmar senha"
+        [label]="'register.confirmPassword' | t"
         labelPlacement="stacked"
         formControlName="confirmPassword"
         [type]="showConfirmPassword ? 'text' : 'password'"
@@ -122,7 +122,7 @@
       (form.get('confirmPassword')?.touched || form.get('password')?.touched) &&
       form.hasError('passwordMismatch')
     ) {
-      <ion-note color="danger" class="ion-padding-horizontal">As senhas nao conferem.</ion-note>
+      <ion-note color="danger" class="ion-padding-horizontal">{{ 'register.passwordMismatch' | t }}</ion-note>
     }
 
     <app-address-form
@@ -132,7 +132,7 @@
       (addressChange)="onAddressChanged()"
     ></app-address-form>
     <ion-note color="medium" class="ion-padding-horizontal">
-      Necessario para sugerir eventos proximos e para os rankings do mural por bairro, cidade e estado.
+      {{ 'register.addressHint' | t }}
     </ion-note>
     @if (form.get('address')?.touched && form.get('address')?.hasError('addressIncomplete')) {
       <ion-note color="danger" class="ion-padding-horizontal">
@@ -167,8 +167,8 @@
     }
 
     <ion-button expand="block" type="submit" class="ion-margin-top" [disabled]="!canSubmit">
-      Salvar
+      {{ 'register.submit' | t }}
     </ion-button>
   </form>
-  <ion-button expand="block" fill="clear" (click)="goLogin()">Ja tenho conta</ion-button>
+  <ion-button expand="block" fill="clear" (click)="goLogin()">{{ 'register.hasAccount' | t }}</ion-button>
 </ion-content>

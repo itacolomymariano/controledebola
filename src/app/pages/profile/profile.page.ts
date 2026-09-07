@@ -13,6 +13,11 @@ import { TeamService } from '../../core/services/team.service';
 import { FanProfileService } from '../../core/services/fan-profile.service';
 import { RefereeInvitationService } from '../../core/services/referee-invitation.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
+import { I18nService } from '../../core/services/i18n.service';
+import { ThemePaletteService } from '../../core/services/theme-palette.service';
+import { AppGuideService } from '../../core/services/app-guide.service';
+import { APP_LOCALE_LABELS, APP_LOCALES, AppLocale } from '../../core/models/app-locale.model';
+import { THEME_PALETTE_IDS, ThemePaletteId } from '../../core/models/theme-palette.model';
 
 @Component({
   selector: 'app-profile',
@@ -32,6 +37,15 @@ export class ProfilePage implements OnInit, OnDestroy {
   primaryRoleLabel = '';
   pendingInvitations = 0;
   inviteShareBusy = false;
+  readonly locales = APP_LOCALES;
+  readonly localeLabels = APP_LOCALE_LABELS;
+  currentLocale: AppLocale = 'pt-BR';
+  readonly paletteIds = THEME_PALETTE_IDS;
+  currentPalette: ThemePaletteId = 'default';
+
+  get paletteLabelKeys() {
+    return this.theme.labelKeys;
+  }
 
   readonly professionalRoles = PROFESSIONAL_ROLES;
   roleProfileRegistered: Record<ProfessionalRole, boolean> = {
@@ -61,7 +75,10 @@ export class ProfilePage implements OnInit, OnDestroy {
     private readonly storage: AppStorageService,
     private readonly router: Router,
     private readonly alertCtrl: AlertController,
-    private readonly loadingCtrl: LoadingController
+    private readonly loadingCtrl: LoadingController,
+    private readonly i18n: I18nService,
+    private readonly theme: ThemePaletteService,
+    private readonly appGuide: AppGuideService
   ) {}
 
   ngOnInit(): void {
@@ -75,7 +92,27 @@ export class ProfilePage implements OnInit, OnDestroy {
   }
 
   async ionViewWillEnter(): Promise<void> {
+    this.currentLocale = this.i18n.locale;
+    this.currentPalette = this.theme.current;
     await this.loadProfile();
+  }
+
+  async onLocaleChange(event: CustomEvent): Promise<void> {
+    const locale = (event.detail as { value?: AppLocale })?.value;
+    if (!locale || locale === this.currentLocale) return;
+    await this.i18n.setLocale(locale);
+    this.currentLocale = locale;
+  }
+
+  async onPaletteChange(event: CustomEvent): Promise<void> {
+    const palette = (event.detail as { value?: ThemePaletteId })?.value;
+    if (!palette || palette === this.currentPalette) return;
+    await this.theme.setPalette(palette);
+    this.currentPalette = palette;
+  }
+
+  openGuide(): void {
+    this.appGuide.openManual();
   }
 
   roleLabel(role: ProfessionalRole): string {

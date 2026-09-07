@@ -9,6 +9,11 @@
 </ion-header>
 
 <ion-content class="ion-padding">
+    <app-coach-hint
+      tipId="event-create"
+      titleKey="coach.hint.eventCreateTitle"
+      bodyKey="coach.hint.eventCreateBody"
+    />
     <form [formGroup]="form" novalidate (ngSubmit)="submit()">
     <ion-list lines="full">
       <ion-item>

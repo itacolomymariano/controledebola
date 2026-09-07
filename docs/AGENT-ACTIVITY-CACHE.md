@@ -2,7 +2,7 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-09-01 (iOS iPhone-only para nao exigir screenshot de iPad)
+**Ultima atualizacao:** 2026-09-07 (ondas de refino pos App Store implementadas — docs/PLANO-REFINOS-POS-APP-STORE.md)
 
 ---
 
@@ -71,6 +71,21 @@ Rotas: `src/app/app-routing.module.ts`. Labels: `src/app/core/models/profile-rol
 - Resultados consolidados: ver `docs/AUDITORIA-PERFIS-RESULTADOS.md` (apos agents).
 
 ---
+
+### 2026-09-07 — App Store aprovada + refinamentos (ondas)
+
+- iOS 1.0 **Pronto para distribuicao**. Icone generico na lista do Connect e metadado 1024 da ficha; PNG de marca em `ios-config/AppIcon.appiconset/AppIcon-1024.png` (humano: Informacoes do app).
+- Plano: `docs/PLANO-REFINOS-POS-APP-STORE.md`. Reset: `passwordResetEnabled: true` + `docs/BACK4APP-ZOHO-SMTP.md`. PIX Inter: so memo (`docs/VIABILIDADE-PIX-INTER.md`), sem API.
+- i18n `I18nService` + pipe `t` + JSON em `src/assets/i18n/` (pt-BR, es-ES, en-GB). Seletor em Perfil.
+- Paletas: `ThemePaletteService` + `html[data-palette]` em `src/theme/variables.scss`. Persistencia em `AppStorageService`.
+- Coach: `CoachService` na home Peladas; overlays `app-coach-hint` em pelada-form, event-create, team-split, mural, sumula, scout, lendas, inscricao, atleta. Menu Ajuda + Manual (`AppGuideService` → https://controledebola.com/guia).
+- Screenshots do manual: `docs/MANUAL-SCREENSHOTS-PEDIDOS.md` (usuario envia). Sem Lottie/API Inter/Cloud nesta leva.
+
+### 2026-09-02 — Visibilidade do repo GitHub
+
+- Remote: `https://github.com/itacolomymariano/controledebola` permanece **publico** de proposito: no plano Free, Actions em repo privado cobra minuto de **macos** (10x) e o `release-ipa` estouraria a cota.
+- Nao tornar privado enquanto o CI iOS rodar neste repo, salvo se houver plano pago ou outro runner.
+- Agents locais nao dependem da visibilidade. Nao commitar `environment.local.ts` nem keystores.
 
 ### 2026-09-01 — Rejeicao 2.3.3 (screenshots) + iPhone-only
 

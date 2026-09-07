@@ -9,6 +9,11 @@
 </ion-header>
 
 <ion-content class="ion-padding">
+  <app-coach-hint
+    tipId="pay"
+    titleKey="coach.hint.payTitle"
+    bodyKey="coach.hint.payBody"
+  />
   @if (checkingEligibility) {
     <div class="ion-text-center ion-padding">
       <ion-spinner name="crescent"></ion-spinner>

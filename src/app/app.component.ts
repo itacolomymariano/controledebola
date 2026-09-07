@@ -6,6 +6,7 @@ import { parseErrorMessage } from './core/utils/parse-error.util';
 import { AppInviteShareService } from './core/services/app-invite-share.service';
 import { DeepLinkService } from './core/services/deep-link.service';
 import { PushNotificationService } from './core/services/push-notification.service';
+import { AppGuideService } from './core/services/app-guide.service';
 
 @Component({
   selector: 'app-root',
@@ -24,7 +25,8 @@ export class AppComponent implements OnInit {
     private readonly appInviteShare: AppInviteShareService,
     private readonly menuCtrl: MenuController,
     private readonly router: Router,
-    private readonly toastCtrl: ToastController
+    private readonly toastCtrl: ToastController,
+    private readonly appGuide: AppGuideService
   ) {}
 
   ngOnInit(): void {
@@ -99,5 +101,10 @@ export class AppComponent implements OnInit {
   async navigateFromMenu(url: string): Promise<void> {
     await this.menuCtrl.close('app-menu');
     await this.router.navigateByUrl(url);
+  }
+
+  async openGuideFromMenu(): Promise<void> {
+    await this.menuCtrl.close('app-menu');
+    this.appGuide.openManual();
   }
 }

@@ -2,8 +2,8 @@
 
 export const environment = {
   production: true,
-  /** Ativar quando o provedor de e-mail estiver configurado no Back4App. */
-  passwordResetEnabled: false,
+  /** Exige Email Adapter SMTP (Zoho) no Back4App — docs/BACK4APP-ZOHO-SMTP.md */
+  passwordResetEnabled: true,
   parse: {
     appId: parseLocal.appId,
     javascriptKey: parseLocal.javascriptKey,

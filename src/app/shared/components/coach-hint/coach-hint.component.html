@@ -1,0 +1,12 @@
+@if (visible) {
+  <ion-card class="coach-hint-card" color="light">
+    <ion-card-header>
+      <ion-card-subtitle>{{ 'coach.cardTitle' | t }}</ion-card-subtitle>
+      <ion-card-title>{{ titleKey | t }}</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p>{{ bodyKey | t }}</p>
+      <ion-button fill="clear" size="small" (click)="dismiss()">{{ 'coach.dismiss' | t }}</ion-button>
+    </ion-card-content>
+  </ion-card>
+}

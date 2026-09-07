@@ -7,6 +7,7 @@ import { MIN_PASSWORD_LENGTH } from '../../core/constants/auth.constants';
 import { AppStorageService } from '../../core/services/app-storage.service';
 import { PostAuthNavigationService } from '../../core/services/post-auth-navigation.service';
 import { environment } from '../../../environments/environment';
+import { I18nService } from '../../core/services/i18n.service';
 
 @Component({
   selector: 'app-login',
@@ -38,7 +39,8 @@ export class LoginPage {
     private readonly loadingCtrl: LoadingController,
     private readonly alertCtrl: AlertController,
     private readonly storage: AppStorageService,
-    private readonly postAuthNav: PostAuthNavigationService
+    private readonly postAuthNav: PostAuthNavigationService,
+    private readonly i18n: I18nService
   ) {}
 
   async ionViewWillEnter(): Promise<void> {
@@ -47,7 +49,7 @@ export class LoginPage {
 
     if (!this.canUseBiometric) return;
 
-    const loading = await this.loadingCtrl.create({ message: 'Entrando...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('login.entering') });
     await loading.present();
 
     try {
@@ -78,24 +80,24 @@ export class LoginPage {
 
   async loginWithBiometric(): Promise<void> {
     if (!this.biometricEnabled) {
-      await this.showError('Ative o login por biometria em Meu Perfil apos entrar com senha.');
+      await this.showError(this.i18n.t('login.biometricEnable'));
       return;
     }
 
     if (!this.auth.isLoggedIn()) {
       await this.showError(
-        'Faca login com e-mail/celular e senha neste dispositivo ao menos uma vez antes de usar a biometria.'
+        this.i18n.t('login.biometricOnce')
       );
       return;
     }
 
-    const loading = await this.loadingCtrl.create({ message: 'Validando sessao...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('login.entering') });
     await loading.present();
 
     try {
       const valid = await this.auth.validateSession();
       if (!valid) {
-        await this.showError('Sessao expirada. Informe e-mail ou celular e senha.');
+        await this.showError(this.i18n.t('login.sessionExpired'));
         return;
       }
       await this.postAuthNav.navigateAfterAuth();
@@ -108,17 +110,17 @@ export class LoginPage {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       if (this.form.get('identifier')?.invalid) {
-        await this.showError('Informe e-mail ou celular.');
+        await this.showError(this.i18n.t('login.identifierError'));
         return;
       }
       if (this.form.get('password')?.invalid) {
-        await this.showError('Informe sua senha.');
+        await this.showError(this.i18n.t('login.passwordError'));
         return;
       }
       return;
     }
 
-    const loading = await this.loadingCtrl.create({ message: 'Entrando...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('login.entering') });
     await loading.present();
 
     try {
@@ -141,7 +143,7 @@ export class LoginPage {
       await this.postAuthNav.navigateAfterAuth();
       await this.offerBiometric();
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Nao foi possivel entrar.');
+      await this.showError(this.i18n.translateError(error) || this.i18n.t('login.failed'));
     } finally {
       await loading.dismiss();
     }
@@ -153,7 +155,7 @@ export class LoginPage {
       return;
     }
 
-    const loading = await this.loadingCtrl.create({ message: 'Enviando e-mail...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('login.sending') });
     await loading.present();
 
     try {
@@ -164,16 +166,15 @@ export class LoginPage {
       await loading.dismiss();
 
       const alert = await this.alertCtrl.create({
-        header: 'E-mail enviado',
-        message:
-          'Se o e-mail estiver cadastrado, voce recebera instrucoes para redefinir sua senha.',
-        buttons: ['OK'],
+        header: this.i18n.t('login.resetSentTitle'),
+        message: this.i18n.t('login.resetSentBody'),
+        buttons: [this.i18n.t('ok')],
       });
       await alert.present();
       return;
     } catch (error: unknown) {
       await this.showError(
-        error instanceof Error ? error.message : 'Nao foi possivel enviar o e-mail.'
+        this.i18n.translateError(error) || this.i18n.t('login.resetFailed')
       );
     } finally {
       await loading.dismiss();
