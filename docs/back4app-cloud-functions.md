@@ -2,7 +2,9 @@
 
 Gere o arquivo com `npm run build:cloud` e publique o conteudo de `cloud/main.js` no dashboard do Back4App:
 
-**Server Settings → Cloud Code → main.js**
+**Cloud Code → `main.js`** (painel antigo: Server Settings → Cloud Code).
+
+Reset de senha por e-mail tambem exige `cloud/package.json` no mesmo Cloud Code (`parse-mail-smtp-adapter`). Ver `docs/BACK4APP-ZOHO-SMTP.md`.
 
 Sem publicar o Cloud Code, o app usa fallback local no cadastro, mas login por celular, inscricoes em eventos e outras funcoes podem falhar com `Invalid function`.
 

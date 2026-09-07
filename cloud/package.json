@@ -1,0 +1,9 @@
+{
+  "name": "controle-de-bola-cloud",
+  "private": true,
+  "description": "NPM modules for Back4App Cloud Code. Email adapter credentials stay on the Parse Server (support), not in this file.",
+  "dependencies": {
+    "nodemailer": "^6.9.16",
+    "parse-mail-smtp-adapter": "1.0.0"
+  }
+}
