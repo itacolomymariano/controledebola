@@ -82,6 +82,7 @@ Rotas: `src/app/app-routing.module.ts`. Labels: `src/app/core/models/profile-rol
 - Screenshots do manual: `docs/MANUAL-SCREENSHOTS-PEDIDOS.md` (usuario envia). Sem Lottie/API Inter/Cloud nesta leva.
 - Zoho: senha antiga revogada; senha nova enviada so ao Charles (2026-09-07). Sem segunda troca apos o teste, salvo vazamento. Aguardando Charles ligar o `emailAdapter`.
 - Cloud Code SMTP: `cloud/package.json` publicado em Functions & Web Hosting (`backend.back4app.com/…/cloud_code`). Modulos `parse-mail-smtp-adapter` + `nodemailer`. Sem senha no repo.
+- Apple recusou IPA `1.0.3` (90062/90186): trem 1.0.3 ja aprovado/fechado. Marketing no `package.json` agora **1.0.4**. No Connect: criar versao 1.0.4 e anexar o novo build.
 
 ### 2026-09-02 — Visibilidade do repo GitHub
 
