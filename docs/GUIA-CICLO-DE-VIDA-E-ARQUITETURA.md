@@ -49,7 +49,7 @@ Definidos em `src/app/core/models/event.model.ts`:
 |------|--------|-----|
 | Pelada | `pelada` | Jogo informal do grupo |
 | Racha | `racha` | Confronto entre grupos |
-| Jogo entre equipes | `team_match` | Partida com times nomeados (casa/visitante) |
+| Jogo entre equipes | `team_match` | Confronto: aba **Confrontos** (`/tabs/events`) + `createTeamMatch` (sem pelada); pointers `homeTeam`/`awayTeam`; ida/volta (`hasReturnLeg` / `returnOf`); convocacao `RefereeInvitation` |
 
 ---
 
@@ -169,7 +169,7 @@ flowchart TD
 | `src/app/app.module.ts` | Ionic, Storage, `IonicRouteStrategy` |
 | `src/app/app.component.ts` | Shell `<ion-router-outlet>`, init push |
 | `src/app/core/services/parse.service.ts` | `Parse.initialize()`, URL web vs nativo |
-| `src/app/core/services/app-storage.service.ts` | Flags locais (onboarding, wizard, biometria) |
+| `src/app/core/services/app-storage.service.ts` | Flags locais (onboarding, wizard, biometria + credenciais no aparelho) |
 
 ### Decisao de rota inicial (Splash)
 
@@ -216,16 +216,15 @@ Todas as demais rotas em `src/app/app-routing.module.ts`, incluindo:
 
 ### Abas (tabs)
 
-`src/app/tabs/tabs.page.html` — **4 abas visiveis:**
+`src/app/tabs/tabs.page.html` — **5 abas visiveis:**
 
 | Aba | Rota | Conteudo |
 |-----|------|----------|
 | Peladas | `/tabs/peladas` | Lista de peladas (padrao) |
-| Buscar | `/tabs/search` | Busca de eventos/perfis |
+| Buscar | `/tabs/search` | Busca de eventos/perfis (segmento no content, nao no header) |
+| Confrontos | `/tabs/events` | Feed publico `listTeamMatchesForFeed` (proximidade) + desafios aceitos; FAB Desafiar |
 | Mural | `/tabs/mural` | Mural geral do app |
 | Perfil | `/tabs/profile` | Meu perfil |
-
-**Nota:** a rota `/tabs/events` existe em `tabs-routing.module.ts` mas **nao aparece** na barra de abas.
 
 ---
 
@@ -236,12 +235,18 @@ Todas as demais rotas em `src/app/app-routing.module.ts`, incluindo:
 | Metodo | Comportamento |
 |--------|---------------|
 | `login()` | Tenta variantes de email/telefone; fallback Cloud `resolveLoginUsername` |
+| `requestPasswordReset()` | Cloud `requestPasswordResetEmail` (codigo 6 digitos; SMTP via `MailSettings`) |
+| `confirmPasswordReset()` | Cloud `confirmPasswordReset` (codigo + senha nova; minimo 8) |
 | `register()` | Cloud `registerUser` → login; fallback client-side `signUp`. E-mail e endereco obrigatorios (eventos proximos e rankings por localidade); celular e nascimento opcionais |
 | `updateUserAccount()` | Mesma regra de campos; endereco completo obrigatorio |
 | `deleteAccount()` | Cloud `deleteMyAccount` (senha + exclusao permanente) + limpa sessao local |
 | `validateSession()` | `user.fetch()` no servidor; em erro de rede nao desloga |
-| `clearLocalSession()` | Unregister push + `Parse.User.logOut()` |
+| `clearLocalSession()` | Unregister push + `Parse.User.logOut()`. **Nao** apaga a biometria cadastrada no aparelho |
 | `handleApiError()` | Se sessao invalida → limpa sessao, retorna `true` (caller redireciona `/login`) |
+
+### Biometria (login por digital)
+
+Nao e o BiometricPrompt nativo: o app guarda e-mail/celular + senha no Ionic Storage deste aparelho (`biometric_enabled` + `biometric_creds`). O logout limpa so a sessao Parse. Na tela de login, a imagem da digital chama `BiometricUnlockService` e refaz o `login()`. Cadastro: menu **Cadastrar biometria** (pede a senha) ou o convite apos o login/cadastro. Desativar no mesmo menu ou no toggle do Perfil. Troca/redefinicao de senha atualiza a senha guardada quando o identificador bate.
 
 ### Pos-autenticacao
 
@@ -254,6 +259,10 @@ Todas as demais rotas em `src/app/app-routing.module.ts`, incluindo:
 ### Profile setup
 
 `profile-setup.page.ts`: cria `AthleteProfile`, `FanProfile` ou `RoleProfile` conforme `WizardPath` escolhido no onboarding; marca wizard completo e vai para `/tabs/peladas`.
+
+### Assistente (Wizard de dicas)
+
+`WizardTourService` + overlay `app-wizard-tour`. Sequencia Seguir / Pular / Fechar. Flags `wizard_tour_*` no storage local sao **por usuario** (`:userId`), nao do aparelho. Abre sozinho so no primeiro uso daquela conta sem registros alem do perfil (pelada, socio, inscricao ou time). Menu **Usar o Wizard** reabre a qualquer momento.
 
 ### Cadastro (anti-bot)
 
@@ -311,7 +320,7 @@ Definidos em `src/app/core/models/profile-role.model.ts`:
 
 Fluxo em `pages/legends-hub/`, `legend-athlete-form/`, `legend-team-form/`, `legend-pro-athlete-form/`.
 
-Cloud: `cloud/source/05-legends.js` — CRUD de lendas amadoras/profissionais; alimenta sugestoes de idolos e times nos formularios de perfil.
+Cloud: `cloud/source/05-legends.js` — CRUD de lendas amadoras/profissionais; alimenta sugestoes de idolos e times nos formularios de perfil. Busca ignora acentos. Se o termo ja existe, o hub e o widget `app-legend-suggest-input` pedem para usar o cadastro; se nao existe, sugerem criar. `createAmateurLegendAthlete/Team` e `createProLegendAthlete` recusam nome/apelido duplicado (normalizado).
 
 ---
 
@@ -416,7 +425,7 @@ Retorna `true` quando: taxa zero, isento, convidado por contrato/arbitro, anonim
 
 **Votacao:** um usuario confirma a cédula uma unica vez (`submitEventMuralBallot`). **Integridade:** nao pode votar em si mesmo (pode votar em colegas do mesmo time ou adversarios); `MuralVote` so via Cloud (CLP). Rankings/destaques do evento continuam visiveis mesmo com poucos votantes; o app exibe nota de integridade quando ha &lt;3 votantes distintos. Midia: engajamento por reacoes/comentarios; views de TOP so de participantes confirmados (nao-autor); TOP midia exige ≥3 views.
 
-**Sumula:** edicao apenas pelo juiz confirmado dentro de `sumulaOpensAt`/`sumulaClosesAt`. Apos o encerramento do evento, qualquer perfil confirmado (ou admin) consulta em modo leitura.
+**Sumula:** edicao apenas pelo juiz confirmado dentro de `sumulaOpensAt`/`sumulaClosesAt` (e evento nao encerrado). **Confronto (`team_match`):** consulta disponivel para qualquer usuario logado do App; placar = soma dos gols marcados (nao inclui gols sofridos de goleiro); gols sofridos dos goleiros de um time nao podem ultrapassar os gols do adversario. Apos salvar a sumula, murais usam `refereeGoals` imediatamente. Empate de goleadores: um card por atleta empatado. Em pelada, apos o encerramento, qualquer perfil confirmado (ou admin) consulta em modo leitura.
 
 **Preparador fisico:** `savePhysicalTrainerSession` so antes de `event.startTime`.
 
@@ -479,7 +488,9 @@ flowchart LR
 | 01 | `01-phone-helpers.js` | Normalizacao telefone BR |
 | 01b | `01b-comment-discipline.js` | Filtro palavroes |
 | 01c | `01c-integrity-helpers.js` | Integridade mural/midia (anti-self, quorum) |
-| 02 | `02-core.js` | Login, conta, senha |
+| 01d | `01d-mail-helpers.js` | SMTP (nodemailer) via `MailSettings` |
+| 02 | `02-core.js` | Login, conta, senha, reset por codigo |
+| 02b | `02b-contact-messages.js` | Formularios de contato/suporte |
 | 03 | `03-push-notifications.js` | Push, triggers Event/Registration |
 | 04 | `04-auth-signup.js` | Cadastro anti-bot, beforeSave User |
 | 05 | `05-legends.js` | CRUD lendas, sugestoes idolos/times |
@@ -494,7 +505,7 @@ flowchart LR
 
 ### Cloud Functions por categoria (principais)
 
-**Auth:** `prepareSignupChallenge`, `registerUser`, `resolveLoginUsername`, `updateUserAccount`, `changeUserPassword`, `deleteMyAccount`
+**Auth:** `prepareSignupChallenge`, `registerUser`, `resolveLoginUsername`, `updateUserAccount`, `changeUserPassword`, `requestPasswordResetEmail`, `confirmPasswordReset`, `sendContactMessage`, `configureMailSettingsClassPermissions`, `deleteMyAccount`
 
 **Eventos/Inscricoes:** `listEventParticipantsForVoting`, `updateEventRegistrationPayment`, `createAnonymousEventRegistration`, `registerEventAthleteArrival`, `ensureEventArrivalOrders`, `getEventTeamSplit`, `saveEventTeamSplit`, `checkInviteeScheduleConflict`, `createSupplementaryEventInvitation`
 
@@ -502,13 +513,15 @@ flowchart LR
 
 **Mural:** `getMuralAppDashboard`, `getEventMuralDashboard`, `getMuralRankings`, `castEventMuralVote`, `getMuralPerformanceAnalytics`, `getPredictionRankings`, `configureMuralClassPermissions`
 
+**Mural do App (tab Mural):** tres abas — **Geral** (notas/gols de confronto peso 3x), **Peladas**, **Confrontos**. `getMuralAppDashboard` retorna `buckets.merged|pelada|team_match` (rankings, topScorers ponderados, topTeams/topCoaches V/E/D 3-1-0, palpites filtrados). Desempate de ranking: maior idade. Papéis de voto incluem `fan` e `gatekeeper`. Compartilhamento: titulo por aba via `MuralShareContext.appMuralVariant`.
+
 **Imprensa/Midia:** `getEventMediaDashboard`, `publishEventRadioNarration`, `publishEventRadioInterview`, `publishEventJournalReportage`, `publishEventJournalInterview`, `publishEventHighlightVideo`, `castEventMediaVote`, `recordEventMediaView`, `setEventMediaReaction`, `upsertEventMediaComment`, `getEventMediaEngagement`, `getTopEventMedia`, `configureEventMediaClassPermissions`. Detalhes: [EVENT-MEDIA.md](EVENT-MEDIA.md).
 
 **Scout/Sumula:** `getScoutApontamentoBoard`, `incrementScoutApontamento`, `getRefereeSumulaBoard`, `saveRefereeSumulaBoard`
 
 **Pelada:** `listPeladasForFeed`, `getPeladaDisplayInfo`, `listPeladaProfilePresentationRequests`, `resolveProfilePresentationRequest`, `listPeladaActiveSocios`, `listPeladaMembershipsForAdmin`
 
-**Push:** `registerPushDevice`, `unregisterPushDevice`, `setPushNotificationsEnabled`, `getPushNotificationsEnabled`, `sendEventConfirmedParticipantNotification`, `runEventRemindersTwoHours`, `backfillAndroidPushInstallations`, `diagnosePushForContact`, `diagnoseEventPushTargets`, `sendTestPushToSelf`, `pruneStalePushInstallationsForUser`. Preferência `_User.pushNotificationsEnabled` (toggle no menu). Inventário: [PUSH-NOTIFICATIONS.md](PUSH-NOTIFICATIONS.md).
+**Push:** `registerPushDevice`, `unregisterPushDevice`, `setPushNotificationsEnabled`, `getPushNotificationsEnabled`, `notifyNewPeladaEventCreated`, `diagnoseNewPeladaEventPush`, `sendEventConfirmedParticipantNotification`, `runEventRemindersTwoHours`, `backfillAndroidPushInstallations`, `diagnosePushForContact`, `diagnoseEventPushTargets`, `sendTestPushToSelf`, `pruneStalePushInstallationsForUser`. Preferência `_User.pushNotificationsEnabled` (toggle no menu). Inventário: [PUSH-NOTIFICATIONS.md](PUSH-NOTIFICATIONS.md).
 
 **Push jobs:** `sendEventRemindersTwoHoursJob` (agendar a cada 10–15 min no Back4App).
 
@@ -516,9 +529,9 @@ flowchart LR
 
 | Trigger | Classe | Efeito |
 |---------|--------|--------|
-| `beforeSave` | `Parse.User` | Anti-bot no cadastro |
+| `beforeSave` | `Parse.User` | Anti-bot no cadastro; bloqueia campos `passwordReset*` sem master key |
 | `beforeSave` | `EventRegistration` | Apresentacao de perfil pendente |
-| `afterSave` | `Event` | Push novo evento; remarcacao/cancelamento; auto-emissao ingressos |
+| `afterSave` | `Event` | Push novo evento (create = sem `original`); remarcacao/cancelamento; auto-emissao ingressos |
 | `afterSave` | `EventRegistration` | Push apresentacao perfil; auto-emissao ingresso |
 | `afterSave` | `RefereeInvitation` | Push convite e resposta de contratacao |
 
@@ -538,7 +551,8 @@ Todos em `src/app/core/services/`. Padrao: tentam Cloud Function primeiro; fallb
 |---------|------------------|
 | `parse.service.ts` | Init SDK Parse |
 | `parse-file.service.ts` | Upload Parse.File (imagens/audio) |
-| `app-storage.service.ts` | Ionic Storage (flags locais) |
+| `app-storage.service.ts` | Ionic Storage (flags locais + credenciais de biometria) |
+| `biometric-unlock.service.ts` | Login por digital no aparelho (sobrevive ao logout) |
 | `address-geocoding.service.ts` | Geocoding Nominatim/Photon |
 | `post-auth-navigation.service.ts` | Roteamento pos-login |
 | `auth.service.ts` | Login, cadastro, sessao, conta |
@@ -790,7 +804,7 @@ Componentes custom (`app-birth-date-picker`, `app-address-form`) implementam `Co
 | Financas sem Cloud Code | `PeladaCashEntry`, `Cotinha`, `Fee` gerenciados so no cliente | Considerar Cloud functions para integridade |
 | Denormalizacao | Dados de exibicao defasados | Verificar propagacao apos mudancas em conta/avatar |
 | `@capacitor/status-bar` | Dependencia declarada, nao usada em `src/` | Remover ou implementar |
-| Aba `/tabs/events` | Rota existe mas nao aparece na barra | Decidir: remover rota ou adicionar aba |
+| Aba `/tabs/events` | Agora e a aba Confrontos | Fluxo em `docs/PLANO-CONFRONTOS-TIMES.md` |
 | Scout vs Referee stats | Campos `scout*`/`referee*` coexistem em EventPerformance | Respeitar `Pelada.statsConflictSource` |
 | JDK Android | Capacitor 8 exige Java 21 | Usar JBR do Android Studio no build |
 

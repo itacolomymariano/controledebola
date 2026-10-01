@@ -1,0 +1,24 @@
+<ion-button fill="solid" color="tertiary" size="small" class="help-toolbar-btn" [id]="helpId">
+  <ion-icon name="help-circle-outline" slot="start"></ion-icon>
+  {{ titleKey | t }}
+</ion-button>
+
+<ion-popover #helpPopover [trigger]="helpId" side="bottom" alignment="end">
+  <ng-template>
+    <ion-content class="ion-padding help-popover-body">
+      <div class="balloon-header">
+        <h3 class="help-popover-title">{{ titleKey | t }}</h3>
+        <ion-button fill="clear" size="small" color="medium" class="balloon-close" (click)="helpPopover.dismiss()" aria-label="Fechar">
+          <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+        </ion-button>
+      </div>
+      <p>{{ bodyKey | t }}</p>
+      <div class="balloon-actions">
+        <ion-button size="small" fill="solid" color="medium" (click)="helpPopover.dismiss()">
+          <ion-icon slot="start" name="close-outline"></ion-icon>
+          Fechar
+        </ion-button>
+      </div>
+    </ion-content>
+  </ng-template>
+</ion-popover>

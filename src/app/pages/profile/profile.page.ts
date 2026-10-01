@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { AppInviteShareService } from '../../core/services/app-invite-share.service';
 import { AppStorageService } from '../../core/services/app-storage.service';
+import { BiometricUnlockService } from '../../core/services/biometric-unlock.service';
 import { PROFILE_ROLE_LABELS, ProfileRole } from '../../core/models/profile-role.model';
 import { PROFESSIONAL_ROLES, ProfessionalRole } from '../../core/models/role-profile.model';
 import { AthleteProfileService } from '../../core/services/athlete-profile.service';
@@ -13,11 +14,7 @@ import { TeamService } from '../../core/services/team.service';
 import { FanProfileService } from '../../core/services/fan-profile.service';
 import { RefereeInvitationService } from '../../core/services/referee-invitation.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
-import { I18nService } from '../../core/services/i18n.service';
-import { ThemePaletteService } from '../../core/services/theme-palette.service';
 import { AppGuideService } from '../../core/services/app-guide.service';
-import { APP_LOCALE_LABELS, APP_LOCALES, AppLocale } from '../../core/models/app-locale.model';
-import { THEME_PALETTE_IDS, ThemePaletteId } from '../../core/models/theme-palette.model';
 
 @Component({
   selector: 'app-profile',
@@ -32,20 +29,12 @@ export class ProfilePage implements OnInit, OnDestroy {
   biometricEnabled = false;
   hasAthleteProfile = false;
   hasTeam = false;
+  teamCount = 0;
   hasFanProfile = false;
   primaryRole: ProfileRole | null = null;
   primaryRoleLabel = '';
   pendingInvitations = 0;
   inviteShareBusy = false;
-  readonly locales = APP_LOCALES;
-  readonly localeLabels = APP_LOCALE_LABELS;
-  currentLocale: AppLocale = 'pt-BR';
-  readonly paletteIds = THEME_PALETTE_IDS;
-  currentPalette: ThemePaletteId = 'default';
-
-  get paletteLabelKeys() {
-    return this.theme.labelKeys;
-  }
 
   readonly professionalRoles = PROFESSIONAL_ROLES;
   roleProfileRegistered: Record<ProfessionalRole, boolean> = {
@@ -73,11 +62,10 @@ export class ProfilePage implements OnInit, OnDestroy {
     private readonly refereeInvitationService: RefereeInvitationService,
     private readonly appInviteShare: AppInviteShareService,
     private readonly storage: AppStorageService,
+    private readonly biometric: BiometricUnlockService,
     private readonly router: Router,
     private readonly alertCtrl: AlertController,
     private readonly loadingCtrl: LoadingController,
-    private readonly i18n: I18nService,
-    private readonly theme: ThemePaletteService,
     private readonly appGuide: AppGuideService
   ) {}
 
@@ -92,23 +80,7 @@ export class ProfilePage implements OnInit, OnDestroy {
   }
 
   async ionViewWillEnter(): Promise<void> {
-    this.currentLocale = this.i18n.locale;
-    this.currentPalette = this.theme.current;
     await this.loadProfile();
-  }
-
-  async onLocaleChange(event: CustomEvent): Promise<void> {
-    const locale = (event.detail as { value?: AppLocale })?.value;
-    if (!locale || locale === this.currentLocale) return;
-    await this.i18n.setLocale(locale);
-    this.currentLocale = locale;
-  }
-
-  async onPaletteChange(event: CustomEvent): Promise<void> {
-    const palette = (event.detail as { value?: ThemePaletteId })?.value;
-    if (!palette || palette === this.currentPalette) return;
-    await this.theme.setPalette(palette);
-    this.currentPalette = palette;
   }
 
   openGuide(): void {
@@ -187,8 +159,17 @@ export class ProfilePage implements OnInit, OnDestroy {
   }
 
   async toggleBiometric(event: CustomEvent): Promise<void> {
-    await this.storage.setBiometricEnabled(!!event.detail.checked);
-    this.biometricEnabled = !!event.detail.checked;
+    const checked = !!(event.detail as { checked?: boolean })?.checked;
+    if (checked === this.biometricEnabled) return;
+
+    if (!checked) {
+      await this.biometric.disable();
+      this.biometricEnabled = false;
+      return;
+    }
+
+    const ok = await this.biometric.promptEnableWithPassword();
+    this.biometricEnabled = ok;
   }
 
   async requestAccountDeletion(): Promise<void> {
@@ -241,7 +222,9 @@ export class ProfilePage implements OnInit, OnDestroy {
     this.primaryRole = this.auth.getPrimaryRole();
     this.primaryRoleLabel = this.primaryRole ? PROFILE_ROLE_LABELS[this.primaryRole] : '';
     this.hasAthleteProfile = !!(await this.athleteProfileService.getForCurrentUser());
-    this.hasTeam = !!(await this.teamService.getForCurrentUser());
+    const myTeams = await this.teamService.listMine();
+    this.teamCount = myTeams.length;
+    this.hasTeam = this.teamCount > 0;
     this.hasFanProfile = !!(await this.fanProfileService.getForCurrentUser());
     this.pendingInvitations = await this.refereeInvitationService.countPendingForCurrentUser();
 

@@ -57,6 +57,11 @@ export interface CoachEventBoard {
   suggestedStarters: CoachSuggestedStarters[];
   rotationNotes: string;
   updatedAt?: string;
+  /** Confronto (`team_match`): lados que este treinador pode editar. */
+  isTeamMatch?: boolean;
+  coachSides?: Array<'home' | 'away'>;
+  homeTeamName?: string;
+  awayTeamName?: string;
 }
 
 export interface CoachProfileStats {

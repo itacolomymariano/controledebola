@@ -1,0 +1,76 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/about"></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ pageTitle }}</ion-title>
+    <ion-buttons slot="end">
+      <app-help-balloon textKey="screen.help.contact-message"></app-help-balloon>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <p class="contact-hint">{{ kind === 'support' ? ('contact.supportHint' | t) : ('contact.feedbackHint' | t) }}</p>
+
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <ion-item>
+      <ion-input
+        [label]="'contact.name' | t"
+        labelPlacement="stacked"
+        [value]="userName"
+        readonly="true"
+      ></ion-input>
+    </ion-item>
+    <ion-item>
+      <ion-input
+        [label]="'contact.apelido' | t"
+        labelPlacement="stacked"
+        [value]="userApelido"
+        readonly="true"
+      ></ion-input>
+    </ion-item>
+    <ion-item>
+      <ion-input
+        [label]="'contact.title' | t"
+        labelPlacement="stacked"
+        formControlName="title"
+        maxlength="120"
+      ></ion-input>
+    </ion-item>
+    @if (form.get('title')?.invalid && form.get('title')?.touched) {
+      <ion-note color="danger" class="ion-padding-horizontal">{{ 'contact.titleError' | t }}</ion-note>
+    }
+    <ion-item>
+      <ion-textarea
+        [label]="bodyLabel"
+        labelPlacement="stacked"
+        formControlName="body"
+        autoGrow="true"
+        rows="6"
+        maxlength="4000"
+      ></ion-textarea>
+    </ion-item>
+    @if (form.get('body')?.invalid && form.get('body')?.touched) {
+      <ion-note color="danger" class="ion-padding-horizontal">{{ 'contact.bodyError' | t }}</ion-note>
+    }
+
+    <input #fileInput type="file" hidden accept="image/*,.pdf,text/plain" (change)="onFileSelected($event)" />
+    <ion-button expand="block" fill="outline" type="button" class="ion-margin-top" (click)="fileInput.click()">
+      <ion-icon slot="start" name="attach-outline"></ion-icon>
+      {{ 'contact.attach' | t }}
+    </ion-button>
+    @if (attachmentLabel) {
+      <p class="contact-file">
+        {{ attachmentLabel }}
+        <ion-button fill="clear" size="small" type="button" (click)="clearAttachment()">
+          {{ 'contact.removeAttach' | t }}
+        </ion-button>
+      </p>
+    }
+
+    <ion-button expand="block" type="submit" class="ion-margin-top" [disabled]="form.invalid">
+      {{ 'contact.submit' | t }}
+    </ion-button>
+  </form>
+</ion-content>

@@ -25,6 +25,20 @@
     debounce="300"
   ></ion-searchbar>
 
+  @if (hasSearchTerm && !loading && hasMatches) {
+    <ion-note color="primary" class="ion-margin-bottom">
+      Ja existe cadastro para "{{ search.trim() }}". Use a lista abaixo em vez de criar outro.
+    </ion-note>
+  }
+
+  @if (hasSearchTerm && !loading && !hasMatches) {
+    <ion-card>
+      <ion-card-content>
+        <p>Nenhuma lenda encontrada para "{{ search.trim() }}". Cadastre uma nova abaixo.</p>
+      </ion-card-content>
+    </ion-card>
+  }
+
   <div class="legend-actions">
     <ion-button expand="block" (click)="openAthleteForm()">Cadastrar lenda (atleta)</ion-button>
     <ion-button expand="block" fill="outline" (click)="openTeamForm()">Cadastrar lenda (time)</ion-button>
@@ -34,7 +48,7 @@
     <ion-spinner name="crescent"></ion-spinner>
   } @else {
     <h2>Atletas lendas</h2>
-    @if (!athletes.length) {
+    @if (!athletes.length && !hasSearchTerm) {
       <ion-note>Nenhuma lenda de atleta cadastrada.</ion-note>
     } @else {
       <ion-list>
@@ -58,7 +72,7 @@
     }
 
     <h2 class="ion-margin-top">Times lendas</h2>
-    @if (!teams.length) {
+    @if (!teams.length && !hasSearchTerm) {
       <ion-note>Nenhuma lenda de time cadastrada.</ion-note>
     } @else {
       <ion-list>

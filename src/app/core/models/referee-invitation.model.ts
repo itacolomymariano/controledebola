@@ -1,3 +1,5 @@
+import { TeamSide } from './event.model';
+
 export type RefereeInvitationStatus = 'pending' | 'accepted' | 'declined' | 'cancelled';
 
 export type EventRoleInvitationStatus = RefereeInvitationStatus;
@@ -61,6 +63,30 @@ export interface RefereeInvitation {
   cashEntryId?: string;
   createdAt?: Date;
   supplementaryKind?: SupplementaryInvitationKind;
+  teamSide?: TeamSide;
+  /** Confronto com ida/volta: distingue o convite na inbox. */
+  teamMatchLeg?: 'ida' | 'volta';
+  refereeHiringApprovalStatus?: 'pending' | 'approved' | 'rejected';
+  refereePaymentMode?: 'free' | 'split_50' | 'home_pays';
+  refereeHiringRequestedByTeamSide?: TeamSide;
+}
+
+export interface TeamMatchRefereeHiringApprovalItem {
+  invitationId: string;
+  eventId: string;
+  eventName: string;
+  eventStartTime: Date | null;
+  status: RefereeInvitationStatus;
+  refereeHiringApprovalStatus: string;
+  refereeHiringRequestedByTeamSide: TeamSide | '';
+  refereePaymentMode: 'free' | 'split_50' | 'home_pays';
+  refereePaymentModeLabel: string;
+  offeredAmount: number;
+  invitedUserId: string;
+  invitedUserName: string;
+  invitedById: string;
+  invitedByName: string;
+  responseDeadline: Date | null;
 }
 
 export interface RefereeInviteCandidate {
@@ -87,6 +113,9 @@ export interface CreateRefereeInvitationPayload {
   invitedUserApelido?: string;
   invitedUserFullName?: string;
   invitedUserAvatarUrl?: string;
+  teamSide?: TeamSide;
+  requestedByTeamSide?: TeamSide;
+  refereePaymentMode?: 'free' | 'split_50' | 'home_pays';
 }
 
 export type EventRoleInvitation = RefereeInvitation;

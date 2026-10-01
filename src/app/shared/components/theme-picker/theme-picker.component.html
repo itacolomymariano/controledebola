@@ -1,0 +1,65 @@
+<button
+  type="button"
+  class="theme-open-btn"
+  (click)="openCurtain()"
+  [attr.aria-label]="'theme.button' | t"
+>
+  <span class="theme-swatch theme-swatch--mini" aria-hidden="true">
+    @for (hex of swatches[current]; track $index) {
+      <span class="theme-swatch-stripe" [style.background-color]="hex"></span>
+    }
+  </span>
+</button>
+
+<ion-modal
+  [isOpen]="curtainOpen"
+  (didDismiss)="closeCurtain()"
+  [initialBreakpoint]="0.62"
+  [breakpoints]="[0, 0.62, 0.9]"
+  [handle]="true"
+>
+  <ng-template>
+    <ion-header>
+      <ion-toolbar>
+        <ion-title>{{ 'theme.curtainTitle' | t }}</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="closeCurtain()">{{ 'confirm.cancel' | t }}</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="ion-padding">
+      <div class="theme-grid">
+        @for (id of paletteIds; track id) {
+          <button
+            type="button"
+            class="theme-swatch"
+            [class.is-current]="id === current"
+            (click)="onSwatchTap(id)"
+            [attr.aria-label]="labelKeys[id] | t"
+            [attr.aria-pressed]="id === current"
+          >
+            @for (hex of swatches[id]; track $index) {
+              <span class="theme-swatch-stripe" [style.background-color]="hex"></span>
+            }
+            @if (id === current) {
+              <ion-icon name="checkmark-circle" class="theme-swatch-check"></ion-icon>
+            }
+          </button>
+        }
+      </div>
+      <div class="theme-surface" role="group" [attr.aria-label]="'theme.curtainTitle' | t">
+        @for (id of surfaces; track id) {
+          <button
+            type="button"
+            class="theme-surface-chip"
+            [class.is-current]="id === surface"
+            (click)="onSurfaceTap(id)"
+            [attr.aria-pressed]="id === surface"
+          >
+            {{ surfaceLabelKey(id) | t }}
+          </button>
+        }
+      </div>
+    </ion-content>
+  </ng-template>
+</ion-modal>

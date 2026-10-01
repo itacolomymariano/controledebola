@@ -127,7 +127,7 @@ async function verifyCurrentPassword(user, password) {
   }
 }
 
-async function assertContactAvailable({ username, email, phone, excludeUserId }) {
+async function assertContactAvailable({ username, email, phone, cpf, excludeUserId }) {
   if (username) {
     const query = new Parse.Query(Parse.User);
     query.equalTo('username', username);
@@ -169,6 +169,40 @@ async function assertContactAvailable({ username, email, phone, excludeUserId })
       }
     }
   }
+
+  if (cpf) {
+    const query = new Parse.Query(Parse.User);
+    query.equalTo('cpf', cpf);
+    const existing = await query.first({ useMasterKey: true });
+    if (existing && existing.id !== excludeUserId) {
+      throw new Parse.Error(
+        Parse.Error.DUPLICATE_VALUE,
+        'CPF ja cadastrado. Faca login com a conta existente. Se esqueceu a senha, use Recuperar senha na tela de login.'
+      );
+    }
+  }
+}
+
+function normalizeCpfDigits(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
+function isValidCpf(value) {
+  const cpf = normalizeCpfDigits(value);
+  if (cpf.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(cpf)) return false;
+
+  let sum = 0;
+  for (let i = 0; i < 9; i += 1) sum += Number(cpf[i]) * (10 - i);
+  let dig1 = (sum * 10) % 11;
+  if (dig1 === 10) dig1 = 0;
+  if (dig1 !== Number(cpf[9])) return false;
+
+  sum = 0;
+  for (let i = 0; i < 10; i += 1) sum += Number(cpf[i]) * (11 - i);
+  let dig2 = (sum * 10) % 11;
+  if (dig2 === 10) dig2 = 0;
+  return dig2 === Number(cpf[10]);
 }
 
 function buildUserDisplayFields(user) {
@@ -445,6 +479,171 @@ Parse.Cloud.define('changeUserPassword', async (request) => {
   user.set('password', newPassword);
   await user.save(null, { useMasterKey: true });
 
+  return { ok: true };
+});
+
+const PASSWORD_RESET_OTP_TTL_MS = 30 * 60 * 1000;
+const PASSWORD_RESET_MIN_INTERVAL_MS = 60 * 1000;
+const PASSWORD_RESET_MAX_PER_HOUR = 5;
+const PASSWORD_RESET_MAX_ATTEMPTS = 5;
+
+async function findUserForPasswordReset(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  const byEmail = new Parse.Query(Parse.User);
+  byEmail.equalTo('email', normalized);
+  const userByEmail = await byEmail.first({ useMasterKey: true });
+  if (userByEmail) return userByEmail;
+
+  const byUsername = new Parse.Query(Parse.User);
+  byUsername.equalTo('username', normalized);
+  return byUsername.first({ useMasterKey: true });
+}
+
+function hashPasswordResetOtp(otp, salt) {
+  const crypto = require('crypto');
+  return crypto.createHash('sha256').update(`${salt}:${otp}`).digest('hex');
+}
+
+function createPasswordResetOtp() {
+  const crypto = require('crypto');
+  const otp = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+  const salt = crypto.randomBytes(16).toString('hex');
+  return { otp, stored: `${salt}:${hashPasswordResetOtp(otp, salt)}` };
+}
+
+function passwordResetOtpMatches(stored, otp) {
+  const parts = String(stored || '').split(':');
+  if (parts.length !== 2) return false;
+  const [salt, expected] = parts;
+  return hashPasswordResetOtp(String(otp || ''), salt) === expected;
+}
+
+function clearPasswordResetFields(user) {
+  user.unset('passwordResetOtpHash');
+  user.unset('passwordResetExpiresAt');
+  user.unset('passwordResetFailCount');
+}
+
+function assertPasswordResetRateLimit(user) {
+  const now = Date.now();
+  const lastAt = user.get('passwordResetRequestedAt');
+  const lastMs = lastAt instanceof Date ? lastAt.getTime() : 0;
+  if (lastMs && now - lastMs < PASSWORD_RESET_MIN_INTERVAL_MS) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'Aguarde um minuto antes de pedir outro codigo.'
+    );
+  }
+
+  const hourStarted = user.get('passwordResetHourStartedAt');
+  const hourStartMs = hourStarted instanceof Date ? hourStarted.getTime() : 0;
+  const hourCount = Number(user.get('passwordResetHourCount') || 0);
+  if (hourStartMs && now - hourStartMs < 60 * 60 * 1000 && hourCount >= PASSWORD_RESET_MAX_PER_HOUR) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'Limite de envios atingido. Tente novamente em uma hora.'
+    );
+  }
+}
+
+function markPasswordResetRequest(user) {
+  const now = new Date();
+  const hourStarted = user.get('passwordResetHourStartedAt');
+  const hourStartMs = hourStarted instanceof Date ? hourStarted.getTime() : 0;
+  if (!hourStartMs || now.getTime() - hourStartMs >= 60 * 60 * 1000) {
+    user.set('passwordResetHourStartedAt', now);
+    user.set('passwordResetHourCount', 1);
+  } else {
+    user.set('passwordResetHourCount', Number(user.get('passwordResetHourCount') || 0) + 1);
+  }
+  user.set('passwordResetRequestedAt', now);
+}
+
+Parse.Cloud.define('requestPasswordResetEmail', async (request) => {
+  const email = String(request.params.email || '').trim().toLowerCase();
+  if (!email || !isEmailValue(email)) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe um e-mail valido.');
+  }
+
+  await assertSmtpConfigured();
+
+  const user = await findUserForPasswordReset(email);
+  if (!user) {
+    return { ok: true };
+  }
+
+  assertPasswordResetRateLimit(user);
+
+  const { otp, stored } = createPasswordResetOtp();
+  user.set('passwordResetOtpHash', stored);
+  user.set('passwordResetExpiresAt', new Date(Date.now() + PASSWORD_RESET_OTP_TTL_MS));
+  user.set('passwordResetFailCount', 0);
+  markPasswordResetRequest(user);
+  await user.save(null, { useMasterKey: true });
+
+  const subject = 'Controle de Bola — codigo para redefinir senha';
+  const text = [
+    'Voce pediu para redefinir a senha do Controle de Bola.',
+    '',
+    `Codigo: ${otp}`,
+    '',
+    'Ele vale por 30 minutos. Digite o codigo no app e escolha a nova senha.',
+    'Se nao foi voce, ignore este e-mail.',
+  ].join('\n');
+  const html = `
+    <p>Voce pediu para redefinir a senha do <strong>Controle de Bola</strong>.</p>
+    <p style="font-size:28px;letter-spacing:6px;font-weight:700">${otp}</p>
+    <p>O codigo vale por 30 minutos. Digite-o no app e escolha a nova senha.</p>
+    <p>Se nao foi voce, ignore este e-mail.</p>
+  `;
+
+  await sendAppMail({ to: email, subject, text, html });
+  return { ok: true };
+});
+
+Parse.Cloud.define('confirmPasswordReset', async (request) => {
+  const email = String(request.params.email || '').trim().toLowerCase();
+  const code = String(request.params.code || '').replace(/\D/g, '');
+  const newPassword = String(request.params.newPassword || '');
+
+  if (!email || !isEmailValue(email)) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe um e-mail valido.');
+  }
+  if (!/^\d{6}$/.test(code)) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o codigo de 6 digitos enviado por e-mail.');
+  }
+  if (newPassword.length < 8) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'A nova senha deve ter no minimo 8 caracteres.'
+    );
+  }
+
+  const user = await findUserForPasswordReset(email);
+  if (!user) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Codigo invalido ou expirado.');
+  }
+
+  const expiresAt = user.get('passwordResetExpiresAt');
+  const expired = !(expiresAt instanceof Date) || expiresAt.getTime() < Date.now();
+  const stored = user.get('passwordResetOtpHash');
+  const failCount = Number(user.get('passwordResetFailCount') || 0);
+
+  if (expired || !stored || failCount >= PASSWORD_RESET_MAX_ATTEMPTS) {
+    clearPasswordResetFields(user);
+    await user.save(null, { useMasterKey: true });
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Codigo invalido ou expirado.');
+  }
+
+  if (!passwordResetOtpMatches(stored, code)) {
+    user.set('passwordResetFailCount', failCount + 1);
+    await user.save(null, { useMasterKey: true });
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Codigo invalido ou expirado.');
+  }
+
+  user.set('password', newPassword);
+  clearPasswordResetFields(user);
+  await user.save(null, { useMasterKey: true });
   return { ok: true };
 });
 

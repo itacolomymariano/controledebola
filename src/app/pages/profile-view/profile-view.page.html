@@ -6,6 +6,9 @@
       </ion-button>
     </ion-buttons>
     <ion-title>Perfil de {{ roleLabel }}</ion-title>
+    <ion-buttons slot="end">
+      <app-help-balloon textKey="screen.help.profile-view"></app-help-balloon>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -112,6 +115,22 @@
           <p>Eventos confirmados: {{ coachStats.eventsCount }}</p>
           <p>Paineis salvos: {{ coachStats.boardsSaved }}</p>
           <p>Checklists completos: {{ coachStats.checklistCompleteCount }}</p>
+        </ion-card-content>
+      </ion-card>
+    }
+
+    @if (coachTeamMatchRecord && coachTeamMatchRecord.matchesPlayed > 0) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Confrontos (treinador)</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <p>Participacoes: {{ coachTeamMatchRecord.matchesPlayed }}</p>
+          <p>
+            Vitorias / Empates / Derrotas: {{ coachTeamMatchRecord.wins }} /
+            {{ coachTeamMatchRecord.draws }} / {{ coachTeamMatchRecord.losses }}
+          </p>
+          <p>Aproveitamento: {{ coachTeamMatchRecord.winRatePercent | number: '1.1-1' }}%</p>
         </ion-card-content>
       </ion-card>
     }

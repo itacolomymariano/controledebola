@@ -1,12 +1,18 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { MenuController, ToastController } from '@ionic/angular';
+import { Capacitor } from '@capacitor/core';
+import { StatusBar } from '@capacitor/status-bar';
+import { AlertController, MenuController, ToastController } from '@ionic/angular';
 import Parse from 'parse';
 import { parseErrorMessage } from './core/utils/parse-error.util';
 import { AppInviteShareService } from './core/services/app-invite-share.service';
+import { AuthService } from './core/services/auth.service';
 import { DeepLinkService } from './core/services/deep-link.service';
 import { PushNotificationService } from './core/services/push-notification.service';
 import { AppGuideService } from './core/services/app-guide.service';
+import { I18nService } from './core/services/i18n.service';
+import { WizardTourService } from './core/services/wizard-tour.service';
+import { BiometricUnlockService } from './core/services/biometric-unlock.service';
 
 @Component({
   selector: 'app-root',
@@ -26,12 +32,30 @@ export class AppComponent implements OnInit {
     private readonly menuCtrl: MenuController,
     private readonly router: Router,
     private readonly toastCtrl: ToastController,
-    private readonly appGuide: AppGuideService
+    private readonly alertCtrl: AlertController,
+    private readonly auth: AuthService,
+    private readonly i18n: I18nService,
+    private readonly appGuide: AppGuideService,
+    private readonly wizardTour: WizardTourService,
+    private readonly biometric: BiometricUnlockService
   ) {}
 
   ngOnInit(): void {
+    void this.configureNativeChrome();
     void this.pushNotificationService.initialize();
     void this.deepLinkService.start();
+  }
+
+  /** Android 15+ (targetSdk 36) desenha atras da barra do sistema; sem inset o rodape fica tapado. */
+  private async configureNativeChrome(): Promise<void> {
+    if (!Capacitor.isNativePlatform()) return;
+    if (Capacitor.getPlatform() !== 'android') return;
+    document.documentElement.classList.add('native-android');
+    try {
+      await StatusBar.setOverlaysWebView({ overlay: false });
+    } catch {
+      // StatusBar pode falhar se o plugin nao estiver sincronizado.
+    }
   }
 
   async onMenuWillOpen(): Promise<void> {
@@ -103,8 +127,56 @@ export class AppComponent implements OnInit {
     await this.router.navigateByUrl(url);
   }
 
+  async startWizardFromMenu(): Promise<void> {
+    await this.menuCtrl.close('app-menu');
+    this.wizardTour.startFromMenu();
+    if (this.wizardTour.isAuthRoute(this.router.url)) {
+      await this.router.navigateByUrl('/tabs/peladas');
+    }
+  }
+
+  async registerBiometricFromMenu(): Promise<void> {
+    await this.menuCtrl.close('app-menu');
+    const result = await this.biometric.promptFromMenu();
+    if (result === 'cancelled') return;
+    const toast = await this.toastCtrl.create({
+      message:
+        result === 'enabled'
+          ? this.i18n.t('menu.biometricRegistered')
+          : this.i18n.t('menu.biometricDisabled'),
+      duration: 2400,
+      color: 'success',
+    });
+    await toast.present();
+  }
+
   async openGuideFromMenu(): Promise<void> {
     await this.menuCtrl.close('app-menu');
     this.appGuide.openManual();
+  }
+
+  async logoutFromMenu(): Promise<void> {
+    await this.menuCtrl.close('app-menu');
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('menu.logout'),
+      message: this.i18n.t('confirm.logout'),
+      buttons: [
+        { text: this.i18n.t('confirm.cancel'), role: 'cancel' },
+        {
+          text: this.i18n.t('menu.logout'),
+          role: 'destructive',
+          handler: () => {
+            void this.doLogout();
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  private async doLogout(): Promise<void> {
+    await this.menuCtrl.close('app-menu');
+    await this.auth.logout();
+    await this.router.navigateByUrl('/login', { replaceUrl: true });
   }
 }

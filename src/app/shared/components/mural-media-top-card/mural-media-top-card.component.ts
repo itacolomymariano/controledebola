@@ -23,6 +23,7 @@ export class MuralMediaTopCardComponent implements OnChanges {
   @Input() peladaId = '';
   @Input() kind: EventMediaTopKind = 'video';
   @Input() shareContext: MuralShareContext | null = null;
+  @Input() filterCaption = '';
 
   loading = true;
   item: EventMediaTopItem | null = null;

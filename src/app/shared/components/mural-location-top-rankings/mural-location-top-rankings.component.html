@@ -4,11 +4,15 @@
     <app-mural-share-button
       [context]="shareContext"
       cardTitle="Top 3 por localizacao"
+      ruleKey="mural.rule.topLocal"
       [target]="locationShareRoot"
     ></app-mural-share-button>
   </ion-list-header>
 
   <div #locationShareRoot>
+  @if (filterCaption) {
+    <p class="mural-filter-line">{{ filterCaption }}</p>
+  }
   <div class="drilldown-header">
     @if (level !== 'states') {
       <ion-button fill="clear" size="small" (click)="backLevel()">Voltar</ion-button>
@@ -102,11 +106,15 @@
       <div class="mural-card-header-row">
         <div>
           <ion-card-title>{{ group.label }}</ion-card-title>
+          @if (filterCaption) {
+            <p class="mural-filter-line">{{ filterCaption }}</p>
+          }
           <ion-card-subtitle>{{ group.participantCount }} participantes</ion-card-subtitle>
         </div>
         <app-mural-share-button
           [context]="shareContext"
           [cardTitle]="'Top 3 — ' + group.label"
+          ruleKey="mural.rule.topLocal"
         ></app-mural-share-button>
       </div>
     </ion-card-header>

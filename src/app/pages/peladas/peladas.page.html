@@ -1,6 +1,9 @@
 <ion-header>
   <ion-toolbar>
     <ion-title>{{ 'peladas.title' | t }}</ion-title>
+    <ion-buttons slot="end">
+      <app-screen-help helpId="peladas-help" bodyKey="peladas.help"></app-screen-help>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -24,28 +27,6 @@
     </ion-card>
   }
 
-  @if (!loading && !errorMessage && coachTip) {
-    <ion-card class="ion-margin coach-card" color="light">
-      <ion-card-header>
-        <ion-card-subtitle>{{ 'coach.cardTitle' | t }}</ion-card-subtitle>
-        <ion-card-title>{{ coachTip.titleKey | t }}</ion-card-title>
-      </ion-card-header>
-      <ion-card-content>
-        <p>{{ coachTip.bodyKey | t }}</p>
-        <ion-button fill="solid" size="small" (click)="followCoach()">{{ coachTip.ctaKey | t }}</ion-button>
-        <ion-button fill="clear" size="small" (click)="openGuide()">{{ 'profile.guideTitle' | t }}</ion-button>
-      </ion-card-content>
-    </ion-card>
-  }
-
-  @if (!loading && !errorMessage) {
-    <ion-card class="ion-margin peladas-orientation">
-      <ion-card-content>
-        <p>{{ 'peladas.hint' | t }}</p>
-      </ion-card-content>
-    </ion-card>
-  }
-
   @if (!loading && !errorMessage && peladaRows.length === 0) {
     <ion-list>
       <ion-item>
@@ -61,7 +42,7 @@
   @if (!loading && peladaRows.length > 0) {
     <ion-list>
       @for (row of peladaRows; track row.pelada.objectId) {
-        <ion-item button (click)="openPelada(row)">
+        <ion-item button (click)="openPelada(row)" class="list-card-with-action">
           <ion-icon name="football-outline" slot="start"></ion-icon>
           <ion-label class="ion-text-wrap">
             <h2>{{ row.pelada.name }}</h2>
@@ -75,9 +56,21 @@
             <p>
               {{ row.pelada.heldEventCount ?? 0 }}
               {{ (row.pelada.heldEventCount ?? 0) === 1 ? ('peladas.eventsOne' | t) : ('peladas.eventsMany' | t) }}
+              @if ((row.pelada.heldEventCount ?? 0) > 0) {
+                · {{ 'peladas.avgParticipants' | t }}:
+                {{ (row.pelada.avgParticipantsPerEvent ?? 0) | number: '1.0-1' }}
+              }
             </p>
             <p>{{ 'peladas.admin' | t }}: {{ row.pelada.adminName }}</p>
           </ion-label>
+          <ion-button
+            slot="end"
+            fill="solid"
+            size="small"
+            (click)="openPelada(row); $event.stopPropagation()"
+          >
+            Entrar
+          </ion-button>
         </ion-item>
       }
     </ion-list>

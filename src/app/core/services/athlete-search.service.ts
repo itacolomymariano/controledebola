@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import Parse from 'parse';
 import { Address } from '../models/address.model';
 import {
+  AthleteActivityIndicators,
+  TeamMatchRecord,
   AthletePublicProfile,
   AthleteSearchResult,
 } from '../models/athlete-search.model';
@@ -224,6 +226,81 @@ export class AthleteSearchService {
     }
 
     return this.getPublicProfileClient(normalizedUserId);
+  }
+
+  async getActivityIndicators(
+    userId: string,
+    months = 3
+  ): Promise<AthleteActivityIndicators | null> {
+    const normalizedUserId = userId.trim();
+    if (!normalizedUserId) return null;
+    try {
+      const result = await Parse.Cloud.run('getAthleteActivityIndicators', {
+        userId: normalizedUserId,
+        months,
+      });
+      if (!result || typeof result !== 'object') return null;
+      const row = result as Record<string, unknown>;
+      return {
+        windowStart: String(row['windowStart'] || ''),
+        windowEnd: String(row['windowEnd'] || ''),
+        months: Number(row['months'] || months),
+        gamesPlayed: Number(row['gamesPlayed'] || 0),
+        peladasPlayed: Number(row['peladasPlayed'] || 0),
+        gamesAbsent: Number(row['gamesAbsent'] || 0),
+        peladasAbsent: Number(row['peladasAbsent'] || 0),
+        teamMatchInvitesReceived: Number(row['teamMatchInvitesReceived'] || 0),
+        teamMatchInvitesDeclined: Number(row['teamMatchInvitesDeclined'] || 0),
+        peladaInvitesReceived: Number(row['peladaInvitesReceived'] || 0),
+        peladaInvitesDeclined: Number(row['peladaInvitesDeclined'] || 0),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async getUserTeamMatchRecord(
+    userId: string,
+    roleContext: 'athlete' | 'coach' = 'athlete'
+  ): Promise<TeamMatchRecord | null> {
+    const normalizedUserId = userId.trim();
+    if (!normalizedUserId) return null;
+    try {
+      const result = await Parse.Cloud.run('getUserTeamMatchRecord', {
+        userId: normalizedUserId,
+        roleContext,
+      });
+      return this.mapTeamMatchRecord(result);
+    } catch {
+      return null;
+    }
+  }
+
+  async getPresidentTeamMatchRecord(userId: string): Promise<TeamMatchRecord | null> {
+    const normalizedUserId = userId.trim();
+    if (!normalizedUserId) return null;
+    try {
+      const result = await Parse.Cloud.run('getPresidentTeamMatchRecord', {
+        userId: normalizedUserId,
+      });
+      return this.mapTeamMatchRecord(result);
+    } catch {
+      return null;
+    }
+  }
+
+  private mapTeamMatchRecord(raw: unknown): TeamMatchRecord | null {
+    if (!raw || typeof raw !== 'object') return null;
+    const row = raw as Record<string, unknown>;
+    return {
+      matchesPlayed: Number(row['matchesPlayed'] || 0),
+      wins: Number(row['wins'] || 0),
+      losses: Number(row['losses'] || 0),
+      draws: Number(row['draws'] || 0),
+      winRatePercent: Number(row['winRatePercent'] || 0),
+      teamsPresided:
+        row['teamsPresided'] != null ? Number(row['teamsPresided']) : undefined,
+    };
   }
 
   private async loadCatalog(): Promise<AthleteSearchResult[]> {

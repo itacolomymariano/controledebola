@@ -5,12 +5,20 @@ export interface EventDetailOverviewChip {
   color: string;
 }
 
+export interface EventDetailOverviewTeamMatchLine {
+  homeTeamName: string;
+  awayTeamName: string;
+  homeTeamShieldUrl?: string;
+  awayTeamShieldUrl?: string;
+}
+
 export interface EventDetailOverviewRow {
   icon: string;
   title: string;
   value: string;
   detail?: string;
   detailLines?: string[];
+  teamMatch?: EventDetailOverviewTeamMatchLine;
 }
 
 export interface EventDetailOverviewViewModel {

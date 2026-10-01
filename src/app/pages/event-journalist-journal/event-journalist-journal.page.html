@@ -14,6 +14,9 @@
   }
 
   @if (!loading) {
+    <ion-note class="scroll-hint ion-margin-bottom" color="medium">
+      Role a tela para revisar o texto e enviar a reportagem ao mural.
+    </ion-note>
     <ion-segment [value]="activeSection" (ionChange)="onSectionChange($any($event.detail.value))">
       <ion-segment-button value="reportage">
         <ion-label>Reportagem</ion-label>

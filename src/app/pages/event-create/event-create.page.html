@@ -30,6 +30,20 @@
 
       @if (form.get('type')?.value === 'team_match') {
         <ion-item>
+          <ion-select
+            label="Time mandante cadastrado"
+            labelPlacement="stacked"
+            formControlName="homeTeamId"
+            interface="popover"
+            (ionChange)="onHomeTeamPicked($any($event.detail.value))"
+          >
+            <ion-select-option value="">Digitar nome</ion-select-option>
+            @for (team of amateurTeams; track team.id) {
+              <ion-select-option [value]="team.id">{{ team.name }}</ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
+        <ion-item>
           <ion-input
             label="Nome da equipe mandante"
             labelPlacement="stacked"
@@ -37,6 +51,20 @@
             placeholder="Ex.: Time Azul"
             (ionInput)="onFieldChange()"
           ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-select
+            label="Time visitante cadastrado"
+            labelPlacement="stacked"
+            formControlName="awayTeamId"
+            interface="popover"
+            (ionChange)="onAwayTeamPicked($any($event.detail.value))"
+          >
+            <ion-select-option value="">Digitar nome</ion-select-option>
+            @for (team of amateurTeams; track team.id) {
+              <ion-select-option [value]="team.id">{{ team.name }}</ion-select-option>
+            }
+          </ion-select>
         </ion-item>
         <ion-item>
           <ion-input
@@ -47,6 +75,9 @@
             (ionInput)="onFieldChange()"
           ></ion-input>
         </ion-item>
+        <ion-note color="medium" class="ion-padding-horizontal">
+          Prefira um time ja cadastrado. Se ainda nao existir, digite o nome.
+        </ion-note>
       }
 
       <ion-item>

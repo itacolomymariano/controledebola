@@ -4,25 +4,385 @@
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/tabs/peladas"></ion-back-button>
     </ion-buttons>
-    <ion-title>Caixa de entrada</ion-title>
+    <ion-title>Mensagens</ion-title>
+    <ion-buttons slot="end">
+      <app-screen-help helpId="inbox-help" bodyKey="inbox.help"></app-screen-help>
+    </ion-buttons>
+  </ion-toolbar>
+  <ion-toolbar>
+    <ion-segment [value]="mailbox" (ionChange)="setMailbox($any($event.detail.value))">
+      <ion-segment-button value="in">
+        <ion-label>Entrada</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="out">
+        <ion-label>Saida</ion-label>
+      </ion-segment-button>
+    </ion-segment>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
+  <ion-searchbar
+    class="inbox-searchbar"
+    [value]="searchTerm"
+    debounce="0"
+    placeholder="Buscar nas mensagens"
+    (ionInput)="onSearchInput($any($event.detail.value))"
+    (ionClear)="onSearchInput('')"
+  ></ion-searchbar>
+
   @if (loading) {
     <div class="ion-text-center ion-padding">
       <ion-spinner name="crescent"></ion-spinner>
     </div>
   }
 
-  @if (!loading && invitations.length === 0 && paymentConfirmations.length === 0 && supplementaryOpportunities.length === 0) {
-    <ion-note color="medium">Nenhum convite pendente no momento.</ion-note>
-    <ion-button expand="block" class="ion-margin-top" fill="outline" (click)="goBack()">
-      Voltar
-    </ion-button>
+  @if (!loading && hasPendingItems) {
+    <h2 class="section-title">Precisa da sua resposta</h2>
   }
 
-  @if (!loading && supplementaryOpportunities.length > 0) {
+  @if (!loading && mailbox === 'in' && !hasPendingItems) {
+    <ion-note color="medium">Nenhum convite pendente na entrada.</ion-note>
+  }
+
+  @if (!loading && mailbox === 'out' && !hasPendingItems) {
+    <ion-note color="medium">Nenhum desafio ou solicitacao na saida.</ion-note>
+  }
+
+  @if (!loading && mailbox === 'out' && outboxJoinRequests.length > 0) {
+    <h2 class="section-title">Participacao em confrontos</h2>
+    @for (request of outboxJoinRequests; track request.objectId) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>{{ joinOutboxTitle(request) }}</ion-card-title>
+          <ion-card-subtitle>{{ joinOutboxStatus(request) }}</ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          <p>{{ request.eventName }}</p>
+          @if (request.eventStartTime) {
+            <p>Inicio: {{ formatDate(request.eventStartTime) }}</p>
+          }
+          @if (joinOutboxIsAthlete(request)) {
+            <p>Presidente: {{ request.presidentApelido || '—' }}</p>
+          } @else {
+            <p>Atleta: {{ request.athleteApelido || request.athleteFullName || '—' }}</p>
+          }
+          @if (request.message) {
+            <p>{{ request.message }}</p>
+          }
+          @if (request.status === 'declined' && request.declineReason) {
+            <p>Motivo: {{ request.declineReason }}</p>
+          }
+          @if (request.eventId) {
+            <ion-button expand="block" fill="outline" (click)="openEventById(request.eventId)">
+              Ver confronto
+            </ion-button>
+          }
+        </ion-card-content>
+      </ion-card>
+    }
+  }
+
+  @if (!loading && mailbox === 'out' && outboxRefereeApprovals.length > 0) {
+    <h2 class="section-title">Arbitragem em confrontos</h2>
+    @for (item of outboxRefereeApprovals; track item.invitationId) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>{{ item.invitedUserName }}</ion-card-title>
+          <ion-card-subtitle>{{ refereeApprovalOutboxStatus(item) }}</ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          <p>{{ item.eventName }}</p>
+          @if (item.eventStartTime) {
+            <p>Inicio: {{ formatDate(item.eventStartTime) }}</p>
+          }
+          <p>Pagamento: {{ item.refereePaymentModeLabel || item.refereePaymentMode }}</p>
+          @if (item.refereeHiringApprovalStatus === 'rejected') {
+            <p>
+              O presidente adversario recusou esta proposta. Voce pode contratar outro arbitro no
+              confronto.
+            </p>
+          }
+          @if (item.eventId) {
+            <ion-button expand="block" fill="outline" (click)="openEventById(item.eventId)">
+              Ver confronto
+            </ion-button>
+          }
+        </ion-card-content>
+      </ion-card>
+    }
+  }
+
+  @if (!loading && mailbox === 'out' && outboxChallenges.length > 0) {
+    <h2 class="section-title">Desafios e respostas</h2>
+    @for (challenge of outboxChallenges; track challenge.objectId) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>{{ challengeOutboxTitle(challenge) }}</ion-card-title>
+          <ion-card-subtitle>{{ challengeOutboxStatus(challenge) }}</ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          @if (challenge.proposedStartTime) {
+            <p>Proposta: {{ formatDate(challenge.proposedStartTime) }}</p>
+          }
+          @if (challengeLocationLabel(challenge)) {
+            <p>Local: {{ challengeLocationLabel(challenge) }}</p>
+          }
+          @if (challenge.message) {
+            <p>{{ challenge.message }}</p>
+          }
+          @if (challenge.challengeConditions) {
+            <p><strong>Condicoes e beneficios:</strong> {{ challenge.challengeConditions }}</p>
+          }
+          @if (challenge.hasReturnLeg) {
+            <p><strong>Formato:</strong> Ida e volta</p>
+          }
+          @if (challenge.status === 'declined' && challenge.declineReason) {
+            <p>Motivo: {{ challenge.declineReason }}</p>
+          }
+          @if (challengeOutboxIsSender(challenge) && challenge.status === 'accepted') {
+            <ion-button expand="block" (click)="scheduleChallenge(challenge)">
+              Marcar confronto
+            </ion-button>
+          }
+          @if (challenge.eventId) {
+            <ion-button expand="block" fill="outline" (click)="openEventById(challenge.eventId)">
+              Ver confronto
+            </ion-button>
+          }
+        </ion-card-content>
+      </ion-card>
+    }
+  }
+
+  @if (!loading && mailbox === 'in' && pendingReschedules.length > 0) {
+    <h2 class="section-title">Remarcacoes de confronto</h2>
+    @for (proposal of pendingReschedules; track proposal.eventId) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>{{ proposal.homeTeamName }} x {{ proposal.awayTeamName }}</ion-card-title>
+          <ion-card-subtitle>{{ proposal.eventName }}</ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          @if (proposal.currentStartTime) {
+            <p>Atual: {{ formatDate(proposal.currentStartTime) }}</p>
+          }
+          @if (proposal.proposedStartTime) {
+            <p>Proposta: {{ formatDate(proposal.proposedStartTime) }}</p>
+          }
+          @if (proposal.reason) {
+            <p>Motivo: {{ proposal.reason }}</p>
+          }
+          <ion-button
+            expand="block"
+            [disabled]="processingId === proposal.eventId"
+            (click)="acceptReschedule(proposal)"
+          >
+            Aceitar remarcacao
+          </ion-button>
+          <ion-button
+            expand="block"
+            fill="clear"
+            color="danger"
+            [disabled]="processingId === proposal.eventId"
+            (click)="declineReschedule(proposal)"
+          >
+            Recusar
+          </ion-button>
+          <ion-button expand="block" fill="outline" (click)="openEventById(proposal.eventId)">
+            Ver confronto
+          </ion-button>
+        </ion-card-content>
+      </ion-card>
+    }
+  }
+
+  @if (!loading && mailbox === 'in' && incomingRefereeApprovals.length > 0) {
+    <h2 class="section-title">Aprovar arbitragem</h2>
+    @for (item of incomingRefereeApprovals; track item.invitationId) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Arbitro: {{ item.invitedUserName }}</ion-card-title>
+          <ion-card-subtitle>{{ item.eventName }}</ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          @if (item.eventStartTime) {
+            <p>Inicio: {{ formatDate(item.eventStartTime) }}</p>
+          }
+          <p>Proposta do time {{ refereeApprovalSideLabel(item.refereeHiringRequestedByTeamSide) }}</p>
+          <p>Pagamento: <strong>{{ item.refereePaymentModeLabel || item.refereePaymentMode }}</strong></p>
+          @if (item.offeredAmount > 0) {
+            <p>Valor oferecido: <strong>{{ formatCurrency(item.offeredAmount) }}</strong></p>
+          }
+          <p>Solicitado por: {{ item.invitedByName }}</p>
+          <ion-button
+            expand="block"
+            class="ion-margin-top"
+            [disabled]="processingId === item.invitationId"
+            (click)="approveRefereeHiring(item)"
+          >
+            Aprovar contratacao
+          </ion-button>
+          <ion-button
+            expand="block"
+            fill="clear"
+            color="danger"
+            [disabled]="processingId === item.invitationId"
+            (click)="rejectRefereeHiring(item)"
+          >
+            Recusar
+          </ion-button>
+          @if (item.eventId) {
+            <ion-button expand="block" fill="outline" (click)="openEventById(item.eventId)">
+              Ver confronto
+            </ion-button>
+          }
+        </ion-card-content>
+      </ion-card>
+    }
+  }
+
+  @if (!loading && mailbox === 'in' && incomingJoinRequests.length > 0) {
+    <h2 class="section-title">Solicitacoes de participacao</h2>
+    @for (request of incomingJoinRequests; track request.objectId) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>
+            {{ request.athleteApelido || request.athleteFullName || 'Atleta' }}
+          </ion-card-title>
+          <ion-card-subtitle>{{ request.eventName }} — {{ request.teamName }}</ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          @if (request.eventStartTime) {
+            <p>Inicio: {{ formatDate(request.eventStartTime) }}</p>
+          }
+          @if (request.message) {
+            <p>{{ request.message }}</p>
+          }
+          <div class="inviter-row ion-margin-top">
+            <app-user-avatar
+              [avatarUrl]="request.athleteAvatarUrl"
+              [alt]="request.athleteApelido || request.athleteFullName"
+              size="md"
+            ></app-user-avatar>
+            <div class="inviter-info">
+              <p class="inviter-label">Solicitante</p>
+              <p class="inviter-name">
+                <strong>{{ request.athleteApelido || request.athleteFullName }}</strong>
+              </p>
+              @if (
+                request.athleteFullName &&
+                request.athleteFullName !== request.athleteApelido
+              ) {
+                <p>{{ request.athleteFullName }}</p>
+              }
+            </div>
+          </div>
+          <ion-button
+            expand="block"
+            fill="outline"
+            class="ion-margin-top"
+            (click)="viewJoinAthleteProfile(request)"
+          >
+            Ver perfil do atleta
+          </ion-button>
+          <ion-button
+            expand="block"
+            class="ion-margin-top"
+            [disabled]="processingId === request.objectId"
+            (click)="acceptJoinRequest(request)"
+          >
+            Autorizar participacao
+          </ion-button>
+          <ion-button
+            expand="block"
+            fill="clear"
+            color="danger"
+            [disabled]="processingId === request.objectId"
+            (click)="declineJoinRequest(request)"
+          >
+            Recusar
+          </ion-button>
+          @if (request.eventId) {
+            <ion-button expand="block" fill="outline" (click)="openEventById(request.eventId)">
+              Ver confronto
+            </ion-button>
+          }
+        </ion-card-content>
+      </ion-card>
+    }
+  }
+
+  @if (!loading && mailbox === 'in' && incomingChallenges.length > 0) {
+    <h2 class="section-title">Desafios recebidos</h2>
+    @for (challenge of incomingChallenges; track challenge.objectId) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Desafio de {{ challenge.challengerTeamName }}</ion-card-title>
+          <ion-card-subtitle>Para {{ challenge.challengedTeamName }}</ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          @if (challenge.proposedStartTime) {
+            <p>Proposta: {{ formatDate(challenge.proposedStartTime) }}</p>
+          }
+          @if (challengeLocationLabel(challenge)) {
+            <p>Local: {{ challengeLocationLabel(challenge) }}</p>
+          }
+          @if (challenge.message) {
+            <p>{{ challenge.message }}</p>
+          }
+          @if (challenge.challengeConditions) {
+            <p><strong>Condicoes e beneficios:</strong> {{ challenge.challengeConditions }}</p>
+          }
+          @if (challenge.hasReturnLeg) {
+            <p><strong>Formato:</strong> Ida e volta</p>
+          }
+          <ion-button
+            expand="block"
+            fill="outline"
+            (click)="viewChallengeTeam(challenge.challengerTeamId)"
+          >
+            Ver perfil do desafiante
+          </ion-button>
+          <ion-button
+            expand="block"
+            class="ion-margin-top"
+            [disabled]="processingId === challenge.objectId"
+            (click)="acceptChallenge(challenge)"
+          >
+            Aceitar desafio
+          </ion-button>
+          <ion-button
+            expand="block"
+            fill="clear"
+            color="danger"
+            [disabled]="processingId === challenge.objectId"
+            (click)="declineChallenge(challenge)"
+          >
+            Recusar
+          </ion-button>
+        </ion-card-content>
+      </ion-card>
+    }
+  }
+
+  @if (!loading && mailbox === 'in' && teamMatchNotices.length > 0) {
+    <h2 class="section-title">Confrontos do seu time</h2>
+    @for (notice of teamMatchNotices; track notice.objectId) {
+      <ion-card button (click)="openTeamMatchNotice(notice)">
+        <ion-card-header>
+          <ion-card-title>Novo confronto</ion-card-title>
+          <ion-card-subtitle>{{ notice.homeTeamName }} x {{ notice.awayTeamName }}</ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          <p>Inicio: {{ formatDate(notice.startTime) }}</p>
+          <ion-button expand="block" (click)="openTeamMatchNotice(notice)">Abrir confronto</ion-button>
+        </ion-card-content>
+      </ion-card>
+    }
+  }
+
+  @if (!loading && mailbox === 'in' && supplementaryOpportunities.length > 0) {
     <h2 class="section-title">Negociacao pos-convite</h2>
     @for (opportunity of supplementaryOpportunities; track opportunity.invitationId) {
       <ion-card>
@@ -54,16 +414,44 @@
     }
   }
 
+  @if (!loading && mailbox === 'in' && contractConfirmations.length > 0) {
+    <h2 class="section-title">Contratacoes confirmadas</h2>
+    @for (invitation of contractConfirmations; track invitation.objectId) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Contratacao confirmada</ion-card-title>
+          <ion-card-subtitle>
+            {{ invitationRoleLabel(invitation) }} · {{ invitation.eventName }}
+          </ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          <p>Inicio: {{ formatDate(invitation.eventStartTime) }}</p>
+          @if (invitation.offeredAmount > 0) {
+            <p>Valor acordado: <strong>{{ formatCurrency(invitation.offeredAmount) }}</strong></p>
+          }
+          <p>Contratado por {{ invitation.invitedByApelido || invitation.invitedByName }}.</p>
+          <ion-button expand="block" class="ion-margin-top" (click)="openContractConfirmation(invitation)">
+            Ver evento
+          </ion-button>
+        </ion-card-content>
+      </ion-card>
+    }
+  }
+
+  @if (mailbox === 'in') {
   @for (invitation of invitations; track invitation.objectId) {
     <ion-card>
       <ion-card-header>
-        <ion-card-title>Convite de {{ invitationRoleLabel(invitation) }}</ion-card-title>
+        <ion-card-title>{{ invitationTitle(invitation) }}</ion-card-title>
         <ion-card-subtitle>{{ invitation.eventName }}</ion-card-subtitle>
       </ion-card-header>
       <ion-card-content>
-        <p>Pelada: {{ invitation.peladaName || '—' }}</p>
+        <p>Pelada: {{ invitation.peladaName || (invitation.eventType === 'team_match' ? 'Confronto' : '—') }}</p>
         <p>Inicio: {{ formatDate(invitation.eventStartTime) }}</p>
         <p>Valor oferecido: <strong>{{ formatCurrency(invitation.offeredAmount) }}</strong></p>
+        @if (invitationTeamLabel(invitation)) {
+          <p>Time: <strong>{{ invitationTeamLabel(invitation) }}</strong></p>
+        }
         @if (invitation.responseDeadline) {
           <p>Responder ate: <strong>{{ formatDate(invitation.responseDeadline) }}</strong></p>
         }
@@ -111,12 +499,21 @@
     </ion-card>
   }
 
-  @if (!loading && paymentConfirmations.length > 0) {
+  @if (!loading && mailbox === 'in' && paymentConfirmations.length > 0) {
     <h2 class="section-title">Confirmar recebimento de pagamento</h2>
     @for (invitation of paymentConfirmations; track invitation.objectId) {
       <ion-card>
         <ion-card-header>
-          <ion-card-title>Pagamento — {{ invitationRoleLabel(invitation) }}</ion-card-title>
+          <ion-card-title>
+            Pagamento — {{ invitationRoleLabel(invitation)
+            }}{{
+              invitation.teamMatchLeg === 'volta'
+                ? ' (Volta)'
+                : invitation.teamMatchLeg === 'ida'
+                  ? ' (Ida)'
+                  : ''
+            }}
+          </ion-card-title>
           <ion-card-subtitle>{{ invitation.eventName }}</ion-card-subtitle>
         </ion-card-header>
         <ion-card-content>
@@ -134,4 +531,88 @@
       </ion-card>
     }
   }
+  }
+
+  <div class="messages-header">
+    <h2 class="section-title">
+      {{ mailbox === 'out' ? 'Mensagens enviadas' : 'Mensagens recebidas' }}
+    </h2>
+    @if (mailbox === 'in' && unreadMessageCount > 0) {
+      <ion-button fill="clear" size="small" (click)="markAllMessagesRead()">
+        Marcar todas como lidas
+      </ion-button>
+    }
+  </div>
+
+  @if (messagesLoading && messages.length === 0) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  @if (messagesError) {
+    <ion-note color="danger">{{ messagesError }}</ion-note>
+  }
+
+  @if (!messagesLoading && !messagesError && messages.length === 0) {
+    <ion-note color="medium">
+      @if (searchTerm) {
+        Nenhuma mensagem encontrada para "{{ searchTerm }}".
+      } @else if (mailbox === 'out') {
+        Voce ainda nao enviou mensagens.
+      } @else {
+        Voce ainda nao recebeu mensagens.
+      }
+    </ion-note>
+  }
+
+  @if (messages.length > 0) {
+    <ion-list lines="full" class="messages-list">
+      @for (message of messages; track message.objectId) {
+        <ion-item
+          button
+          detail="false"
+          [class.message-unread]="message.unread && mailbox === 'in'"
+          (click)="openMessage(message)"
+        >
+          <app-user-avatar
+            slot="start"
+            [avatarUrl]="message.counterpartAvatarUrl"
+            [alt]="message.counterpartName"
+            size="md"
+          ></app-user-avatar>
+          <ion-label>
+            <h3 class="message-title">
+              @if (message.unread && mailbox === 'in') {
+                <span class="message-dot" aria-label="Nao lida"></span>
+              }
+              {{ message.title }}
+            </h3>
+            <p class="message-body">{{ message.body }}</p>
+            <p class="message-meta">
+              {{ messageCounterpartLabel(message) }} ·
+              {{ mailbox === 'out' ? 'Enviada em' : 'Recebida em' }}
+              {{ formatMessageDate(message.sentAt) }}
+            </p>
+          </ion-label>
+        </ion-item>
+      }
+    </ion-list>
+
+    @if (hasMoreMessages) {
+      <ion-button
+        expand="block"
+        fill="outline"
+        class="ion-margin-top"
+        [disabled]="messagesLoading"
+        (click)="loadMoreMessages()"
+      >
+        Carregar mais mensagens
+      </ion-button>
+    }
+  }
+
+  <ion-button expand="block" class="ion-margin-top" fill="outline" (click)="goBack()">
+    Voltar
+  </ion-button>
 </ion-content>

@@ -1,5 +1,11 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
-import { PeladaEvent, hasPositiveParticipationFee } from '../../../core/models/event.model';
+import { Router } from '@angular/router';
+import {
+  PeladaEvent,
+  TeamSide,
+  hasPositiveParticipationFee,
+  teamSideLabel,
+} from '../../../core/models/event.model';
 import {
   EventRegistration,
   EventRegistrationListItem,
@@ -44,6 +50,7 @@ export class EventDetailParticipantsPanelComponent {
   @Input() issuingTicketId = '';
   @Input() cancellingTicketId = '';
   @Input() resolvingProfileId = '';
+  @Input() updatingTeamSideId = '';
   @Input() activeSocioUserIds: ReadonlySet<string> = new Set<string>();
 
   @Output() back = new EventEmitter<void>();
@@ -66,11 +73,20 @@ export class EventDetailParticipantsPanelComponent {
   @Output() viewProfilePresentation = new EventEmitter<EventRegistrationListItem>();
   @Output() approveProfilePresentation = new EventEmitter<EventRegistrationListItem>();
   @Output() rejectProfilePresentation = new EventEmitter<EventRegistrationListItem>();
+  @Output() teamSideChange = new EventEmitter<{
+    participant: EventRegistrationListItem;
+    teamSide: TeamSide;
+  }>();
 
   constructor(
     readonly registrationService: RegistrationService,
-    readonly eventService: EventService
+    readonly eventService: EventService,
+    private readonly router: Router
   ) {}
+
+  openInbox(): void {
+    void this.router.navigateByUrl('/inbox');
+  }
 
   get isAdminMode(): boolean {
     return this.mode === 'admin';
@@ -144,5 +160,40 @@ export class EventDetailParticipantsPanelComponent {
 
   onSearchInput(event: CustomEvent): void {
     this.participantSearchChange.emit(String(event.detail.value ?? ''));
+  }
+
+  get isTeamMatch(): boolean {
+    return this.event.type === 'team_match';
+  }
+
+  participantTeamSideLabel(participant: EventRegistration | EventRegistrationListItem): string {
+    return teamSideLabel(participant.teamSide, this.event.homeTeamName, this.event.awayTeamName);
+  }
+
+  teamGroupTitle(participant: EventRegistrationListItem): string {
+    if (participant.teamSide === 'home') {
+      return this.event.homeTeamName?.trim() || 'Mandante';
+    }
+    if (participant.teamSide === 'away') {
+      return this.event.awayTeamName?.trim() || 'Visitante';
+    }
+    return 'Sem time definido';
+  }
+
+  showTeamGroupHeader(
+    index: number,
+    rows: EventRegistrationListItem[]
+  ): boolean {
+    if (!this.isTeamMatch || !rows.length) return false;
+    if (index === 0) return true;
+    const prev = rows[index - 1]?.teamSide;
+    const current = rows[index]?.teamSide;
+    return prev !== current;
+  }
+
+  onTeamSideSelect(participant: EventRegistrationListItem, value: string): void {
+    if (value !== 'home' && value !== 'away') return;
+    if (participant.teamSide === value) return;
+    this.teamSideChange.emit({ participant, teamSide: value });
   }
 }

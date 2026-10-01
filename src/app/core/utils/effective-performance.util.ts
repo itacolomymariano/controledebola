@@ -41,6 +41,7 @@ function hasRefereeSumulaSaved(obj: Parse.Object): boolean {
   if (obj.get('refereeSumulaSaved')) return true;
   if (obj.get('refereeObservation')) return true;
   if (Number(obj.get('refereeGoals') ?? 0) > 0) return true;
+  if (Number(obj.get('refereeGoalsConceded') ?? 0) > 0) return true;
   if (Number(obj.get('refereeYellowCards') ?? 0) > 0) return true;
   if (Number(obj.get('refereeRedCards') ?? 0) > 0) return true;
   if (Number(obj.get('refereeFoulsCommitted') ?? 0) > 0) return true;

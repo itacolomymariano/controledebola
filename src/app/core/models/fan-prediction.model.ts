@@ -38,6 +38,7 @@ export interface EventAthleteOption {
   primaryPosition?: string;
   secondaryPosition?: string;
   thirdPosition?: string;
+  teamSide?: import('./event.model').TeamSide;
 }
 
 export interface PredictionRankingEntry {

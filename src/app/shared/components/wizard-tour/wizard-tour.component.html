@@ -1,0 +1,40 @@
+@if (visible && current) {
+  <div class="wizard-tour" role="dialog" [attr.aria-label]="'coach.cardTitle' | t">
+    <ion-card class="wizard-tour-card" color="light">
+      <ion-card-header>
+        <div class="wizard-tour-header">
+          <div>
+            <ion-card-subtitle>
+              {{ 'coach.cardTitle' | t }} · {{ stepIndex + 1 }}/{{ total }}
+            </ion-card-subtitle>
+            <ion-card-title>{{ current.titleKey | t }}</ion-card-title>
+          </div>
+          <app-help-balloon textKey="coach.help"></app-help-balloon>
+          <ion-button
+            fill="clear"
+            size="small"
+            class="wizard-tour-close"
+            (click)="close()"
+            [attr.aria-label]="'coach.close' | t"
+          >
+            <ion-icon name="close-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+        </div>
+      </ion-card-header>
+      <ion-card-content>
+        <p>{{ current.bodyKey | t }}</p>
+        <div class="wizard-tour-actions">
+          <ion-button fill="solid" size="small" (click)="follow()">
+            {{ current.ctaKey | t }}
+          </ion-button>
+          <ion-button fill="clear" size="small" (click)="skip()">
+            {{ 'coach.skip' | t }}
+          </ion-button>
+          <ion-button fill="clear" size="small" color="medium" (click)="close()">
+            {{ 'coach.close' | t }}
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+}

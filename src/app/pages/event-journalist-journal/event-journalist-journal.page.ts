@@ -137,7 +137,11 @@ export class EventJournalistJournalPage {
       await this.showError(this.eventMediaService.errorMessage(error, 'Nao foi possivel enviar a reportagem.'));
     } finally {
       this.publishingReportage = false;
-      await loading.dismiss();
+      try {
+        await loading.dismiss();
+      } catch {
+        /* overlay ja fechado */
+      }
       this.cdr.markForCheck();
     }
   }
@@ -177,7 +181,11 @@ export class EventJournalistJournalPage {
       await this.showError(this.eventMediaService.errorMessage(error, 'Nao foi possivel enviar a entrevista.'));
     } finally {
       this.publishingInterview = false;
-      await loading.dismiss();
+      try {
+        await loading.dismiss();
+      } catch {
+        /* overlay ja fechado */
+      }
       this.cdr.markForCheck();
     }
   }

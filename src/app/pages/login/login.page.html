@@ -1,18 +1,32 @@
 ﻿<ion-header>
   <ion-toolbar>
-    <ion-title>{{ (passwordResetEnabled && forgotPasswordMode ? 'login.resetTitle' : 'login.title') | t }}</ion-title>
-    @if (passwordResetEnabled && forgotPasswordMode) {
-      <ion-buttons slot="start">
-        <ion-button (click)="backToLogin()">
+    <ion-buttons slot="start">
+      @if (passwordResetEnabled && forgotPasswordMode) {
+        <ion-button (click)="resetStep === 'code' ? backToResetEmail() : backToLogin()">
           <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
         </ion-button>
-      </ion-buttons>
-    }
+      }
+      <img
+        src="assets/icon/logo_controle_de_bola.png"
+        alt="Controle de Bola"
+        class="login-brand-logo"
+      />
+    </ion-buttons>
+    <ion-title>
+      <div class="login-title-block">
+        <span>Controle de Bola</span>
+        <span class="login-version">{{ appVersion }}</span>
+      </div>
+    </ion-title>
+    <ion-buttons slot="end">
+      <app-help-balloon textKey="screen.help.login"></app-help-balloon>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
   @if (!passwordResetEnabled || !forgotPasswordMode) {
+    <h1 class="login-heading">{{ 'login.title' | t }}</h1>
     <form [formGroup]="form" (ngSubmit)="submit()">
       <ion-item>
         <ion-input
@@ -50,10 +64,16 @@
       <ion-button expand="block" type="submit" class="ion-margin-top">{{ 'login.submit' | t }}</ion-button>
     </form>
 
-    @if (biometricEnabled) {
-      <ion-button expand="block" fill="outline" class="ion-margin-top" (click)="loginWithBiometric()">
-        {{ 'login.biometric' | t }}
-      </ion-button>
+    @if (showBiometricUnlock) {
+      <button
+        type="button"
+        class="login-fingerprint"
+        (click)="loginWithBiometric()"
+        [attr.aria-label]="'login.biometricAria' | t"
+      >
+        <img src="assets/icon/fingerprint.svg" alt="" class="login-fingerprint-image" />
+        <span class="login-fingerprint-hint">{{ 'login.biometricHint' | t }}</span>
+      </button>
     }
 
     @if (passwordResetEnabled) {
@@ -62,7 +82,8 @@
       </ion-button>
     }
     <ion-button expand="block" fill="clear" (click)="goRegister()">{{ 'login.register' | t }}</ion-button>
-  } @else if (passwordResetEnabled) {
+  } @else if (passwordResetEnabled && resetStep === 'email') {
+    <h1 class="login-heading">{{ 'login.resetTitle' | t }}</h1>
     <p class="reset-hint">{{ 'login.resetHint' | t }}</p>
 
     <form [formGroup]="resetForm" (ngSubmit)="submitPasswordReset()">
@@ -81,6 +102,68 @@
 
       <ion-button expand="block" type="submit" class="ion-margin-top" [disabled]="resetForm.invalid">
         {{ 'login.resetSubmit' | t }}
+      </ion-button>
+    </form>
+  } @else if (passwordResetEnabled) {
+    <h1 class="login-heading">{{ 'login.resetCodeTitle' | t }}</h1>
+    <p class="reset-hint">{{ 'login.resetCodeHint' | t }}</p>
+
+    <form [formGroup]="confirmResetForm" (ngSubmit)="submitPasswordResetConfirm()">
+      <ion-item>
+        <ion-input
+          [label]="'login.resetCode' | t"
+          labelPlacement="stacked"
+          formControlName="code"
+          type="text"
+          inputmode="numeric"
+          maxlength="6"
+          autocomplete="one-time-code"
+        ></ion-input>
+      </ion-item>
+      @if (confirmResetForm.get('code')?.invalid && confirmResetForm.get('code')?.touched) {
+        <ion-note color="danger" class="ion-padding-horizontal">{{ 'login.resetCodeError' | t }}</ion-note>
+      }
+
+      <ion-item>
+        <ion-input
+          [label]="'login.resetNewPassword' | t"
+          labelPlacement="stacked"
+          formControlName="newPassword"
+          [type]="showNewPassword ? 'text' : 'password'"
+          autocomplete="new-password"
+        ></ion-input>
+        <ion-button
+          fill="clear"
+          slot="end"
+          class="password-toggle"
+          (click)="toggleNewPasswordVisibility()"
+          [attr.aria-label]="showNewPassword ? ('login.hidePassword' | t) : ('login.showPassword' | t)"
+        >
+          <ion-icon [name]="showNewPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+        </ion-button>
+      </ion-item>
+      @if (confirmResetForm.get('newPassword')?.invalid && confirmResetForm.get('newPassword')?.touched) {
+        <ion-note color="danger" class="ion-padding-horizontal">{{ 'login.resetNewPasswordError' | t }}</ion-note>
+      }
+
+      <ion-item>
+        <ion-input
+          [label]="'login.resetConfirmPassword' | t"
+          labelPlacement="stacked"
+          formControlName="confirmPassword"
+          [type]="showNewPassword ? 'text' : 'password'"
+          autocomplete="new-password"
+        ></ion-input>
+      </ion-item>
+      @if (confirmResetForm.get('confirmPassword')?.invalid && confirmResetForm.get('confirmPassword')?.touched) {
+        <ion-note color="danger" class="ion-padding-horizontal">{{ 'login.resetConfirmPasswordError' | t }}</ion-note>
+      }
+
+      <ion-button expand="block" type="submit" class="ion-margin-top" [disabled]="confirmResetForm.invalid">
+        {{ 'login.resetConfirmSubmit' | t }}
+      </ion-button>
+      <ion-button expand="block" fill="clear" type="button" (click)="submitPasswordReset()">
+        {{ 'login.resetResend' | t }}
       </ion-button>
     </form>
   }

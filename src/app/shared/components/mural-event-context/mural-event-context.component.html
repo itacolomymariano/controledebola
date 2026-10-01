@@ -1,0 +1,23 @@
+@if (show && context) {
+  <div class="mural-event-context">
+    @if (context.eventName) {
+      <p class="mural-event-context-name">{{ context.eventName }}</p>
+    }
+    @if (eventDateLabel) {
+      <p class="mural-event-context-date">{{ eventDateLabel }}</p>
+    }
+    @if (showTeamMatch) {
+      <app-team-match-headline
+        [homeTeamName]="context.homeTeamName!"
+        [awayTeamName]="context.awayTeamName!"
+        [homeTeamShieldUrl]="context.homeTeamShieldUrl"
+        [awayTeamShieldUrl]="context.awayTeamShieldUrl"
+        [homeScore]="showScores ? context.homeScore! : null"
+        [awayScore]="showScores ? context.awayScore! : null"
+      ></app-team-match-headline>
+    }
+    @if (context.journalistName) {
+      <p class="mural-event-context-journalist">Jornalista: {{ context.journalistName }}</p>
+    }
+  </div>
+}

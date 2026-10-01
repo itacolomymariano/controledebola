@@ -7,9 +7,10 @@ import {
   RefereeInvitation,
   RefereeInvitationStatus,
   SupplementaryHiringOpportunity,
+  TeamMatchRefereeHiringApprovalItem,
 } from '../models/referee-invitation.model';
 import { HireableRole, hireableRoleLabel, inviteeRoleLabel } from '../models/event-hiring.model';
-import { ScheduleConflict } from '../models/event-registration.model';
+import { InvitationAcceptConflict, ScheduleConflict } from '../models/event-registration.model';
 import { PROFILE_ROLE_LABELS, ProfileRole } from '../models/profile-role.model';
 import { getUserAvatarUrl } from '../utils/user-avatar.util';
 import { parseErrorMessage } from '../utils/parse-error.util';
@@ -18,6 +19,7 @@ import { ParseFileService } from './parse-file.service';
 import { PeladaCashService } from './pelada-cash.service';
 import { ParseService } from './parse.service';
 import { RegistrationService } from './registration.service';
+import { AppStorageService } from './app-storage.service';
 
 const CLASS = 'RefereeInvitation';
 const EVENT_CLASS = 'Event';
@@ -33,12 +35,18 @@ export class RefereeInvitationService {
     private readonly eventService: EventService,
     private readonly registrationService: RegistrationService,
     private readonly cashService: PeladaCashService,
-    private readonly parseFileService: ParseFileService
+    private readonly parseFileService: ParseFileService,
+    private readonly appStorage: AppStorageService
   ) {
     this.parseService.init();
   }
 
   async countPendingForCurrentUser(): Promise<number> {
+    return this.countInboxAttentionForCurrentUser();
+  }
+
+  /** Convites de contratacao + desafios recebidos + remarcacoes pendentes. */
+  async countInboxAttentionForCurrentUser(): Promise<number> {
     const user = Parse.User.current();
     if (!user) return 0;
 
@@ -47,7 +55,103 @@ export class RefereeInvitationService {
     const query = new Parse.Query(CLASS);
     query.equalTo('invitedUser', user);
     query.equalTo('status', 'pending');
-    return query.count();
+    let total = await query.count();
+
+    try {
+      const challenges = await Parse.Cloud.run('listMyMatchChallenges');
+      if (Array.isArray(challenges)) {
+        total += challenges.filter(
+          (row) =>
+            String(row['status'] || '') === 'pending' &&
+            String(row['challengedUserId'] || '') === user.id
+        ).length;
+      }
+    } catch {
+      /* cloud indisponivel */
+    }
+
+    try {
+      const reschedules = await Parse.Cloud.run('listPendingTeamMatchReschedules');
+      if (Array.isArray(reschedules)) {
+        total += reschedules.length;
+      }
+    } catch {
+      /* cloud indisponivel */
+    }
+
+    try {
+      const joinRequests = await Parse.Cloud.run('listMyTeamMatchJoinRequests');
+      if (Array.isArray(joinRequests)) {
+        total += joinRequests.filter(
+          (row) =>
+            String(row['status'] || '') === 'pending' &&
+            String(row['presidentUserId'] || '') === user.id
+        ).length;
+      }
+    } catch {
+      /* cloud indisponivel */
+    }
+
+    try {
+      const refereeApprovals = await this.listTeamMatchRefereeHiringApprovals('in');
+      total += refereeApprovals.length;
+    } catch {
+      /* cloud indisponivel */
+    }
+
+    try {
+      total += await this.countUnseenContractConfirmationsForCurrentUser();
+    } catch {
+      /* storage indisponivel */
+    }
+
+    return total;
+  }
+
+  /** Convites aceitos recentes — exibidos na caixa de entrada em vez do card no evento. */
+  async listAcceptedContractConfirmationsForCurrentUser(): Promise<RefereeInvitation[]> {
+    const user = Parse.User.current();
+    if (!user?.id) return [];
+
+    const since = new Date();
+    since.setDate(since.getDate() - 60);
+
+    const query = new Parse.Query(CLASS);
+    query.equalTo('invitedUser', user);
+    query.equalTo('status', 'accepted');
+    query.greaterThan('updatedAt', since);
+    query.include('event');
+    query.include('pelada');
+    query.include('invitedBy');
+    query.descending('updatedAt');
+    query.limit(40);
+    const results = await query.find();
+    return results.map((obj) => this.toInvitation(obj));
+  }
+
+  async listUnseenContractConfirmationsForCurrentUser(): Promise<RefereeInvitation[]> {
+    const user = Parse.User.current();
+    if (!user?.id) return [];
+    const items = await this.listAcceptedContractConfirmationsForCurrentUser();
+    const unseen: RefereeInvitation[] = [];
+    for (const item of items) {
+      if (!(await this.appStorage.isContractInboxSeen(user.id, item.objectId))) {
+        unseen.push(item);
+      }
+    }
+    return unseen;
+  }
+
+  async countUnseenContractConfirmationsForCurrentUser(): Promise<number> {
+    const items = await this.listUnseenContractConfirmationsForCurrentUser();
+    return items.length;
+  }
+
+  async markContractConfirmationSeen(invitationId: string): Promise<void> {
+    const userId = Parse.User.current()?.id;
+    if (!userId || !invitationId) return;
+    await this.appStorage.setContractInboxSeen(userId, invitationId);
+    this.notifyChanged();
   }
 
   async listPendingForCurrentUser(): Promise<RefereeInvitation[]> {
@@ -66,7 +170,106 @@ export class RefereeInvitationService {
     query.descending('createdAt');
     query.limit(100);
     const results = await query.find();
-    return results.map((obj) => this.toInvitation(obj));
+    return results
+      .filter((obj) => {
+        const approval = obj.get('refereeHiringApprovalStatus');
+        return !approval || approval === 'approved';
+      })
+      .map((obj) => this.toInvitation(obj));
+  }
+
+  async listTeamMatchRefereeHiringApprovals(
+    mailbox: 'in' | 'out'
+  ): Promise<TeamMatchRefereeHiringApprovalItem[]> {
+    try {
+      const rows = await Parse.Cloud.run('listTeamMatchRefereeHiringApprovals', { mailbox });
+      if (!Array.isArray(rows)) return [];
+      return rows.map((row) => this.mapRefereeHiringApprovalRow(row));
+    } catch {
+      return [];
+    }
+  }
+
+  async createTeamMatchRefereeHiring(
+    payload: CreateRefereeInvitationPayload & {
+      requestedByTeamSide: 'home' | 'away';
+      refereePaymentMode: 'free' | 'split_50' | 'home_pays';
+    }
+  ): Promise<TeamMatchRefereeHiringApprovalItem> {
+    const result = await Parse.Cloud.run('createTeamMatchRefereeHiringInvitation', {
+      eventId: payload.eventId,
+      invitedUserId: payload.invitedUserId,
+      requestedByTeamSide: payload.requestedByTeamSide,
+      refereePaymentMode: payload.refereePaymentMode,
+      offeredAmount: payload.offeredAmount,
+      responseDeadline: payload.responseDeadline.toISOString(),
+      invitedUserApelido: payload.invitedUserApelido,
+      invitedUserFullName: payload.invitedUserFullName,
+      invitedUserAvatarUrl: payload.invitedUserAvatarUrl,
+    });
+    this.notifyChanged();
+    return this.mapRefereeHiringApprovalRow(result);
+  }
+
+  async createTeamMatchAthleteInvitation(payload: {
+    eventId: string;
+    invitedUserId: string;
+    teamSide: 'home' | 'away';
+    offeredAmount: number;
+    responseDeadline: Date;
+    invitedUserApelido?: string;
+    invitedUserFullName?: string;
+    invitedUserAvatarUrl?: string;
+  }): Promise<void> {
+    await Parse.Cloud.run('createTeamMatchAthleteInvitation', {
+      eventId: payload.eventId,
+      invitedUserId: payload.invitedUserId,
+      teamSide: payload.teamSide,
+      offeredAmount: payload.offeredAmount,
+      responseDeadline: payload.responseDeadline.toISOString(),
+      invitedUserApelido: payload.invitedUserApelido,
+      invitedUserFullName: payload.invitedUserFullName,
+      invitedUserAvatarUrl: payload.invitedUserAvatarUrl,
+    });
+    this.notifyChanged();
+  }
+
+  async respondTeamMatchRefereeHiringApproval(
+    invitationId: string,
+    decision: 'approved' | 'rejected'
+  ): Promise<void> {
+    await Parse.Cloud.run('respondTeamMatchRefereeHiringApproval', {
+      invitationId,
+      decision,
+    });
+    this.notifyChanged();
+  }
+
+  private mapRefereeHiringApprovalRow(raw: unknown): TeamMatchRefereeHiringApprovalItem {
+    const row = (raw || {}) as Record<string, unknown>;
+    const mode = row['refereePaymentMode'];
+    const paymentMode =
+      mode === 'split_50' || mode === 'home_pays' || mode === 'free' ? mode : 'free';
+    const side = row['refereeHiringRequestedByTeamSide'];
+    return {
+      invitationId: String(row['invitationId'] || ''),
+      eventId: String(row['eventId'] || ''),
+      eventName: String(row['eventName'] || ''),
+      eventStartTime: row['eventStartTime'] ? new Date(String(row['eventStartTime'])) : null,
+      status: (row['status'] as RefereeInvitationStatus) || 'pending',
+      refereeHiringApprovalStatus: String(row['refereeHiringApprovalStatus'] || ''),
+      refereeHiringRequestedByTeamSide: side === 'home' || side === 'away' ? side : '',
+      refereePaymentMode: paymentMode,
+      refereePaymentModeLabel: String(row['refereePaymentModeLabel'] || ''),
+      offeredAmount: Number(row['offeredAmount'] || 0),
+      invitedUserId: String(row['invitedUserId'] || ''),
+      invitedUserName: String(row['invitedUserName'] || ''),
+      invitedById: String(row['invitedById'] || ''),
+      invitedByName: String(row['invitedByName'] || ''),
+      responseDeadline: row['responseDeadline']
+        ? new Date(String(row['responseDeadline']))
+        : null,
+    };
   }
 
   async listAwaitingRefereePaymentConfirmation(): Promise<RefereeInvitation[]> {
@@ -213,7 +416,8 @@ export class RefereeInvitationService {
     invitedUserId: string,
     startTime: Date,
     endTime: Date,
-    excludeEventId?: string
+    excludeEventId?: string,
+    options?: { includePending?: boolean }
   ): Promise<ScheduleConflict | null> {
     if (!invitedUserId || !startTime || !endTime) return null;
 
@@ -223,6 +427,7 @@ export class RefereeInvitationService {
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
         excludeEventId,
+        includePending: !!options?.includePending,
       });
 
       if (!result?.conflict) return null;
@@ -232,10 +437,36 @@ export class RefereeInvitationService {
         eventName: String(result.eventName ?? 'Outro evento'),
         startTime: this.parseCloudDate(result.startTime) ?? startTime,
         endTime: this.parseCloudDate(result.endTime) ?? endTime,
+        source: result.source ? String(result.source) : undefined,
+        invitationId: result.invitationId ? String(result.invitationId) : null,
+        invitationStatus: result.invitationStatus ? String(result.invitationStatus) : undefined,
       };
     } catch {
       // Cloud function indisponivel (ex.: Cloud Code nao publicado): nao bloqueia o envio.
       return null;
+    }
+  }
+
+  async getAcceptConflicts(invitationId: string): Promise<InvitationAcceptConflict[]> {
+    try {
+      const result = (await Parse.Cloud.run('getInvitationAcceptConflicts', {
+        invitationId,
+      })) as { conflicts?: Array<Record<string, unknown>> };
+      const rows = Array.isArray(result?.conflicts) ? result.conflicts : [];
+      return rows.map((row) => ({
+        invitationId: row['invitationId'] ? String(row['invitationId']) : null,
+        invitationStatus: String(row['invitationStatus'] || ''),
+        source: String(row['source'] || ''),
+        eventId: String(row['eventId'] || ''),
+        eventName: String(row['eventName'] || 'Outro evento'),
+        teamSide: row['teamSide'] ? String(row['teamSide']) : undefined,
+        startTime: this.parseCloudDate(row['startTime']),
+        endTime: this.parseCloudDate(row['endTime']),
+        canDecline: !!row['canDecline'],
+        hardBlock: !!row['hardBlock'],
+      }));
+    } catch {
+      return [];
     }
   }
 
@@ -275,11 +506,17 @@ export class RefereeInvitationService {
     const event = await this.eventService.getById(payload.eventId);
     if (!event) throw new Error('Evento nao encontrado.');
 
+    if (event.type === 'team_match' && role === 'referee') {
+      throw new Error(
+        'Em confrontos, a contratacao de arbitro exige aprovacao do presidente adversario. Use o fluxo de arbitragem do confronto.'
+      );
+    }
+
     if (!this.eventService.isCurrentUserAdmin(event)) {
       throw new Error('Apenas o administrador do evento pode enviar convites de contratacao.');
     }
 
-    if (!event.peladaId) {
+    if (!event.peladaId && event.type !== 'team_match') {
       throw new Error('Evento sem pelada vinculada.');
     }
 
@@ -321,6 +558,9 @@ export class RefereeInvitationService {
     if (payload.attendanceMode) {
       invitation.set('attendanceMode', payload.attendanceMode);
     }
+    if (payload.teamSide === 'home' || payload.teamSide === 'away') {
+      invitation.set('teamSide', payload.teamSide);
+    }
 
     this.applyInvitedByDisplayFields(invitation, user);
 
@@ -341,7 +581,10 @@ export class RefereeInvitationService {
     }
   }
 
-  async accept(invitationId: string): Promise<RefereeInvitation> {
+  async accept(
+    invitationId: string,
+    options?: { declineConflictInvitationIds?: string[] }
+  ): Promise<RefereeInvitation> {
     const user = Parse.User.current();
     if (!user) throw new Error('Faca login para aceitar convites.');
 
@@ -362,6 +605,20 @@ export class RefereeInvitationService {
       throw new Error('Este convite ja foi respondido.');
     }
 
+    const eventType = (invitationObj.get('event') as Parse.Object | undefined)?.get('type');
+    const inviteRole = (invitationObj.get('role') as ProfileRole | undefined) ?? 'referee';
+    const approval = invitationObj.get('refereeHiringApprovalStatus');
+    if (
+      eventType === 'team_match' &&
+      inviteRole === 'referee' &&
+      approval &&
+      approval !== 'approved'
+    ) {
+      throw new Error(
+        'Este convite de arbitro ainda aguarda aprovacao do presidente adversario.'
+      );
+    }
+
     const deadline = invitationObj.get('responseDeadline') as Date | undefined;
     if (deadline && deadline < new Date()) {
       invitationObj.set('status', 'cancelled');
@@ -372,12 +629,75 @@ export class RefereeInvitationService {
 
     const event = invitationObj.get('event') as Parse.Object;
     const eventId = event.id!;
-    const role = (invitationObj.get('role') as ProfileRole | undefined) ?? 'referee';
+
+    // Cancela/recusa convites do outro lado do mesmo confronto automaticamente.
+    const sameEventOthers = await new Parse.Query(CLASS)
+      .equalTo('event', event)
+      .equalTo('invitedUser', user)
+      .containedIn('status', ['pending', 'accepted'])
+      .notEqualTo('objectId', invitationId)
+      .limit(20)
+      .find();
+    for (const other of sameEventOthers) {
+      if (other.get('status') === 'accepted') {
+        throw new Error(
+          'Voce ja aceitou convocacao do outro time neste confronto. Cancele a inscricao antes de aceitar este convite.'
+        );
+      }
+      other.set('status', 'declined');
+      other.set('responseAt', new Date());
+      await other.save();
+    }
+
+    const declineIds = [
+      ...new Set((options?.declineConflictInvitationIds || []).filter(Boolean)),
+    ];
+    for (const conflictId of declineIds) {
+      if (conflictId === invitationId) continue;
+      try {
+        const other = await new Parse.Query(CLASS).get(conflictId);
+        const otherInvited = other.get('invitedUser') as Parse.User | undefined;
+        if (otherInvited?.id !== user.id) continue;
+        if (other.get('status') === 'pending') {
+          other.set('status', 'declined');
+          other.set('responseAt', new Date());
+          await other.save();
+        }
+      } catch {
+        // Melhor esforco
+      }
+    }
+
+    const startTime = event.get('startTime') as Date | undefined;
+    const endTime = event.get('endTime') as Date | undefined;
+    if (startTime && endTime) {
+      try {
+        const conflict = (await Parse.Cloud.run('checkInviteeScheduleConflict', {
+          invitedUserId: user.id,
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          excludeEventId: eventId,
+          includePending: false,
+        })) as { conflict?: boolean; eventName?: string };
+        if (conflict?.conflict) {
+          throw new Error(
+            `Conflito de agenda com "${conflict.eventName || 'outro evento'}". ` +
+              'Cancele o outro compromisso antes de aceitar este convite.'
+          );
+        }
+      } catch (error: unknown) {
+        if (error instanceof Error && error.message.includes('Conflito de agenda')) {
+          throw error;
+        }
+        // Se a Cloud falhar, segue e deixa registerFromInvitation validar.
+      }
+    }
+
     const apelido =
       (user.get('apelido') as string) ||
       (user.get('name') as string) ||
       user.getUsername() ||
-      PROFILE_ROLE_LABELS[role];
+      PROFILE_ROLE_LABELS[inviteRole];
 
     // Marca aceite antes da inscricao para evitar convite "pending" com inscricao ja criada.
     invitationObj.set('status', 'accepted');
@@ -391,13 +711,16 @@ export class RefereeInvitationService {
 
     let registration;
     try {
-      registration = await this.registrationService.registerFromInvitation(eventId, apelido, role, {
+      const teamSide = invitationObj.get('teamSide');
+      registration = await this.registrationService.registerFromInvitation(eventId, apelido, inviteRole, {
         invited: true,
+        teamSide: teamSide === 'home' || teamSide === 'away' ? teamSide : undefined,
+        offeredAmount: Number(invitationObj.get('offeredAmount') ?? 0),
       });
     } catch (error: unknown) {
       const message = parseErrorMessage(error);
       const existing = await this.registrationService.getForEvent(eventId);
-      if (existing && existing.role === role) {
+      if (existing && existing.role === inviteRole) {
         registration = existing;
       } else {
         invitationObj.set('status', 'pending');
@@ -781,6 +1104,15 @@ export class RefereeInvitationService {
     const paymentConfirmedByAdmin =
       !!obj.get('paymentConfirmedByAdmin') || !!obj.get('workCompleted');
 
+    let teamMatchLeg: RefereeInvitation['teamMatchLeg'];
+    if ((event?.get('type') as string) === 'team_match') {
+      if (event?.get('returnOf')) {
+        teamMatchLeg = 'volta';
+      } else if (event?.get('hasReturnLeg')) {
+        teamMatchLeg = 'ida';
+      }
+    }
+
     return {
       objectId: obj.id!,
       eventId: event?.id ?? '',
@@ -817,6 +1149,22 @@ export class RefereeInvitationService {
       cashEntryId: obj.get('cashEntryId') as string | undefined,
       createdAt: obj.get('createdAt') as Date | undefined,
       supplementaryKind: obj.get('supplementaryKind') as RefereeInvitation['supplementaryKind'],
+      teamSide:
+        obj.get('teamSide') === 'home' || obj.get('teamSide') === 'away'
+          ? obj.get('teamSide')
+          : undefined,
+      teamMatchLeg,
+      refereeHiringApprovalStatus: obj.get('refereeHiringApprovalStatus') as
+        | RefereeInvitation['refereeHiringApprovalStatus']
+        | undefined,
+      refereePaymentMode: obj.get('refereePaymentMode') as
+        | RefereeInvitation['refereePaymentMode']
+        | undefined,
+      refereeHiringRequestedByTeamSide:
+        obj.get('refereeHiringRequestedByTeamSide') === 'home' ||
+        obj.get('refereeHiringRequestedByTeamSide') === 'away'
+          ? obj.get('refereeHiringRequestedByTeamSide')
+          : undefined,
     };
   }
 }

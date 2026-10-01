@@ -1,0 +1,20 @@
+.section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem;
+}
+
+.highlight-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.rank-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  span {
+    flex: 1;
+  }
+}

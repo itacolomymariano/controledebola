@@ -11,10 +11,12 @@ function normalizeSearchText(value) {
 
 function calcAgeFromBirthDate(birthDate) {
   if (!birthDate) return null;
+  const date = birthDate instanceof Date ? birthDate : new Date(birthDate);
+  if (Number.isNaN(date.getTime())) return null;
   const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+  let age = today.getFullYear() - date.getFullYear();
+  const monthDiff = today.getMonth() - date.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
     age -= 1;
   }
   return age;
@@ -540,6 +542,116 @@ Parse.Cloud.define('getAthletePublicProfile', async (request) => {
     peladaRate: athleteProfile.get('peladaRate') ?? undefined,
     teamMatchRate: athleteProfile.get('teamMatchRate') ?? undefined,
     primaryPosition: athleteProfile.get('primaryPosition') || '',
+  };
+});
+
+Parse.Cloud.define('getAthleteActivityIndicators', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const userId = String(request.params.userId || '').trim();
+  if (!userId) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'userId obrigatorio.');
+  }
+  const months = Math.min(Math.max(Number(request.params.months) || 3, 1), 12);
+  const windowEnd = new Date();
+  const windowStart = new Date(windowEnd.getTime());
+  windowStart.setMonth(windowStart.getMonth() - months);
+
+  const user = Parse.User.createWithoutData(userId);
+  const registrations = await new Parse.Query('EventRegistration')
+    .equalTo('user', user)
+    .containedIn('role', ['athlete', 'goalkeeper'])
+    .include('event')
+    .limit(2000)
+    .find({ useMasterKey: true });
+
+  let gamesPlayed = 0;
+  let peladasPlayed = 0;
+  let gamesAbsent = 0;
+  let peladasAbsent = 0;
+
+  for (const registration of registrations) {
+    const event = registration.get('event');
+    if (!event || !event.get) continue;
+    const startTime = event.get('startTime');
+    if (!(startTime instanceof Date) || startTime < windowStart || startTime > windowEnd) {
+      continue;
+    }
+    const fee = Number(event.get('participationFee') || 0);
+    const confirmed =
+      typeof computeRegistrationEffectiveConfirmation === 'function'
+        ? computeRegistrationEffectiveConfirmation(registration, fee)
+        : !!registration.get('isEffectivelyConfirmed');
+    if (!confirmed) continue;
+
+    const type = event.get('type') || '';
+    const isMatch = type === 'team_match';
+    const isPelada = type === 'pelada' || type === 'racha';
+    if (!isMatch && !isPelada) continue;
+
+    const attendance = registration.get('attendance') || 'pending';
+    const arrivedAt = registration.get('arrivedAt');
+    const eventEnded =
+      event.get('isFinished') ||
+      (event.get('endTime') instanceof Date && event.get('endTime') < windowEnd) ||
+      (startTime < windowEnd && startTime.getTime() + 3 * 60 * 60 * 1000 < Date.now());
+
+    const present =
+      attendance === 'present' ||
+      (arrivedAt != null && attendance !== 'absent');
+    const absent =
+      eventEnded &&
+      (attendance === 'absent' || (!present && attendance !== 'present'));
+
+    if (isMatch) {
+      if (absent) gamesAbsent += 1;
+      else gamesPlayed += 1;
+    } else if (isPelada) {
+      if (absent) peladasAbsent += 1;
+      else peladasPlayed += 1;
+    }
+  }
+
+  const invitations = await new Parse.Query('RefereeInvitation')
+    .equalTo('invitedUser', user)
+    .equalTo('role', 'athlete')
+    .include('event')
+    .greaterThanOrEqualTo('createdAt', windowStart)
+    .limit(2000)
+    .find({ useMasterKey: true });
+
+  let teamMatchInvitesReceived = 0;
+  let teamMatchInvitesDeclined = 0;
+  let peladaInvitesReceived = 0;
+  let peladaInvitesDeclined = 0;
+
+  for (const invitation of invitations) {
+    const event = invitation.get('event');
+    if (!event || !event.get) continue;
+    const type = event.get('type') || '';
+    const status = invitation.get('status') || '';
+    if (type === 'team_match') {
+      teamMatchInvitesReceived += 1;
+      if (status === 'declined') teamMatchInvitesDeclined += 1;
+    } else if (type === 'pelada' || type === 'racha') {
+      peladaInvitesReceived += 1;
+      if (status === 'declined') peladaInvitesDeclined += 1;
+    }
+  }
+
+  return {
+    windowStart: windowStart.toISOString(),
+    windowEnd: windowEnd.toISOString(),
+    months,
+    gamesPlayed,
+    peladasPlayed,
+    gamesAbsent,
+    peladasAbsent,
+    teamMatchInvitesReceived,
+    teamMatchInvitesDeclined,
+    peladaInvitesReceived,
+    peladaInvitesDeclined,
   };
 });
 
@@ -1476,4 +1588,112 @@ Parse.Cloud.define('resolveTeamShieldUrl', async (request) => {
   }
 
   return { url: null };
+});
+
+function isAllowedShareImageHost(hostname) {
+  const h = String(hostname || '').toLowerCase();
+  if (h.endsWith('.wikimedia.org')) return true;
+  if (h.includes('back4app') || h.includes('parsefile') || h.includes('amazonaws.com')) return true;
+  if (h === 'www.thesportsdb.com' || h === 'thesportsdb.com') return true;
+  return false;
+}
+
+function isAllowedShareImageUrl(urlString) {
+  try {
+    const u = new URL(String(urlString || '').trim());
+    if (u.protocol !== 'https:') return false;
+    return isAllowedShareImageHost(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
+async function fetchHttpsImageAsDataUrl(urlString) {
+  const url = String(urlString || '').trim();
+  if (!isAllowedShareImageUrl(url)) return null;
+  const response = await fetch(url, { redirect: 'follow' });
+  if (!response.ok) return null;
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (!buffer.length || buffer.length > 512 * 1024) return null;
+  let mime = String(response.headers.get('content-type') || 'image/png').split(';')[0].trim();
+  if (!mime.startsWith('image/')) mime = 'image/png';
+  return `data:${mime};base64,${buffer.toString('base64')}`;
+}
+
+async function resolveTeamShieldBadgeUrlCached(teamName, slug) {
+  const cacheKey = slug ? `${slug}::${teamName}` : teamName;
+  const config = await Parse.Config.get({ useMasterKey: true });
+  const cache = config.get('teamBadgeUrls') || {};
+  if (cache[cacheKey]) return cache[cacheKey];
+  if (cache[teamName]) return cache[teamName];
+
+  try {
+    const url = await resolveTeamShieldUrlFromSportsDb(teamName, slug);
+    if (url) {
+      cache[cacheKey] = url;
+      cache[teamName] = url;
+      await Parse.Config.save({ teamBadgeUrls: cache }, { useMasterKey: true });
+      return url;
+    }
+  } catch {
+    // fallback no cliente
+  }
+  return null;
+}
+
+Parse.Cloud.define('fetchShareImagesAsDataUrls', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'Login obrigatorio.');
+  }
+  const urls = request.params.urls;
+  if (!urls || !Array.isArray(urls)) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'urls deve ser um array.');
+  }
+
+  const unique = [
+    ...new Set(urls.map((value) => String(value || '').trim()).filter(isAllowedShareImageUrl)),
+  ].slice(0, 24);
+
+  const dataUrls = {};
+  await Promise.all(
+    unique.map(async (url) => {
+      try {
+        const dataUrl = await fetchHttpsImageAsDataUrl(url);
+        if (dataUrl) dataUrls[url] = dataUrl;
+      } catch {
+        // ignora URL que falhou
+      }
+    })
+  );
+
+  return { dataUrls };
+});
+
+Parse.Cloud.define('resolveTeamShieldImageBase64', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'Login obrigatorio.');
+  }
+
+  const teamName = request.params.teamName ? String(request.params.teamName).trim() : '';
+  const slug = request.params.slug ? String(request.params.slug).trim() : '';
+  const preferredUrl = request.params.preferredUrl
+    ? String(request.params.preferredUrl).trim()
+    : '';
+
+  if (!teamName) {
+    return { dataUrl: null };
+  }
+
+  if (preferredUrl && isAllowedShareImageUrl(preferredUrl)) {
+    const fromPreferred = await fetchHttpsImageAsDataUrl(preferredUrl);
+    if (fromPreferred) return { dataUrl: fromPreferred };
+  }
+
+  const badgeUrl = await resolveTeamShieldBadgeUrlCached(teamName, slug);
+  if (!badgeUrl) {
+    return { dataUrl: null };
+  }
+
+  const dataUrl = await fetchHttpsImageAsDataUrl(badgeUrl);
+  return { dataUrl: dataUrl || null };
 });

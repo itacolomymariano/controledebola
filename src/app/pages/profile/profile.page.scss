@@ -1,3 +1,11 @@
+.profile-prefs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px 12px;
+}
+
 .profile-avatar-section {
   display: flex;
   flex-direction: column;

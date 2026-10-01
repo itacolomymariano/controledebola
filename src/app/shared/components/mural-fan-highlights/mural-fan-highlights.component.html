@@ -1,8 +1,14 @@
 <ion-card>
   <ion-card-header>
+    @if (scope === 'event') {
+      <app-mural-event-context [context]="shareContext"></app-mural-event-context>
+    }
     <div class="mural-card-header-row">
       <div>
         <ion-card-title>Torcedores destaque</ion-card-title>
+        @if (filterCaption) {
+          <p class="mural-filter-line">{{ filterCaption }}</p>
+        }
         <ion-card-subtitle>
           Engajamento por check-in da torcida (presencial e remoto)
         </ion-card-subtitle>
@@ -10,6 +16,7 @@
       <app-mural-share-button
         [context]="shareContext"
         cardTitle="Torcedores destaque"
+        ruleKey="mural.rule.torcida"
       ></app-mural-share-button>
     </div>
   </ion-card-header>

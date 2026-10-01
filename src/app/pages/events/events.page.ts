@@ -4,24 +4,20 @@ import { RefresherCustomEvent } from '@ionic/angular';
 import Parse from 'parse';
 import { Subscription } from 'rxjs';
 import { Address, normalizeBrazilUf } from '../../core/models/address.model';
-import { isEventPast, PeladaEvent, PeladaEventListItem } from '../../core/models/event.model';
+import { TeamMatchListItem } from '../../core/models/event.model';
 import { AuthService } from '../../core/services/auth.service';
 import { EventService } from '../../core/services/event.service';
+import {
+  MatchChallengeItem,
+  MatchChallengeService,
+} from '../../core/services/match-challenge.service';
 import { ParseService } from '../../core/services/parse.service';
-import { RegistrationService } from '../../core/services/registration.service';
 
-interface EventListBadge {
-  label: string;
-  color: string;
-}
-
-interface EventListRow {
-  event: PeladaEventListItem;
-  badges: EventListBadge[];
-  typeLabel: string;
+interface ConfrontoRow {
+  match: TeamMatchListItem;
   dateLabel: string;
-  feeLabel: string;
   locationLabel: string;
+  badge?: string;
 }
 
 @Component({
@@ -32,53 +28,67 @@ interface EventListRow {
   standalone: false,
 })
 export class EventsPage implements OnDestroy {
-  eventRows: EventListRow[] = [];
+  rows: ConfrontoRow[] = [];
+  acceptedChallenges: MatchChallengeItem[] = [];
   loading = true;
   errorMessage = '';
   parseConfigured = false;
+  currentUserId = '';
 
   private eventsSub?: Subscription;
+  private challengeSub?: Subscription;
 
   constructor(
     private readonly auth: AuthService,
     private readonly eventService: EventService,
+    private readonly challengeService: MatchChallengeService,
     private readonly parseService: ParseService,
-    private readonly registrationService: RegistrationService,
     private readonly router: Router,
     private readonly cdr: ChangeDetectorRef
   ) {
     this.eventsSub = this.eventService.onEventsChanged.subscribe(() => {
-      void this.loadEvents();
+      void this.loadMatches();
+    });
+    this.challengeSub = this.challengeService.onChanged.subscribe(() => {
+      void this.loadMatches();
     });
   }
 
   ngOnDestroy(): void {
     this.eventsSub?.unsubscribe();
+    this.challengeSub?.unsubscribe();
   }
 
   ionViewWillEnter(): void {
     this.parseConfigured = this.parseService.isConfigured;
-    void this.loadEvents();
+    this.currentUserId = Parse.User.current()?.id || '';
+    void this.loadMatches();
   }
 
-  createEvent(): void {
-    void this.router.navigateByUrl('/event-create');
+  createDesafio(): void {
+    void this.router.navigateByUrl('/desafio-create');
   }
 
-  openEvent(row: EventListRow): void {
-    void this.router.navigate(['/event', row.event.objectId]);
+  scheduleAccepted(challenge: MatchChallengeItem): void {
+    void this.router.navigate(['/confronto-create'], {
+      queryParams: { challengeId: challenge.objectId },
+    });
+  }
+
+  openMatch(row: ConfrontoRow): void {
+    void this.router.navigate(['/event', row.match.objectId]);
   }
 
   retry(): void {
-    void this.loadEvents();
+    void this.loadMatches();
   }
 
   async refresh(event: RefresherCustomEvent): Promise<void> {
-    await this.loadEvents();
+    await this.loadMatches();
     event.target.complete();
   }
 
-  private async loadEvents(): Promise<void> {
+  private async loadMatches(): Promise<void> {
     if (!this.parseConfigured) {
       this.loading = false;
       this.errorMessage = 'Configure as chaves do Back4App em environment.local.ts';
@@ -86,86 +96,35 @@ export class EventsPage implements OnDestroy {
       return;
     }
 
-    const showSpinner = this.eventRows.length === 0;
-    if (showSpinner) {
-      this.loading = true;
-    }
+    const showSpinner = this.rows.length === 0;
+    if (showSpinner) this.loading = true;
     this.errorMessage = '';
 
     try {
-      const user = Parse.User.current();
-      const address = (user?.get('address') as Address) ?? undefined;
-      const { participated, member } = await this.registrationService.getParticipatedEventIds();
-      const userCity = address?.city?.toLowerCase().trim();
-
-      const list = await this.eventService.listForFeed({
-        userCity,
-        participatedEventIds: participated,
-        memberEventIds: member,
-      });
-
-      this.eventRows = list.map((event) => {
-        const isRegistered = participated.has(event.objectId);
-        const isPast = isEventPast(event.endTime);
-        const enriched: PeladaEventListItem = {
-          ...event,
-          memberBadge: member.has(event.objectId),
-          isRegistered,
-          isPast,
-          registrationStatusLabel: this.eventService.registrationStatusLabel(event),
-          nearby: !!userCity && event.address.city?.toLowerCase().trim() === userCity,
-        };
-        return this.toEventListRow(enriched);
-      });
+      const [list, challenges] = await Promise.all([
+        this.eventService.listTeamMatchesForFeed(),
+        this.challengeService.listMine().catch(() => [] as MatchChallengeItem[]),
+      ]);
+      this.acceptedChallenges = challenges.filter(
+        (row) => row.status === 'accepted' && row.challengerUserId === this.currentUserId
+      );
+      this.rows = list.map((match) => ({
+        match,
+        dateLabel: this.formatDate(match.startTime),
+        locationLabel: this.formatLocation(match.address, match.locationComplement),
+        badge: match.returnOfEventId ? 'Volta' : match.hasReturnLeg ? 'Ida' : undefined,
+      }));
     } catch (error: unknown) {
       if (await this.auth.handleApiError(error)) {
         await this.router.navigateByUrl('/login', { replaceUrl: true });
         return;
       }
       this.errorMessage =
-        error instanceof Error ? error.message : 'Nao foi possivel carregar os eventos.';
+        error instanceof Error ? error.message : 'Nao foi possivel carregar os confrontos.';
     } finally {
       this.loading = false;
       this.cdr.markForCheck();
     }
-  }
-
-  private toEventListRow(event: PeladaEventListItem): EventListRow {
-    return {
-      event,
-      badges: this.buildBadges(event),
-      typeLabel: this.eventService.formatType(event.type),
-      dateLabel: this.formatDate(event.startTime),
-      feeLabel: this.eventService.formatParticipationFee(event.participationFee),
-      locationLabel: this.formatLocation(event),
-    };
-  }
-
-  private buildBadges(event: PeladaEventListItem): EventListBadge[] {
-    const badges: EventListBadge[] = [];
-
-    if (event.memberBadge) {
-      badges.push({ label: 'Socio', color: 'primary' });
-    }
-
-    if (event.isRegistered) {
-      badges.push({
-        label: event.isPast ? 'Participei' : 'Ja inscrito',
-        color: event.isPast ? 'medium' : 'success',
-      });
-    }
-
-    if (event.registrationStatusLabel) {
-      const color =
-        event.registrationStatusLabel === 'Inscricoes abertas' ? 'tertiary' : 'warning';
-      badges.push({ label: event.registrationStatusLabel, color });
-    }
-
-    if (event.nearby && !event.isRegistered) {
-      badges.push({ label: 'Perto de voce', color: 'primary' });
-    }
-
-    return badges;
   }
 
   private formatDate(date: Date): string {
@@ -177,9 +136,8 @@ export class EventsPage implements OnDestroy {
     }).format(date);
   }
 
-  private formatLocation(event: PeladaEvent): string {
-    const { neighborhood, city } = event.address;
-    const state = normalizeBrazilUf(event.address.state);
-    return [neighborhood, city, state].filter(Boolean).join(' - ');
+  private formatLocation(address: Address, complement: string): string {
+    const state = normalizeBrazilUf(address.state);
+    return [complement, address.neighborhood, address.city, state].filter(Boolean).join(' - ');
   }
 }

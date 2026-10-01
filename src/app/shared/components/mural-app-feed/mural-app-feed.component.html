@@ -1,0 +1,388 @@
+@if (bestTeam; as team) {
+  <ion-card>
+    <ion-card-header>
+      <div class="mural-card-header-row">
+        <ion-card-title>{{ 'mural.app.bestTeam.title' | t }}</ion-card-title>
+        <app-mural-share-button
+          [context]="shareContext"
+          [cardTitle]="('mural.app.bestTeam.title' | t)"
+          ruleKey="mural.rule.melhorTime"
+        ></app-mural-share-button>
+      </div>
+      @if (filterCaption) {
+        <p class="mural-filter-line">{{ filterCaption }}</p>
+      }
+    </ion-card-header>
+    <ion-card-content>
+      <ion-card class="match-rank-card">
+        <ion-card-content>
+          <div class="match-rank-head">
+            @if (team.shieldImageUrl) {
+              <img class="amateur-shield" [src]="team.shieldImageUrl" [alt]="team.teamName" crossorigin="anonymous" />
+            }
+            <h3>{{ team.teamName }}</h3>
+          </div>
+          <p><strong>Confrontos realizados:</strong> {{ team.matchesPlayed }}</p>
+          <p><strong>Vitória(s):</strong> {{ team.wins }}</p>
+          <p><strong>Empate(s):</strong> {{ team.draws }}</p>
+          <p><strong>Derrota(s):</strong> {{ team.losses }}</p>
+          <p><strong>Aproveitamento:</strong> {{ team.winRatePercent }}%</p>
+        </ion-card-content>
+      </ion-card>
+    </ion-card-content>
+  </ion-card>
+}
+
+@if (longestUnbeaten; as streak) {
+  <ion-card>
+    <ion-card-header>
+      <div class="mural-card-header-row">
+        <ion-card-title>{{ 'mural.app.longestUnbeaten.title' | t }}</ion-card-title>
+        <app-mural-share-button
+          [context]="shareContext"
+          [cardTitle]="('mural.app.longestUnbeaten.title' | t)"
+          ruleKey="mural.rule.invencibilidade"
+        ></app-mural-share-button>
+      </div>
+      @if (filterCaption) {
+        <p class="mural-filter-line">{{ filterCaption }}</p>
+      }
+    </ion-card-header>
+    <ion-card-content>
+      <ion-card class="match-rank-card">
+        <ion-card-content>
+          <div class="match-rank-head">
+            @if (streak.shieldImageUrl) {
+              <img class="amateur-shield" [src]="streak.shieldImageUrl" [alt]="streak.teamName" crossorigin="anonymous" />
+            }
+            <h3>{{ streak.teamName }}</h3>
+          </div>
+          <p><strong>Invicto há:</strong> {{ unbeatenText(streak) }}</p>
+          <p><strong>Dias invicto:</strong> {{ streak.unbeatenDays }}</p>
+          <p><strong>Confrontos na sequência:</strong> {{ streak.matchesInStreak }}</p>
+          @if (streak.sinceStartTime) {
+            <p><strong>Desde:</strong> {{ formatFoundedAt(streak.sinceStartTime) }}</p>
+          }
+        </ion-card-content>
+      </ion-card>
+    </ion-card-content>
+  </ion-card>
+}
+
+@if (bestAttack; as attack) {
+  <ion-card>
+    <ion-card-header>
+      <div class="mural-card-header-row">
+        <ion-card-title>{{ 'mural.app.bestAttack.title' | t }}</ion-card-title>
+        <app-mural-share-button
+          [context]="shareContext"
+          [cardTitle]="('mural.app.bestAttack.title' | t)"
+          ruleKey="mural.rule.melhorAtaque"
+        ></app-mural-share-button>
+      </div>
+      @if (filterCaption) {
+        <p class="mural-filter-line">{{ filterCaption }}</p>
+      }
+    </ion-card-header>
+    <ion-card-content>
+      <ion-card class="match-rank-card">
+        <ion-card-content>
+          <div class="match-rank-head">
+            @if (attack.shieldImageUrl) {
+              <img class="amateur-shield" [src]="attack.shieldImageUrl" [alt]="attack.teamName" crossorigin="anonymous" />
+            }
+            <h3>{{ attack.teamName }}</h3>
+          </div>
+          <p><strong>Gols marcados:</strong> {{ attack.goalsFor }}</p>
+          <p><strong>Confrontos realizados:</strong> {{ attack.matchesPlayed }}</p>
+          <p><strong>Média de gols por partida:</strong> {{ formatAverage(attack.goalsPerMatch) }}</p>
+          @if (attack.topScorer; as scorer) {
+            <div class="match-rank-row mural-sub-highlight">
+              <app-user-avatar [avatarUrl]="scorer.avatarUrl" [alt]="scorer.name" size="md"></app-user-avatar>
+              <span><strong>Goleador do time:</strong> {{ scorer.name }}</span>
+            </div>
+            <p><strong>Gols:</strong> {{ scorer.goals }}</p>
+            <p><strong>Média de gols por partida:</strong> {{ formatAverage(scorer.goalsPerMatch) }}</p>
+          }
+        </ion-card-content>
+      </ion-card>
+    </ion-card-content>
+  </ion-card>
+}
+
+@if (bestDefense; as defense) {
+  <ion-card>
+    <ion-card-header>
+      <div class="mural-card-header-row">
+        <ion-card-title>{{ 'mural.app.bestDefense.title' | t }}</ion-card-title>
+        <app-mural-share-button
+          [context]="shareContext"
+          [cardTitle]="('mural.app.bestDefense.title' | t)"
+          ruleKey="mural.rule.melhorDefesa"
+        ></app-mural-share-button>
+      </div>
+      @if (filterCaption) {
+        <p class="mural-filter-line">{{ filterCaption }}</p>
+      }
+    </ion-card-header>
+    <ion-card-content>
+      <ion-card class="match-rank-card">
+        <ion-card-content>
+          <div class="match-rank-head">
+            @if (defense.shieldImageUrl) {
+              <img class="amateur-shield" [src]="defense.shieldImageUrl" [alt]="defense.teamName" crossorigin="anonymous" />
+            }
+            <h3>{{ defense.teamName }}</h3>
+          </div>
+          <p><strong>Gols sofridos:</strong> {{ defense.goalsAgainst }}</p>
+          <p><strong>Confrontos realizados:</strong> {{ defense.matchesPlayed }}</p>
+          <p><strong>Média de gols sofridos por partida:</strong> {{ formatAverage(defense.goalsAgainstPerMatch) }}</p>
+          @if (defense.topDefender; as defender) {
+            <div class="match-rank-row mural-sub-highlight">
+              <app-user-avatar [avatarUrl]="defender.avatarUrl" [alt]="defender.name" size="md"></app-user-avatar>
+              <span><strong>Defensor com mais pontos:</strong> {{ defender.name }}</span>
+            </div>
+            <p><strong>Pontos:</strong> {{ defender.points }}</p>
+            <p><strong>Média de pontos por partida:</strong> {{ formatAverage(defender.pointsPerMatch) }}</p>
+          }
+        </ion-card-content>
+      </ion-card>
+    </ion-card-content>
+  </ion-card>
+}
+
+<app-mural-highlights-panel
+  [highlights]="highlights"
+  scope="app"
+  [appBucketTab]="tab"
+  [shareContext]="shareContext"
+  [titleOverrides]="titles"
+  [filterCaption]="filterCaption"
+></app-mural-highlights-panel>
+
+<ion-card>
+  <ion-card-header>
+    <div class="mural-card-header-row">
+      <ion-card-title>{{ titles.athletes }}</ion-card-title>
+      <app-mural-share-button
+        [context]="shareContext"
+        [cardTitle]="titles.athletes"
+        ruleKey="mural.rule.atletas"
+      ></app-mural-share-button>
+    </div>
+    @if (filterCaption) {
+      <p class="mural-filter-line">{{ filterCaption }}</p>
+    }
+  </ion-card-header>
+  <ion-card-content>
+    @if (!athleteEntries().length) {
+      <ion-note>Sem dados ainda.</ion-note>
+    }
+    @for (entry of athleteEntries(); track entry.userId; let i = $index) {
+      <div class="rank-row ion-margin-bottom">
+        <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="sm"></app-user-avatar>
+        <span>{{ i + 1 }}. {{ entry.userName }}</span>
+        <ion-badge>{{ badge('athlete', entry) }}</ion-badge>
+      </div>
+    }
+  </ion-card-content>
+</ion-card>
+
+@if (showTeamCoachBlocks()) {
+  <ion-card>
+    <ion-card-header>
+      <div class="mural-card-header-row">
+        <ion-card-title>{{ 'mural.app.top.teams' | t }}</ion-card-title>
+        <app-mural-share-button
+          [context]="shareContext"
+          [cardTitle]="('mural.app.top.teams' | t)"
+          ruleKey="mural.rule.times"
+        ></app-mural-share-button>
+      </div>
+      @if (filterCaption) {
+        <p class="mural-filter-line">{{ filterCaption }}</p>
+      }
+    </ion-card-header>
+    <ion-card-content>
+      @if (!bucket?.topTeams?.length) {
+        <ion-note>Sem dados ainda.</ion-note>
+      }
+      @for (team of bucket?.topTeams ?? []; track team.teamId + $index; let i = $index) {
+        <ion-card class="match-rank-card ion-margin-bottom">
+          <ion-card-content>
+            <div class="match-rank-head">
+              @if (team.shieldImageUrl) {
+                <img class="amateur-shield" [src]="team.shieldImageUrl" [alt]="team.teamName" crossorigin="anonymous" />
+              }
+              <h3>{{ team.teamName }}</h3>
+            </div>
+            @if (team.presidentName) {
+              <div class="match-rank-row">
+                <app-user-avatar
+                  [avatarUrl]="team.presidentAvatarUrl"
+                  [alt]="team.presidentName"
+                  size="sm"
+                ></app-user-avatar>
+                <span><strong>Presidente:</strong> {{ team.presidentName }}</span>
+              </div>
+            }
+            @if (team.foundedAt) {
+              <p><strong>Fundação:</strong> {{ formatFoundedAt(team.foundedAt) }}</p>
+            }
+            @if (team.homeVenue) {
+              <p><strong>Sede:</strong> {{ team.homeVenue }}</p>
+            }
+            <p><strong>Confrontos:</strong> {{ team.matchesPlayed }}</p>
+            <p><strong>Vitória(s):</strong> {{ team.wins }}</p>
+            <p><strong>Empate(s):</strong> {{ team.draws }}</p>
+            <p><strong>Derrota(s):</strong> {{ team.losses }}</p>
+            <p><strong>Rendimento:</strong> {{ team.winRatePercent }}%</p>
+          </ion-card-content>
+        </ion-card>
+      }
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card>
+    <ion-card-header>
+      <div class="mural-card-header-row">
+        <ion-card-title>{{ 'mural.app.top.coaches' | t }}</ion-card-title>
+        <app-mural-share-button
+          [context]="shareContext"
+          [cardTitle]="('mural.app.top.coaches' | t)"
+          ruleKey="mural.rule.treinadores"
+        ></app-mural-share-button>
+      </div>
+      @if (filterCaption) {
+        <p class="mural-filter-line">{{ filterCaption }}</p>
+      }
+    </ion-card-header>
+    <ion-card-content>
+      @if (!bucket?.topCoaches?.length) {
+        <ion-note>Sem dados ainda.</ion-note>
+      }
+      @for (entry of bucket?.topCoaches ?? []; track entry.userId + $index; let i = $index) {
+        <ion-card class="match-rank-card ion-margin-bottom">
+          <ion-card-content>
+            <div class="match-rank-row">
+              <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="md"></app-user-avatar>
+              <h3>{{ entry.userName }}</h3>
+            </div>
+            @if (entry.age) {
+              <p><strong>Idade:</strong> {{ entry.age }} anos</p>
+            }
+            @if (entry.teamsCoachedCount) {
+              <p><strong>Times treinados:</strong> {{ entry.teamsCoachedCount }}</p>
+            }
+            <p><strong>Confrontos:</strong> {{ entry.matchesPlayed ?? 0 }}</p>
+            <p><strong>Vitória(s):</strong> {{ entry.wins ?? 0 }}</p>
+            <p><strong>Empate(s):</strong> {{ entry.draws ?? 0 }}</p>
+            <p><strong>Derrota(s):</strong> {{ entry.losses ?? 0 }}</p>
+            <p><strong>Rendimento:</strong> {{ entry.winRatePercent ?? 0 }}%</p>
+            <ion-badge>{{ teamPointsLabel(entry) }}</ion-badge>
+          </ion-card-content>
+        </ion-card>
+      }
+    </ion-card-content>
+  </ion-card>
+}
+
+<ion-accordion-group>
+  <ion-accordion value="support">
+    <ion-item slot="header" color="light">
+      <ion-label>{{ 'mural.app.accordion.support' | t }}</ion-label>
+    </ion-item>
+    <div slot="content" class="ion-padding">
+      @for (section of supportSections; track section.role) {
+        @if (supportEntries(section.role).length) {
+          <ion-card>
+            <ion-card-header>
+              <div class="mural-card-header-row">
+                <ion-card-title>{{ section.title }}</ion-card-title>
+                <app-mural-share-button
+                  [context]="shareContext"
+                  [cardTitle]="section.title"
+                  ruleKey="mural.rule.apoio"
+                ></app-mural-share-button>
+              </div>
+              @if (filterCaption) {
+                <p class="mural-filter-line">{{ filterCaption }}</p>
+              }
+            </ion-card-header>
+            <ion-card-content>
+              @for (entry of supportEntries(section.role); track entry.userId; let i = $index) {
+                <div class="rank-row ion-margin-bottom">
+                  <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="sm"></app-user-avatar>
+                  <span>{{ i + 1 }}. {{ entry.userName }}</span>
+                  <ion-badge>{{ badge(section.role, entry) }}</ion-badge>
+                </div>
+              }
+            </ion-card-content>
+          </ion-card>
+        }
+      }
+
+      <ion-card>
+        <ion-card-header>
+          <div class="mural-card-header-row">
+            <ion-card-title>{{ 'mural.app.top.predictions' | t }}</ion-card-title>
+            <app-mural-share-button
+              [context]="shareContext"
+              [cardTitle]="('mural.app.top.predictions' | t)"
+              ruleKey="mural.rule.palpites"
+            ></app-mural-share-button>
+          </div>
+          @if (filterCaption) {
+            <p class="mural-filter-line">{{ filterCaption }}</p>
+          }
+        </ion-card-header>
+        <ion-card-content>
+          @if (!predictionEntries().length) {
+            <ion-note>Sem dados ainda.</ion-note>
+          }
+          @for (entry of predictionEntries(); track entry.userId; let i = $index) {
+            <div class="rank-row ion-margin-bottom">
+              <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="sm"></app-user-avatar>
+              <span>{{ i + 1 }}. {{ entry.userName }}</span>
+              <ion-badge>{{ entry.totalScore }} pts</ion-badge>
+            </div>
+          }
+        </ion-card-content>
+      </ion-card>
+    </div>
+  </ion-accordion>
+
+  <ion-accordion value="explore">
+    <ion-item slot="header" color="light">
+      <ion-label>{{ 'mural.app.accordion.explore' | t }}</ion-label>
+    </ion-item>
+    <div slot="content" class="ion-padding">
+      <app-mural-participant-stats
+        [stats]="participantStats"
+        scope="app"
+        [shareContext]="shareContext"
+        [filterCaption]="filterCaption"
+      ></app-mural-participant-stats>
+
+      <app-mural-performance-analytics
+        scope="app"
+        [analytics]="performanceAnalytics"
+        [preloadAnalytics]="dashboardFromCloud && performanceAnalytics !== null"
+        [shareContext]="shareContext"
+        [filterCaption]="filterCaption"
+      ></app-mural-performance-analytics>
+
+      <app-mural-location-top-rankings
+        [rankings]="locationTopRankings"
+        [shareContext]="shareContext"
+        [filterCaption]="filterCaption"
+      ></app-mural-location-top-rankings>
+
+      <app-mural-media-top-card scope="app" kind="video" [shareContext]="shareContext" [filterCaption]="filterCaption"></app-mural-media-top-card>
+      <app-mural-media-top-card scope="app" kind="radio" [shareContext]="shareContext" [filterCaption]="filterCaption"></app-mural-media-top-card>
+      <app-mural-media-top-card scope="app" kind="journal" [shareContext]="shareContext" [filterCaption]="filterCaption"></app-mural-media-top-card>
+
+      <app-mural-fan-highlights scope="app" [shareContext]="shareContext" [filterCaption]="filterCaption"></app-mural-fan-highlights>
+    </div>
+  </ion-accordion>
+</ion-accordion-group>

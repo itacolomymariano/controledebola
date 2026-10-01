@@ -1,6 +1,6 @@
 /**
  * Cloud Code — gerado por npm run build:cloud
- * Gerado em: 2026-08-31T09:34:12.744Z
+ * Gerado em: 2026-10-01T18:48:31.949Z
  * Copie o conteudo deste arquivo no Back4App (Server Settings > Cloud Code).
  * Fontes modulares em cloud/source/
  * NAO edite este arquivo direto — edite cloud/source/ e rode npm run build:cloud
@@ -259,6 +259,217 @@ function emptyMuralRoleRankings() {
   return result;
 }
 
+// --- 01d-mail-helpers.js ---
+
+/**
+ * Envio de e-mail pelo Cloud Code (nodemailer).
+ * Credenciais: 1) App Settings → Environment Variables (process.env)
+ * 2) classe MailSettings (Master Key). O emailAdapter nativo do Parse e outro assunto.
+ * Nunca gravar senha no Git.
+ */
+
+const MAIL_SETTINGS_CLASS = 'MailSettings';
+const MAIL_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
+let smtpConfigCache = { at: 0, config: null };
+
+function readSmtpFromEnv() {
+  const host = String(process.env.SMTP_HOST || process.env.MAIL_HOST || '').trim();
+  const user = String(process.env.SMTP_USER || process.env.MAIL_USER || '').trim();
+  const pass = String(process.env.SMTP_PASS || process.env.MAIL_PASS || '').trim();
+  const port = Number(process.env.SMTP_PORT || process.env.MAIL_PORT || 587);
+  const from = String(
+    process.env.SMTP_FROM || process.env.MAIL_FROM || (user ? `Controle de Bola <${user}>` : '')
+  ).trim();
+
+  if (!host || !user || !pass || !from) {
+    return null;
+  }
+
+  return {
+    host,
+    port: Number.isFinite(port) && port > 0 ? port : 587,
+    user,
+    pass,
+    from,
+    replyTo: String(process.env.SMTP_REPLY_TO || '').trim(),
+  };
+}
+
+async function readSmtpFromMailSettings() {
+  const query = new Parse.Query(MAIL_SETTINGS_CLASS);
+  const row = await query.first({ useMasterKey: true });
+  if (!row) return null;
+
+  const host = String(row.get('host') || '').trim();
+  const user = String(row.get('user') || '').trim();
+  const pass = String(row.get('pass') || '').trim();
+  const from = String(row.get('from') || (user ? `Controle de Bola <${user}>` : '')).trim();
+  const port = Number(row.get('port') || 587);
+
+  if (!host || !user || !pass || !from) {
+    return null;
+  }
+
+  return {
+    host,
+    port: Number.isFinite(port) && port > 0 ? port : 587,
+    user,
+    pass,
+    from,
+    replyTo: String(row.get('replyTo') || '').trim(),
+  };
+}
+
+async function readSmtpConfig() {
+  const fromEnv = readSmtpFromEnv();
+  if (fromEnv) return fromEnv;
+
+  if (smtpConfigCache.config && Date.now() - smtpConfigCache.at < 60 * 1000) {
+    return smtpConfigCache.config;
+  }
+
+  const fromClass = await readSmtpFromMailSettings();
+  smtpConfigCache = { at: Date.now(), config: fromClass };
+  return fromClass;
+}
+
+async function assertSmtpConfigured() {
+  const config = await readSmtpConfig();
+  if (!config) {
+    throw new Parse.Error(
+      Parse.Error.INTERNAL_SERVER_ERROR,
+      'SMTP nao configurado. No Back4App (App Settings → Environment Variables) cadastre SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS e SMTP_FROM, ou crie 1 objeto na classe MailSettings. Publique cloud/main.js e cloud/package.json (nodemailer).'
+    );
+  }
+  return config;
+}
+
+function loadNodemailer() {
+  try {
+    return require('nodemailer');
+  } catch (error) {
+    throw new Parse.Error(
+      Parse.Error.INTERNAL_SERVER_ERROR,
+      'Modulo nodemailer ausente. Publique cloud/package.json no Cloud Code e aguarde o build NPM.'
+    );
+  }
+}
+
+function isAllowedAttachmentUrl(url) {
+  try {
+    const parsed = new URL(String(url || ''));
+    if (parsed.protocol !== 'https:') return false;
+    const host = parsed.hostname.toLowerCase();
+    return host.includes('back4app') || host.endsWith('b4a.io');
+  } catch {
+    return false;
+  }
+}
+
+async function buildMailAttachment(attachmentUrl, filename) {
+  if (!attachmentUrl) return null;
+  if (!isAllowedAttachmentUrl(attachmentUrl)) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Anexo invalido.');
+  }
+
+  const response = await fetch(attachmentUrl);
+  if (!response.ok) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Nao foi possivel ler o anexo.');
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (buffer.length > MAIL_ATTACHMENT_MAX_BYTES) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'O anexo deve ter no maximo 5 MB.');
+  }
+
+  return {
+    filename: String(filename || 'anexo').replace(/[^\w.\-]+/g, '_').slice(0, 80),
+    content: buffer,
+  };
+}
+
+async function sendAppMail({ to, subject, text, html, replyTo, attachmentUrl, attachmentName }) {
+  const config = await assertSmtpConfigured();
+  const nodemailer = loadNodemailer();
+  const transporter = nodemailer.createTransport({
+    host: config.host,
+    port: config.port,
+    secure: config.port === 465,
+    requireTLS: config.port === 587,
+    auth: {
+      user: config.user,
+      pass: config.pass,
+    },
+  });
+
+  const attachments = [];
+  const file = await buildMailAttachment(attachmentUrl, attachmentName);
+  if (file) attachments.push(file);
+
+  try {
+    await transporter.sendMail({
+      from: config.from,
+      to,
+      subject,
+      text,
+      html: html || undefined,
+      replyTo: replyTo || config.replyTo || 'contato@controledebola.com.br',
+      attachments: attachments.length ? attachments : undefined,
+    });
+  } catch (error) {
+    const detail = error && error.message ? String(error.message) : 'falha SMTP';
+    console.error('sendAppMail failed:', detail);
+    throw new Parse.Error(
+      Parse.Error.INTERNAL_SERVER_ERROR,
+      'Nao foi possivel enviar o e-mail. Confira o objeto MailSettings (host/user/pass do Zoho).'
+    );
+  }
+}
+
+Parse.Cloud.define('configureMailSettingsClassPermissions', async (request) => {
+  if (!request.master) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Use Master Key (API Console REST) para configurar MailSettings.'
+    );
+  }
+
+  const schema = new Parse.Schema(MAIL_SETTINGS_CLASS);
+  let exists = true;
+  try {
+    await schema.get();
+  } catch {
+    exists = false;
+  }
+
+  if (!exists) {
+    schema.addString('host');
+    schema.addNumber('port');
+    schema.addString('user');
+    schema.addString('pass');
+    schema.addString('from');
+    schema.addString('replyTo');
+  }
+
+  schema.setCLP({
+    find: {},
+    get: {},
+    count: {},
+    create: {},
+    update: {},
+    delete: {},
+    addField: {},
+  });
+
+  if (exists) {
+    await schema.update();
+  } else {
+    await schema.save();
+  }
+
+  return { ok: true, className: MAIL_SETTINGS_CLASS };
+});
+
 // --- 02-core.js ---
 
 /**
@@ -390,7 +601,7 @@ async function verifyCurrentPassword(user, password) {
   }
 }
 
-async function assertContactAvailable({ username, email, phone, excludeUserId }) {
+async function assertContactAvailable({ username, email, phone, cpf, excludeUserId }) {
   if (username) {
     const query = new Parse.Query(Parse.User);
     query.equalTo('username', username);
@@ -432,6 +643,40 @@ async function assertContactAvailable({ username, email, phone, excludeUserId })
       }
     }
   }
+
+  if (cpf) {
+    const query = new Parse.Query(Parse.User);
+    query.equalTo('cpf', cpf);
+    const existing = await query.first({ useMasterKey: true });
+    if (existing && existing.id !== excludeUserId) {
+      throw new Parse.Error(
+        Parse.Error.DUPLICATE_VALUE,
+        'CPF ja cadastrado. Faca login com a conta existente. Se esqueceu a senha, use Recuperar senha na tela de login.'
+      );
+    }
+  }
+}
+
+function normalizeCpfDigits(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
+function isValidCpf(value) {
+  const cpf = normalizeCpfDigits(value);
+  if (cpf.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(cpf)) return false;
+
+  let sum = 0;
+  for (let i = 0; i < 9; i += 1) sum += Number(cpf[i]) * (10 - i);
+  let dig1 = (sum * 10) % 11;
+  if (dig1 === 10) dig1 = 0;
+  if (dig1 !== Number(cpf[9])) return false;
+
+  sum = 0;
+  for (let i = 0; i < 10; i += 1) sum += Number(cpf[i]) * (11 - i);
+  let dig2 = (sum * 10) % 11;
+  if (dig2 === 10) dig2 = 0;
+  return dig2 === Number(cpf[10]);
 }
 
 function buildUserDisplayFields(user) {
@@ -711,6 +956,171 @@ Parse.Cloud.define('changeUserPassword', async (request) => {
   return { ok: true };
 });
 
+const PASSWORD_RESET_OTP_TTL_MS = 30 * 60 * 1000;
+const PASSWORD_RESET_MIN_INTERVAL_MS = 60 * 1000;
+const PASSWORD_RESET_MAX_PER_HOUR = 5;
+const PASSWORD_RESET_MAX_ATTEMPTS = 5;
+
+async function findUserForPasswordReset(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  const byEmail = new Parse.Query(Parse.User);
+  byEmail.equalTo('email', normalized);
+  const userByEmail = await byEmail.first({ useMasterKey: true });
+  if (userByEmail) return userByEmail;
+
+  const byUsername = new Parse.Query(Parse.User);
+  byUsername.equalTo('username', normalized);
+  return byUsername.first({ useMasterKey: true });
+}
+
+function hashPasswordResetOtp(otp, salt) {
+  const crypto = require('crypto');
+  return crypto.createHash('sha256').update(`${salt}:${otp}`).digest('hex');
+}
+
+function createPasswordResetOtp() {
+  const crypto = require('crypto');
+  const otp = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+  const salt = crypto.randomBytes(16).toString('hex');
+  return { otp, stored: `${salt}:${hashPasswordResetOtp(otp, salt)}` };
+}
+
+function passwordResetOtpMatches(stored, otp) {
+  const parts = String(stored || '').split(':');
+  if (parts.length !== 2) return false;
+  const [salt, expected] = parts;
+  return hashPasswordResetOtp(String(otp || ''), salt) === expected;
+}
+
+function clearPasswordResetFields(user) {
+  user.unset('passwordResetOtpHash');
+  user.unset('passwordResetExpiresAt');
+  user.unset('passwordResetFailCount');
+}
+
+function assertPasswordResetRateLimit(user) {
+  const now = Date.now();
+  const lastAt = user.get('passwordResetRequestedAt');
+  const lastMs = lastAt instanceof Date ? lastAt.getTime() : 0;
+  if (lastMs && now - lastMs < PASSWORD_RESET_MIN_INTERVAL_MS) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'Aguarde um minuto antes de pedir outro codigo.'
+    );
+  }
+
+  const hourStarted = user.get('passwordResetHourStartedAt');
+  const hourStartMs = hourStarted instanceof Date ? hourStarted.getTime() : 0;
+  const hourCount = Number(user.get('passwordResetHourCount') || 0);
+  if (hourStartMs && now - hourStartMs < 60 * 60 * 1000 && hourCount >= PASSWORD_RESET_MAX_PER_HOUR) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'Limite de envios atingido. Tente novamente em uma hora.'
+    );
+  }
+}
+
+function markPasswordResetRequest(user) {
+  const now = new Date();
+  const hourStarted = user.get('passwordResetHourStartedAt');
+  const hourStartMs = hourStarted instanceof Date ? hourStarted.getTime() : 0;
+  if (!hourStartMs || now.getTime() - hourStartMs >= 60 * 60 * 1000) {
+    user.set('passwordResetHourStartedAt', now);
+    user.set('passwordResetHourCount', 1);
+  } else {
+    user.set('passwordResetHourCount', Number(user.get('passwordResetHourCount') || 0) + 1);
+  }
+  user.set('passwordResetRequestedAt', now);
+}
+
+Parse.Cloud.define('requestPasswordResetEmail', async (request) => {
+  const email = String(request.params.email || '').trim().toLowerCase();
+  if (!email || !isEmailValue(email)) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe um e-mail valido.');
+  }
+
+  await assertSmtpConfigured();
+
+  const user = await findUserForPasswordReset(email);
+  if (!user) {
+    return { ok: true };
+  }
+
+  assertPasswordResetRateLimit(user);
+
+  const { otp, stored } = createPasswordResetOtp();
+  user.set('passwordResetOtpHash', stored);
+  user.set('passwordResetExpiresAt', new Date(Date.now() + PASSWORD_RESET_OTP_TTL_MS));
+  user.set('passwordResetFailCount', 0);
+  markPasswordResetRequest(user);
+  await user.save(null, { useMasterKey: true });
+
+  const subject = 'Controle de Bola — codigo para redefinir senha';
+  const text = [
+    'Voce pediu para redefinir a senha do Controle de Bola.',
+    '',
+    `Codigo: ${otp}`,
+    '',
+    'Ele vale por 30 minutos. Digite o codigo no app e escolha a nova senha.',
+    'Se nao foi voce, ignore este e-mail.',
+  ].join('\n');
+  const html = `
+    <p>Voce pediu para redefinir a senha do <strong>Controle de Bola</strong>.</p>
+    <p style="font-size:28px;letter-spacing:6px;font-weight:700">${otp}</p>
+    <p>O codigo vale por 30 minutos. Digite-o no app e escolha a nova senha.</p>
+    <p>Se nao foi voce, ignore este e-mail.</p>
+  `;
+
+  await sendAppMail({ to: email, subject, text, html });
+  return { ok: true };
+});
+
+Parse.Cloud.define('confirmPasswordReset', async (request) => {
+  const email = String(request.params.email || '').trim().toLowerCase();
+  const code = String(request.params.code || '').replace(/\D/g, '');
+  const newPassword = String(request.params.newPassword || '');
+
+  if (!email || !isEmailValue(email)) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe um e-mail valido.');
+  }
+  if (!/^\d{6}$/.test(code)) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o codigo de 6 digitos enviado por e-mail.');
+  }
+  if (newPassword.length < 8) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'A nova senha deve ter no minimo 8 caracteres.'
+    );
+  }
+
+  const user = await findUserForPasswordReset(email);
+  if (!user) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Codigo invalido ou expirado.');
+  }
+
+  const expiresAt = user.get('passwordResetExpiresAt');
+  const expired = !(expiresAt instanceof Date) || expiresAt.getTime() < Date.now();
+  const stored = user.get('passwordResetOtpHash');
+  const failCount = Number(user.get('passwordResetFailCount') || 0);
+
+  if (expired || !stored || failCount >= PASSWORD_RESET_MAX_ATTEMPTS) {
+    clearPasswordResetFields(user);
+    await user.save(null, { useMasterKey: true });
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Codigo invalido ou expirado.');
+  }
+
+  if (!passwordResetOtpMatches(stored, code)) {
+    user.set('passwordResetFailCount', failCount + 1);
+    await user.save(null, { useMasterKey: true });
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Codigo invalido ou expirado.');
+  }
+
+  user.set('password', newPassword);
+  clearPasswordResetFields(user);
+  await user.save(null, { useMasterKey: true });
+  return { ok: true };
+});
+
 async function destroyAllByUserField(className, fieldName, user) {
   const query = new Parse.Query(className);
   query.equalTo(fieldName, user);
@@ -752,6 +1162,125 @@ Parse.Cloud.define('deleteMyAccount', async (request) => {
   await destroyAllByUserField('_Installation', 'user', user);
 
   await user.destroy({ useMasterKey: true });
+  return { ok: true };
+});
+
+// --- 02b-contact-messages.js ---
+
+const CONTACT_FEEDBACK_TO = 'contato@controledebola.com.br';
+const CONTACT_SUPPORT_TO = 'suporte@controledebola.com.br';
+const CONTACT_TITLE_MAX = 120;
+const CONTACT_BODY_MAX = 4000;
+const CONTACT_MIN_INTERVAL_MS = 60 * 1000;
+const CONTACT_MAX_PER_HOUR = 5;
+
+function assertContactRateLimit(user) {
+  const now = Date.now();
+  const lastAt = user.get('contactMessageRequestedAt');
+  const lastMs = lastAt instanceof Date ? lastAt.getTime() : 0;
+  if (lastMs && now - lastMs < CONTACT_MIN_INTERVAL_MS) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'Aguarde um minuto antes de enviar outra mensagem.'
+    );
+  }
+
+  const hourStarted = user.get('contactMessageHourStartedAt');
+  const hourStartMs = hourStarted instanceof Date ? hourStarted.getTime() : 0;
+  const hourCount = Number(user.get('contactMessageHourCount') || 0);
+  if (hourStartMs && now - hourStartMs < 60 * 60 * 1000 && hourCount >= CONTACT_MAX_PER_HOUR) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'Limite de mensagens atingido. Tente novamente em uma hora.'
+    );
+  }
+}
+
+function markContactMessageRequest(user) {
+  const now = new Date();
+  const hourStarted = user.get('contactMessageHourStartedAt');
+  const hourStartMs = hourStarted instanceof Date ? hourStarted.getTime() : 0;
+  if (!hourStartMs || now.getTime() - hourStartMs >= 60 * 60 * 1000) {
+    user.set('contactMessageHourStartedAt', now);
+    user.set('contactMessageHourCount', 1);
+  } else {
+    user.set('contactMessageHourCount', Number(user.get('contactMessageHourCount') || 0) + 1);
+  }
+  user.set('contactMessageRequestedAt', now);
+}
+
+Parse.Cloud.define('sendContactMessage', async (request) => {
+  const sessionUser = request.user;
+  if (!sessionUser) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login para enviar a mensagem.');
+  }
+
+  const kind = String(request.params.kind || '').trim();
+  if (kind !== 'feedback' && kind !== 'support') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Tipo de mensagem invalido.');
+  }
+
+  const title = String(request.params.title || '').trim();
+  const body = String(request.params.body || '').trim();
+  if (title.length < 3 || title.length > CONTACT_TITLE_MAX) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      `Informe um titulo (3 a ${CONTACT_TITLE_MAX} caracteres).`
+    );
+  }
+  if (body.length < 10 || body.length > CONTACT_BODY_MAX) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      `Descreva a mensagem (10 a ${CONTACT_BODY_MAX} caracteres).`
+    );
+  }
+
+  const attachmentUrl = String(request.params.attachmentUrl || '').trim();
+  const attachmentName = String(request.params.attachmentName || '').trim();
+
+  const user = await new Parse.Query(Parse.User).get(sessionUser.id, { useMasterKey: true });
+  assertContactRateLimit(user);
+
+  const fullName = String(user.get('name') || '').trim() || 'Nao informado';
+  const apelido = String(user.get('apelido') || '').trim() || 'Nao informado';
+  const email = String(user.get('email') || user.getUsername() || '').trim();
+  const to = kind === 'support' ? CONTACT_SUPPORT_TO : CONTACT_FEEDBACK_TO;
+  const kindLabel = kind === 'support' ? 'Problema no app' : 'Critica / sugestao / elogio';
+  const subject = `[Controle de Bola] ${kindLabel}: ${title}`.slice(0, 180);
+
+  const text = [
+    `Tipo: ${kindLabel}`,
+    `Nome: ${fullName}`,
+    `Apelido: ${apelido}`,
+    `Conta: ${email || user.id}`,
+    `UserId: ${user.id}`,
+    '',
+    title,
+    '',
+    body,
+  ].join('\n');
+
+  const html = `
+    <p><strong>Tipo:</strong> ${kindLabel}</p>
+    <p><strong>Nome:</strong> ${fullName}<br/>
+    <strong>Apelido:</strong> ${apelido}<br/>
+    <strong>Conta:</strong> ${email || user.id}</p>
+    <h3>${title.replace(/</g, '')}</h3>
+    <p>${body.replace(/</g, '').replace(/\n/g, '<br/>')}</p>
+  `;
+
+  await sendAppMail({
+    to,
+    subject,
+    text,
+    html,
+    replyTo: isEmailValue(email) ? email : undefined,
+    attachmentUrl: attachmentUrl || undefined,
+    attachmentName: attachmentName || undefined,
+  });
+
+  markContactMessageRequest(user);
+  await user.save(null, { useMasterKey: true });
   return { ok: true };
 });
 
@@ -964,20 +1493,49 @@ function formatEventPushDate(startTime) {
   }).format(date);
 }
 
+async function collectNewPeladaEventAudience(peladaId, excludeEventId) {
+  if (typeof collectPeladaParticipantUserIds === 'function') {
+    return collectPeladaParticipantUserIds(peladaId);
+  }
+  return collectPeladaPreviousEventParticipantUserIds(peladaId, excludeEventId);
+}
+
 async function notifyNewPeladaEvent(event) {
+  const empty = {
+    ok: false,
+    skipped: 'missing_event',
+    targetedUsers: 0,
+    devicesMatched: 0,
+    audience: 0,
+  };
+  if (!event || !event.id) return empty;
+
+  if (event.get('pushNewEventSentAt')) {
+    return {
+      ok: true,
+      skipped: 'already_sent',
+      targetedUsers: 0,
+      devicesMatched: 0,
+      audience: 0,
+    };
+  }
+
   const peladaPtr = event.get('pelada');
-  if (!peladaPtr || !peladaPtr.id) return;
+  if (!peladaPtr || !peladaPtr.id) {
+    return { ...empty, skipped: 'missing_pelada' };
+  }
 
   const peladaId = peladaPtr.id;
   const eventId = event.id;
-  const participantIds = await collectPeladaPreviousEventParticipantUserIds(peladaId, eventId);
-  if (!participantIds.size) return;
-
+  const participantIds = await collectNewPeladaEventAudience(peladaId, eventId);
   const admin = event.get('admin');
   if (admin && admin.id) {
     participantIds.delete(String(admin.id));
   }
-  if (!participantIds.size) return;
+  if (!participantIds.size) {
+    console.info('notifyNewPeladaEvent empty audience', { eventId, peladaId });
+    return { ok: true, skipped: 'empty_audience', targetedUsers: 0, devicesMatched: 0, audience: 0 };
+  }
 
   let peladaName = 'pelada';
   try {
@@ -993,7 +1551,7 @@ async function notifyNewPeladaEvent(event) {
     ? `Novo evento "${eventName}" em ${peladaName} em ${dateLabel}.`
     : `Novo evento "${eventName}" em ${peladaName}.`;
 
-  await sendPushToUsers(
+  const pushResult = await sendPushToUsers(
     participantIds,
     {
       title: 'Novo evento na pelada',
@@ -1006,6 +1564,61 @@ async function notifyNewPeladaEvent(event) {
     },
     { throwOnError: false }
   );
+
+  event.set('pushNewEventSentAt', new Date());
+  try {
+    await event.save(null, { useMasterKey: true });
+  } catch (error) {
+    console.error('notifyNewPeladaEvent flag save failed', error);
+  }
+
+  console.info('notifyNewPeladaEvent sent', {
+    eventId,
+    peladaId,
+    audience: participantIds.size,
+    targetedUsers: pushResult.targetedUsers,
+    devicesMatched: pushResult.devicesMatched,
+  });
+
+  return {
+    ok: true,
+    skipped: null,
+    audience: participantIds.size,
+    targetedUsers: pushResult.targetedUsers || 0,
+    devicesMatched: pushResult.devicesMatched || 0,
+    pushBatchesSent: pushResult.pushBatchesSent || 0,
+  };
+}
+
+async function notifyTeamMatchStakeholders(event, userIds, excludeUserId) {
+  const targets = new Set();
+  for (const id of userIds || []) {
+    const value = String(id || '').trim();
+    if (value && value !== excludeUserId) targets.add(value);
+  }
+  if (!targets.size) {
+    return { audience: 0, devicesMatched: 0 };
+  }
+  const home = event.get('homeTeamName') || 'Mandante';
+  const away = event.get('awayTeamName') || 'Visitante';
+  const eventName = event.get('name') || `${home} x ${away}`;
+  const dateLabel = formatEventPushDate(event.get('startTime'));
+  const alert = dateLabel
+    ? `Confronto ${eventName} marcado para ${dateLabel}.`
+    : `Confronto ${eventName} marcado.`;
+  const pushResult = await sendPushToUsers(
+    targets,
+    {
+      title: 'Novo confronto',
+      alert,
+      data: { type: 'team_match_created', eventId: event.id },
+    },
+    { throwOnError: false }
+  );
+  return {
+    audience: targets.size,
+    devicesMatched: pushResult.devicesMatched || 0,
+  };
 }
 
 async function notifyProfilePresentationDecision(registration, event, peladaId, decision) {
@@ -1044,9 +1657,14 @@ async function notifyProfilePresentationDecision(registration, event, peladaId, 
 }
 
 Parse.Cloud.afterSave('Event', async (request) => {
-  if (!request.object.isNew()) return;
+  const event = request.object;
+  if (!event || event.get('pushNewEventSentAt')) return;
+  const createdAt = event.createdAt instanceof Date ? event.createdAt : new Date(event.createdAt || 0);
+  if (Number.isNaN(createdAt.getTime())) return;
+  // Back4App pode mandar original.id mesmo no create — dispara se o evento e recente.
+  if (Date.now() - createdAt.getTime() > 5 * 60 * 1000) return;
   try {
-    await notifyNewPeladaEvent(request.object);
+    await notifyNewPeladaEvent(event);
   } catch (error) {
     console.error('notifyNewPeladaEvent failed', error);
   }
@@ -1150,8 +1768,18 @@ async function notifyEventScheduleOrCancelChange(event, original) {
   // Ignora saves auxiliares (ex.: limpar pushReminder2hSentAt) sem mudanca de agenda.
   if (!finishChanged && !startChanged) return;
 
-  const confirmedIds = await collectConfirmedParticipantUserIdsForEvent(event);
-  if (!confirmedIds.length) {
+  let audienceIds = [];
+  if (event.get('type') === 'team_match' && typeof collectTeamMatchNotifyUserIds === 'function') {
+    try {
+      audienceIds = await collectTeamMatchNotifyUserIds(event);
+    } catch (error) {
+      console.error('collectTeamMatchNotifyUserIds (schedule change) failed', error);
+    }
+  }
+  if (!audienceIds.length) {
+    audienceIds = await collectConfirmedParticipantUserIdsForEvent(event);
+  }
+  if (!audienceIds.length) {
     if (startChanged && event.get('pushReminder2hSentAt')) {
       event.unset('pushReminder2hSentAt');
       await event.save(null, { useMasterKey: true });
@@ -1163,14 +1791,19 @@ async function notifyEventScheduleOrCancelChange(event, original) {
   const eventId = event.id;
   const peladaPtr = event.get('pelada');
   const peladaId = peladaPtr && peladaPtr.id ? peladaPtr.id : '';
+  const reasonRaw = String(event.get('lastScheduleChangeReason') || '').trim();
+  const reasonSuffix = reasonRaw ? ` Motivo: ${reasonRaw.slice(0, 220)}` : '';
+  const isTeamMatch = event.get('type') === 'team_match';
+  const cancelTitle = isTeamMatch ? 'Confronto cancelado' : 'Evento cancelado';
+  const rescheduleTitle = isTeamMatch ? 'Confronto remarcado' : 'Evento remarcado';
 
   // Cancelamento antecipado: marcado como encerrado antes do horario de inicio.
   if (finishChanged && newStartMs && newStartMs > now) {
     await sendPushToUsers(
-      confirmedIds,
+      audienceIds,
       {
-        title: 'Evento cancelado',
-        alert: `O evento "${eventName}" foi cancelado.`,
+        title: cancelTitle,
+        alert: `O evento "${eventName}" foi cancelado.${reasonSuffix}`,
         data: {
           type: 'event_cancelled',
           eventId,
@@ -1179,19 +1812,27 @@ async function notifyEventScheduleOrCancelChange(event, original) {
       },
       { throwOnError: false }
     );
+    if (reasonRaw) {
+      event.unset('lastScheduleChangeReason');
+      try {
+        await event.save(null, { useMasterKey: true });
+      } catch (error) {
+        console.error('clear lastScheduleChangeReason failed', error);
+      }
+    }
     return;
   }
 
   if (startChanged) {
     const dateLabel = formatEventPushDate(newStart);
     const alert = dateLabel
-      ? `O evento "${eventName}" foi remarcado para ${dateLabel}.`
-      : `O evento "${eventName}" teve o horario alterado.`;
+      ? `O evento "${eventName}" foi remarcado para ${dateLabel}.${reasonSuffix}`
+      : `O evento "${eventName}" teve o horario alterado.${reasonSuffix}`;
 
     await sendPushToUsers(
-      confirmedIds,
+      audienceIds,
       {
-        title: 'Evento remarcado',
+        title: rescheduleTitle,
         alert,
         data: {
           type: 'event_rescheduled',
@@ -1202,6 +1843,15 @@ async function notifyEventScheduleOrCancelChange(event, original) {
       { throwOnError: false }
     );
 
+    if (reasonRaw) {
+      event.unset('lastScheduleChangeReason');
+      try {
+        await event.save(null, { useMasterKey: true });
+      } catch (error) {
+        console.error('clear lastScheduleChangeReason failed', error);
+      }
+    }
+
     // Permite novo lembrete 2h apos remarcacao.
     if (event.get('pushReminder2hSentAt')) {
       event.unset('pushReminder2hSentAt');
@@ -1211,7 +1861,7 @@ async function notifyEventScheduleOrCancelChange(event, original) {
 }
 
 Parse.Cloud.afterSave('Event', async (request) => {
-  if (request.object.isNew()) return;
+  if (!(request.original && request.original.id)) return;
   try {
     await notifyEventScheduleOrCancelChange(request.object, request.original);
   } catch (error) {
@@ -1252,17 +1902,24 @@ Parse.Cloud.afterSave('RefereeInvitation', async (request) => {
     const roleLabel = hiringRoleLabel(invitation.get('role'));
 
     let eventName = 'evento';
+    let eventStartTime = null;
     if (eventId) {
       try {
         const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
         eventName = event.get('name') || eventName;
+        eventStartTime = event.get('startTime') || null;
       } catch {
         // mantem padrao
       }
     }
+    const eventDateLabel = eventStartTime ? formatEventPushDate(eventStartTime) : '';
 
     // Novo convite pendente → profissional.
     if (!original) {
+      const hiringApproval = invitation.get('refereeHiringApprovalStatus');
+      if (hiringApproval === 'pending') {
+        return;
+      }
       if (status === 'pending' && invitedUser && invitedUser.id) {
         await sendPushToUser(invitedUser.id, {
           title: 'Novo convite de contratacao',
@@ -1274,6 +1931,23 @@ Parse.Cloud.afterSave('RefereeInvitation', async (request) => {
             invitationId: invitation.id,
           },
         });
+        if (typeof createAppMessage === 'function') {
+          const offeredAmount = Number(invitation.get('offeredAmount') || 0);
+          await createAppMessage({
+            recipientId: invitedUser.id,
+            senderId: invitedBy && invitedBy.id ? invitedBy.id : '',
+            kind: 'hiring_invite',
+            title: `Convite de ${roleLabel}`,
+            body:
+              `Voce foi convidado como ${roleLabel} para "${eventName}"` +
+              (eventDateLabel ? ` (${eventDateLabel}).` : '.') +
+              (offeredAmount > 0 ? ` Valor oferecido: R$ ${offeredAmount.toFixed(2)}.` : '') +
+              ' Aceite ou recuse na Entrada.',
+            relatedClass: 'RefereeInvitation',
+            relatedId: invitation.id,
+            actionRoute: '/inbox',
+          });
+        }
       }
       return;
     }
@@ -1300,6 +1974,28 @@ Parse.Cloud.afterSave('RefereeInvitation', async (request) => {
         decision: status,
       },
     });
+
+    // Recusa do presidente adversario em confronto ja gera mensagem propria
+    // em respondTeamMatchRefereeHiringApproval — nao duplicar aqui.
+    const rejectedByOpponent =
+      String(invitation.get('refereeHiringApprovalStatus') || '') === 'rejected';
+    if (typeof createAppMessage === 'function' && !rejectedByOpponent) {
+      await createAppMessage({
+        recipientId: invitedBy.id,
+        senderId: invitedUser && invitedUser.id ? invitedUser.id : '',
+        kind: 'hiring_response',
+        title:
+          status === 'accepted'
+            ? `Contratacao confirmada: ${inviteeName}`
+            : `Convite recusado por ${inviteeName}`,
+        body:
+          `${inviteeName} ${decisionLabel} o convite de ${roleLabel} em "${eventName}"` +
+          (eventDateLabel ? ` (${eventDateLabel}).` : '.'),
+        relatedClass: 'RefereeInvitation',
+        relatedId: invitation.id,
+        actionRoute: eventId ? `/event/${eventId}` : '/inbox',
+      });
+    }
   } catch (error) {
     console.error('RefereeInvitation push failed', error);
   }
@@ -1851,6 +2547,75 @@ Parse.Cloud.define('diagnoseEventPushTargets', async (request) => {
   };
 });
 
+/** Disparo explicito apos criar evento (nao depende so do afterSave). */
+Parse.Cloud.define('notifyNewPeladaEventCreated', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+
+  const eventId = String(request.params.eventId || '').trim();
+  if (!eventId) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'eventId obrigatorio.');
+  }
+
+  const event = await new Parse.Query('Event').include('pelada').get(eventId, { useMasterKey: true });
+  await assertCanNotifyEventParticipants(user, event);
+  const result = await notifyNewPeladaEvent(event);
+  return { ok: true, eventId, ...result };
+});
+
+/** Diagnostico: o e-mail entra no publico de "novo evento" e tem Installation? */
+Parse.Cloud.define('diagnoseNewPeladaEventPush', async (request) => {
+  if (!request.user && !request.master) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login ou chame com Master Key.');
+  }
+
+  const eventId = String(request.params.eventId || '').trim();
+  const peladaIdParam = String(request.params.peladaId || '').trim();
+  const email = String(request.params.email || '').trim().toLowerCase();
+  if (!email) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'email obrigatorio.');
+  }
+  if (!eventId && !peladaIdParam) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'Informe eventId ou peladaId.');
+  }
+
+  let event = null;
+  let peladaId = peladaIdParam;
+  if (eventId) {
+    event = await new Parse.Query('Event').include('pelada').get(eventId, { useMasterKey: true });
+    const peladaPtr = event.get('pelada');
+    peladaId = (peladaPtr && peladaPtr.id) || peladaId;
+  }
+
+  const audience = peladaId ? await collectNewPeladaEventAudience(peladaId, eventId) : new Set();
+  const adminId = event && event.get('admin') && event.get('admin').id
+    ? String(event.get('admin').id)
+    : '';
+  if (adminId) audience.delete(adminId);
+
+  const focus = await buildPushFocusReport(email, [...audience]);
+  const foundUser = focus.found
+    ? await findUserByEmailOrPhone(email, '')
+    : null;
+  const pushEnabled = foundUser ? foundUser.get('pushNotificationsEnabled') !== false : null;
+
+  return {
+    ok: true,
+    eventId: eventId || null,
+    peladaId: peladaId || null,
+    audience: audience.size,
+    alreadySent: !!(event && event.get('pushNewEventSentAt')),
+    focus: {
+      ...focus,
+      inAudience: !!(focus.userId && audience.has(String(focus.userId))),
+      isEventAdmin: !!(focus.userId && adminId && focus.userId === adminId),
+      pushEnabled,
+    },
+  };
+});
+
 /** Envia push de teste para o usuario logado (valida FCM + Installation). */
 Parse.Cloud.define('sendTestPushToSelf', async (request) => {
   const user = request.user;
@@ -2099,6 +2864,12 @@ Parse.Cloud.define('registerUser', async (request) => {
     );
   }
 
+  const cpfInput = String(params.cpf || '').trim();
+  const normalizedCpf = normalizeCpfDigits(cpfInput);
+  if (!isValidCpf(normalizedCpf)) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe um CPF valido.');
+  }
+
   const normalizedPhone = phoneInput ? normalizePhoneForStorage(phoneInput) : '';
   const username = resolveUsernameFromContact(emailInput, normalizedPhone);
   if (!username) {
@@ -2109,6 +2880,7 @@ Parse.Cloud.define('registerUser', async (request) => {
     username,
     email: emailInput || undefined,
     phone: normalizedPhone || undefined,
+    cpf: normalizedCpf,
   });
 
   const user = new Parse.User();
@@ -2117,6 +2889,7 @@ Parse.Cloud.define('registerUser', async (request) => {
   user.set('name', name);
   user.set('apelido', apelido);
   user.set('address', address);
+  user.set('cpf', normalizedCpf);
 
   if (emailInput) {
     user.set('email', emailInput);
@@ -2140,9 +2913,39 @@ Parse.Cloud.define('registerUser', async (request) => {
 });
 
 Parse.Cloud.beforeSave(Parse.User, async (request) => {
+  if (!request.master) {
+    const locked = [
+      'passwordResetOtpHash',
+      'passwordResetExpiresAt',
+      'passwordResetRequestedAt',
+      'passwordResetFailCount',
+      'passwordResetHourStartedAt',
+      'passwordResetHourCount',
+      'contactMessageRequestedAt',
+      'contactMessageHourStartedAt',
+      'contactMessageHourCount',
+      'cpf',
+    ];
+    for (const key of locked) {
+      if (key === 'cpf' && request.object.isNew()) {
+        continue;
+      }
+      if (request.object.dirty(key)) {
+        request.object.revert(key);
+      }
+    }
+  }
+
   if (!request.object.isNew()) {
     return;
   }
+
+  const cpf = normalizeCpfDigits(request.object.get('cpf'));
+  if (!isValidCpf(cpf)) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe um CPF valido.');
+  }
+  request.object.set('cpf', cpf);
+  await assertContactAvailable({ cpf });
 
   await validateNewUserSignupAntiBot(request.object, request.ip);
 });
@@ -2212,7 +3015,29 @@ function mapLegendTeamRow(row) {
 }
 
 function normalizeLegendSearch(value) {
-  return String(value || '').trim().toLowerCase();
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function legendHaystack(parts) {
+  return normalizeLegendSearch(parts.filter(Boolean).join(' '));
+}
+
+async function findExistingLegendByName(className, name, apelido) {
+  const needles = [normalizeLegendSearch(name), normalizeLegendSearch(apelido)].filter(
+    (value) => value.length >= 2
+  );
+  if (!needles.length) return null;
+  const rows = await new Parse.Query(className).limit(200).find({ useMasterKey: true });
+  return (
+    rows.find((row) => {
+      const names = [normalizeLegendSearch(row.get('name')), normalizeLegendSearch(row.get('apelido'))];
+      return needles.some((needle) => names.includes(needle));
+    }) || null
+  );
 }
 
 Parse.Cloud.define('createAmateurLegendAthlete', async (request) => {
@@ -2233,6 +3058,15 @@ Parse.Cloud.define('createAmateurLegendAthlete', async (request) => {
   }
   if (!LEGEND_ATHLETE_RELATIONSHIPS.includes(relationship)) {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Relacao com a lenda invalida.');
+  }
+
+  const existingAthlete = await findExistingLegendByName('AmateurLegendAthlete', name, apelido);
+  if (existingAthlete) {
+    const label = existingAthlete.get('apelido') || existingAthlete.get('name');
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      `Ja existe a lenda "${label}". Use o cadastro existente em Lendas.`
+    );
   }
 
   const row = new Parse.Object('AmateurLegendAthlete');
@@ -2281,6 +3115,15 @@ Parse.Cloud.define('createAmateurLegendTeam', async (request) => {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Relacao com o time lenda invalida.');
   }
 
+  const existingTeam = await findExistingLegendByName('AmateurLegendTeam', name, apelido);
+  if (existingTeam) {
+    const label = existingTeam.get('apelido') || existingTeam.get('name');
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      `Ja existe o time lenda "${label}". Use o cadastro existente em Lendas.`
+    );
+  }
+
   const row = new Parse.Object('AmateurLegendTeam');
   row.set('name', name);
   row.set('apelido', apelido);
@@ -2317,8 +3160,7 @@ Parse.Cloud.define('listAmateurLegendAthletes', async (request) => {
     .map(mapLegendAthleteRow)
     .filter((row) => {
       if (!search) return true;
-      const haystack = `${row.name} ${row.apelido} ${(row.amateurTeams || []).join(' ')}`.toLowerCase();
-      return haystack.includes(search);
+      return legendHaystack([row.name, row.apelido, ...(row.amateurTeams || [])]).includes(search);
     });
 });
 
@@ -2335,8 +3177,7 @@ Parse.Cloud.define('listAmateurLegendTeams', async (request) => {
     .map(mapLegendTeamRow)
     .filter((row) => {
       if (!search) return true;
-      const haystack = `${row.name} ${row.apelido} ${row.description || ''}`.toLowerCase();
-      return haystack.includes(search);
+      return legendHaystack([row.name, row.apelido, row.description]).includes(search);
     });
 });
 
@@ -2373,14 +3214,15 @@ Parse.Cloud.define('suggestAmateurFootballIdols', async (request) => {
   function pushSuggestion(item) {
     const key = `${item.source}:${item.id}`;
     if (seen.has(key)) return;
-    if (search && !`${item.label} ${item.subtitle || ''}`.toLowerCase().includes(search)) return;
+    if (!matchesLegendSearch(`${item.label} ${item.subtitle || ''}`, search)) return;
     seen.add(key);
     suggestions.push(item);
   }
 
+  const fetchLimit = search ? 200 : limit;
   const legendQuery = new Parse.Query('AmateurLegendAthlete');
   legendQuery.descending('createdAt');
-  legendQuery.limit(limit);
+  legendQuery.limit(fetchLimit);
   for (const row of await legendQuery.find({ useMasterKey: true })) {
     pushSuggestion({
       id: row.id,
@@ -2394,7 +3236,7 @@ Parse.Cloud.define('suggestAmateurFootballIdols', async (request) => {
 
   const athleteQuery = new Parse.Query('AthleteProfile');
   athleteQuery.include('user');
-  athleteQuery.limit(limit);
+  athleteQuery.limit(fetchLimit);
   for (const profile of await athleteQuery.find({ useMasterKey: true })) {
     const profileUser = profile.get('user');
     if (!profileUser) continue;
@@ -2456,6 +3298,15 @@ Parse.Cloud.define('createProLegendAthlete', async (request) => {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Relacao com a lenda invalida.');
   }
 
+  const existingPro = await findExistingLegendByName('ProLegendAthlete', name, apelido);
+  if (existingPro) {
+    const label = existingPro.get('apelido') || existingPro.get('name');
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      `Ja existe a lenda profissional "${label}". Use o cadastro existente.`
+    );
+  }
+
   const row = new Parse.Object('ProLegendAthlete');
   row.set('name', name);
   row.set('apelido', apelido);
@@ -2492,8 +3343,7 @@ Parse.Cloud.define('listProLegendAthletes', async (request) => {
     .map(mapProLegendAthleteRow)
     .filter((row) => {
       if (!search) return true;
-      const haystack = `${row.name} ${row.apelido} ${(row.proTeams || []).join(' ')}`.toLowerCase();
-      return haystack.includes(search);
+      return legendHaystack([row.name, row.apelido, ...(row.proTeams || [])]).includes(search);
     });
 });
 
@@ -2518,14 +3368,15 @@ Parse.Cloud.define('suggestProFootballIdols', async (request) => {
   function pushSuggestion(item) {
     const key = `${item.source}:${item.id}`;
     if (seen.has(key)) return;
-    if (search && !`${item.label} ${item.subtitle || ''}`.toLowerCase().includes(search)) return;
+    if (!matchesLegendSearch(`${item.label} ${item.subtitle || ''}`, search)) return;
     seen.add(key);
     suggestions.push(item);
   }
 
+  const fetchLimit = search ? 200 : limit;
   const legendQuery = new Parse.Query('ProLegendAthlete');
   legendQuery.descending('createdAt');
-  legendQuery.limit(limit);
+  legendQuery.limit(fetchLimit);
   for (const row of await legendQuery.find({ useMasterKey: true })) {
     pushSuggestion({
       id: row.id,
@@ -2539,7 +3390,7 @@ Parse.Cloud.define('suggestProFootballIdols', async (request) => {
 
   const athleteQuery = new Parse.Query('AthleteProfile');
   athleteQuery.include('user');
-  athleteQuery.limit(limit);
+  athleteQuery.limit(fetchLimit);
   for (const profile of await athleteQuery.find({ useMasterKey: true })) {
     const profileUser = profile.get('user');
     if (!profileUser) continue;
@@ -2577,9 +3428,7 @@ function amateurTeamImageUrl(row) {
 
 function matchesLegendSearch(haystack, search) {
   if (!search) return true;
-  return String(haystack || '')
-    .toLowerCase()
-    .includes(search);
+  return normalizeLegendSearch(haystack).includes(search);
 }
 
 Parse.Cloud.define('suggestFavoritePeladaTeams', async (request) => {
@@ -2743,7 +3592,7 @@ Parse.Cloud.define('listAmateurTeamsForLegend', async (request) => {
   for (const row of rows) {
     const name = String(row.get('name') || '').trim();
     if (!name) continue;
-    if (search && !name.toLowerCase().includes(search)) continue;
+    if (search && !normalizeLegendSearch(name).includes(search)) continue;
 
     let presidentAddress = {};
     const president = row.get('president');
@@ -2757,10 +3606,19 @@ Parse.Cloud.define('listAmateurTeamsForLegend', async (request) => {
     }
 
     const teamImage = row.get('teamImage');
+    let averageAge = null;
+    try {
+      if (typeof amateurTeamAverageAge === 'function') {
+        averageAge = await amateurTeamAverageAge(row.id);
+      }
+    } catch {
+      averageAge = null;
+    }
     results.push({
       id: row.id,
       name,
       imageUrl: teamImage && teamImage.url ? teamImage.url() : undefined,
+      averageAge,
       proximityScore: locationProximityScoreForLegend(address, presidentAddress),
     });
   }
@@ -3145,6 +4003,8 @@ const MURAL_TARGET_ROLES = [
   'masseur',
   'kitman',
   'gandula',
+  'fan',
+  'gatekeeper',
 ];
 
 function isGoalkeeperPosition(position) {
@@ -3225,13 +4085,49 @@ function dedupeMuralVoteRowsByVoter(voteRows) {
   return Array.from(byKey.values());
 }
 
-async function mapMuralVoteRowsForScope(scope, scopeId) {
+/** Confrontos (team_match) pesam 3x em votacao/pontuacao agregada do mural. */
+const TEAM_MATCH_MURAL_WEIGHT = 3;
+
+async function attachTeamMatchVoteWeights(voteRows) {
+  const eventIds = [
+    ...new Set(
+      voteRows
+        .map((vote) => String(vote.scopeId || '').trim())
+        .filter(Boolean)
+    ),
+  ];
+  if (!eventIds.length) return voteRows;
+  const typeById = new Map();
+  const chunkSize = 50;
+  for (let i = 0; i < eventIds.length; i += chunkSize) {
+    const chunk = eventIds.slice(i, i + chunkSize);
+    const events = await new Parse.Query('Event')
+      .containedIn('objectId', chunk)
+      .select(['type'])
+      .limit(chunk.length)
+      .find({ useMasterKey: true });
+    for (const event of events) {
+      typeById.set(event.id, event.get('type') || '');
+    }
+  }
+  for (const vote of voteRows) {
+    const type = typeById.get(String(vote.scopeId || '')) || '';
+    const weight = type === 'team_match' ? TEAM_MATCH_MURAL_WEIGHT : 1;
+    vote.scoreWeight = weight;
+    vote.weightedScore = Number(vote.score || 0) * weight;
+  }
+  return voteRows;
+}
+
+async function mapMuralVoteRowsForScope(scope, scopeId, locationFilter) {
   const goalkeeperUserIds = await loadGoalkeeperUserIdsForMuralScope(scope, scopeId);
-  const rawVotes = await loadMuralVoteRows(scope, scopeId);
+  const rawVotes = await loadMuralVoteRows(scope, scopeId, locationFilter);
   const mapped = rawVotes.map((vote) =>
     normalizeVoteRowTargetRole(mapVoteRow(vote), goalkeeperUserIds)
   );
-  return dedupeMuralVoteRowsByVoter(mapped);
+  const deduped = dedupeMuralVoteRowsByVoter(mapped);
+  if (scope === 'event') return deduped;
+  return attachTeamMatchVoteWeights(deduped);
 }
 
 function assertEventVotingWindowOpen(event) {
@@ -3260,8 +4156,12 @@ function computePerformanceScoreFromRow(perf) {
   return points + goals * 3 + assists * 2 + saves * 2 - yellowCards - redCards * 3;
 }
 
-async function loadMuralVoteRows(scope, scopeId) {
+async function loadMuralVoteRows(scope, scopeId, locationFilter) {
   if (scope === 'app') {
+    if (locationFilter && locationFilter.active) {
+      const eventIds = await loadMuralLocationEventIds(locationFilter);
+      return loadMuralVoteRowsForEventIds(eventIds);
+    }
     const query = new Parse.Query('MuralVote');
     query.include(['targetUser', 'voter']);
     query.limit(10000);
@@ -3306,9 +4206,13 @@ async function loadMuralVoteRows(scope, scopeId) {
   return query.find({ useMasterKey: true });
 }
 
-async function loadMuralPerformanceRows(scope, scopeId) {
+async function loadMuralPerformanceRows(scope, scopeId, locationFilter) {
   if (scope === 'app') {
-    return new Parse.Query('EventPerformance').limit(3000).find({ useMasterKey: true });
+    const query = new Parse.Query('EventPerformance');
+    if (locationFilter && locationFilter.active) {
+      query.matchesQuery('event', buildMuralLocationEventQuery(locationFilter));
+    }
+    return query.limit(3000).find({ useMasterKey: true });
   }
 
   if (scope === 'pelada' && scopeId) {
@@ -3349,6 +4253,7 @@ function mapPerformanceRow(perf, conflictMap = new Map(), scopeDefaultPriority) 
   const user = perf.get('user');
   const priority = resolvePerformanceStatsPriority(perf, conflictMap, scopeDefaultPriority);
   const effective = resolveEffectivePerformanceStats(perf, priority);
+  const event = perf.get('event');
   return {
     userId,
     userName:
@@ -3360,7 +4265,35 @@ function mapPerformanceRow(perf, conflictMap = new Map(), scopeDefaultPriority) 
     score: computeEffectivePerformanceScore(perf, priority),
     goals: effective.goals,
     saves: effective.saves,
+    eventId: event && event.id ? String(event.id) : '',
   };
+}
+
+async function attachTeamMatchPerformanceWeights(rows, applyWeight = true) {
+  const eventIds = [
+    ...new Set(rows.map((row) => String(row.eventId || '').trim()).filter(Boolean)),
+  ];
+  if (!eventIds.length) return rows;
+  const typeById = new Map();
+  for (let i = 0; i < eventIds.length; i += 50) {
+    const chunk = eventIds.slice(i, i + 50);
+    const events = await new Parse.Query('Event')
+      .containedIn('objectId', chunk)
+      .select(['type'])
+      .limit(chunk.length)
+      .find({ useMasterKey: true });
+    for (const event of events) {
+      typeById.set(event.id, event.get('type') || '');
+    }
+  }
+  for (const row of rows) {
+    const type = typeById.get(String(row.eventId || '')) || '';
+    row.eventType = type === 'team_match' ? 'team_match' : type || 'pelada';
+    if (type === 'team_match' && applyWeight) {
+      row.score = Number(row.score || 0) * TEAM_MATCH_MURAL_WEIGHT;
+    }
+  }
+  return rows;
 }
 
 async function mapPerformanceRowsForMural(scope, scopeId, performances) {
@@ -3369,7 +4302,8 @@ async function mapPerformanceRowsForMural(scope, scopeId, performances) {
     scopeDefaultPriority = await loadPeladaStatsConflictSource(scopeId);
   }
   const conflictMap = await buildPeladaStatsConflictMapFromPerformances(performances);
-  return performances.map((perf) => mapPerformanceRow(perf, conflictMap, scopeDefaultPriority));
+  const rows = performances.map((perf) => mapPerformanceRow(perf, conflictMap, scopeDefaultPriority));
+  return attachTeamMatchPerformanceWeights(rows, scope !== 'event');
 }
 
 function buildLocationStatsFromParticipantRows(participants) {
@@ -3381,7 +4315,7 @@ function buildLocationStatsFromParticipantRows(participants) {
     const address = row.address || {};
     const city = normalizeLocationLabel(address.city);
     const neighborhood = normalizeLocationLabel(address.neighborhood);
-    const state = normalizeLocationLabel(address.state).toUpperCase();
+    const state = normalizeBrazilUfLabel(address.state);
     if (!city && !neighborhood) continue;
     total += 1;
     if (city) {
@@ -3567,6 +4501,8 @@ function mapVoteRow(vote) {
     targetRole: vote.get('targetRole') || 'athlete',
     score: Number(vote.get('score') || 0),
     period: vote.get('period') || '',
+    scopeId: String(vote.get('scopeId') || ''),
+    scoreWeight: 1,
   };
 }
 
@@ -3575,6 +4511,12 @@ function muralRankingDisplayScore(entry) {
   const totalScore = Number(entry.totalScore || 0);
   const combinedScore = Number(entry.combinedScore || 0);
   return voteCount > 0 ? totalScore : combinedScore;
+}
+
+/** Nota exibida na badge do Top 10 Atletas (averageScore quando há votos). */
+function athleteDisplayNote(entry) {
+  if (Number(entry.voteCount || 0) > 0) return Number(entry.averageScore || 0);
+  return Number(entry.combinedScore || 0);
 }
 
 function buildMuralRankingsFromData(performances, votes, topN = 10) {
@@ -3591,9 +4533,12 @@ function buildMuralRankingsFromData(performances, votes, topN = 10) {
   for (const vote of dedupeMuralVoteRowsByVoter(votes)) {
     if (!vote.targetUserId) continue;
     const key = `${vote.targetUserId}:${vote.targetRole}`;
-    const current = voteAgg.get(key) || { total: 0, count: 0 };
-    current.total += vote.score;
+    const current = voteAgg.get(key) || { total: 0, count: 0, weightSum: 0 };
+    const weight = Number(vote.scoreWeight || 1) || 1;
+    const weighted = Number(vote.weightedScore != null ? vote.weightedScore : vote.score * weight);
+    current.total += weighted;
     current.count += 1;
+    current.weightSum += weight;
     voteAgg.set(key, current);
   }
 
@@ -3611,9 +4556,14 @@ function buildMuralRankingsFromData(performances, votes, topN = 10) {
     for (const userId of userIds) {
       const perfKey = `${userId}:${role}`;
       const performanceScore = perfScores.get(perfKey) || 0;
-      const voteData = voteAgg.get(perfKey) || { total: 0, count: 0 };
+      const voteData = voteAgg.get(perfKey) || { total: 0, count: 0, weightSum: 0 };
       if (voteData.count === 0 && performanceScore === 0) continue;
-      const averageScore = voteData.count > 0 ? voteData.total / voteData.count : 0;
+      const averageScore =
+        voteData.weightSum > 0
+          ? voteData.total / voteData.weightSum
+          : voteData.count > 0
+            ? voteData.total / voteData.count
+            : 0;
       const combinedScore = performanceScore + averageScore * 10;
       const perf = perfMeta.get(perfKey);
       const vote = votes.find((row) => row.targetUserId === userId && row.targetRole === role);
@@ -3633,6 +4583,13 @@ function buildMuralRankingsFromData(performances, votes, topN = 10) {
       if (role === 'goalkeeper') {
         const scoreDiff = (b.totalScore || 0) - (a.totalScore || 0);
         if (scoreDiff !== 0) return scoreDiff;
+      }
+      if (role === 'athlete') {
+        const noteDiff = athleteDisplayNote(b) - athleteDisplayNote(a);
+        if (noteDiff !== 0) return noteDiff;
+        const voteDiff = (b.voteCount || 0) - (a.voteCount || 0);
+        if (voteDiff !== 0) return voteDiff;
+        return (b.combinedScore || 0) - (a.combinedScore || 0);
       }
       return b.combinedScore - a.combinedScore;
     });
@@ -3654,6 +4611,8 @@ const SUPPORT_MURAL_ROLES = [
   'masseur',
   'kitman',
   'gandula',
+  'fan',
+  'gatekeeper',
 ];
 
 function isSupportMuralRole(role) {
@@ -3685,9 +4644,12 @@ function buildSupportRoleAverageByEventRankings(voteRows, topN = 10) {
       if (vote.targetUserName && vote.targetUserName !== 'Usuario') {
         userData.userName = vote.targetUserName;
       }
-      const eventAgg = userData.events.get(eventId) || { sum: 0, count: 0 };
-      eventAgg.sum += Number(vote.score) || 0;
+      const eventAgg = userData.events.get(eventId) || { sum: 0, count: 0, weightSum: 0 };
+      const weight = Number(vote.scoreWeight || 1) || 1;
+      const weighted = Number(vote.weightedScore != null ? vote.weightedScore : vote.score * weight);
+      eventAgg.sum += weighted;
       eventAgg.count += 1;
+      eventAgg.weightSum += weight;
       userData.events.set(eventId, eventAgg);
       userData.voteCount += 1;
     }
@@ -3696,7 +4658,9 @@ function buildSupportRoleAverageByEventRankings(voteRows, topN = 10) {
       .map(([userId, data]) => {
         const eventAverages = [];
         for (const eventAgg of data.events.values()) {
-          if (eventAgg.count > 0) {
+          if (eventAgg.weightSum > 0) {
+            eventAverages.push(eventAgg.sum / eventAgg.weightSum);
+          } else if (eventAgg.count > 0) {
             eventAverages.push(eventAgg.sum / eventAgg.count);
           }
         }
@@ -3794,10 +4758,14 @@ function buildEventVoteRankings(voteRows, topN = 10) {
       const current = agg.get(vote.targetUserId) || {
         total: 0,
         count: 0,
+        weightSum: 0,
         userName: vote.targetUserName || 'Participante',
       };
-      current.total += vote.score;
+      const weight = Number(vote.scoreWeight || 1) || 1;
+      const weighted = Number(vote.weightedScore != null ? vote.weightedScore : vote.score * weight);
+      current.total += weighted;
       current.count += 1;
+      current.weightSum += weight;
       if (vote.targetUserName && vote.targetUserName !== 'Usuario') {
         current.userName = vote.targetUserName;
       }
@@ -3811,7 +4779,12 @@ function buildEventVoteRankings(voteRows, topN = 10) {
         role,
         totalScore: data.total,
         voteCount: data.count,
-        averageScore: data.count > 0 ? data.total / data.count : 0,
+        averageScore:
+          data.weightSum > 0
+            ? data.total / data.weightSum
+            : data.count > 0
+              ? data.total / data.count
+              : 0,
         performanceScore: 0,
         combinedScore: data.total,
       }))
@@ -3865,9 +4838,53 @@ async function finalizeEventGoalkeeperRankings(rankings) {
   return rankings;
 }
 
+function muralRankingPrimarySort(a, b, role) {
+  if (role === 'goalkeeper') {
+    const totalDiff = (b.totalScore || 0) - (a.totalScore || 0);
+    if (totalDiff !== 0) return totalDiff;
+    const voteDiff = (b.voteCount || 0) - (a.voteCount || 0);
+    if (voteDiff !== 0) return voteDiff;
+    return 0;
+  }
+  if (role === 'athlete') {
+    const noteDiff = athleteDisplayNote(b) - athleteDisplayNote(a);
+    if (noteDiff !== 0) return noteDiff;
+    const voteDiff = (b.voteCount || 0) - (a.voteCount || 0);
+    if (voteDiff !== 0) return voteDiff;
+    return (b.combinedScore || 0) - (a.combinedScore || 0);
+  }
+  const combinedDiff = (b.combinedScore || 0) - (a.combinedScore || 0);
+  if (combinedDiff !== 0) return combinedDiff;
+  const avgDiff = (b.averageScore || 0) - (a.averageScore || 0);
+  if (avgDiff !== 0) return avgDiff;
+  return (b.voteCount || 0) - (a.voteCount || 0);
+}
+
+async function finalizeMuralRankingsAgeTiebreak(rankings) {
+  const userIds = new Set();
+  for (const role of MURAL_TARGET_ROLES) {
+    for (const entry of rankings[role] || []) {
+      if (entry.userId) userIds.add(entry.userId);
+    }
+  }
+  const ageByUserId = await loadUserAgesForRanking(Array.from(userIds));
+
+  for (const role of MURAL_TARGET_ROLES) {
+    const entries = rankings[role] || [];
+    if (entries.length <= 1) continue;
+    entries.sort((a, b) => {
+      const primary = muralRankingPrimarySort(a, b, role);
+      if (primary !== 0) return primary;
+      return (ageByUserId.get(b.userId) || 0) - (ageByUserId.get(a.userId) || 0);
+    });
+    rankings[role] = entries;
+  }
+  return rankings;
+}
+
 function extractUserLocationKeys(user, includeState) {
   const address = user.get('address') || {};
-  const state = normalizeLocationLabel(address.state).toUpperCase();
+  const state = normalizeBrazilUfLabel(address.state);
   const city = normalizeLocationLabel(address.city);
   const neighborhood = normalizeLocationLabel(address.neighborhood);
 
@@ -4119,6 +5136,7 @@ function hasRefereeSumulaSaved(perf) {
   if (perf.get('refereeSumulaSaved')) return true;
   if (perf.get('refereeObservation')) return true;
   if (Number(perf.get('refereeGoals') || 0) > 0) return true;
+  if (Number(perf.get('refereeGoalsConceded') || 0) > 0) return true;
   if (Number(perf.get('refereeYellowCards') || 0) > 0) return true;
   if (Number(perf.get('refereeRedCards') || 0) > 0) return true;
   if (Number(perf.get('refereeFoulsCommitted') || 0) > 0) return true;
@@ -4214,7 +5232,7 @@ async function collectMuralProfileUserIds(scope, scopeId, extraUserIds) {
   return ids;
 }
 
-function buildMuralParticipantProfile(user, athleteProfile, amateurTeam) {
+function buildMuralParticipantProfile(user, athleteProfile, amateurTeam, fanProfile) {
   const birthDate = user.get('birthDate');
   const age = calcAgeFromBirthDate(birthDate);
   const primaryRole = user.get('primaryRole');
@@ -4248,7 +5266,8 @@ function buildMuralParticipantProfile(user, athleteProfile, amateurTeam) {
     isAthlete: !!athleteProfile,
     favoriteProTeam: readUserFavoriteProTeam(
       user,
-      athleteProfile ? athleteProfile.get('favoriteProTeam') : undefined
+      athleteProfile ? athleteProfile.get('favoriteProTeam') : undefined,
+      fanProfile ? fanProfile.get('favoriteProTeam') : undefined
     ),
     favoriteAmateurTeam: readUserFavoriteAmateurTeam(
       user,
@@ -4296,6 +5315,16 @@ Parse.Cloud.define('getMuralParticipantProfiles', async (request) => {
     if (userPtr && userPtr.id) athleteByUserId.set(userPtr.id, row);
   }
 
+  const fanQuery = new Parse.Query('FanProfile');
+  fanQuery.containedIn('user', users);
+  fanQuery.limit(users.length);
+  const fans = await fanQuery.find({ useMasterKey: true });
+  const fanByUserId = new Map();
+  for (const row of fans) {
+    const userPtr = row.get('user');
+    if (userPtr && userPtr.id) fanByUserId.set(userPtr.id, row);
+  }
+
   const teamQuery = new Parse.Query('AmateurTeam');
   teamQuery.containedIn('president', users);
   teamQuery.limit(users.length);
@@ -4312,7 +5341,8 @@ Parse.Cloud.define('getMuralParticipantProfiles', async (request) => {
       buildMuralParticipantProfile(
         user,
         athleteByUserId.get(user.id),
-        teamByPresidentId.get(user.id)
+        teamByPresidentId.get(user.id),
+        fanByUserId.get(user.id)
       )
     );
 });
@@ -4404,6 +5434,162 @@ function normalizeLocationLabel(value) {
     .replace(/\s+/g, ' ');
 }
 
+/** Corrige UFs invalidas vindas de geocoding (ex.: Federal District → FE). */
+function normalizeBrazilUfLabel(value) {
+  const uf = normalizeLocationLabel(value).toUpperCase();
+  if (uf === 'FE') return 'DF';
+  return uf;
+}
+
+/* ---------- Filtro de regiao do mural (local do jogo: Event.address) ---------- */
+
+const MURAL_LOCATION_EVENT_SCAN_LIMIT = 5000;
+
+/** UFs gravadas no banco sem normalizacao (geocoding ja gerou 'FE' e minusculas). */
+function muralLocationStateVariants(uf) {
+  const normalized = normalizeBrazilUfLabel(uf);
+  if (!normalized) return [];
+  const variants = new Set([normalized, normalized.toLowerCase()]);
+  if (normalized === 'DF') {
+    variants.add('FE');
+    variants.add('fe');
+  }
+  return Array.from(variants);
+}
+
+/** Cascata Estado > Cidade > Bairro: cidade exige UF e bairro exige cidade. */
+function normalizeMuralLocationFilter(params) {
+  const source = params || {};
+  const state = normalizeBrazilUfLabel(source.state);
+  const city = state ? normalizeLocationLabel(source.city) : '';
+  const neighborhood = city ? normalizeLocationLabel(source.neighborhood) : '';
+  return { state, city, neighborhood, active: !!state };
+}
+
+function applyMuralLocationFilterToEventQuery(query, filter) {
+  if (!filter || !filter.active) return query;
+  if (filter.state) {
+    query.containedIn('address.state', muralLocationStateVariants(filter.state));
+  }
+  if (filter.city) {
+    query.equalTo('address.city', filter.city);
+  }
+  if (filter.neighborhood) {
+    query.equalTo('address.neighborhood', filter.neighborhood);
+  }
+  return query;
+}
+
+/** Eventos (pelada ou confronto) com endereco dentro do recorte. */
+function buildMuralLocationEventQuery(filter) {
+  const query = new Parse.Query('Event');
+  query.exists('address');
+  return applyMuralLocationFilterToEventQuery(query, filter);
+}
+
+/** Eventos que ja contam para o mural: encerrados ou com inicio no passado. */
+function buildCountedEventQueryForLocation(filter) {
+  const finishedQuery = new Parse.Query('Event').equalTo('isFinished', true);
+  const startedQuery = new Parse.Query('Event').lessThan('startTime', new Date());
+  const combined = Parse.Query.or(finishedQuery, startedQuery);
+  combined.exists('address');
+  return applyMuralLocationFilterToEventQuery(combined, filter);
+}
+
+async function loadMuralLocationEventIds(filter) {
+  if (!filter || !filter.active) return null;
+  const query = buildMuralLocationEventQuery(filter);
+  query.select(['objectId']);
+  query.limit(MURAL_LOCATION_EVENT_SCAN_LIMIT);
+  const events = await query.find({ useMasterKey: true });
+  return events.map((event) => event.id).filter(Boolean);
+}
+
+async function loadMuralVoteRowsForEventIds(eventIds) {
+  const ids = (eventIds || []).filter(Boolean);
+  if (!ids.length) return [];
+  const rows = [];
+  const seen = new Set();
+  for (let i = 0; i < ids.length; i += 200) {
+    const query = new Parse.Query('MuralVote');
+    query.equalTo('scope', 'event');
+    query.containedIn('scopeId', ids.slice(i, i + 200));
+    query.include(['targetUser', 'voter']);
+    query.limit(10000);
+    for (const row of await query.find({ useMasterKey: true })) {
+      if (seen.has(row.id)) continue;
+      seen.add(row.id);
+      rows.push(row);
+    }
+  }
+  return rows;
+}
+
+Parse.Cloud.define('getMuralLocationOptions', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+
+  const level = String(request.params.level || 'state').trim();
+  if (level !== 'state' && level !== 'city' && level !== 'neighborhood') {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'Nivel invalido. Use state, city ou neighborhood.'
+    );
+  }
+
+  const state = normalizeBrazilUfLabel(request.params.state);
+  const city = normalizeLocationLabel(request.params.city);
+  if (level !== 'state' && !state) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o Estado.');
+  }
+  if (level === 'neighborhood' && !city) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe a Cidade.');
+  }
+
+  const parentFilter = {
+    state: level === 'state' ? '' : state,
+    city: level === 'neighborhood' ? city : '',
+    neighborhood: '',
+    active: level !== 'state',
+  };
+  const query = buildCountedEventQueryForLocation(parentFilter);
+  query.select(['address']);
+  query.limit(MURAL_LOCATION_EVENT_SCAN_LIMIT);
+  const events = await query.find({ useMasterKey: true });
+
+  const counts = new Map();
+  for (const event of events) {
+    const address = event.get('address') || {};
+    const eventState = normalizeBrazilUfLabel(address.state);
+    const eventCity = normalizeLocationLabel(address.city);
+    const eventNeighborhood = normalizeLocationLabel(address.neighborhood);
+
+    let value = '';
+    if (level === 'state') {
+      value = eventState;
+    } else if (level === 'city') {
+      if (eventState !== state) continue;
+      value = eventCity;
+    } else {
+      if (eventState !== state || eventCity !== city) continue;
+      value = eventNeighborhood;
+    }
+    if (!value) continue;
+    counts.set(value, (counts.get(value) || 0) + 1);
+  }
+
+  const options = Array.from(counts.entries())
+    .map(([key, count]) => ({ key, label: key, count }))
+    .sort((a, b) => {
+      const diff = b.count - a.count;
+      if (diff !== 0) return diff;
+      return a.label.localeCompare(b.label, 'pt-BR');
+    });
+
+  return { options };
+});
+
 function sortLocationCounts(map) {
   return Array.from(map.entries())
     .map(([label, count]) => ({ label, count }))
@@ -4469,7 +5655,7 @@ function buildMuralParticipantLocationStats(users, includeState) {
 
   for (const user of users) {
     const address = user.get('address') || {};
-    const state = normalizeLocationLabel(address.state).toUpperCase();
+    const state = normalizeBrazilUfLabel(address.state);
     const city = normalizeLocationLabel(address.city);
     const neighborhood = normalizeLocationLabel(address.neighborhood);
 
@@ -4534,18 +5720,10 @@ Parse.Cloud.define('getMuralParticipantLocationStats', async (request) => {
   return buildMuralParticipantLocationStats(users, includeState);
 });
 
-// Highlights, dashboards e votacao do evento
-Parse.Cloud.define('getMuralHighlightPerformances', async (request) => {
-  if (!request.user) {
-    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
-  }
-
-  const scope = String(request.params.scope || 'app');
-  const scopeId = request.params.scopeId ? String(request.params.scopeId) : undefined;
-  const rawPerformances = await loadMuralPerformanceRows(scope, scopeId);
+async function buildHighlightGoalRowsFromRawPerformances(rawPerformances) {
   const conflictMap = await buildPeladaStatsConflictMapFromPerformances(rawPerformances);
   const goalsByEventUser = new Map();
-  const byUserId = new Map();
+  const eventIds = new Set();
 
   for (const perf of rawPerformances) {
     const userId = getPerformanceParticipantId(perf);
@@ -4562,43 +5740,289 @@ Parse.Cloud.define('getMuralHighlightPerformances', async (request) => {
 
     const event = perf.get('event');
     const eventId = event && event.id ? String(event.id) : String(perf.id);
+    if (event && event.id) eventIds.add(event.id);
     const eventUserKey = `${eventId}:${userId}`;
     const currentEventGoals = goalsByEventUser.get(eventUserKey) ?? 0;
     goalsByEventUser.set(eventUserKey, Math.max(currentEventGoals, goals));
   }
 
+  const typeById = new Map();
+  const idList = Array.from(eventIds);
+  for (let i = 0; i < idList.length; i += 50) {
+    const chunk = idList.slice(i, i + 50);
+    const events = await new Parse.Query('Event')
+      .containedIn('objectId', chunk)
+      .select(['type'])
+      .limit(chunk.length)
+      .find({ useMasterKey: true });
+    for (const event of events) {
+      typeById.set(event.id, event.get('type') || '');
+    }
+  }
+
+  const byUserId = new Map();
   for (const [eventUserKey, goals] of goalsByEventUser.entries()) {
-    const userId = eventUserKey.split(':').slice(1).join(':');
+    const parts = eventUserKey.split(':');
+    const eventId = parts[0];
+    const userId = parts.slice(1).join(':');
     if (!userId) continue;
-    const current = byUserId.get(userId) || { userId, role: 'athlete', goals: 0 };
+    const type = typeById.get(eventId) || '';
+    const bucket = type === 'team_match' ? 'teamMatch' : 'pelada';
+    const current = byUserId.get(userId) || {
+      userId,
+      role: 'athlete',
+      goals: 0,
+      peladaGoals: 0,
+      teamMatchGoals: 0,
+      eventType: type || 'pelada',
+    };
     current.goals += goals;
+    if (bucket === 'teamMatch') current.teamMatchGoals += goals;
+    else current.peladaGoals += goals;
     byUserId.set(userId, current);
   }
 
   return Array.from(byUserId.values());
+}
+
+function weightedGoleadorPointsFromRow(row, bucket) {
+  const peladaGoals = Number(row.peladaGoals || 0);
+  const teamMatchGoals = Number(row.teamMatchGoals || 0);
+  if (bucket === 'pelada') return peladaGoals;
+  if (bucket === 'team_match') return teamMatchGoals;
+  return peladaGoals + teamMatchGoals * TEAM_MATCH_MURAL_WEIGHT;
+}
+
+async function buildAppTopScorerRankingEntries(rawPerformances, bucket, topN = 10) {
+  const rows = await buildHighlightGoalRowsFromRawPerformances(rawPerformances);
+  const scored = rows
+    .map((row) => {
+      const peladaGoals = Number(row.peladaGoals || 0);
+      const teamMatchGoals = Number(row.teamMatchGoals || 0);
+      const displayGoals = peladaGoals + teamMatchGoals;
+      return {
+        userId: row.userId,
+        userName: 'Participante',
+        role: 'athlete',
+        weightedGoals: weightedGoleadorPointsFromRow(row, bucket),
+        displayGoals,
+        peladaGoals,
+        teamMatchGoals,
+      };
+    })
+    .filter((row) => row.weightedGoals > 0);
+
+  const ageByUserId = await loadUserAgesForRanking(scored.map((row) => row.userId));
+  scored.sort((a, b) => {
+    const diff = b.weightedGoals - a.weightedGoals;
+    if (diff !== 0) return diff;
+    return (ageByUserId.get(b.userId) || 0) - (ageByUserId.get(a.userId) || 0);
+  });
+
+  const topRows = scored.slice(0, topN);
+  const enriched = await enrichMuralRankingNames('app', undefined, { athlete: topRows });
+  return (enriched.athlete || []).map((entry, index) => {
+    const row = topRows[index];
+    const displayGoals = row?.displayGoals ?? 0;
+    return {
+      ...entry,
+      weightedGoals: row?.weightedGoals ?? 0,
+      // Cards mostram gols reais; peso 3x fica so no sort (weightedGoals).
+      totalScore: displayGoals,
+      combinedScore: displayGoals,
+    };
+  });
+}
+
+/** Aplica campos de exibicao (sem peso 3x) mantendo a ordem ja calculada com peso. */
+function applyMergedRankingDisplayFields(orderedRankings, displayRankings) {
+  const result = { ...orderedRankings };
+  for (const role of MURAL_TARGET_ROLES) {
+    const ordered = orderedRankings[role] || [];
+    const displayById = new Map((displayRankings[role] || []).map((entry) => [entry.userId, entry]));
+    result[role] = ordered.map((entry) => {
+      const display = displayById.get(entry.userId);
+      if (!display) {
+        return {
+          ...entry,
+          rankingScore: Number(entry.combinedScore || entry.totalScore || 0),
+        };
+      }
+      return {
+        ...entry,
+        rankingScore: Number(entry.combinedScore || entry.totalScore || 0),
+        totalScore: Number(display.totalScore || 0),
+        performanceScore: Number(display.performanceScore || 0),
+        combinedScore: Number(display.combinedScore || 0),
+        averageScore: Number(display.averageScore || 0),
+        voteCount: Number(display.voteCount || 0),
+      };
+    });
+  }
+  return result;
+}
+
+function unweightPerformanceRowsForDisplay(performanceRows) {
+  return performanceRows.map((row) => ({
+    ...row,
+    score:
+      row.eventType === 'team_match'
+        ? Number(row.score || 0) / TEAM_MATCH_MURAL_WEIGHT
+        : Number(row.score || 0),
+  }));
+}
+
+async function buildAppMuralBucketPayload(
+  scope,
+  performanceRows,
+  voteRows,
+  performanceRaw,
+  bucket,
+  locationFilter
+) {
+  let perf = performanceRows;
+  let votes = voteRows;
+  if (bucket === 'pelada') {
+    votes = unweightVoteRows(filterVoteRowsByEventBucket(voteRows, 'pelada'));
+    perf = filterPerformanceRowsByEventBucket(performanceRows, 'pelada');
+  } else if (bucket === 'team_match') {
+    votes = unweightVoteRows(filterVoteRowsByEventBucket(voteRows, 'teamMatch'));
+    perf = normalizePerformanceScoresForBucket(
+      filterPerformanceRowsByEventBucket(performanceRows, 'teamMatch'),
+      'teamMatch'
+    );
+  }
+
+  let rankings = buildPeladaMuralRankings(perf, votes, 10);
+  rankings = await enrichMuralRankingNames(scope, undefined, rankings);
+  rankings = await finalizeEventGoalkeeperRankings(rankings);
+  rankings = await finalizeMuralRankingsAgeTiebreak(rankings);
+
+  let voteAggregates = buildMuralVoteAggregatesFromRows(votes);
+
+  if (bucket === 'merged') {
+    const displayVotes = unweightVoteRows(voteRows);
+    const displayPerf = unweightPerformanceRowsForDisplay(performanceRows);
+    const displayRankings = buildPeladaMuralRankings(displayPerf, displayVotes, 50);
+    rankings = applyMergedRankingDisplayFields(rankings, displayRankings);
+    voteAggregates = buildMuralVoteAggregatesFromRows(displayVotes, voteRows);
+  }
+
+  const topScorers = await buildAppTopScorerRankingEntries(performanceRaw, bucket, 10);
+  const predictionRankings = await computePredictionRankingEntries(scope, undefined, 10, bucket);
+
+  let topTeams = [];
+  let topCoaches = [];
+  // Recorte de regiao: o dashboard de confrontos (spotlight.teamRows) preenche esses tops.
+  // Sem filtro, a varredura nacional (ate 300 times) permanece.
+  if ((bucket === 'merged' || bucket === 'team_match') && !(locationFilter && locationFilter.active)) {
+    if (typeof buildTopTeamsByMatchPoints === 'function') {
+      topTeams = await buildTopTeamsByMatchPoints(10);
+    }
+    if (typeof buildTopCoachesByMatchPoints === 'function') {
+      topCoaches = await buildTopCoachesByMatchPoints(10);
+    }
+  }
+
+  return {
+    bucket,
+    rankings,
+    voteAggregates,
+    topScorers,
+    topTeams,
+    topCoaches,
+    predictionRankings,
+  };
+}
+
+// Highlights, dashboards e votacao do evento
+Parse.Cloud.define('getMuralHighlightPerformances', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+
+  const scope = String(request.params.scope || 'app');
+  const scopeId = request.params.scopeId ? String(request.params.scopeId) : undefined;
+  const rawPerformances = await loadMuralPerformanceRows(scope, scopeId);
+  return buildHighlightGoalRowsFromRawPerformances(rawPerformances);
 });
 
-function buildMuralVoteAggregatesFromRows(voteRows) {
+function filterVoteRowsByEventBucket(voteRows, bucket) {
+  if (bucket === 'teamMatch') {
+    return voteRows.filter((vote) => Number(vote.scoreWeight || 1) === TEAM_MATCH_MURAL_WEIGHT);
+  }
+  return voteRows.filter((vote) => Number(vote.scoreWeight || 1) !== TEAM_MATCH_MURAL_WEIGHT);
+}
+
+function unweightVoteRows(voteRows) {
+  return voteRows.map((vote) => ({
+    ...vote,
+    scoreWeight: 1,
+    weightedScore: Number(vote.score || 0),
+  }));
+}
+
+function filterPerformanceRowsByEventBucket(performanceRows, bucket) {
+  if (bucket === 'teamMatch') {
+    return performanceRows.filter((row) => row.eventType === 'team_match');
+  }
+  return performanceRows.filter((row) => row.eventType !== 'team_match');
+}
+
+function normalizePerformanceScoresForBucket(performanceRows, bucket) {
+  if (bucket !== 'teamMatch') return performanceRows;
+  return performanceRows.map((row) => ({
+    ...row,
+    score: Number(row.score || 0) / TEAM_MATCH_MURAL_WEIGHT,
+  }));
+}
+
+function buildMuralVoteAggregatesFromRows(voteRows, rankingVoteRows) {
   const result = {};
   for (const role of MURAL_TARGET_ROLES) {
     result[role] = {};
   }
-  for (const vote of dedupeMuralVoteRowsByVoter(voteRows)) {
+  const displayRows = dedupeMuralVoteRowsByVoter(voteRows);
+  for (const vote of displayRows) {
     if (!vote.targetUserId) continue;
     const role = vote.targetRole;
     if (!result[role]) continue;
     const current = result[role][vote.targetUserId] || {
       totalScore: 0,
+      rankingScore: 0,
       voteCount: 0,
       userName: vote.targetUserName || 'Participante',
     };
-    current.totalScore += vote.score;
+    current.totalScore += Number(vote.score || 0);
     current.voteCount += 1;
     if (vote.targetUserName && vote.targetUserName !== 'Participante') {
       current.userName = vote.targetUserName;
     }
     result[role][vote.targetUserId] = current;
   }
+
+  const rankSource = rankingVoteRows || voteRows;
+  for (const vote of dedupeMuralVoteRowsByVoter(rankSource)) {
+    if (!vote.targetUserId) continue;
+    const role = vote.targetRole;
+    if (!result[role] || !result[role][vote.targetUserId]) continue;
+    const weight = Number(vote.scoreWeight || 1) || 1;
+    const weighted = Number(
+      vote.weightedScore != null ? vote.weightedScore : vote.score * weight
+    );
+    result[role][vote.targetUserId].rankingScore += weighted;
+  }
+
+  // Sem rankingVoteRows separado: rankingScore espelha totalScore (ja raw ou ja ponderado no input).
+  if (!rankingVoteRows) {
+    for (const role of MURAL_TARGET_ROLES) {
+      for (const userId of Object.keys(result[role])) {
+        const row = result[role][userId];
+        if (!row.rankingScore) row.rankingScore = row.totalScore;
+      }
+    }
+  }
+
   return result;
 }
 
@@ -4685,13 +6109,16 @@ Parse.Cloud.define('getMuralLocationTopRankings', async (request) => {
   return buildMuralLocationTopRankingsFromUsers(users, fullRankings, true);
 });
 
-async function loadRecentAppParticipantRows(limit) {
+async function loadRecentAppParticipantRows(limit, locationFilter) {
   const cap = Math.min(Number(limit) || 500, 500);
-  const registrations = await new Parse.Query('EventRegistration')
+  const registrationQuery = new Parse.Query('EventRegistration')
     .descending('createdAt')
     .include('user')
-    .limit(cap)
-    .find({ useMasterKey: true });
+    .limit(cap);
+  if (locationFilter && locationFilter.active) {
+    registrationQuery.matchesQuery('event', buildMuralLocationEventQuery(locationFilter));
+  }
+  const registrations = await registrationQuery.find({ useMasterKey: true });
 
   const byUser = {};
   for (const registration of registrations) {
@@ -4791,8 +6218,13 @@ async function buildMuralPerformanceAnalyticsPayload(scope, scopeId, performance
   return enrichMuralPerformanceAnalytics(scope, scopeId, analytics);
 }
 
-async function computePredictionRankingEntries(scope, scopeId, limit) {
-  const events = await loadFinishedEventsForPredictionScope(scope, scopeId);
+async function computePredictionRankingEntries(scope, scopeId, limit, bucket = 'merged') {
+  let events = await loadFinishedEventsForPredictionScope(scope, scopeId);
+  if (bucket === 'pelada') {
+    events = events.filter((event) => event.get('type') !== 'team_match');
+  } else if (bucket === 'team_match') {
+    events = events.filter((event) => event.get('type') === 'team_match');
+  }
   if (!events.length) {
     return [];
   }
@@ -4821,11 +6253,18 @@ async function computePredictionRankingEntries(scope, scopeId, limit) {
     const existing = scoresByUser.get(userId) || {
       userId,
       totalScore: 0,
+      rankingScore: 0,
       eventsCount: 0,
     };
 
     if (actual && actual.ready) {
-      existing.totalScore += scoreFanPredictionRecord(prediction, actual, event.get('type'));
+      const points = scoreFanPredictionRecord(prediction, actual, event.get('type'));
+      existing.totalScore += points;
+      let rankingPoints = points;
+      if (bucket === 'merged' && event.get('type') === 'team_match') {
+        rankingPoints *= TEAM_MATCH_MURAL_WEIGHT;
+      }
+      existing.rankingScore += rankingPoints;
     }
     existing.eventsCount += 1;
     scoresByUser.set(userId, existing);
@@ -4838,12 +6277,24 @@ async function computePredictionRankingEntries(scope, scopeId, limit) {
         : entry.totalScore > 0
     )
     .sort((a, b) => {
-      if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+      if (b.rankingScore !== a.rankingScore) return b.rankingScore - a.rankingScore;
       return b.eventsCount - a.eventsCount;
     })
     .slice(0, limit);
 
-  return enrichPredictionRankingEntries(entries);
+  const enriched = await enrichPredictionRankingEntries(entries);
+  const ageByUserId = await loadUserAgesForRanking(enriched.map((entry) => entry.userId));
+  enriched.sort((a, b) => {
+    const aRank = Number(a.rankingScore != null ? a.rankingScore : a.totalScore);
+    const bRank = Number(b.rankingScore != null ? b.rankingScore : b.totalScore);
+    if (bRank !== aRank) return bRank - aRank;
+    if (b.eventsCount !== a.eventsCount) return b.eventsCount - a.eventsCount;
+    return (ageByUserId.get(b.userId) || 0) - (ageByUserId.get(a.userId) || 0);
+  });
+  return enriched.slice(0, limit).map((entry) => {
+    const { rankingScore, ...rest } = entry;
+    return rest;
+  });
 }
 
 Parse.Cloud.define('getMuralAppDashboard', async (request) => {
@@ -4853,22 +6304,42 @@ Parse.Cloud.define('getMuralAppDashboard', async (request) => {
 
   const participantLimit = Math.min(Number(request.params.participantLimit) || 500, 500);
   const scope = 'app';
+  const locationFilter = normalizeMuralLocationFilter(request.params);
 
   const [participants, performanceRaw, voteRows] = await Promise.all([
-    loadRecentAppParticipantRows(participantLimit),
-    loadMuralPerformanceRows(scope),
-    mapMuralVoteRowsForScope(scope),
+    loadRecentAppParticipantRows(participantLimit, locationFilter),
+    loadMuralPerformanceRows(scope, undefined, locationFilter),
+    mapMuralVoteRowsForScope(scope, undefined, locationFilter),
   ]);
 
   const performanceRows = await mapPerformanceRowsForMural(scope, undefined, performanceRaw);
 
-  let rankings = buildPeladaMuralRankings(performanceRows, voteRows, 10);
-  rankings = await enrichMuralRankingNames(scope, undefined, rankings);
-  rankings = await finalizeEventGoalkeeperRankings(rankings);
+  const [bucketMerged, bucketPelada, bucketTeamMatch] = await Promise.all([
+    buildAppMuralBucketPayload(scope, performanceRows, voteRows, performanceRaw, 'merged', locationFilter),
+    buildAppMuralBucketPayload(scope, performanceRows, voteRows, performanceRaw, 'pelada', locationFilter),
+    buildAppMuralBucketPayload(scope, performanceRows, voteRows, performanceRaw, 'team_match', locationFilter),
+  ]);
 
-  const voteAggregates = buildMuralVoteAggregatesFromRows(voteRows);
+  const rankings = bucketMerged.rankings;
+  const rankingsPelada = bucketPelada.rankings;
+  const rankingsTeamMatch = bucketTeamMatch.rankings;
+
+  const voteAggregates = bucketMerged.voteAggregates;
+  const voteAggregatesPelada = bucketPelada.voteAggregates;
+  const voteAggregatesTeamMatch = bucketTeamMatch.voteAggregates;
   const participantIds = participants.map((row) => row.userId).filter(Boolean);
-  const statsUserIds = await collectMuralStatsUserIds(scope, undefined, participantIds);
+  // Com recorte de regiao, as estatisticas de local olham so quem aparece nos eventos filtrados.
+  const scopedUserIds = locationFilter.active
+    ? new Set(
+        [
+          ...participantIds,
+          ...performanceRows.map((row) => String(row.userId || '')),
+          ...voteRows.map((row) => String(row.targetUserId || '')),
+        ].filter(Boolean)
+      )
+    : null;
+  const statsUserIds =
+    scopedUserIds || (await collectMuralStatsUserIds(scope, undefined, participantIds));
   const statsIdList = Array.from(statsUserIds);
   const statsUsers = [];
 
@@ -4884,7 +6355,7 @@ Parse.Cloud.define('getMuralAppDashboard', async (request) => {
 
   let fullRankings = buildPeladaMuralRankings(performanceRows, voteRows, 10000);
   fullRankings = await enrichMuralRankingNames(scope, undefined, fullRankings);
-  const locationUserIds = await collectAppParticipantUserIdsForStats();
+  const locationUserIds = scopedUserIds || (await collectAppParticipantUserIdsForStats());
   const locationUsers = [];
   const locationIdList = Array.from(locationUserIds);
 
@@ -4904,19 +6375,38 @@ Parse.Cloud.define('getMuralAppDashboard', async (request) => {
         byNeighborhood: [],
       };
 
-  const [performanceAnalytics, predictionRankings] = await Promise.all([
-    buildMuralPerformanceAnalyticsPayload(scope, undefined, performanceRaw),
-    computePredictionRankingEntries(scope, undefined, 10),
-  ]);
+  const performanceAnalytics = await buildMuralPerformanceAnalyticsPayload(
+    scope,
+    undefined,
+    performanceRaw
+  );
 
   return {
     participants,
     rankings,
+    rankingsPelada,
+    rankingsTeamMatch,
     voteAggregates,
+    voteAggregatesPelada,
+    voteAggregatesTeamMatch,
     locationStats,
     locationTopRankings,
     performanceAnalytics,
-    predictionRankings,
+    predictionRankings: bucketMerged.predictionRankings,
+    buckets: {
+      merged: bucketMerged,
+      pelada: bucketPelada,
+      team_match: bucketTeamMatch,
+    },
+    rankingsMeta: {
+      tieBreak: 'older_age',
+      confrontoWeight: TEAM_MATCH_MURAL_WEIGHT,
+    },
+    appliedLocation: {
+      state: locationFilter.state,
+      city: locationFilter.city,
+      neighborhood: locationFilter.neighborhood,
+    },
   };
 });
 
@@ -5142,11 +6632,26 @@ async function createEventMuralVoteForTarget(user, event, eventId, period, entry
     registration.get('primaryPosition') ||
     (athlete && athlete.get ? athlete.get('primaryPosition') : '');
 
+  if (!MURAL_TARGET_ROLES.includes(targetRole)) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Papel de votacao invalido.');
+  }
+
   let effectiveTargetRole = targetRole;
   if (registrationRole === 'goalkeeper' || isGoalkeeperPosition(position)) {
     effectiveTargetRole = 'goalkeeper';
   } else if (registrationRole === 'athlete') {
     effectiveTargetRole = 'athlete';
+  } else if (registrationRole === 'fan' || registrationRole === 'gatekeeper') {
+    effectiveTargetRole = registrationRole;
+  } else if (MURAL_TARGET_ROLES.includes(registrationRole)) {
+    effectiveTargetRole = registrationRole;
+  }
+
+  if (effectiveTargetRole !== targetRole && registrationRole !== 'athlete') {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'O papel da votacao nao corresponde ao perfil do participante.'
+    );
   }
 
   const voter = Parse.User.createWithoutData(user.id);
@@ -5536,11 +7041,15 @@ function buildPerformanceTopEntries(performances, field, topN = 3) {
   for (const perf of performances) {
     const userId = getPerformanceParticipantId(perf);
     if (!userId) continue;
-    const stats = mapPerformanceToScoutStats(perf);
     let value = 0;
-    if (field === 'totalShots') {
+    if (field === 'goals') {
+      // Reflete sumula do arbitro assim que salva (refereeGoals com prioridade).
+      value = resolveEffectiveGoalsForCounting(perf, 'referee');
+    } else if (field === 'totalShots') {
+      const stats = mapPerformanceToScoutStats(perf);
       value = Number(stats.shotsOnTarget || 0) + Number(stats.shotsOffTarget || 0);
     } else {
+      const stats = mapPerformanceToScoutStats(perf);
       value = Number(stats[field] || 0);
     }
     if (!value) continue;
@@ -5761,6 +7270,168 @@ Parse.Cloud.define('getMuralPerformanceAnalytics', async (request) => {
   };
 
   return enrichMuralPerformanceAnalytics(scope, scopeId, analytics);
+});
+
+// --- 07b-mural-highlight-tenure.js ---
+
+/** Tempo no destaque do mural App (Geral / Peladas / Confrontos). */
+
+const MURAL_TENURE_BUCKETS = new Set(['merged', 'pelada', 'team_match']);
+
+const MURAL_SINGLE_HIGHLIGHT_KEYS = new Set([
+  'craque',
+  'melhor_goleiro',
+  'melhor_juiz',
+  'time_mais_amado',
+  'promessa',
+  'master',
+]);
+
+function normalizeMuralTenureHolderKey(value) {
+  return String(value || '').trim();
+}
+
+function muralTenureRowIdentity(highlightKey, holderKey) {
+  return `${highlightKey}::${holderKey}`;
+}
+
+Parse.Cloud.define('syncMuralHighlightTenures', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'Faca login para sincronizar destaques.');
+  }
+
+  const bucket = String(request.params.bucket || '').trim();
+  if (!MURAL_TENURE_BUCKETS.has(bucket)) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'bucket invalido.');
+  }
+
+  const holders = request.params.holders;
+  if (!holders || typeof holders !== 'object') {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'holders obrigatorio.');
+  }
+
+  const now = new Date();
+  const Tenure = Parse.Object.extend('MuralHighlightTenure');
+
+  const existingQuery = new Parse.Query(Tenure);
+  existingQuery.equalTo('bucket', bucket);
+  existingQuery.limit(1000);
+  const existingRows = await existingQuery.find({ useMasterKey: true });
+
+  const existingByIdentity = new Map();
+  for (const row of existingRows) {
+    const highlightKey = String(row.get('highlightKey') || '').trim();
+    const holderKey = normalizeMuralTenureHolderKey(row.get('holderKey'));
+    if (!highlightKey || !holderKey) continue;
+    existingByIdentity.set(muralTenureRowIdentity(highlightKey, holderKey), row);
+  }
+
+  const holderKeysSent = Object.keys(holders);
+  const desiredIdentities = new Set();
+  const tenures = {};
+
+  for (const highlightKey of holderKeysSent) {
+    const hk = String(highlightKey || '').trim();
+    if (!hk) continue;
+    const rawHolder = holders[hk];
+    const holderKey = normalizeMuralTenureHolderKey(rawHolder);
+
+    if (!holderKey) {
+      for (const row of existingRows) {
+        if (String(row.get('highlightKey') || '').trim() !== hk) continue;
+        await row.destroy({ useMasterKey: true });
+        const rowHolder = normalizeMuralTenureHolderKey(row.get('holderKey'));
+        existingByIdentity.delete(muralTenureRowIdentity(hk, rowHolder));
+      }
+      continue;
+    }
+
+    desiredIdentities.add(muralTenureRowIdentity(hk, holderKey));
+
+    if (MURAL_SINGLE_HIGHLIGHT_KEYS.has(hk)) {
+      for (const row of existingRows) {
+        const rowHk = String(row.get('highlightKey') || '').trim();
+        if (rowHk !== hk) continue;
+        const rowHolder = normalizeMuralTenureHolderKey(row.get('holderKey'));
+        if (rowHolder === holderKey) continue;
+        await row.destroy({ useMasterKey: true });
+        existingByIdentity.delete(muralTenureRowIdentity(hk, rowHolder));
+      }
+    }
+
+    let row = existingByIdentity.get(muralTenureRowIdentity(hk, holderKey));
+    if (!row) {
+      row = new Tenure();
+      row.set('bucket', bucket);
+      row.set('highlightKey', hk);
+      row.set('holderKey', holderKey);
+      row.set('sinceAt', now);
+      const acl = new Parse.ACL();
+      acl.setPublicReadAccess(false);
+      acl.setPublicWriteAccess(false);
+      row.setACL(acl);
+      await row.save(null, { useMasterKey: true });
+      existingByIdentity.set(muralTenureRowIdentity(hk, holderKey), row);
+    }
+
+    const sinceAt = row.get('sinceAt');
+    if (sinceAt instanceof Date) {
+      tenures[hk] = { sinceAt: sinceAt.toISOString(), holderKey };
+    }
+  }
+
+  for (const row of existingRows) {
+    const highlightKey = String(row.get('highlightKey') || '').trim();
+    const holderKey = normalizeMuralTenureHolderKey(row.get('holderKey'));
+    if (!highlightKey || !holderKey) continue;
+    const identity = muralTenureRowIdentity(highlightKey, holderKey);
+    if (desiredIdentities.has(identity)) continue;
+
+    if (highlightKey.startsWith('goleador:')) {
+      if (!Object.prototype.hasOwnProperty.call(holders, highlightKey)) {
+        await row.destroy({ useMasterKey: true });
+      }
+    }
+  }
+
+  return { tenures };
+});
+
+Parse.Cloud.define('configureMuralHighlightTenurePermissions', async (request) => {
+  if (!request.master && !request.user) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Faca login no app ou chame com Master Key / REST API Key.'
+    );
+  }
+
+  const authRead = { requiresAuthentication: true };
+  const className = 'MuralHighlightTenure';
+  const schema = new Parse.Schema(className);
+  schema.addString('bucket');
+  schema.addString('highlightKey');
+  schema.addString('holderKey');
+  schema.addDate('sinceAt');
+  schema.setCLP({
+    find: authRead,
+    get: authRead,
+    count: authRead,
+    create: {},
+    update: {},
+    delete: {},
+    addField: {},
+    protectedFields: {},
+  });
+
+  let created = false;
+  try {
+    await schema.update();
+  } catch {
+    await schema.save();
+    created = true;
+  }
+
+  return { ok: true, className, created, updated: !created };
 });
 
 // --- 08-scout-referee-performance.js ---
@@ -6069,9 +7740,18 @@ function buildMergedScoutStatsByParticipantId(performances) {
 function mergeRefereeSumulaStatObjects(base, incoming) {
   return {
     goals: Math.max(Number(base.goals || 0), Number(incoming.goals || 0)),
+    goalsConceded: Math.max(Number(base.goalsConceded || 0), Number(incoming.goalsConceded || 0)),
     fouls: Math.max(Number(base.fouls || 0), Number(incoming.fouls || 0)),
     yellowCards: Math.max(Number(base.yellowCards || 0), Number(incoming.yellowCards || 0)),
     redCards: Math.max(Number(base.redCards || 0), Number(incoming.redCards || 0)),
+    penaltiesCommitted: Math.max(
+      Number(base.penaltiesCommitted || 0),
+      Number(incoming.penaltiesCommitted || 0)
+    ),
+    penaltiesSuffered: Math.max(
+      Number(base.penaltiesSuffered || 0),
+      Number(incoming.penaltiesSuffered || 0)
+    ),
     observation: base.observation || incoming.observation || '',
   };
 }
@@ -6081,6 +7761,7 @@ function performanceHasRefereeSumulaData(perf) {
   if (perf.get('refereeSumulaSaved')) return true;
   return (
     readRefereeOverlapStat(perf, 'goals') > 0 ||
+    Number(perf.get('refereeGoalsConceded') || 0) > 0 ||
     readRefereeOverlapStat(perf, 'foulsCommitted') > 0 ||
     readRefereeOverlapStat(perf, 'yellowCards') > 0 ||
     readRefereeOverlapStat(perf, 'redCards') > 0 ||
@@ -6390,7 +8071,7 @@ async function assertConfirmedAthleteInEvent(event, athleteUserId) {
   const participationFee = Number(event.get('participationFee') || 0);
   const registrations = await new Parse.Query('EventRegistration')
     .equalTo('event', event)
-    .equalTo('role', 'athlete')
+    .containedIn('role', ['athlete', 'goalkeeper'])
     .include('user')
     .limit(500)
     .find({ useMasterKey: true });
@@ -6819,30 +8500,32 @@ async function buildEventActualPredictionResults(event) {
   let awayScore = 0;
   if (event.get('type') === 'team_match') {
     const participationFee = Number(event.get('participationFee') || 0);
+    // Confronto: placar = soma dos gols anotados pelo arbitro (refereeGoals) por time.
     const athleteRegs = await new Parse.Query('EventRegistration')
       .equalTo('event', event)
-      .equalTo('role', 'athlete')
-      .ascending('arrivalOrder')
-      .addAscending('apelido')
+      .containedIn('role', ['athlete', 'goalkeeper'])
       .limit(500)
       .find({ useMasterKey: true });
 
-    const confirmedAthletes = [];
+    const homeIds = new Set();
+    const awayIds = new Set();
     for (const registration of athleteRegs) {
       const resolved = await resolveRegistrationParticipantUserId(registration);
       if (!resolved.userId) continue;
       if (!computeRegistrationEffectiveConfirmation(registration, participationFee)) continue;
-      confirmedAthletes.push(resolved.userId);
+      const side = registration.get('teamSide');
+      if (side === 'home') homeIds.add(resolved.userId);
+      else if (side === 'away') awayIds.add(resolved.userId);
     }
 
-    const midpoint = Math.ceil(confirmedAthletes.length / 2);
-    const homeIds = new Set(confirmedAthletes.slice(0, midpoint));
-    for (const [participantId, stats] of statsByUser.entries()) {
-      if (homeIds.has(participantId)) {
-        homeScore += stats.goals;
-      } else {
-        awayScore += stats.goals;
-      }
+    // Placar = apenas gols marcados (refereeGoals). Gols sofridos de goleiro nao entram.
+    for (const perf of performances) {
+      const participantId = getPerformanceParticipantId(perf);
+      if (!participantId) continue;
+      const refereeGoals = Number(mapPerformanceToRefereeSumula(perf).goals || 0);
+      if (!refereeGoals) continue;
+      if (homeIds.has(participantId)) homeScore += refereeGoals;
+      else if (awayIds.has(participantId)) awayScore += refereeGoals;
     }
   }
 
@@ -7054,6 +8737,7 @@ const REFEREE_SUMULA_FIELDS = [
 function emptyRefereeSumulaStats() {
   return {
     goals: 0,
+    goalsConceded: 0,
     fouls: 0,
     yellowCards: 0,
     redCards: 0,
@@ -7069,6 +8753,10 @@ function mapPerformanceToRefereeSumula(perf) {
   }
   return {
     goals: readRefereeOverlapStat(perf, 'goals'),
+    goalsConceded: Math.max(
+      0,
+      Number(perf.get('refereeGoalsConceded') != null ? perf.get('refereeGoalsConceded') : perf.get('goalsConceded') || 0)
+    ),
     fouls: readRefereeOverlapStat(perf, 'foulsCommitted'),
     yellowCards: readRefereeOverlapStat(perf, 'yellowCards'),
     redCards: readRefereeOverlapStat(perf, 'redCards'),
@@ -7081,9 +8769,29 @@ function mapPerformanceToRefereeSumula(perf) {
 async function assertCanViewRefereeSumula(user, eventId) {
   const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
   const participationFee = Number(event.get('participationFee') || 0);
-  const eventEnded = isEventEndedForTools(event);
+  // Sumula: bloqueio de edicao so com isFinished. A faixa sumulaOpensAt/ClosesAt
+  // pode ser aberta pelo admin apos o horario do jogo.
+  const finished = !!event.get('isFinished');
   const withinSumulaWindow = isWithinApontamentoWindow(event, 'sumula');
-  const locked = eventEnded;
+  const locked = finished;
+  const isTeamMatch = event.get('type') === 'team_match';
+
+  const registration = await new Parse.Query('EventRegistration')
+    .equalTo('event', event)
+    .equalTo('user', user)
+    .first({ useMasterKey: true });
+
+  const isReferee =
+    !!registration &&
+    registration.get('role') === 'referee' &&
+    computeRegistrationEffectiveConfirmation(registration, participationFee);
+
+  const canEdit = isReferee && !finished && withinSumulaWindow;
+
+  // Confronto: qualquer usuario logado consulta; so o arbitro edita na janela.
+  if (isTeamMatch) {
+    return { event, locked, canEdit };
+  }
 
   const eventAdmin = event.get('admin');
   if (eventAdmin && eventAdmin.id === user.id) {
@@ -7099,11 +8807,6 @@ async function assertCanViewRefereeSumula(user, eventId) {
     }
   }
 
-  const registration = await new Parse.Query('EventRegistration')
-    .equalTo('event', event)
-    .equalTo('user', user)
-    .first({ useMasterKey: true });
-
   if (!registration || !computeRegistrationEffectiveConfirmation(registration, participationFee)) {
     throw new Parse.Error(
       Parse.Error.OPERATION_FORBIDDEN,
@@ -7111,17 +8814,73 @@ async function assertCanViewRefereeSumula(user, eventId) {
     );
   }
 
-  const isReferee = registration.get('role') === 'referee';
-  if (!eventEnded && !isReferee) {
+  if (!finished && !isReferee) {
     throw new Parse.Error(
       Parse.Error.OPERATION_FORBIDDEN,
       'A sumula fica disponivel para consulta apos o encerramento do evento.'
     );
   }
 
-  const canEdit = isReferee && !eventEnded && withinSumulaWindow;
-
   return { event, locked, canEdit };
+}
+
+/**
+ * Confronto: gols sofridos dos goleiros de um time nao podem ultrapassar
+ * a soma de gols marcados pelo time adversario.
+ */
+async function assertTeamMatchGoalkeeperConcededCap(event, entriesByUserId) {
+  if (event.get('type') !== 'team_match') return;
+
+  const participationFee = Number(event.get('participationFee') || 0);
+  const registrations = await new Parse.Query('EventRegistration')
+    .equalTo('event', event)
+    .containedIn('role', ['athlete', 'goalkeeper'])
+    .limit(500)
+    .find({ useMasterKey: true });
+
+  const sideByUserId = new Map();
+  const roleByUserId = new Map();
+  for (const registration of registrations) {
+    const resolved = await resolveRegistrationParticipantUserId(registration);
+    if (!resolved.userId) continue;
+    if (!computeRegistrationEffectiveConfirmation(registration, participationFee)) continue;
+    const side = registration.get('teamSide');
+    if (side !== 'home' && side !== 'away') continue;
+    sideByUserId.set(resolved.userId, side);
+    roleByUserId.set(resolved.userId, registration.get('role') || 'athlete');
+  }
+
+  let homeGoals = 0;
+  let awayGoals = 0;
+  let homeConceded = 0;
+  let awayConceded = 0;
+
+  for (const [userId, stats] of entriesByUserId.entries()) {
+    const side = sideByUserId.get(userId);
+    if (!side) continue;
+    const goals = Math.max(0, Number(stats.goals || 0));
+    const conceded = Math.max(0, Number(stats.goalsConceded || 0));
+    if (side === 'home') {
+      homeGoals += goals;
+      if (roleByUserId.get(userId) === 'goalkeeper') homeConceded += conceded;
+    } else {
+      awayGoals += goals;
+      if (roleByUserId.get(userId) === 'goalkeeper') awayConceded += conceded;
+    }
+  }
+
+  if (homeConceded > awayGoals) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      `Gols sofridos dos goleiros mandantes (${homeConceded}) nao podem ultrapassar os gols do visitante (${awayGoals}).`
+    );
+  }
+  if (awayConceded > homeGoals) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      `Gols sofridos dos goleiros visitantes (${awayConceded}) nao podem ultrapassar os gols do mandante (${homeGoals}).`
+    );
+  }
 }
 
 async function assertConfirmedRefereeForEvent(user, eventId, allowFinished = false) {
@@ -7147,7 +8906,7 @@ async function assertConfirmedRefereeForEvent(user, eventId, allowFinished = fal
     );
   }
 
-  if (!allowFinished && isEventEndedForTools(event)) {
+  if (!allowFinished && !!event.get('isFinished')) {
     throw new Parse.Error(
       Parse.Error.OPERATION_FORBIDDEN,
       'O evento ja foi encerrado. Sumula indisponivel.'
@@ -7172,10 +8931,13 @@ Parse.Cloud.define('getRefereeSumulaBoard', async (request) => {
 
   const { event, locked, canEdit } = await assertCanViewRefereeSumula(user, eventId);
   const participationFee = Number(event.get('participationFee') || 0);
+  const isTeamMatch = event.get('type') === 'team_match';
+  const homeTeamName = event.get('homeTeamName') || 'Mandante';
+  const awayTeamName = event.get('awayTeamName') || 'Visitante';
 
   const registrations = await new Parse.Query('EventRegistration')
     .equalTo('event', event)
-    .equalTo('role', 'athlete')
+    .containedIn('role', ['athlete', 'goalkeeper'])
     .include('user')
     .include('athlete')
     .ascending('apelido')
@@ -7195,6 +8957,8 @@ Parse.Cloud.define('getRefereeSumulaBoard', async (request) => {
   const perfStatsByParticipantId = buildMergedRefereeStatsByParticipantId(eventPerformances);
 
   const athletes = [];
+  let homeScore = 0;
+  let awayScore = 0;
   for (const registration of registrations) {
     const resolved = await resolveRegistrationParticipantUserId(registration);
     if (!resolved.userId) continue;
@@ -7203,6 +8967,19 @@ Parse.Cloud.define('getRefereeSumulaBoard', async (request) => {
     const row = mapRegistrationForEventListItem(registration, eventId, participationFee);
     const stats =
       perfStatsByParticipantId.get(resolved.userId) || emptyRefereeSumulaStats();
+    const teamSide =
+      registration.get('teamSide') === 'home' || registration.get('teamSide') === 'away'
+        ? registration.get('teamSide')
+        : '';
+    const teamName =
+      teamSide === 'home' ? homeTeamName : teamSide === 'away' ? awayTeamName : '';
+
+    // Placar = apenas gols marcados. Gols sofridos (goleiro) nao somam.
+    if (isTeamMatch) {
+      const goals = Number(stats.goals || 0);
+      if (teamSide === 'home') homeScore += goals;
+      else if (teamSide === 'away') awayScore += goals;
+    }
 
     athletes.push({
       userId: resolved.userId,
@@ -7211,15 +8988,28 @@ Parse.Cloud.define('getRefereeSumulaBoard', async (request) => {
       userName: row.userName,
       avatarUrl: row.avatarUrl || undefined,
       primaryPosition: row.primaryPosition || undefined,
+      role: registration.get('role') || 'athlete',
+      teamSide,
+      teamName,
       stats,
     });
   }
 
-  athletes.sort((a, b) => a.apelido.localeCompare(b.apelido, 'pt-BR'));
+  athletes.sort((a, b) => {
+    const sideRank = (side) => (side === 'home' ? 0 : side === 'away' ? 1 : 2);
+    const diff = sideRank(a.teamSide) - sideRank(b.teamSide);
+    if (diff !== 0) return diff;
+    return String(a.apelido || '').localeCompare(String(b.apelido || ''), 'pt-BR');
+  });
 
   return {
     eventId,
     eventName: event.get('name') || 'Evento',
+    eventType: event.get('type') || 'pelada',
+    homeTeamName: isTeamMatch ? homeTeamName : undefined,
+    awayTeamName: isTeamMatch ? awayTeamName : undefined,
+    homeScore: isTeamMatch ? homeScore : undefined,
+    awayScore: isTeamMatch ? awayScore : undefined,
     locked,
     canEdit,
     athletes,
@@ -7278,6 +9068,12 @@ Parse.Cloud.define('incrementRefereeSumula', async (request) => {
 
 function applyRefereeSumulaStatsToPerformance(perf, stats) {
   perf.set('refereeGoals', Math.max(0, Number(stats.goals || 0)));
+  if (stats.goalsConceded != null) {
+    const conceded = Math.max(0, Number(stats.goalsConceded || 0));
+    perf.set('refereeGoalsConceded', conceded);
+    // Espelha no campo agregado para murais/dashboards de goleiro.
+    perf.set('goalsConceded', conceded);
+  }
   perf.set('refereeFoulsCommitted', Math.max(0, Number(stats.fouls || 0)));
   perf.set('refereeYellowCards', Math.max(0, Number(stats.yellowCards || 0)));
   perf.set('refereeRedCards', Math.max(0, Number(stats.redCards || 0)));
@@ -7305,6 +9101,14 @@ Parse.Cloud.define('saveRefereeSumulaBoard', async (request) => {
 
   const { event } = await assertConfirmedRefereeForEvent(user, eventId);
   const pelada = event.get('pelada');
+
+  const entriesByUserId = new Map();
+  for (const entry of entries) {
+    const athleteUserId = entry && entry.athleteUserId ? String(entry.athleteUserId) : '';
+    if (!athleteUserId) continue;
+    entriesByUserId.set(athleteUserId, entry.stats || {});
+  }
+  await assertTeamMatchGoalkeeperConcededCap(event, entriesByUserId);
 
   for (const entry of entries) {
     const athleteUserId = entry && entry.athleteUserId ? String(entry.athleteUserId) : '';
@@ -7825,6 +9629,10 @@ function mapRegistrationForEventListItem(registration, eventId, participationFee
   const paymentConfirmed = !!registration.get('paymentConfirmed');
   const paymentExempt = !!registration.get('paymentExempt');
   const profilePresentationStatus = registration.get('profilePresentationStatus') || null;
+  const userPtr = registration.get('user');
+  const birthDate = userPtr && userPtr.get ? userPtr.get('birthDate') : null;
+  const age =
+    typeof calcAgeFromBirthDate === 'function' ? calcAgeFromBirthDate(birthDate) : null;
 
   return {
     objectId: registration.id,
@@ -7848,6 +9656,10 @@ function mapRegistrationForEventListItem(registration, eventId, participationFee
     ),
     invitedByContract: !!registration.get('invitedByContract'),
     invitedAsReferee: !!registration.get('invitedAsReferee'),
+    contractOfferedAmount:
+      registration.get('contractOfferedAmount') != null
+        ? Number(registration.get('contractOfferedAmount'))
+        : undefined,
     profilePresentationStatus,
     arrivalOrder:
       registration.get('arrivalOrder') != null ? Number(registration.get('arrivalOrder')) : undefined,
@@ -7858,7 +9670,113 @@ function mapRegistrationForEventListItem(registration, eventId, participationFee
     isAnonymous: !!registration.get('isAnonymous'),
     gateTicketActive:
       !!registration.get('gateTicketToken') && !registration.get('gateTicketCancelledAt'),
+    teamSide:
+      registration.get('teamSide') === 'home' || registration.get('teamSide') === 'away'
+        ? registration.get('teamSide')
+        : undefined,
+    age: age != null && !Number.isNaN(age) ? age : null,
+    appAverageScore: null,
+    teamName: undefined,
   };
+}
+
+async function buildAppAverageVoteScores(userIds) {
+  const scores = new Map();
+  if (!userIds || !userIds.size) return scores;
+  for (const userId of userIds) {
+    scores.set(userId, null);
+  }
+
+  const idList = Array.from(userIds);
+  const chunkSize = 50;
+  const voteAgg = new Map();
+
+  for (let i = 0; i < idList.length; i += chunkSize) {
+    const chunk = idList.slice(i, i + chunkSize);
+    const votes = await new Parse.Query('MuralVote')
+      .containedIn('targetUserId', chunk)
+      .limit(5000)
+      .find({ useMasterKey: true });
+
+    const eventIds = [
+      ...new Set(
+        votes
+          .map((vote) => String(vote.get('scopeId') || '').trim())
+          .filter(Boolean)
+      ),
+    ];
+    const typeById = new Map();
+    for (let j = 0; j < eventIds.length; j += 50) {
+      const eventChunk = eventIds.slice(j, j + 50);
+      if (!eventChunk.length) continue;
+      const events = await new Parse.Query('Event')
+        .containedIn('objectId', eventChunk)
+        .select(['type'])
+        .limit(eventChunk.length)
+        .find({ useMasterKey: true });
+      for (const event of events) {
+        typeById.set(event.id, event.get('type') || '');
+      }
+    }
+
+    for (const vote of votes) {
+      const targetUserId = String(
+        vote.get('targetUserId') ||
+          (vote.get('targetUser') && vote.get('targetUser').id ? vote.get('targetUser').id : '')
+      );
+      if (!targetUserId || !userIds.has(targetUserId)) continue;
+      const scopeId = String(vote.get('scopeId') || '');
+      const weight = typeById.get(scopeId) === 'team_match' ? 3 : 1;
+      const score = Number(vote.get('score') || 0);
+      const current = voteAgg.get(targetUserId) || { weighted: 0, weightSum: 0 };
+      current.weighted += score * weight;
+      current.weightSum += weight;
+      voteAgg.set(targetUserId, current);
+    }
+  }
+
+  for (const [userId, data] of voteAgg.entries()) {
+    if (data.weightSum > 0) {
+      scores.set(userId, Math.round((data.weighted / data.weightSum) * 10) / 10);
+    }
+  }
+  return scores;
+}
+
+async function enrichEventRegistrationListRows(rows, event) {
+  if (!rows.length) return rows;
+  const userIds = new Set(rows.map((row) => String(row.userId || '')).filter(Boolean));
+  const averages = await buildAppAverageVoteScores(userIds);
+  const homeName = event.get('homeTeamName') || 'Mandante';
+  const awayName = event.get('awayTeamName') || 'Visitante';
+  const isTeamMatch = event.get('type') === 'team_match';
+
+  for (const row of rows) {
+    const avg = averages.get(String(row.userId || ''));
+    row.appAverageScore = avg != null ? avg : null;
+    if (isTeamMatch && (row.role === 'athlete' || row.role === 'goalkeeper')) {
+      if (row.teamSide === 'home') row.teamName = homeName;
+      else if (row.teamSide === 'away') row.teamName = awayName;
+      else row.teamName = undefined;
+    }
+  }
+  return rows;
+}
+
+function sortTeamMatchRegistrationRows(rows, event) {
+  if (!event || event.get('type') !== 'team_match' || !Array.isArray(rows)) {
+    return rows;
+  }
+  const sideRank = (side) => (side === 'home' ? 0 : side === 'away' ? 1 : 2);
+  rows.sort((a, b) => {
+    const sideDiff = sideRank(a.teamSide) - sideRank(b.teamSide);
+    if (sideDiff !== 0) return sideDiff;
+    return String(a.apelido || a.userName || '').localeCompare(
+      String(b.apelido || b.userName || ''),
+      'pt-BR'
+    );
+  });
+  return rows;
 }
 
 async function resolveRegistrationAthleteProfile(registration) {
@@ -7967,7 +9885,10 @@ Parse.Cloud.define('listEventParticipantsForVoting', async (request) => {
   }
 
   rows.sort((a, b) => a.apelido.localeCompare(b.apelido, 'pt-BR'));
-  return rows;
+  return sortTeamMatchRegistrationRows(
+    await enrichEventRegistrationListRows(rows, event),
+    event
+  );
 });
 
 Parse.Cloud.define('listEventRegistrationsForAdmin', async (request) => {
@@ -8039,7 +9960,10 @@ Parse.Cloud.define('listEventRegistrationsForAdmin', async (request) => {
     return (a.apelido || a.userName).localeCompare(b.apelido || b.userName, 'pt-BR');
   });
 
-  return rows;
+  return sortTeamMatchRegistrationRows(
+    await enrichEventRegistrationListRows(rows, event),
+    event
+  );
 });
 
 function athletePositionsFromProfile(athlete) {
@@ -8128,6 +10052,7 @@ Parse.Cloud.define('listEventAthletesForPredictions', async (request) => {
       userName: row.userName,
       apelido: row.apelido || row.userName,
       avatarUrl: resolveStoredAvatarUrl(user, registration),
+      teamSide: row.teamSide,
       ...athletePositionsFromProfile(athleteResolved.athlete),
     });
   }
@@ -8642,6 +10567,46 @@ Parse.Cloud.define('createAnonymousEventRegistration', async (request) => {
   return mapRegistrationForEventListItem(registration, eventId, participationFee);
 });
 
+Parse.Cloud.define('setEventRegistrationTeamSide', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+
+  const registrationId = String(request.params.registrationId || '').trim();
+  const teamSide = request.params.teamSide === 'away' ? 'away' : request.params.teamSide === 'home' ? 'home' : '';
+  if (!registrationId || !teamSide) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe a inscricao e o time (mandante ou visitante).');
+  }
+
+  const registration = await new Parse.Query('EventRegistration').get(registrationId, {
+    useMasterKey: true,
+  });
+  const event = registration.get('event');
+  if (!event || !event.id) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'Inscricao sem evento.');
+  }
+
+  const eventObj = await assertEventAdmin(user, event.id);
+  if (eventObj.get('type') !== 'team_match') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'So confrontos entre times usam lado mandante/visitante.');
+  }
+  if (registration.get('role') !== 'athlete') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'So atletas entram no confronto por time.');
+  }
+
+  registration.set('teamSide', teamSide);
+  await registration.save(null, { useMasterKey: true });
+  const participationFee = Number(eventObj.get('participationFee') || 0);
+  const athleteResolved = await resolveRegistrationAthleteProfile(registration);
+  return mapRegistrationForEventListItem(
+    registration,
+    eventObj.id,
+    participationFee,
+    athleteResolved.athlete
+  );
+});
+
 // Contratacao suplementar
 Parse.Cloud.define('createSupplementaryEventInvitation', async (request) => {
   const user = request.user;
@@ -8820,30 +10785,69 @@ Parse.Cloud.define('checkInviteeScheduleConflict', async (request) => {
     throw new Parse.Error(Parse.Error.INVALID_QUERY, 'Informe um periodo valido.');
   }
 
-  const invitedUser = Parse.User.createWithoutData(invitedUserId);
-  const overlaps = (otherStart, otherEnd) =>
-    !!otherStart && !!otherEnd && startTime < otherEnd && otherStart < endTime;
+  const includePending = !!request.params.includePending;
+  return findUserScheduleConflictDetail(
+    invitedUserId,
+    startTime,
+    endTime,
+    excludeEventId,
+    { includePending }
+  );
+});
 
-  const acceptedInvitations = await new Parse.Query('RefereeInvitation')
+function timesOverlap(startA, endA, startB, endB) {
+  return !!startA && !!endA && !!startB && !!endB && startA < endB && startB < endA;
+}
+
+function resolveUserAvatarUrl(user) {
+  if (!user || !user.get) return '';
+  const direct = String(user.get('avatarUrl') || '').trim();
+  if (direct) return direct;
+  const file = user.get('avatar');
+  if (file && typeof file.url === 'function') {
+    try {
+      return String(file.url() || '').trim();
+    } catch {
+      return '';
+    }
+  }
+  if (file && file._url) return String(file._url).trim();
+  return '';
+}
+
+async function findUserScheduleConflictDetail(
+  userId,
+  startTime,
+  endTime,
+  excludeEventId,
+  options = {}
+) {
+  const includePending = !!(options && options.includePending);
+  const invitedUser = Parse.User.createWithoutData(userId);
+  const statuses = includePending ? ['pending', 'accepted'] : ['accepted'];
+
+  const invitations = await new Parse.Query('RefereeInvitation')
     .equalTo('invitedUser', invitedUser)
-    .equalTo('status', 'accepted')
+    .containedIn('status', statuses)
     .include('event')
     .limit(200)
     .find({ useMasterKey: true });
 
-  for (const invitation of acceptedInvitations) {
+  for (const invitation of invitations) {
     const event = invitation.get('event');
     if (!event || !event.id || event.id === excludeEventId) continue;
     const otherStart = event.get('startTime');
     const otherEnd = event.get('endTime');
-    if (overlaps(otherStart, otherEnd)) {
+    if (timesOverlap(startTime, endTime, otherStart, otherEnd)) {
       return {
         conflict: true,
-        source: 'invitation',
+        source: invitation.get('status') === 'pending' ? 'pending_invitation' : 'invitation',
+        invitationId: invitation.id,
+        invitationStatus: invitation.get('status') || '',
         eventId: event.id,
         eventName: event.get('name') || 'Outro evento',
-        startTime: otherStart,
-        endTime: otherEnd,
+        startTime: otherStart ? otherStart.toISOString() : null,
+        endTime: otherEnd ? otherEnd.toISOString() : null,
       };
     }
   }
@@ -8860,19 +10864,836 @@ Parse.Cloud.define('checkInviteeScheduleConflict', async (request) => {
     if (!event || !event.id || event.id === excludeEventId) continue;
     const otherStart = event.get('startTime');
     const otherEnd = event.get('endTime');
-    if (overlaps(otherStart, otherEnd)) {
+    if (timesOverlap(startTime, endTime, otherStart, otherEnd)) {
       return {
         conflict: true,
         source: 'registration',
+        invitationId: null,
+        invitationStatus: '',
         eventId: event.id,
         eventName: event.get('name') || 'Outro evento',
-        startTime: otherStart,
-        endTime: otherEnd,
+        startTime: otherStart ? otherStart.toISOString() : null,
+        endTime: otherEnd ? otherEnd.toISOString() : null,
       };
     }
   }
 
   return { conflict: false };
+}
+
+Parse.Cloud.define('getInvitationAcceptConflicts', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const invitationId = String(request.params.invitationId || '').trim();
+  if (!invitationId) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'invitationId obrigatorio.');
+  }
+
+  const invitation = await new Parse.Query('RefereeInvitation')
+    .include('event')
+    .include('invitedUser')
+    .get(invitationId, { useMasterKey: true });
+  const invited = invitation.get('invitedUser');
+  if (!invited || invited.id !== user.id) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Este convite nao pertence a voce.');
+  }
+  const event = invitation.get('event');
+  if (!event || !event.id) {
+    return { conflicts: [] };
+  }
+  const startTime = event.get('startTime');
+  const endTime = event.get('endTime');
+  const conflicts = [];
+
+  // Outro lado do mesmo confronto (pending/accepted).
+  const sameEventOthers = await new Parse.Query('RefereeInvitation')
+    .equalTo('event', event)
+    .equalTo('invitedUser', invited)
+    .containedIn('status', ['pending', 'accepted'])
+    .notEqualTo('objectId', invitationId)
+    .limit(20)
+    .find({ useMasterKey: true });
+  for (const other of sameEventOthers) {
+    conflicts.push({
+      invitationId: other.id,
+      invitationStatus: other.get('status') || '',
+      source: 'same_event',
+      eventId: event.id,
+      eventName: event.get('name') || 'Confronto',
+      teamSide: other.get('teamSide') || '',
+      startTime: startTime ? startTime.toISOString() : null,
+      endTime: endTime ? endTime.toISOString() : null,
+      canDecline: other.get('status') === 'pending',
+      hardBlock: other.get('status') === 'accepted',
+    });
+  }
+
+  if (startTime && endTime) {
+    const schedule = await findUserScheduleConflictDetail(
+      invited.id,
+      startTime,
+      endTime,
+      event.id,
+      { includePending: true }
+    );
+    if (schedule && schedule.conflict) {
+      const alreadyListed =
+        schedule.invitationId &&
+        conflicts.some((row) => row.invitationId === schedule.invitationId);
+      if (!alreadyListed) {
+        conflicts.push({
+          invitationId: schedule.invitationId || null,
+          invitationStatus: schedule.invitationStatus || '',
+          source: schedule.source || 'invitation',
+          eventId: schedule.eventId,
+          eventName: schedule.eventName,
+          teamSide: '',
+          startTime: schedule.startTime,
+          endTime: schedule.endTime,
+          canDecline: schedule.source === 'pending_invitation' && !!schedule.invitationId,
+          hardBlock: schedule.source === 'invitation' || schedule.source === 'registration',
+        });
+      }
+    }
+  }
+
+  return { conflicts };
+});
+
+async function findAmateurTeamScheduleConflict(teamId, startTime, endTime, opts = {}) {
+  const excludeEventId = String(opts.excludeEventId || '').trim();
+  const excludeChallengeId = String(opts.excludeChallengeId || '').trim();
+  const teamPtr = Parse.Object.createWithoutData('AmateurTeam', teamId);
+
+  const homeQ = new Parse.Query('Event')
+    .equalTo('type', 'team_match')
+    .equalTo('homeTeam', teamPtr)
+    .notEqualTo('isFinished', true);
+  const awayQ = new Parse.Query('Event')
+    .equalTo('type', 'team_match')
+    .equalTo('awayTeam', teamPtr)
+    .notEqualTo('isFinished', true);
+  const events = await Parse.Query.or(homeQ, awayQ).limit(100).find({ useMasterKey: true });
+  for (const event of events) {
+    if (event.id === excludeEventId) continue;
+    const otherStart = event.get('startTime');
+    const otherEnd = event.get('endTime');
+    if (timesOverlap(startTime, endTime, otherStart, otherEnd)) {
+      return {
+        conflict: true,
+        source: 'team_event',
+        eventId: event.id,
+        eventName: event.get('name') || 'Outro confronto',
+        startTime: otherStart,
+        endTime: otherEnd,
+        teamId,
+      };
+    }
+  }
+
+  const asChallenger = new Parse.Query('MatchChallenge')
+    .equalTo('challengerTeam', teamPtr)
+    .containedIn('status', ['pending', 'accepted']);
+  const asChallenged = new Parse.Query('MatchChallenge')
+    .equalTo('challengedTeam', teamPtr)
+    .containedIn('status', ['pending', 'accepted']);
+  const challenges = await Parse.Query.or(asChallenger, asChallenged)
+    .limit(50)
+    .find({ useMasterKey: true });
+  for (const challenge of challenges) {
+    if (challenge.id === excludeChallengeId) continue;
+    const otherStart = challenge.get('proposedStartTime');
+    const otherEnd = challenge.get('proposedEndTime');
+    if (timesOverlap(startTime, endTime, otherStart, otherEnd)) {
+      return {
+        conflict: true,
+        source: 'challenge',
+        challengeId: challenge.id,
+        eventName:
+          `${challenge.get('challengerTeamName') || 'Time'} x ${
+            challenge.get('challengedTeamName') || 'Adversario'
+          }`,
+        startTime: otherStart,
+        endTime: otherEnd,
+        teamId,
+      };
+    }
+  }
+
+  return { conflict: false };
+}
+
+async function assertTeamsFreeForProposedMatch(
+  challengerTeam,
+  challengedTeam,
+  startTime,
+  endTime,
+  opts = {}
+) {
+  const teams = [challengerTeam, challengedTeam].filter(Boolean);
+  for (const team of teams) {
+    const teamConflict = await findAmateurTeamScheduleConflict(team.id, startTime, endTime, opts);
+    if (teamConflict.conflict) {
+      const teamName = team.get('name') || 'Time';
+      throw new Parse.Error(
+        Parse.Error.VALIDATION_ERROR,
+        `${teamName} ja tem compromisso em "${teamConflict.eventName}" neste horario.`
+      );
+    }
+    let president = team.get('president');
+    if (president && president.id && !president.get) {
+      president = await new Parse.Query(Parse.User).get(president.id, { useMasterKey: true });
+    } else if (president && president.id && typeof president.fetch === 'function') {
+      try {
+        await president.fetch({ useMasterKey: true });
+      } catch {
+        /* usa pointer */
+      }
+    }
+    if (president && president.id) {
+      const userConflict = await findUserScheduleConflictDetail(
+        president.id,
+        startTime,
+        endTime,
+        opts.excludeEventId
+      );
+      if (userConflict.conflict) {
+        const teamName = team.get('name') || 'Time';
+        throw new Parse.Error(
+          Parse.Error.VALIDATION_ERROR,
+          `Presidente de ${teamName} ja tem compromisso em "${userConflict.eventName}" neste horario.`
+        );
+      }
+    }
+  }
+}
+
+function mapTeamMatchEventRow(event) {
+  const homeTeam = event.get('homeTeam');
+  const awayTeam = event.get('awayTeam');
+  const admin = event.get('admin');
+  const startTime = event.get('startTime');
+  const endTime = event.get('endTime');
+  const returnOf = event.get('returnOf');
+  const homeShield = homeTeam && homeTeam.get ? homeTeam.get('shieldImage') : null;
+  const awayShield = awayTeam && awayTeam.get ? awayTeam.get('shieldImage') : null;
+  return {
+    objectId: event.id,
+    name: event.get('name') || '',
+    type: 'team_match',
+    startTime: startTime ? startTime.toISOString() : null,
+    endTime: endTime ? endTime.toISOString() : null,
+    homeTeamId: homeTeam && homeTeam.id ? homeTeam.id : undefined,
+    awayTeamId: awayTeam && awayTeam.id ? awayTeam.id : undefined,
+    homeTeamName:
+      event.get('homeTeamName') || (homeTeam && homeTeam.get ? homeTeam.get('name') : '') || '',
+    awayTeamName:
+      event.get('awayTeamName') || (awayTeam && awayTeam.get ? awayTeam.get('name') : '') || '',
+    homeTeamShieldUrl: homeShield && homeShield.url ? homeShield.url() : undefined,
+    awayTeamShieldUrl: awayShield && awayShield.url ? awayShield.url() : undefined,
+    adminId: admin && admin.id ? admin.id : '',
+    hasReturnLeg: !!event.get('hasReturnLeg'),
+    returnOfEventId: returnOf && returnOf.id ? returnOf.id : undefined,
+    address: event.get('address') || {},
+    locationComplement: event.get('locationComplement') || '',
+    isFinished: !!event.get('isFinished'),
+    homeAcceptsUninvitedAthletes: !!event.get('homeAcceptsUninvitedAthletes'),
+    awayAcceptsUninvitedAthletes: !!event.get('awayAcceptsUninvitedAthletes'),
+  };
+}
+
+async function loadUserAmateurTeams(user) {
+  return new Parse.Query('AmateurTeam')
+    .equalTo('president', user)
+    .limit(20)
+    .find({ useMasterKey: true });
+}
+
+async function createTeamMatchInvitation(event, invitedUserId, invitedBy, teamSide, deadline, offeredAmount) {
+  const invitedUser = Parse.User.createWithoutData(invitedUserId);
+  // Duplicata so no mesmo lado — outro time pode convocar o mesmo atleta (ele escolhe).
+  const duplicateSameSide = await new Parse.Query('RefereeInvitation')
+    .equalTo('event', event)
+    .equalTo('invitedUser', invitedUser)
+    .equalTo('role', 'athlete')
+    .equalTo('teamSide', teamSide)
+    .containedIn('status', ['pending', 'accepted'])
+    .first({ useMasterKey: true });
+  if (duplicateSameSide) return duplicateSameSide;
+
+  const existingReg = await new Parse.Query('EventRegistration')
+    .equalTo('event', event)
+    .equalTo('user', invitedUser)
+    .first({ useMasterKey: true });
+  if (existingReg) return null;
+
+  const invitation = new Parse.Object('RefereeInvitation');
+  invitation.set('event', event);
+  if (event.get('pelada')) invitation.set('pelada', event.get('pelada'));
+  invitation.set('invitedUser', invitedUser);
+  invitation.set('invitedBy', invitedBy);
+  invitation.set('role', 'athlete');
+  invitation.set('teamSide', teamSide);
+  invitation.set('status', 'pending');
+  invitation.set('offeredAmount', Number(offeredAmount || 0));
+  invitation.set('responseDeadline', deadline);
+  invitation.set('presenceConfirmed', false);
+  invitation.set('paymentConfirmedByAdmin', false);
+  invitation.set('paymentConfirmedByReferee', false);
+  invitation.set('workCompleted', false);
+  invitation.set('paymentReleased', false);
+  invitation.set('excusedFault', false);
+  const inviterApelido = (invitedBy.get('apelido') || '').trim();
+  const inviterFullName = (invitedBy.get('name') || '').trim();
+  invitation.set('invitedByName', inviterApelido || inviterFullName || invitedBy.getUsername() || 'Mandante');
+  if (inviterApelido) invitation.set('invitedByApelido', inviterApelido);
+  if (inviterFullName) invitation.set('invitedByFullName', inviterFullName);
+  const inviterAvatar = resolveUserAvatarUrl(invitedBy);
+  if (inviterAvatar) invitation.set('invitedByAvatarUrl', inviterAvatar);
+  await invitation.save(null, { useMasterKey: true });
+  return invitation;
+}
+
+async function saveTeamMatchEvent(adminUser, payload) {
+  if (!adminUser || !adminUser.id) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Administrador do confronto invalido.');
+  }
+  const event = new Parse.Object('Event');
+  event.set('name', payload.name);
+  event.set('type', 'team_match');
+  event.set('startTime', payload.startTime);
+  event.set('endTime', payload.endTime);
+  event.set('address', payload.address || {});
+  event.set('locationComplement', payload.locationComplement || '');
+  // Admin = presidente do mandante desta perna (ida ou volta).
+  event.set('admin', adminUser);
+  event.set('readOnlyAt', new Date(payload.endTime.getTime() + 2 * 60 * 60 * 1000));
+  event.set('registrationOpensAt', new Date());
+  event.set('registrationClosesAt', payload.startTime);
+  event.set('useArrivalOrderForTeams', false);
+  event.set('participationFee', 0);
+  event.set('isFinished', false);
+  event.set('homeTeam', payload.homeTeam);
+  event.set('awayTeam', payload.awayTeam);
+  event.set('homeTeamName', payload.homeTeam.get('name') || payload.name);
+  event.set('awayTeamName', payload.awayTeam.get('name') || '');
+  event.set('homeAcceptsUninvitedAthletes', false);
+  event.set('awayAcceptsUninvitedAthletes', false);
+  event.set('athleteConvocationBy', 'president');
+  if (payload.hasReturnLeg) event.set('hasReturnLeg', true);
+  if (payload.returnOf) event.set('returnOf', payload.returnOf);
+  if (payload.challengeConditions) {
+    event.set('challengeConditions', String(payload.challengeConditions).trim().slice(0, 2000));
+  }
+  if (payload.matchChallenge) event.set('matchChallenge', payload.matchChallenge);
+  const acl = new Parse.ACL();
+  acl.setPublicReadAccess(true);
+  acl.setWriteAccess(adminUser.id, true);
+  event.setACL(acl);
+  await event.save(null, { useMasterKey: true });
+  return event;
+}
+
+Parse.Cloud.define('createTeamMatch', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+
+  const challengeId = String(request.params.challengeId || '').trim();
+  if (!challengeId) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'Aceite um desafio antes de marcar o confronto.'
+    );
+  }
+  const challenge = await new Parse.Query('MatchChallenge')
+    .include('challengerTeam')
+    .include('challengedTeam')
+    .include('challengerUser')
+    .get(challengeId, { useMasterKey: true });
+  if (challenge.get('status') !== 'accepted') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'O desafio precisa estar aceito.');
+  }
+  const challengerUser = challenge.get('challengerUser');
+  if (!challengerUser || challengerUser.id !== user.id) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Apenas quem enviou o desafio pode marcar o confronto apos o aceite.'
+    );
+  }
+  if (challenge.get('eventId')) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Este desafio ja gerou um confronto.');
+  }
+
+  const homeTeamId = String(
+    request.params.homeTeamId || (challenge.get('challengerTeam') && challenge.get('challengerTeam').id) || ''
+  ).trim();
+  const awayTeamId = String(
+    request.params.awayTeamId || (challenge.get('challengedTeam') && challenge.get('challengedTeam').id) || ''
+  ).trim();
+  if (!homeTeamId || !awayTeamId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o time mandante e o visitante.');
+  }
+  if (homeTeamId === awayTeamId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Mandante e visitante precisam ser times diferentes.');
+  }
+
+  const startTime = request.params.startTime
+    ? new Date(request.params.startTime)
+    : challenge.get('proposedStartTime')
+      ? new Date(challenge.get('proposedStartTime'))
+      : null;
+  const endTime = request.params.endTime
+    ? new Date(request.params.endTime)
+    : challenge.get('proposedEndTime')
+      ? new Date(challenge.get('proposedEndTime'))
+      : null;
+  if (!startTime || Number.isNaN(startTime.getTime()) || !endTime || Number.isNaN(endTime.getTime())) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe data e hora do confronto.');
+  }
+  if (endTime <= startTime) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'O termino deve ser apos o inicio.');
+  }
+
+  const homeTeam = await new Parse.Query('AmateurTeam').include('president').get(homeTeamId, {
+    useMasterKey: true,
+  });
+  const awayTeam = await new Parse.Query('AmateurTeam').include('president').get(awayTeamId, {
+    useMasterKey: true,
+  });
+  const homePresident = homeTeam.get('president');
+  if (!homePresident || homePresident.id !== user.id) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'So o presidente do time mandante pode marcar o confronto.'
+    );
+  }
+
+  await assertTeamsFreeForProposedMatch(homeTeam, awayTeam, startTime, endTime, {
+    excludeChallengeId: challenge.id,
+  });
+
+  const homeName = String(homeTeam.get('name') || 'Mandante').trim();
+  const awayName = String(awayTeam.get('name') || 'Visitante').trim();
+  const name = String(request.params.name || '').trim() || `${homeName} x ${awayName}`;
+  const addressFromChallenge =
+    challenge.get('proposedAddress') && typeof challenge.get('proposedAddress') === 'object'
+      ? challenge.get('proposedAddress')
+      : {};
+  const address =
+    request.params.address && typeof request.params.address === 'object'
+      ? request.params.address
+      : addressFromChallenge;
+  const locationComplement = String(
+    request.params.locationComplement || challenge.get('proposedLocationComplement') || ''
+  ).trim();
+
+  const athleteInvitesRaw = Array.isArray(request.params.athleteInvites)
+    ? request.params.athleteInvites
+    : [];
+  const athleteInvites = [];
+  const seenAthleteIds = new Set();
+  for (const row of athleteInvitesRaw) {
+    const userId = String((row && row.userId) || '').trim();
+    if (!userId || seenAthleteIds.has(userId) || userId === user.id) continue;
+    seenAthleteIds.add(userId);
+    athleteInvites.push({
+      userId,
+      offeredAmount: Math.max(0, Number((row && row.offeredAmount) || 0)),
+    });
+  }
+  if (!athleteInvites.length && Array.isArray(request.params.athleteUserIds)) {
+    const defaultOffer = Math.max(0, Number(request.params.offeredAmount || 0));
+    for (const id of request.params.athleteUserIds) {
+      const userId = String(id || '').trim();
+      if (!userId || seenAthleteIds.has(userId) || userId === user.id) continue;
+      seenAthleteIds.add(userId);
+      athleteInvites.push({ userId, offeredAmount: defaultOffer });
+    }
+  }
+  athleteInvites.splice(40);
+
+  const deadlineRaw = request.params.responseDeadline
+    ? new Date(request.params.responseDeadline)
+    : new Date(Date.now() + 48 * 60 * 60 * 1000);
+  const deadline =
+    deadlineRaw && !Number.isNaN(deadlineRaw.getTime()) && deadlineRaw > new Date()
+      ? deadlineRaw
+      : new Date(Date.now() + 2 * 60 * 60 * 1000);
+
+  for (const invite of athleteInvites) {
+    const athleteConflict = await findUserScheduleConflictDetail(
+      invite.userId,
+      startTime,
+      endTime,
+      ''
+    );
+    if (athleteConflict.conflict) {
+      throw new Parse.Error(
+        Parse.Error.VALIDATION_ERROR,
+        `Atleta ja tem compromisso em "${athleteConflict.eventName}" neste horario (ida).`
+      );
+    }
+  }
+
+  let returnStart = null;
+  let returnEnd = null;
+  const forceReturnLeg = !!challenge.get('hasReturnLeg') || !!request.params.returnLeg;
+  if (forceReturnLeg) {
+    returnStart = request.params.returnStartTime ? new Date(request.params.returnStartTime) : null;
+    returnEnd = request.params.returnEndTime ? new Date(request.params.returnEndTime) : null;
+    if (!returnStart || Number.isNaN(returnStart.getTime()) || !returnEnd || Number.isNaN(returnEnd.getTime())) {
+      throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe data e hora do jogo da volta.');
+    }
+    if (returnEnd <= returnStart) {
+      throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'O termino da volta deve ser apos o inicio.');
+    }
+    await assertTeamsFreeForProposedMatch(homeTeam, awayTeam, returnStart, returnEnd, {
+      excludeChallengeId: challenge.id,
+    });
+    for (const invite of athleteInvites) {
+      const athleteConflict = await findUserScheduleConflictDetail(
+        invite.userId,
+        returnStart,
+        returnEnd,
+        ''
+      );
+      if (athleteConflict.conflict) {
+        throw new Parse.Error(
+          Parse.Error.VALIDATION_ERROR,
+          `Atleta ja tem compromisso em "${athleteConflict.eventName}" neste horario (volta).`
+        );
+      }
+    }
+  }
+
+  const challengeConditions = String(
+    request.params.challengeConditions ||
+      challenge.get('challengeConditions') ||
+      ''
+  )
+    .trim()
+    .slice(0, 2000);
+  const returnChallengeConditions = String(
+    request.params.returnChallengeConditions ||
+      challenge.get('returnChallengeConditions') ||
+      challengeConditions
+  )
+    .trim()
+    .slice(0, 2000);
+
+  // Garante campos de avatar do presidente no convite.
+  try {
+    await user.fetch({ useMasterKey: true });
+  } catch {
+    /* segue com sessao atual */
+  }
+
+  const first = await saveTeamMatchEvent(homePresident, {
+    name,
+    startTime,
+    endTime,
+    address,
+    locationComplement,
+    homeTeam,
+    awayTeam,
+    hasReturnLeg: forceReturnLeg,
+    challengeConditions,
+    matchChallenge: challenge,
+  });
+
+  let second = null;
+  if (forceReturnLeg) {
+    const returnAddress =
+      request.params.returnAddress && typeof request.params.returnAddress === 'object'
+        ? request.params.returnAddress
+        : address;
+    const awayPresident = awayTeam.get('president');
+    if (!awayPresident || !awayPresident.id) {
+      throw new Parse.Error(
+        Parse.Error.VALIDATION_ERROR,
+        'Time visitante sem presidente para administrar a volta.'
+      );
+    }
+    second = await saveTeamMatchEvent(awayPresident, {
+      name: `${awayName} x ${homeName}`,
+      startTime: returnStart,
+      endTime: returnEnd,
+      address: returnAddress,
+      locationComplement: String(request.params.returnLocationComplement || locationComplement).trim(),
+      homeTeam: awayTeam,
+      awayTeam: homeTeam,
+      returnOf: first,
+      challengeConditions: returnChallengeConditions,
+      matchChallenge: challenge,
+    });
+  }
+
+  challenge.set('eventId', first.id);
+  if (second && second.id) challenge.set('returnEventId', second.id);
+  challenge.set('status', 'scheduled');
+  await challenge.save(null, { useMasterKey: true });
+
+  // Convite por data: ida e, se houver, volta (cada um com seu evento).
+  for (const invite of athleteInvites) {
+    await createTeamMatchInvitation(
+      first,
+      invite.userId,
+      user,
+      'home',
+      deadline,
+      invite.offeredAmount
+    );
+    if (second) {
+      await createTeamMatchInvitation(
+        second,
+        invite.userId,
+        user,
+        'away',
+        deadline,
+        invite.offeredAmount
+      );
+    }
+  }
+
+  let audienceIds = [];
+  try {
+    if (typeof collectTeamMatchNotifyUserIds === 'function') {
+      audienceIds = await collectTeamMatchNotifyUserIds(first);
+    } else {
+      const awayPresident = awayTeam.get('president');
+      if (awayPresident && awayPresident.id) audienceIds.push(awayPresident.id);
+    }
+  } catch (error) {
+    console.error('collectTeamMatchNotifyUserIds failed', error);
+    const awayPresident = awayTeam.get('president');
+    if (awayPresident && awayPresident.id) audienceIds = [awayPresident.id];
+  }
+
+  let push = { audience: 0, devicesMatched: 0 };
+  try {
+    push = await notifyTeamMatchStakeholders(first, audienceIds, user.id);
+  } catch (error) {
+    console.error('notifyTeamMatchStakeholders failed', error);
+  }
+
+  // Mesmo publico do push: elenco, presidentes, confirmados e contratados aceitos.
+  if (typeof createAppMessages === 'function') {
+    const dateLabel =
+      typeof formatEventPushDate === 'function' ? formatEventPushDate(first.get('startTime')) : '';
+    await createAppMessages(audienceIds, {
+      senderId: user.id,
+      kind: 'team_match_created',
+      title: `Novo confronto: ${homeName} x ${awayName}`,
+      body:
+        `O confronto ${homeName} x ${awayName} foi marcado` +
+        (dateLabel ? ` para ${dateLabel}.` : '.') +
+        ' Abra o confronto para ver os detalhes.',
+      relatedClass: 'Event',
+      relatedId: first.id,
+      actionRoute: `/event/${first.id}`,
+    });
+  }
+
+  return {
+    event: mapTeamMatchEventRow(first),
+    returnEvent: second ? mapTeamMatchEventRow(second) : null,
+    invitedAthletes: athleteInvites.length,
+    push,
+  };
+});
+
+async function mergeTeamMatchEventsById(byId, eventIds) {
+  const missing = [...new Set(eventIds.map((id) => String(id || '').trim()).filter(Boolean))].filter(
+    (id) => !byId.has(id)
+  );
+  if (!missing.length) return;
+  const extraQuery = new Parse.Query('Event');
+  extraQuery.equalTo('type', 'team_match');
+  extraQuery.containedIn('objectId', missing);
+  extraQuery.include('homeTeam');
+  extraQuery.include('awayTeam');
+  extraQuery.limit(100);
+  const extraRows = await extraQuery.find({ useMasterKey: true });
+  for (const row of extraRows) {
+    byId.set(row.id, row);
+  }
+}
+
+async function attachReturnLegsForTeamMatches(byId) {
+  const roots = Array.from(byId.values()).filter((event) => !event.get('returnOf'));
+  if (!roots.length) return;
+  const returnQuery = new Parse.Query('Event');
+  returnQuery.equalTo('type', 'team_match');
+  returnQuery.containedIn('returnOf', roots);
+  returnQuery.include('homeTeam');
+  returnQuery.include('awayTeam');
+  returnQuery.limit(100);
+  const returnRows = await returnQuery.find({ useMasterKey: true });
+  for (const row of returnRows) {
+    byId.set(row.id, row);
+  }
+}
+
+function sortTeamMatchEventsDesc(merged) {
+  merged.sort((a, b) => {
+    const ta = a.get('startTime') ? a.get('startTime').getTime() : 0;
+    const tb = b.get('startTime') ? b.get('startTime').getTime() : 0;
+    return tb - ta;
+  });
+  return merged;
+}
+
+Parse.Cloud.define('listMyTeamMatches', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const teams = await loadUserAmateurTeams(user);
+  const teamPointers = teams.map((team) =>
+    Parse.Object.createWithoutData('AmateurTeam', team.id)
+  );
+  const adminQuery = new Parse.Query('Event').equalTo('type', 'team_match').equalTo('admin', user);
+  const queries = [adminQuery];
+  if (teamPointers.length) {
+    queries.push(
+      new Parse.Query('Event').equalTo('type', 'team_match').containedIn('homeTeam', teamPointers)
+    );
+    queries.push(
+      new Parse.Query('Event').equalTo('type', 'team_match').containedIn('awayTeam', teamPointers)
+    );
+  }
+  const query = queries.length === 1 ? adminQuery : Parse.Query.or(...queries);
+  query.include('homeTeam');
+  query.include('awayTeam');
+  query.descending('startTime');
+  query.limit(80);
+  const rows = await query.find({ useMasterKey: true });
+  const byId = new Map();
+  for (const row of rows) {
+    byId.set(row.id, row);
+  }
+
+  const asChallenger = new Parse.Query('MatchChallenge').equalTo('challengerUser', user);
+  const asChallenged = new Parse.Query('MatchChallenge').equalTo('challengedUser', user);
+  const linkedChallenges = await Parse.Query.or(asChallenger, asChallenged)
+    .exists('eventId')
+    .limit(80)
+    .find({ useMasterKey: true });
+  const linkedEventIds = [];
+  for (const challenge of linkedChallenges) {
+    linkedEventIds.push(String(challenge.get('eventId') || '').trim());
+    linkedEventIds.push(String(challenge.get('returnEventId') || '').trim());
+  }
+  await mergeTeamMatchEventsById(byId, linkedEventIds);
+  await attachReturnLegsForTeamMatches(byId);
+
+  return sortTeamMatchEventsDesc(Array.from(byId.values()))
+    .slice(0, 80)
+    .map(mapTeamMatchEventRow);
+});
+
+/** Feed publico de confrontos (todos os usuarios), semelhante a listPeladasForFeed. */
+Parse.Cloud.define('listTeamMatchesForFeed', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const query = new Parse.Query('Event');
+  query.equalTo('type', 'team_match');
+  query.include('homeTeam');
+  query.include('awayTeam');
+  query.descending('startTime');
+  query.limit(100);
+  const rows = await query.find({ useMasterKey: true });
+  return rows.map(mapTeamMatchEventRow);
+});
+
+/**
+ * Desanexa confrontos de pelada e ajusta admin = presidente do mandante.
+ * Idempotente; chamada pelo app no feed de confrontos.
+ */
+Parse.Cloud.define('repairTeamMatchOwnership', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const query = new Parse.Query('Event');
+  query.equalTo('type', 'team_match');
+  query.include('homeTeam');
+  query.include('homeTeam.president');
+  query.include('admin');
+  query.limit(200);
+  const rows = await query.find({ useMasterKey: true });
+  let detachedPelada = 0;
+  let fixedAdmin = 0;
+  for (const event of rows) {
+    let dirty = false;
+    if (event.get('pelada')) {
+      event.unset('pelada');
+      dirty = true;
+      detachedPelada += 1;
+    }
+    const homeTeam = event.get('homeTeam');
+    let president = homeTeam && homeTeam.get ? homeTeam.get('president') : null;
+    if (homeTeam && homeTeam.id && (!president || !president.id)) {
+      try {
+        const team = await new Parse.Query('AmateurTeam')
+          .include('president')
+          .get(homeTeam.id, { useMasterKey: true });
+        president = team.get('president');
+      } catch {
+        president = null;
+      }
+    }
+    if (president && president.id) {
+      const currentAdmin = event.get('admin');
+      if (!currentAdmin || currentAdmin.id !== president.id) {
+        event.set('admin', president);
+        dirty = true;
+        fixedAdmin += 1;
+      }
+      const acl = new Parse.ACL();
+      acl.setPublicReadAccess(true);
+      acl.setWriteAccess(president.id, true);
+      event.setACL(acl);
+      dirty = true;
+    }
+    if (dirty) {
+      await event.save(null, { useMasterKey: true });
+    }
+  }
+  return { scanned: rows.length, detachedPelada, fixedAdmin };
+});
+
+Parse.Cloud.define('listTeamMatchInboxNotices', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const teams = await loadUserAmateurTeams(user);
+  if (!teams.length) return [];
+  const teamPointers = teams.map((team) =>
+    Parse.Object.createWithoutData('AmateurTeam', team.id)
+  );
+  const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+  const asAway = new Parse.Query('Event')
+    .equalTo('type', 'team_match')
+    .containedIn('awayTeam', teamPointers);
+  const asHome = new Parse.Query('Event')
+    .equalTo('type', 'team_match')
+    .containedIn('homeTeam', teamPointers);
+  const query = Parse.Query.or(asAway, asHome);
+  query.notEqualTo('admin', user);
+  query.greaterThan('createdAt', since);
+  query.notEqualTo('isFinished', true);
+  query.include('homeTeam');
+  query.include('awayTeam');
+  query.descending('createdAt');
+  query.limit(30);
+  const rows = await query.find({ useMasterKey: true });
+  return rows.map(mapTeamMatchEventRow);
 });
 
 // --- 10-pelada.js ---
@@ -9164,12 +11985,15 @@ Parse.Cloud.define('listPeladasForFeed', async (request) => {
   }
 
   const heldEventCountByPelada = {};
+  const heldParticipantSumByPelada = {};
   if (results.length) {
     const eventQuery = new Parse.Query('Event');
     eventQuery.containedIn('pelada', results);
-    eventQuery.select(['pelada', 'teamSplit']);
+    eventQuery.select(['pelada', 'teamSplit', 'participationFee']);
     eventQuery.limit(10000);
     const events = await eventQuery.find({ useMasterKey: true });
+    const heldEvents = [];
+    const feeByEventId = new Map();
     for (const event of events) {
       const peladaPtr = event.get('pelada');
       const peladaId = peladaPtr && peladaPtr.id ? peladaPtr.id : '';
@@ -9185,11 +12009,47 @@ Parse.Cloud.define('listPeladasForFeed', async (request) => {
         }
       }
       heldEventCountByPelada[peladaId] = (heldEventCountByPelada[peladaId] || 0) + 1;
+      feeByEventId.set(event.id, Number(event.get('participationFee') || 0));
+      heldEvents.push(event);
+    }
+
+    if (heldEvents.length) {
+      const regQuery = new Parse.Query('EventRegistration');
+      regQuery.containedIn('event', heldEvents);
+      regQuery.containedIn('role', ['athlete', 'goalkeeper']);
+      regQuery.limit(10000);
+      const regs = await regQuery.find({ useMasterKey: true });
+      const countByEvent = new Map();
+      for (const reg of regs) {
+        const eventPtr = reg.get('event');
+        const eventId = eventPtr && eventPtr.id ? eventPtr.id : '';
+        if (!eventId) continue;
+        const fee = feeByEventId.get(eventId) || 0;
+        const confirmed =
+          typeof computeRegistrationEffectiveConfirmation === 'function'
+            ? computeRegistrationEffectiveConfirmation(reg, fee)
+            : !!reg.get('paymentConfirmed') ||
+              !!reg.get('invitedByContract') ||
+              fee <= 0;
+        if (!confirmed) continue;
+        countByEvent.set(eventId, (countByEvent.get(eventId) || 0) + 1);
+      }
+      for (const event of heldEvents) {
+        const peladaPtr = event.get('pelada');
+        const peladaId = peladaPtr && peladaPtr.id ? peladaPtr.id : '';
+        if (!peladaId) continue;
+        const n = countByEvent.get(event.id) || 0;
+        heldParticipantSumByPelada[peladaId] =
+          (heldParticipantSumByPelada[peladaId] || 0) + n;
+      }
     }
   }
 
   for (const row of rows) {
-    row.heldEventCount = heldEventCountByPelada[row.objectId] || 0;
+    const held = heldEventCountByPelada[row.objectId] || 0;
+    row.heldEventCount = held;
+    const sum = heldParticipantSumByPelada[row.objectId] || 0;
+    row.avgParticipantsPerEvent = held > 0 ? Math.round((sum / held) * 10) / 10 : 0;
   }
 
   return rows;
@@ -9564,6 +12424,18 @@ Parse.Cloud.beforeSave('EventRegistration', async (request) => {
     return;
   }
 
+  if (
+    event.get('type') === 'team_match' &&
+    registration.get('role') === 'athlete' &&
+    !registration.get('invitedByContract') &&
+    !request.master
+  ) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Em confrontos, atletas entram por convocacao ou solicitacao ao presidente.'
+    );
+  }
+
   const pelada = await getPeladaFromEvent(event);
   if (!pelada || !pelada.get('requireProfilePresentationOnFirstEvent')) {
     return;
@@ -9798,10 +12670,12 @@ function normalizeSearchText(value) {
 
 function calcAgeFromBirthDate(birthDate) {
   if (!birthDate) return null;
+  const date = birthDate instanceof Date ? birthDate : new Date(birthDate);
+  if (Number.isNaN(date.getTime())) return null;
   const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+  let age = today.getFullYear() - date.getFullYear();
+  const monthDiff = today.getMonth() - date.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
     age -= 1;
   }
   return age;
@@ -10327,6 +13201,116 @@ Parse.Cloud.define('getAthletePublicProfile', async (request) => {
     peladaRate: athleteProfile.get('peladaRate') ?? undefined,
     teamMatchRate: athleteProfile.get('teamMatchRate') ?? undefined,
     primaryPosition: athleteProfile.get('primaryPosition') || '',
+  };
+});
+
+Parse.Cloud.define('getAthleteActivityIndicators', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const userId = String(request.params.userId || '').trim();
+  if (!userId) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'userId obrigatorio.');
+  }
+  const months = Math.min(Math.max(Number(request.params.months) || 3, 1), 12);
+  const windowEnd = new Date();
+  const windowStart = new Date(windowEnd.getTime());
+  windowStart.setMonth(windowStart.getMonth() - months);
+
+  const user = Parse.User.createWithoutData(userId);
+  const registrations = await new Parse.Query('EventRegistration')
+    .equalTo('user', user)
+    .containedIn('role', ['athlete', 'goalkeeper'])
+    .include('event')
+    .limit(2000)
+    .find({ useMasterKey: true });
+
+  let gamesPlayed = 0;
+  let peladasPlayed = 0;
+  let gamesAbsent = 0;
+  let peladasAbsent = 0;
+
+  for (const registration of registrations) {
+    const event = registration.get('event');
+    if (!event || !event.get) continue;
+    const startTime = event.get('startTime');
+    if (!(startTime instanceof Date) || startTime < windowStart || startTime > windowEnd) {
+      continue;
+    }
+    const fee = Number(event.get('participationFee') || 0);
+    const confirmed =
+      typeof computeRegistrationEffectiveConfirmation === 'function'
+        ? computeRegistrationEffectiveConfirmation(registration, fee)
+        : !!registration.get('isEffectivelyConfirmed');
+    if (!confirmed) continue;
+
+    const type = event.get('type') || '';
+    const isMatch = type === 'team_match';
+    const isPelada = type === 'pelada' || type === 'racha';
+    if (!isMatch && !isPelada) continue;
+
+    const attendance = registration.get('attendance') || 'pending';
+    const arrivedAt = registration.get('arrivedAt');
+    const eventEnded =
+      event.get('isFinished') ||
+      (event.get('endTime') instanceof Date && event.get('endTime') < windowEnd) ||
+      (startTime < windowEnd && startTime.getTime() + 3 * 60 * 60 * 1000 < Date.now());
+
+    const present =
+      attendance === 'present' ||
+      (arrivedAt != null && attendance !== 'absent');
+    const absent =
+      eventEnded &&
+      (attendance === 'absent' || (!present && attendance !== 'present'));
+
+    if (isMatch) {
+      if (absent) gamesAbsent += 1;
+      else gamesPlayed += 1;
+    } else if (isPelada) {
+      if (absent) peladasAbsent += 1;
+      else peladasPlayed += 1;
+    }
+  }
+
+  const invitations = await new Parse.Query('RefereeInvitation')
+    .equalTo('invitedUser', user)
+    .equalTo('role', 'athlete')
+    .include('event')
+    .greaterThanOrEqualTo('createdAt', windowStart)
+    .limit(2000)
+    .find({ useMasterKey: true });
+
+  let teamMatchInvitesReceived = 0;
+  let teamMatchInvitesDeclined = 0;
+  let peladaInvitesReceived = 0;
+  let peladaInvitesDeclined = 0;
+
+  for (const invitation of invitations) {
+    const event = invitation.get('event');
+    if (!event || !event.get) continue;
+    const type = event.get('type') || '';
+    const status = invitation.get('status') || '';
+    if (type === 'team_match') {
+      teamMatchInvitesReceived += 1;
+      if (status === 'declined') teamMatchInvitesDeclined += 1;
+    } else if (type === 'pelada' || type === 'racha') {
+      peladaInvitesReceived += 1;
+      if (status === 'declined') peladaInvitesDeclined += 1;
+    }
+  }
+
+  return {
+    windowStart: windowStart.toISOString(),
+    windowEnd: windowEnd.toISOString(),
+    months,
+    gamesPlayed,
+    peladasPlayed,
+    gamesAbsent,
+    peladasAbsent,
+    teamMatchInvitesReceived,
+    teamMatchInvitesDeclined,
+    peladaInvitesReceived,
+    peladaInvitesDeclined,
   };
 });
 
@@ -11265,6 +14249,114 @@ Parse.Cloud.define('resolveTeamShieldUrl', async (request) => {
   return { url: null };
 });
 
+function isAllowedShareImageHost(hostname) {
+  const h = String(hostname || '').toLowerCase();
+  if (h.endsWith('.wikimedia.org')) return true;
+  if (h.includes('back4app') || h.includes('parsefile') || h.includes('amazonaws.com')) return true;
+  if (h === 'www.thesportsdb.com' || h === 'thesportsdb.com') return true;
+  return false;
+}
+
+function isAllowedShareImageUrl(urlString) {
+  try {
+    const u = new URL(String(urlString || '').trim());
+    if (u.protocol !== 'https:') return false;
+    return isAllowedShareImageHost(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
+async function fetchHttpsImageAsDataUrl(urlString) {
+  const url = String(urlString || '').trim();
+  if (!isAllowedShareImageUrl(url)) return null;
+  const response = await fetch(url, { redirect: 'follow' });
+  if (!response.ok) return null;
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (!buffer.length || buffer.length > 512 * 1024) return null;
+  let mime = String(response.headers.get('content-type') || 'image/png').split(';')[0].trim();
+  if (!mime.startsWith('image/')) mime = 'image/png';
+  return `data:${mime};base64,${buffer.toString('base64')}`;
+}
+
+async function resolveTeamShieldBadgeUrlCached(teamName, slug) {
+  const cacheKey = slug ? `${slug}::${teamName}` : teamName;
+  const config = await Parse.Config.get({ useMasterKey: true });
+  const cache = config.get('teamBadgeUrls') || {};
+  if (cache[cacheKey]) return cache[cacheKey];
+  if (cache[teamName]) return cache[teamName];
+
+  try {
+    const url = await resolveTeamShieldUrlFromSportsDb(teamName, slug);
+    if (url) {
+      cache[cacheKey] = url;
+      cache[teamName] = url;
+      await Parse.Config.save({ teamBadgeUrls: cache }, { useMasterKey: true });
+      return url;
+    }
+  } catch {
+    // fallback no cliente
+  }
+  return null;
+}
+
+Parse.Cloud.define('fetchShareImagesAsDataUrls', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'Login obrigatorio.');
+  }
+  const urls = request.params.urls;
+  if (!urls || !Array.isArray(urls)) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'urls deve ser um array.');
+  }
+
+  const unique = [
+    ...new Set(urls.map((value) => String(value || '').trim()).filter(isAllowedShareImageUrl)),
+  ].slice(0, 24);
+
+  const dataUrls = {};
+  await Promise.all(
+    unique.map(async (url) => {
+      try {
+        const dataUrl = await fetchHttpsImageAsDataUrl(url);
+        if (dataUrl) dataUrls[url] = dataUrl;
+      } catch {
+        // ignora URL que falhou
+      }
+    })
+  );
+
+  return { dataUrls };
+});
+
+Parse.Cloud.define('resolveTeamShieldImageBase64', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'Login obrigatorio.');
+  }
+
+  const teamName = request.params.teamName ? String(request.params.teamName).trim() : '';
+  const slug = request.params.slug ? String(request.params.slug).trim() : '';
+  const preferredUrl = request.params.preferredUrl
+    ? String(request.params.preferredUrl).trim()
+    : '';
+
+  if (!teamName) {
+    return { dataUrl: null };
+  }
+
+  if (preferredUrl && isAllowedShareImageUrl(preferredUrl)) {
+    const fromPreferred = await fetchHttpsImageAsDataUrl(preferredUrl);
+    if (fromPreferred) return { dataUrl: fromPreferred };
+  }
+
+  const badgeUrl = await resolveTeamShieldBadgeUrlCached(teamName, slug);
+  if (!badgeUrl) {
+    return { dataUrl: null };
+  }
+
+  const dataUrl = await fetchHttpsImageAsDataUrl(badgeUrl);
+  return { dataUrl: dataUrl || null };
+});
+
 // --- 12-event-media.js ---
 
 /** Imprensa / Midia do evento (radio, jornal e video de melhores momentos) */
@@ -11328,6 +14420,92 @@ function normalizeReaction(value) {
 
 function trimText(value, maxLength) {
   return String(value || '').trim().slice(0, maxLength);
+}
+
+function safeDisplayName(value, fallback) {
+  if (value == null) return fallback;
+  const text = String(value).trim();
+  return text || fallback;
+}
+
+function resolveMediaAuthorAvatarUrl(user, registration) {
+  const registrationAvatar =
+    registration && registration.get ? registration.get('avatarUrl') : '';
+  if (registrationAvatar && String(registrationAvatar).trim()) {
+    return String(registrationAvatar).trim();
+  }
+  if (!user || !user.get) return undefined;
+  const direct = safeDisplayName(user.get('avatarUrl'), '');
+  if (direct) return direct;
+  const avatar = user.get('avatar');
+  if (avatar && typeof avatar.url === 'function') {
+    return avatar.url();
+  }
+  if (avatar && avatar._url) return avatar._url;
+  if (typeof resolveStoredAvatarUrl === 'function') {
+    return resolveStoredAvatarUrl(user, registration) || undefined;
+  }
+  return undefined;
+}
+
+function assertPublicHttpUrl(url, label) {
+  const value = String(url || '').trim();
+  if (!/^https?:\/\//i.test(value)) {
+    throw new Parse.Error(
+      Parse.Error.INVALID_QUERY,
+      `${label} deve ser uma URL publica (http ou https). Envie a foto novamente.`
+    );
+  }
+  return value;
+}
+
+async function notifyEventMediaPublishedToParticipants(event, publisherUserId, options) {
+  if (typeof sendPushToUsers !== 'function' || typeof computeRegistrationEffectiveConfirmation !== 'function') {
+    return;
+  }
+  const participationFee = Number(event.get('participationFee') || 0);
+  const registrations = await new Parse.Query('EventRegistration')
+    .equalTo('event', event)
+    .limit(1000)
+    .find({ useMasterKey: true });
+
+  const userIds = [];
+  for (const registration of registrations) {
+    if (!computeRegistrationEffectiveConfirmation(registration, participationFee)) {
+      continue;
+    }
+    let resolvedUserId = '';
+    if (typeof resolveRegistrationParticipantUserId === 'function') {
+      const resolved = await resolveRegistrationParticipantUserId(registration);
+      resolvedUserId = resolved && resolved.userId ? String(resolved.userId) : '';
+    } else {
+      const regUser = registration.get('user');
+      resolvedUserId = regUser && regUser.id ? String(regUser.id) : '';
+    }
+    if (resolvedUserId && resolvedUserId !== String(publisherUserId || '')) {
+      userIds.push(resolvedUserId);
+    }
+  }
+
+  const uniqueUserIds = [...new Set(userIds)];
+  if (!uniqueUserIds.length) {
+    return;
+  }
+
+  const eventName = safeDisplayName(event.get('name'), 'Evento');
+  await sendPushToUsers(
+    uniqueUserIds,
+    {
+      title: options.title || 'Nova reportagem no evento',
+      alert: options.alert || `Confira a reportagem de ${eventName}.`,
+      data: {
+        type: options.pushType || 'event_journal_reportage',
+        eventId: event.id,
+        category: options.category || 'journal_reportage',
+      },
+    },
+    { throwOnError: false }
+  );
 }
 
 async function loadEventForMedia(eventId) {
@@ -11396,15 +14574,18 @@ async function getOrCreateEventMediaPublication(event) {
 function mapAuthorSnapshot(user, registration) {
   return {
     authorId: user.id,
-    authorName: (
-      registration.get('apelido') ||
-      user.get('apelido') ||
-      user.get('name') ||
-      user.getUsername() ||
+    authorName: safeDisplayName(
+      (registration && registration.get && registration.get('apelido')) ||
+        user.get('apelido') ||
+        user.get('name') ||
+        user.getUsername(),
       'Autor'
-    ).trim(),
-    authorApelido: (registration.get('apelido') || user.get('apelido') || '').trim(),
-    authorAvatarUrl: resolveStoredAvatarUrl(user, registration) || undefined,
+    ),
+    authorApelido: safeDisplayName(
+      (registration && registration.get && registration.get('apelido')) || user.get('apelido'),
+      ''
+    ),
+    authorAvatarUrl: resolveMediaAuthorAvatarUrl(user, registration),
   };
 }
 
@@ -11983,6 +15164,7 @@ Parse.Cloud.define('publishEventJournalReportage', async (request) => {
   if (!photoUrl) {
     throw new Parse.Error(Parse.Error.INVALID_QUERY, 'Foto da reportagem obrigatoria.');
   }
+  const storedPhotoUrl = assertPublicHttpUrl(photoUrl, 'Foto da reportagem');
 
   const { event, registration } = await assertConfirmedRoleRegistration(user, eventId, 'journalist');
   const publication = await getOrCreateEventMediaPublication(event);
@@ -11992,18 +15174,31 @@ Parse.Cloud.define('publishEventJournalReportage', async (request) => {
 
   publication.set('journalReportageHeadline', headline);
   publication.set('journalReportageBody', body);
-  publication.set('journalReportagePhotoUrl', photoUrl);
+  publication.set('journalReportagePhotoUrl', storedPhotoUrl);
   publication.set('journalReportageAuthorId', author.authorId);
   publication.set('journalReportageAuthorName', author.authorName);
   publication.set('journalReportageAuthorApelido', author.authorApelido);
   publication.set('journalReportageAuthorAvatarUrl', author.authorAvatarUrl || '');
   publication.set('journalReportageUpdatedAt', now);
   if (hadContent) {
-    await clearCategoryEngagement(event, 'journal_reportage');
+    try {
+      await clearCategoryEngagement(event, 'journal_reportage');
+    } catch (clearError) {
+      console.warn('clearCategoryEngagement journal_reportage failed', clearError);
+    }
   }
   publication.set('journalReportageViewCount', 0);
 
   await publication.save(null, { useMasterKey: true });
+
+  const eventLabel = safeDisplayName(event.get('name'), 'evento');
+  await notifyEventMediaPublishedToParticipants(event, user.id, {
+    title: 'Nova reportagem no mural',
+    alert: `${author.authorName} publicou uma reportagem em ${eventLabel}.`,
+    pushType: 'event_journal_reportage',
+    category: 'journal_reportage',
+  });
+
   return { ok: true, updatedAt: now.toISOString() };
 });
 
@@ -13788,8 +16983,44 @@ Parse.Cloud.define('getCoachEventBoard', async (request) => {
     query = query.equalTo('coachUser', request.user);
   }
   const row = await query.descending('updatedAt').first({ useMasterKey: true });
-  return row ? mapCoachBoard(row) : null;
+  if (event.get('type') !== 'team_match') {
+    return row ? mapCoachBoard(row) : null;
+  }
+  const ctx = await resolveCoachTeamMatchContext(event, request.user);
+  const base = row
+    ? mapCoachBoard(row)
+    : {
+        objectId: '',
+        eventId: event.id,
+        checklist: { talkedToTeam: false, ledWarmup: false, lineupDefined: false },
+        teamNotes: [],
+        suggestedStarters: [],
+        rotationNotes: '',
+      };
+  return {
+    ...base,
+    isTeamMatch: true,
+    coachSides: ctx.coachSides,
+    homeTeamName: ctx.homeTeamName,
+    awayTeamName: ctx.awayTeamName,
+  };
 });
+
+async function resolveCoachTeamMatchContext(event, user) {
+  await event.fetchWithInclude(['homeTeam.president', 'awayTeam.president'], {
+    useMasterKey: true,
+  });
+  const homeTeam = event.get('homeTeam');
+  const awayTeam = event.get('awayTeam');
+  const coachSides = await resolveCoachManageSidesForTeamMatch(event, user);
+  return {
+    coachSides,
+    homeTeamName:
+      event.get('homeTeamName') || (homeTeam && homeTeam.get ? homeTeam.get('name') : '') || 'Mandante',
+    awayTeamName:
+      event.get('awayTeamName') || (awayTeam && awayTeam.get ? awayTeam.get('name') : '') || 'Visitante',
+  };
+}
 
 Parse.Cloud.define('saveCoachEventBoard', async (request) => {
   if (!request.user) {
@@ -13798,7 +17029,7 @@ Parse.Cloud.define('saveCoachEventBoard', async (request) => {
   const eventId = String(request.params.eventId || '').trim();
   const { event } = await assertConfirmedSupportRole(request.user, eventId, 'coach');
   const checklistIn = request.params.checklist || {};
-  const teamNotes = Array.isArray(request.params.teamNotes)
+  let teamNotes = Array.isArray(request.params.teamNotes)
     ? request.params.teamNotes.map((note) => ({
         teamIndex: Math.max(0, Number(note.teamIndex) || 0),
         teamName: trimSupportText(note.teamName, 40),
@@ -13806,7 +17037,7 @@ Parse.Cloud.define('saveCoachEventBoard', async (request) => {
         focus: trimSupportText(note.focus, 120),
       }))
     : [];
-  const suggestedStarters = Array.isArray(request.params.suggestedStarters)
+  let suggestedStarters = Array.isArray(request.params.suggestedStarters)
     ? request.params.suggestedStarters.map((line) => ({
         teamIndex: Math.max(0, Number(line.teamIndex) || 0),
         userIds: Array.isArray(line.userIds)
@@ -13824,6 +17055,37 @@ Parse.Cloud.define('saveCoachEventBoard', async (request) => {
     row.set('event', event);
     row.set('coachUser', request.user);
   }
+  let teamMatchCtx = null;
+  if (event.get('type') === 'team_match') {
+    const ctx = await resolveCoachTeamMatchContext(event, request.user);
+    teamMatchCtx = ctx;
+    const allowed = new Set(
+      ctx.coachSides.map((side) => (side === 'away' ? 1 : side === 'home' ? 0 : -1))
+    );
+    if (!allowed.size) {
+      throw new Parse.Error(
+        Parse.Error.OPERATION_FORBIDDEN,
+        'Voce nao esta vinculado a nenhum dos times deste confronto.'
+      );
+    }
+    const names = [ctx.homeTeamName, ctx.awayTeamName];
+    const prevNotes = Array.isArray(row.get('teamNotes')) ? row.get('teamNotes') : [];
+    const prevStarters = Array.isArray(row.get('suggestedStarters'))
+      ? row.get('suggestedStarters')
+      : [];
+    const mergedNotes = [];
+    const mergedStarters = [];
+    for (const idx of [0, 1]) {
+      const source = allowed.has(idx) ? teamNotes : prevNotes;
+      const note = source.find((n) => Number(n && n.teamIndex) === idx);
+      if (note) mergedNotes.push({ ...note, teamIndex: idx, teamName: names[idx] });
+      const starterSource = allowed.has(idx) ? suggestedStarters : prevStarters;
+      const line = starterSource.find((l) => Number(l && l.teamIndex) === idx);
+      if (line) mergedStarters.push({ ...line, teamIndex: idx });
+    }
+    teamNotes = mergedNotes;
+    suggestedStarters = mergedStarters;
+  }
   row.set('checklist', {
     talkedToTeam: !!checklistIn.talkedToTeam,
     ledWarmup: !!checklistIn.ledWarmup,
@@ -13833,6 +17095,15 @@ Parse.Cloud.define('saveCoachEventBoard', async (request) => {
   row.set('suggestedStarters', suggestedStarters);
   row.set('rotationNotes', trimSupportText(request.params.rotationNotes, 400));
   await row.save(null, { useMasterKey: true });
+  if (teamMatchCtx) {
+    return {
+      ...mapCoachBoard(row),
+      isTeamMatch: true,
+      coachSides: teamMatchCtx.coachSides,
+      homeTeamName: teamMatchCtx.homeTeamName,
+      awayTeamName: teamMatchCtx.awayTeamName,
+    };
+  }
   return mapCoachBoard(row);
 });
 
@@ -14195,5 +17466,4479 @@ Parse.Cloud.define('configureSupportRolesClassPermissions', async (request) => {
     ok: true,
     message:
       'CLP atualizado para FanEventCheckIn, CoachEventBoard, MasseurTreatment e PhysicalTrainerSession.',
+  };
+});
+
+// --- 15-amateur-teams.js ---
+
+/** Elenco de AmateurTeam + perfil publico do time */
+const MEMBERSHIP_CLASS = 'AmateurTeamMembership';
+
+function ageFromBirthDate(value) {
+  if (!value) return null;
+  const birth = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(birth.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const m = now.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age -= 1;
+  return age >= 0 && age < 120 ? age : null;
+}
+
+function computeAverageAge(ages) {
+  const valid = ages.filter((n) => typeof n === 'number' && !Number.isNaN(n));
+  if (!valid.length) return null;
+  return Math.round((valid.reduce((sum, n) => sum + n, 0) / valid.length) * 10) / 10;
+}
+
+async function assertTeamPresident(teamId, user) {
+  const team = await new Parse.Query('AmateurTeam').include('president').get(teamId, {
+    useMasterKey: true,
+  });
+  const president = team.get('president');
+  if (!president || president.id !== user.id) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Apenas o presidente do time pode gerenciar o elenco.');
+  }
+  return team;
+}
+
+async function mapMembershipRow(row) {
+  const user = row.get('user');
+  const legend = row.get('legendAthlete');
+  let apelido = String(row.get('apelido') || '').trim();
+  let avatarUrl = row.get('avatarUrl') || undefined;
+  let position = String(row.get('position') || '').trim() || undefined;
+  let birthDate = row.get('birthDate') || null;
+  let age = ageFromBirthDate(birthDate);
+
+  if (user && user.id) {
+    try {
+      const full = await new Parse.Query(Parse.User).get(user.id, { useMasterKey: true });
+      if (!apelido) {
+        apelido =
+          String(full.get('apelido') || '').trim() ||
+          String(full.get('name') || '').trim() ||
+          full.getUsername() ||
+          'Atleta';
+      }
+      if (!birthDate && full.get('birthDate')) birthDate = full.get('birthDate');
+      age = ageFromBirthDate(birthDate);
+      const avatar = full.get('avatar');
+      if (!avatarUrl && avatar && avatar.url) avatarUrl = avatar.url();
+      if (!position) {
+        const profile = await new Parse.Query('AthleteProfile')
+          .equalTo('user', full)
+          .first({ useMasterKey: true });
+        if (profile) position = String(profile.get('primaryPosition') || '').trim() || undefined;
+      }
+    } catch {
+      // mantem denormalizado
+    }
+  } else if (legend && legend.id) {
+    try {
+      const full = await new Parse.Query('AmateurLegendAthlete').get(legend.id, { useMasterKey: true });
+      if (!apelido) apelido = String(full.get('apelido') || full.get('name') || 'Lenda').trim();
+      if (!position) position = String(full.get('primaryPosition') || '').trim() || undefined;
+      if (!birthDate && full.get('birthDate')) birthDate = full.get('birthDate');
+      age = ageFromBirthDate(birthDate);
+      const photo = full.get('photo') || full.get('image');
+      if (!avatarUrl && photo && photo.url) avatarUrl = photo.url();
+    } catch {
+      // mantem denormalizado
+    }
+  }
+
+  return {
+    objectId: row.id,
+    teamId: row.get('team') && row.get('team').id ? row.get('team').id : '',
+    userId: user && user.id ? user.id : undefined,
+    legendAthleteId: legend && legend.id ? legend.id : undefined,
+    source: row.get('source') === 'legend' ? 'legend' : 'athlete',
+    apelido: apelido || 'Atleta',
+    avatarUrl,
+    position,
+    age,
+    birthDate: birthDate ? new Date(birthDate).toISOString() : null,
+  };
+}
+
+async function loadRosterAges(teamId) {
+  const rows = await new Parse.Query(MEMBERSHIP_CLASS)
+    .equalTo('team', Parse.Object.extend('AmateurTeam').createWithoutData(teamId))
+    .equalTo('active', true)
+    .limit(200)
+    .find({ useMasterKey: true });
+  const ages = [];
+  const members = [];
+  for (const row of rows) {
+    const mapped = await mapMembershipRow(row);
+    members.push(mapped);
+    if (typeof mapped.age === 'number') ages.push(mapped.age);
+  }
+  return { count: rows.length, averageAge: computeAverageAge(ages), members };
+}
+
+function personDisplayFromUser(user) {
+  if (!user) return { name: '', avatarUrl: '' };
+  const name = String(user.get('apelido') || user.get('name') || user.getUsername() || '').trim();
+  let avatarUrl = String(user.get('avatarUrl') || '').trim();
+  const avatar = user.get('avatar');
+  if (!avatarUrl && avatar && typeof avatar.url === 'function') avatarUrl = avatar.url();
+  return { name, avatarUrl };
+}
+
+function personWinRatePercent(wins, draws, losses) {
+  const played = wins + draws + losses;
+  if (!played) return null;
+  return Math.round(((wins * 3 + draws) / (played * 3)) * 1000) / 10;
+}
+
+function unbeatenDurationLabel(fromDate, now) {
+  const days = Math.max(0, Math.floor((now.getTime() - fromDate.getTime()) / 86400000));
+  if (days >= 365) {
+    const years = Math.floor(days / 365);
+    return years + (years === 1 ? ' ano' : ' anos');
+  }
+  if (days >= 14) {
+    const weeks = Math.floor(days / 7);
+    return weeks + (weeks === 1 ? ' semana' : ' semanas');
+  }
+  return days + (days === 1 ? ' dia' : ' dias');
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function countFansOfTeamName(teamName) {
+  const name = String(teamName || '').trim();
+  if (!name) return 0;
+  const query = new Parse.Query(Parse.User);
+  query.matches('favoriteAmateurTeam', '^\\s*' + escapeRegExp(name) + '\\s*$', 'i');
+  return query.count({ useMasterKey: true });
+}
+
+async function loadCountedTeamMatches(teamId, limit) {
+  const teamPtr = Parse.Object.extend('AmateurTeam').createWithoutData(teamId);
+  const homeQ = new Parse.Query('Event').equalTo('type', 'team_match').equalTo('homeTeam', teamPtr);
+  const awayQ = new Parse.Query('Event').equalTo('type', 'team_match').equalTo('awayTeam', teamPtr);
+  const capped = Math.min(Math.max(Number(limit) || 1, 1), 200);
+  const events = await Parse.Query.or(homeQ, awayQ)
+    .lessThanOrEqualTo('startTime', new Date())
+    .descending('startTime')
+    .limit(capped)
+    .find({ useMasterKey: true });
+  const matches = [];
+  for (const event of events) {
+    const actual = await loadCountedTeamMatchScore(event);
+    if (!actual) continue;
+    const isHome = event.get('homeTeam') && event.get('homeTeam').id === teamId;
+    const homeScore = Number(actual.homeScore || 0);
+    const awayScore = Number(actual.awayScore || 0);
+    const teamScore = isHome ? homeScore : awayScore;
+    const oppScore = isHome ? awayScore : homeScore;
+    matches.push({
+      event,
+      result: teamScore > oppScore ? 'W' : teamScore < oppScore ? 'L' : 'D',
+      teamSide: isHome ? 'home' : 'away',
+      startTime: event.get('startTime') || null,
+      homeTeamName: event.get('homeTeamName') || '',
+      awayTeamName: event.get('awayTeamName') || '',
+      homeScore,
+      awayScore,
+    });
+  }
+  return matches;
+}
+
+function buildUnbeatenSummary(matches, now) {
+  if (!matches.length) return { unbeatenFor: null, lastDefeat: null };
+  const streak = [];
+  let lastDefeat = null;
+  for (const match of matches) {
+    if (match.result === 'L') {
+      lastDefeat = match;
+      break;
+    }
+    streak.push(match);
+  }
+  const unbeatenFor = streak.length
+    ? unbeatenDurationLabel(new Date(streak[streak.length - 1].startTime || now), now)
+    : '0 dias';
+  return {
+    unbeatenFor,
+    lastDefeat: lastDefeat
+      ? {
+          startTime: lastDefeat.startTime ? new Date(lastDefeat.startTime).toISOString() : null,
+          homeTeamName: lastDefeat.homeTeamName,
+          awayTeamName: lastDefeat.awayTeamName,
+          homeScore: lastDefeat.homeScore,
+          awayScore: lastDefeat.awayScore,
+        }
+      : null,
+  };
+}
+
+function bumpPersonRecord(bucket, user, result) {
+  if (!user || !user.id) return;
+  const current = bucket.get(user.id) || {
+    userId: user.id,
+    name: '',
+    avatarUrl: '',
+    wins: 0,
+    draws: 0,
+    losses: 0,
+  };
+  const display = personDisplayFromUser(user);
+  if (!current.name && display.name) current.name = display.name;
+  if (!current.avatarUrl && display.avatarUrl) current.avatarUrl = display.avatarUrl;
+  if (result === 'W') current.wins += 1;
+  else if (result === 'L') current.losses += 1;
+  else current.draws += 1;
+  bucket.set(user.id, current);
+}
+
+function toPublicPerson(row) {
+  const played = row.wins + row.draws + row.losses;
+  return {
+    userId: row.userId,
+    name: row.name || 'Atleta',
+    avatarUrl: row.avatarUrl || '',
+    matchesPlayed: played,
+    winRatePercent: played ? personWinRatePercent(row.wins, row.draws, row.losses) : null,
+  };
+}
+
+async function collectTeamPeopleRecords(matches) {
+  const athletes = new Map();
+  const coaches = new Map();
+  for (const match of matches) {
+    const regs = await new Parse.Query('EventRegistration')
+      .equalTo('event', match.event)
+      .equalTo('teamSide', match.teamSide)
+      .containedIn('role', ['athlete', 'coach'])
+      .include('user')
+      .limit(150)
+      .find({ useMasterKey: true });
+    for (const reg of regs) {
+      const bucket = reg.get('role') === 'coach' ? coaches : athletes;
+      bumpPersonRecord(bucket, reg.get('user'), match.result);
+    }
+  }
+  return { athletes, coaches };
+}
+
+Parse.Cloud.define('listTeamRoster', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const teamId = String(request.params.teamId || '').trim();
+  if (!teamId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o time.');
+  }
+  const teamPtr = Parse.Object.extend('AmateurTeam').createWithoutData(teamId);
+  const rows = await new Parse.Query(MEMBERSHIP_CLASS)
+    .equalTo('team', teamPtr)
+    .equalTo('active', true)
+    .ascending('apelido')
+    .limit(200)
+    .find({ useMasterKey: true });
+  const mapped = [];
+  for (const row of rows) {
+    mapped.push(await mapMembershipRow(row));
+  }
+  return mapped;
+});
+
+Parse.Cloud.define('addTeamMember', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const teamId = String(request.params.teamId || '').trim();
+  const athleteUserId = String(request.params.athleteUserId || '').trim();
+  const legendAthleteId = String(request.params.legendAthleteId || '').trim();
+  if (!teamId || (!athleteUserId && !legendAthleteId)) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o time e o atleta ou lenda.');
+  }
+  await assertTeamPresident(teamId, user);
+
+  const teamPtr = Parse.Object.extend('AmateurTeam').createWithoutData(teamId);
+  const existingQ = new Parse.Query(MEMBERSHIP_CLASS).equalTo('team', teamPtr).equalTo('active', true);
+  if (athleteUserId) {
+    existingQ.equalTo('user', Parse.User.createWithoutData(athleteUserId));
+  } else {
+    existingQ.equalTo(
+      'legendAthlete',
+      Parse.Object.extend('AmateurLegendAthlete').createWithoutData(legendAthleteId)
+    );
+  }
+  const already = await existingQ.first({ useMasterKey: true });
+  if (already) {
+    throw new Parse.Error(Parse.Error.DUPLICATE_VALUE, 'Este atleta ja esta no elenco.');
+  }
+
+  const membership = new Parse.Object(MEMBERSHIP_CLASS);
+  membership.set('team', teamPtr);
+  membership.set('active', true);
+  membership.set('addedBy', user);
+  if (athleteUserId) {
+    membership.set('user', Parse.User.createWithoutData(athleteUserId));
+    membership.set('source', 'athlete');
+  } else {
+    membership.set(
+      'legendAthlete',
+      Parse.Object.extend('AmateurLegendAthlete').createWithoutData(legendAthleteId)
+    );
+    membership.set('source', 'legend');
+  }
+  const acl = new Parse.ACL();
+  acl.setPublicReadAccess(true);
+  acl.setWriteAccess(user.id, true);
+  membership.setACL(acl);
+  await membership.save(null, { useMasterKey: true });
+  return mapMembershipRow(membership);
+});
+
+Parse.Cloud.define('removeTeamMember', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const membershipId = String(request.params.membershipId || '').trim();
+  if (!membershipId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o membro do elenco.');
+  }
+  const row = await new Parse.Query(MEMBERSHIP_CLASS).include('team').get(membershipId, {
+    useMasterKey: true,
+  });
+  const team = row.get('team');
+  if (!team || !team.id) {
+    throw new Parse.Error(Parse.Error.OBJECT_NOT_FOUND, 'Time nao encontrado.');
+  }
+  await assertTeamPresident(team.id, user);
+  row.set('active', false);
+  await row.save(null, { useMasterKey: true });
+  return { ok: true };
+});
+
+function mapAmateurTeamListRow(team) {
+  const teamImage = team.get('teamImage');
+  const shieldImage = team.get('shieldImage');
+  const president = team.get('president');
+  return {
+    objectId: team.id,
+    name: team.get('name') || '',
+    presidentId: president && president.id ? president.id : '',
+    imageUrl: teamImage && teamImage.url ? teamImage.url() : undefined,
+    shieldImageUrl: shieldImage && shieldImage.url ? shieldImage.url() : undefined,
+    uniformId: team.get('uniformId') || '',
+    homeVenue: team.get('homeVenue') || '',
+    foundedAt: team.get('foundedAt') ? team.get('foundedAt').toISOString() : null,
+  };
+}
+
+Parse.Cloud.define('listMyAmateurTeams', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const rows = await new Parse.Query('AmateurTeam')
+    .equalTo('president', user)
+    .ascending('name')
+    .limit(5)
+    .find({ useMasterKey: true });
+  return rows.map(mapAmateurTeamListRow);
+});
+
+/**
+ * Mesma regra de eventCountsForTeamMatchRanking (17): encerrado OU ja iniciado com placar pronto.
+ * Retorna o placar quando o confronto conta; null caso contrario.
+ */
+async function loadCountedTeamMatchScore(event) {
+  const finished = !!event.get('isFinished');
+  const start = event.get('startTime');
+  if (!finished && (!start || start > new Date())) return null;
+  let actual = null;
+  try {
+    if (typeof buildEventActualPredictionResults === 'function') {
+      actual = await buildEventActualPredictionResults(event);
+    }
+  } catch (error) {
+    console.warn('loadCountedTeamMatchScore failed', event.id, error);
+  }
+  if (!finished && (!actual || !actual.ready)) return null;
+  return actual || { homeScore: 0, awayScore: 0, goalScorers: [] };
+}
+
+async function loadTeamMatchHistoryRows(teamId, limit = 10) {
+  const teamPtr = Parse.Object.extend('AmateurTeam').createWithoutData(teamId);
+  const homeQ = new Parse.Query('Event').equalTo('type', 'team_match').equalTo('homeTeam', teamPtr);
+  const awayQ = new Parse.Query('Event').equalTo('type', 'team_match').equalTo('awayTeam', teamPtr);
+  const capped = Math.min(Math.max(Number(limit) || 10, 1), 40);
+  const events = await Parse.Query.or(homeQ, awayQ)
+    .lessThanOrEqualTo('startTime', new Date())
+    .descending('startTime')
+    .limit(Math.min(capped * 3, 120))
+    .find({ useMasterKey: true });
+
+  const lastResults = [];
+  for (const event of events) {
+    if (lastResults.length >= capped) break;
+    const actual = await loadCountedTeamMatchScore(event);
+    if (!actual) continue;
+    const isHome = event.get('homeTeam') && event.get('homeTeam').id === teamId;
+    const teamScore = isHome ? Number(actual.homeScore || 0) : Number(actual.awayScore || 0);
+    const oppScore = isHome ? Number(actual.awayScore || 0) : Number(actual.homeScore || 0);
+    const result = teamScore > oppScore ? 'W' : teamScore < oppScore ? 'L' : 'D';
+    lastResults.push({
+      eventId: event.id,
+      name: event.get('name') || '',
+      startTime: event.get('startTime') ? event.get('startTime').toISOString() : null,
+      homeTeamName: event.get('homeTeamName') || '',
+      awayTeamName: event.get('awayTeamName') || '',
+      homeScore: Number(actual.homeScore || 0),
+      awayScore: Number(actual.awayScore || 0),
+      isFinished: !!event.get('isFinished'),
+      result,
+    });
+  }
+  return lastResults;
+}
+
+Parse.Cloud.define('listAmateurTeamMatchHistory', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const teamId = String(request.params.teamId || '').trim();
+  if (!teamId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o time.');
+  }
+  const limit = Number(request.params.limit || 8);
+  return loadTeamMatchHistoryRows(teamId, limit);
+});
+
+Parse.Cloud.define('getAmateurTeamPublicProfile', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const teamId = String(request.params.teamId || '').trim();
+  if (!teamId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o time.');
+  }
+
+  const team = await new Parse.Query('AmateurTeam').include('president').get(teamId, {
+    useMasterKey: true,
+  });
+  const roster = await loadRosterAges(teamId);
+
+  const teamPtr = Parse.Object.extend('AmateurTeam').createWithoutData(teamId);
+  const homeQ = new Parse.Query('Event').equalTo('type', 'team_match').equalTo('homeTeam', teamPtr);
+  const awayQ = new Parse.Query('Event').equalTo('type', 'team_match').equalTo('awayTeam', teamPtr);
+  const events = await Parse.Query.or(homeQ, awayQ)
+    .lessThanOrEqualTo('startTime', new Date())
+    .descending('startTime')
+    .limit(40)
+    .find({ useMasterKey: true });
+
+  let wins = 0;
+  let losses = 0;
+  let draws = 0;
+  const scorerMap = new Map();
+  const pointsMap = new Map();
+  let yellowCards = 0;
+  let redCards = 0;
+  const observations = [];
+
+  for (const event of events) {
+    const actual = await loadCountedTeamMatchScore(event);
+    if (!actual) continue;
+    const isHome = event.get('homeTeam') && event.get('homeTeam').id === teamId;
+    const teamScore = isHome ? Number(actual.homeScore || 0) : Number(actual.awayScore || 0);
+    const oppScore = isHome ? Number(actual.awayScore || 0) : Number(actual.homeScore || 0);
+    const result = teamScore > oppScore ? 'W' : teamScore < oppScore ? 'L' : 'D';
+    if (result === 'W') wins += 1;
+    else if (result === 'L') losses += 1;
+    else draws += 1;
+
+    const perfs = await new Parse.Query('EventPerformance')
+      .equalTo('event', event)
+      .include('user')
+      .limit(200)
+      .find({ useMasterKey: true });
+    for (const perf of perfs) {
+      const reg = await new Parse.Query('EventRegistration')
+        .equalTo('event', event)
+        .equalTo('user', perf.get('user'))
+        .first({ useMasterKey: true });
+      const side = reg ? reg.get('teamSide') : null;
+      if (side && ((isHome && side !== 'home') || (!isHome && side !== 'away'))) continue;
+
+      const uid = perf.get('user') && perf.get('user').id ? perf.get('user').id : '';
+      if (!uid) continue;
+      const goals = Number(perf.get('goals') || perf.get('refereeGoals') || 0);
+      const points = Number(perf.get('points') || perf.get('score') || 0);
+      yellowCards += Math.max(
+        Number(perf.get('yellowCards') || 0),
+        Number(perf.get('refereeYellowCards') || 0)
+      );
+      redCards += Math.max(Number(perf.get('redCards') || 0), Number(perf.get('refereeRedCards') || 0));
+      const obs = String(perf.get('refereeObservation') || '').trim();
+      if (obs && observations.length < 20) {
+        observations.push({
+          eventId: event.id,
+          eventName: event.get('name') || '',
+          text: obs,
+        });
+      }
+      if (goals > 0) {
+        const prev = scorerMap.get(uid) || { userId: uid, goals: 0, name: '' };
+        prev.goals += goals;
+        const u = perf.get('user');
+        prev.name =
+          (u && (u.get('apelido') || u.get('name') || u.getUsername())) || prev.name || 'Atleta';
+        scorerMap.set(uid, prev);
+      }
+      if (points > 0) {
+        const prev = pointsMap.get(uid) || { userId: uid, points: 0, name: '' };
+        prev.points += points;
+        const u = perf.get('user');
+        prev.name =
+          (u && (u.get('apelido') || u.get('name') || u.getUsername())) || prev.name || 'Atleta';
+        pointsMap.set(uid, prev);
+      }
+    }
+  }
+
+  const lastResults = await loadTeamMatchHistoryRows(teamId, 5);
+  const countedMatches = await loadCountedTeamMatches(teamId, 200);
+  const unbeaten = buildUnbeatenSummary(countedMatches, new Date());
+  const people = await collectTeamPeopleRecords(countedMatches);
+  const fanCount = await countFansOfTeamName(team.get('name'));
+  const athletes = (roster.members || []).map((member) => {
+    const record = member.userId ? people.athletes.get(member.userId) : null;
+    const person = record ? toPublicPerson(record) : null;
+    return {
+      userId: member.userId || '',
+      name: member.apelido || 'Atleta',
+      avatarUrl: member.avatarUrl || '',
+      matchesPlayed: person ? person.matchesPlayed : 0,
+      winRatePercent: person ? person.winRatePercent : null,
+    };
+  });
+  const coaches = Array.from(people.coaches.values())
+    .map(toPublicPerson)
+    .sort((a, b) => a.name.localeCompare(b.name, 'pt'));
+
+  const topScorer = Array.from(scorerMap.values()).sort((a, b) => b.goals - a.goals)[0] || null;
+  const topPoints = Array.from(pointsMap.values()).sort((a, b) => b.points - a.points)[0] || null;
+  const teamImage = team.get('teamImage');
+  const shieldImage = team.get('shieldImage');
+  const president = team.get('president');
+
+  return {
+    objectId: team.id,
+    name: team.get('name') || '',
+    description: team.get('description') || '',
+    foundedAt: team.get('foundedAt') ? team.get('foundedAt').toISOString() : null,
+    homeVenue: team.get('homeVenue') || '',
+    imageUrl: teamImage && teamImage.url ? teamImage.url() : undefined,
+    shieldImageUrl: shieldImage && shieldImage.url ? shieldImage.url() : undefined,
+    presidentId: president && president.id ? president.id : '',
+    presidentName: personDisplayFromUser(president).name,
+    presidentAvatarUrl: personDisplayFromUser(president).avatarUrl,
+    fanCount,
+    unbeatenFor: unbeaten.unbeatenFor,
+    lastDefeat: unbeaten.lastDefeat,
+    athletes,
+    coaches,
+    averageAge: roster.averageAge,
+    rosterCount: roster.count,
+    wins,
+    losses,
+    draws,
+    matchesPlayed: wins + losses + draws,
+    winRatePercent:
+      wins + losses + draws > 0
+        ? Math.round(((wins * 3 + draws) / ((wins + losses + draws) * 3)) * 1000) / 10
+        : 0,
+    lastResults,
+    topScorer,
+    topPointsAthlete: topPoints,
+    yellowCards,
+    redCards,
+    observations: observations.slice(0, 10),
+  };
+});
+
+/** Enrich listAmateurTeamsForLegend rows — called from patched list below if needed. */
+async function amateurTeamAverageAge(teamId) {
+  const { averageAge } = await loadRosterAges(teamId);
+  return averageAge;
+}
+
+/** Publico de push para confronto: elenco ativo, presidentes, confirmados e contratados aceitos. */
+async function collectTeamMatchNotifyUserIds(event) {
+  const userIds = new Set();
+  const add = (id) => {
+    const value = String(id || '').trim();
+    if (value) userIds.add(value);
+  };
+
+  let homeTeam = event.get('homeTeam');
+  let awayTeam = event.get('awayTeam');
+  const teamIds = [];
+
+  async function resolveTeam(teamPtr) {
+    if (!teamPtr || !teamPtr.id) return null;
+    if (teamPtr.get && teamPtr.get('president')) return teamPtr;
+    try {
+      return await new Parse.Query('AmateurTeam').include('president').get(teamPtr.id, {
+        useMasterKey: true,
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  homeTeam = await resolveTeam(homeTeam);
+  awayTeam = await resolveTeam(awayTeam);
+
+  for (const team of [homeTeam, awayTeam]) {
+    if (!team || !team.id) continue;
+    teamIds.push(team.id);
+    const president = team.get('president');
+    add(president && president.id);
+  }
+
+  for (const teamId of teamIds) {
+    const memberships = await new Parse.Query(MEMBERSHIP_CLASS)
+      .equalTo('team', Parse.Object.extend('AmateurTeam').createWithoutData(teamId))
+      .equalTo('active', true)
+      .include('user')
+      .limit(200)
+      .find({ useMasterKey: true });
+    for (const membership of memberships) {
+      const memberUser = membership.get('user');
+      if (memberUser && memberUser.id) add(memberUser.id);
+    }
+  }
+
+  if (typeof computeRegistrationEffectiveConfirmation === 'function') {
+    const participationFee = Number(event.get('participationFee') || 0);
+    const registrations = await new Parse.Query('EventRegistration')
+      .equalTo('event', event)
+      .limit(1000)
+      .find({ useMasterKey: true });
+    for (const registration of registrations) {
+      if (!computeRegistrationEffectiveConfirmation(registration, participationFee)) continue;
+      const direct = registration.get('participantUserId');
+      const regUser = registration.get('user');
+      add(direct || (regUser && regUser.id));
+    }
+  }
+
+  const invitations = await new Parse.Query('RefereeInvitation')
+    .equalTo('event', event)
+    .equalTo('status', 'accepted')
+    .limit(300)
+    .find({ useMasterKey: true });
+  for (const invitation of invitations) {
+    const invited = invitation.get('invitedUser');
+    add(invited && invited.id);
+  }
+
+  return [...userIds];
+}
+
+// --- 16-match-challenge.js ---
+
+/** Desafio entre times (MatchChallenge) + resumo do dia do confronto */
+
+function mapMatchChallengeRow(row) {
+  const challengerTeam = row.get('challengerTeam');
+  const challengedTeam = row.get('challengedTeam');
+  const proposedStart = row.get('proposedStartTime');
+  const proposedEnd = row.get('proposedEndTime');
+  return {
+    objectId: row.id,
+    status: row.get('status') || 'pending',
+    message: row.get('message') || '',
+    challengeConditions: row.get('challengeConditions') || '',
+    returnChallengeConditions: row.get('returnChallengeConditions') || '',
+    hasReturnLeg: !!row.get('hasReturnLeg'),
+    eventId: row.get('eventId') || '',
+    returnEventId: row.get('returnEventId') || '',
+    declineReason: row.get('declineReason') || '',
+    proposedStartTime: proposedStart ? proposedStart.toISOString() : null,
+    proposedEndTime: proposedEnd ? proposedEnd.toISOString() : null,
+    proposedAddress: row.get('proposedAddress') || {},
+    proposedLocationComplement: row.get('proposedLocationComplement') || '',
+    challengerTeamId: challengerTeam && challengerTeam.id ? challengerTeam.id : '',
+    challengedTeamId: challengedTeam && challengedTeam.id ? challengedTeam.id : '',
+    challengerTeamName: row.get('challengerTeamName') || '',
+    challengedTeamName: row.get('challengedTeamName') || '',
+    challengerUserId: row.get('challengerUser') && row.get('challengerUser').id
+      ? row.get('challengerUser').id
+      : '',
+    challengedUserId: row.get('challengedUser') && row.get('challengedUser').id
+      ? row.get('challengedUser').id
+      : '',
+    createdAt: row.get('createdAt') ? row.get('createdAt').toISOString() : null,
+  };
+}
+
+Parse.Cloud.define('createMatchChallenge', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const challengedTeamId = String(request.params.challengedTeamId || '').trim();
+  const challengerTeamId = String(request.params.challengerTeamId || '').trim();
+  const message = String(request.params.message || '').trim().slice(0, 1000);
+  const challengeConditions = String(request.params.challengeConditions || '').trim().slice(0, 2000);
+  const hasReturnLeg = !!request.params.hasReturnLeg;
+  const proposedStartTime = request.params.proposedStartTime
+    ? new Date(request.params.proposedStartTime)
+    : null;
+  const proposedEndTime = request.params.proposedEndTime
+    ? new Date(request.params.proposedEndTime)
+    : null;
+  if (
+    !proposedStartTime ||
+    Number.isNaN(proposedStartTime.getTime()) ||
+    !proposedEndTime ||
+    Number.isNaN(proposedEndTime.getTime())
+  ) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'Informe data e hora desejadas para o confronto.'
+    );
+  }
+  if (proposedEndTime <= proposedStartTime) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'O termino deve ser apos o inicio.');
+  }
+  const proposedAddress =
+    request.params.proposedAddress && typeof request.params.proposedAddress === 'object'
+      ? request.params.proposedAddress
+      : {};
+  const proposedLocationComplement = String(request.params.proposedLocationComplement || '').trim();
+  const city = String(proposedAddress.city || '').trim();
+  const state = String(proposedAddress.state || '').trim();
+  if (!city || !state) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'Informe o local desejado (cidade e UF no minimo).'
+    );
+  }
+  if (!challengedTeamId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Selecione o time desafiado.');
+  }
+  if (!challengerTeamId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Selecione o seu time desafiante.');
+  }
+
+  const myTeams = await new Parse.Query('AmateurTeam')
+    .equalTo('president', user)
+    .limit(5)
+    .find({ useMasterKey: true });
+  if (!myTeams.length) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Cadastre seu time antes de desafiar.');
+  }
+  const challengerTeam = myTeams.find((team) => team.id === challengerTeamId);
+  if (!challengerTeam) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Voce so pode desafiar com um time do qual e presidente.'
+    );
+  }
+  if (challengerTeam.id === challengedTeamId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Nao e possivel desafiar o proprio time.');
+  }
+
+  const challengedTeam = await new Parse.Query('AmateurTeam')
+    .include('president')
+    .get(challengedTeamId, { useMasterKey: true });
+  const challengedPresident = challengedTeam.get('president');
+  if (!challengedPresident || !challengedPresident.id) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Time desafiado sem presidente.');
+  }
+  if (challengedPresident.id === user.id) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Nao e possivel desafiar o proprio time.');
+  }
+
+  const pending = await new Parse.Query('MatchChallenge')
+    .equalTo('challengerTeam', challengerTeam)
+    .equalTo('challengedTeam', challengedTeam)
+    .equalTo('status', 'pending')
+    .first({ useMasterKey: true });
+  if (pending) {
+    throw new Parse.Error(Parse.Error.DUPLICATE_VALUE, 'Ja existe um desafio pendente para este time.');
+  }
+
+  if (typeof assertTeamsFreeForProposedMatch === 'function') {
+    await assertTeamsFreeForProposedMatch(
+      challengerTeam,
+      challengedTeam,
+      proposedStartTime,
+      proposedEndTime,
+      {}
+    );
+  }
+
+  const challenge = new Parse.Object('MatchChallenge');
+  challenge.set('challengerTeam', challengerTeam);
+  challenge.set('challengedTeam', challengedTeam);
+  challenge.set('challengerUser', user);
+  challenge.set('challengedUser', challengedPresident);
+  challenge.set('challengerTeamName', challengerTeam.get('name') || '');
+  challenge.set('challengedTeamName', challengedTeam.get('name') || '');
+  challenge.set('message', message);
+  if (challengeConditions) challenge.set('challengeConditions', challengeConditions);
+  challenge.set('hasReturnLeg', hasReturnLeg);
+  challenge.set('proposedStartTime', proposedStartTime);
+  challenge.set('proposedEndTime', proposedEndTime);
+  challenge.set('proposedAddress', proposedAddress);
+  challenge.set('proposedLocationComplement', proposedLocationComplement);
+  challenge.set('status', 'pending');
+  const acl = new Parse.ACL();
+  acl.setReadAccess(user.id, true);
+  acl.setWriteAccess(user.id, true);
+  acl.setReadAccess(challengedPresident.id, true);
+  acl.setWriteAccess(challengedPresident.id, true);
+  challenge.setACL(acl);
+  await challenge.save(null, { useMasterKey: true });
+
+  try {
+    await sendPushToUser(challengedPresident.id, {
+      title: 'Desafio de confronto',
+      alert: `${challengerTeam.get('name') || 'Um time'} te desafiou. Veja na caixa de entrada.`,
+      data: {
+        type: 'match_challenge',
+        challengeId: challenge.id,
+      },
+    });
+  } catch (error) {
+    console.error('createMatchChallenge push failed', error);
+  }
+
+  if (typeof createAppMessage === 'function') {
+    const dateLabel =
+      typeof formatEventPushDate === 'function' ? formatEventPushDate(proposedStartTime) : '';
+    await createAppMessage({
+      recipientId: challengedPresident.id,
+      senderId: user.id,
+      kind: 'match_challenge',
+      title: `Desafio de ${challengerTeam.get('name') || 'um time'}`,
+      body:
+        `${challengerTeam.get('name') || 'Um time'} desafiou ${challengedTeam.get('name') || 'seu time'}` +
+        (dateLabel ? ` para ${dateLabel}.` : '.') +
+        ' Responda na Entrada.',
+      relatedClass: 'MatchChallenge',
+      relatedId: challenge.id,
+      actionRoute: '/inbox',
+    });
+  }
+
+  return mapMatchChallengeRow(challenge);
+});
+
+Parse.Cloud.define('respondMatchChallenge', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const challengeId = String(request.params.challengeId || '').trim();
+  const decision = String(request.params.decision || '').trim();
+  const declineReason = String(request.params.declineReason || '').trim().slice(0, 500);
+  const returnChallengeConditions = String(request.params.returnChallengeConditions || '')
+    .trim()
+    .slice(0, 2000);
+  if (!challengeId || (decision !== 'accepted' && decision !== 'declined')) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o desafio e a decisao.');
+  }
+  if (decision === 'declined' && declineReason.length < 3) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o motivo da rejeicao.');
+  }
+
+  const challenge = await new Parse.Query('MatchChallenge')
+    .include('challengerUser')
+    .include('challengedUser')
+    .include('challengerTeam')
+    .include('challengedTeam')
+    .get(challengeId, { useMasterKey: true });
+  const challengedUser = challenge.get('challengedUser');
+  if (!challengedUser || challengedUser.id !== user.id) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Apenas o presidente desafiado pode responder.');
+  }
+  if (challenge.get('status') !== 'pending') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Este desafio ja foi respondido.');
+  }
+
+  if (decision === 'accepted') {
+    const proposedStart = challenge.get('proposedStartTime');
+    const proposedEnd = challenge.get('proposedEndTime');
+    if (
+      !proposedStart ||
+      !proposedEnd ||
+      Number.isNaN(new Date(proposedStart).getTime()) ||
+      Number.isNaN(new Date(proposedEnd).getTime())
+    ) {
+      throw new Parse.Error(
+        Parse.Error.VALIDATION_ERROR,
+        'Este desafio nao tem data/hora propostas. Peca um novo convite.'
+      );
+    }
+    if (challenge.get('hasReturnLeg') && returnChallengeConditions.length < 3) {
+      throw new Parse.Error(
+        Parse.Error.VALIDATION_ERROR,
+        'Informe as condicoes para receber o adversario no jogo da volta (voce sera o mandante).'
+      );
+    }
+    const challengerTeam = challenge.get('challengerTeam');
+    const challengedTeam = challenge.get('challengedTeam');
+    let homeTeam = challengerTeam;
+    let awayTeam = challengedTeam;
+    if (challengerTeam && challengerTeam.id && (!challengerTeam.get || !challengerTeam.get('president'))) {
+      homeTeam = await new Parse.Query('AmateurTeam')
+        .include('president')
+        .get(challengerTeam.id, { useMasterKey: true });
+    }
+    if (challengedTeam && challengedTeam.id && (!challengedTeam.get || !challengedTeam.get('president'))) {
+      awayTeam = await new Parse.Query('AmateurTeam')
+        .include('president')
+        .get(challengedTeam.id, { useMasterKey: true });
+    }
+    if (typeof assertTeamsFreeForProposedMatch === 'function') {
+      await assertTeamsFreeForProposedMatch(homeTeam, awayTeam, proposedStart, proposedEnd, {
+        excludeChallengeId: challenge.id,
+      });
+    }
+  }
+
+  challenge.set('status', decision);
+  if (decision === 'declined') challenge.set('declineReason', declineReason);
+  if (decision === 'accepted' && challenge.get('hasReturnLeg') && returnChallengeConditions) {
+    challenge.set('returnChallengeConditions', returnChallengeConditions);
+  }
+  await challenge.save(null, { useMasterKey: true });
+
+  const challengerUser = challenge.get('challengerUser');
+  if (challengerUser && challengerUser.id) {
+    try {
+      await sendPushToUser(challengerUser.id, {
+        title: decision === 'accepted' ? 'Desafio aceito' : 'Desafio recusado',
+        alert:
+          decision === 'accepted'
+            ? `${challenge.get('challengedTeamName') || 'O adversario'} aceitou o desafio. Marque o confronto.`
+            : `${challenge.get('challengedTeamName') || 'O adversario'} recusou: ${declineReason}`,
+        data: {
+          type: 'match_challenge_response',
+          challengeId: challenge.id,
+          decision,
+        },
+      });
+    } catch (error) {
+      console.error('respondMatchChallenge push failed', error);
+    }
+
+    if (typeof createAppMessage === 'function') {
+      const challengedName = challenge.get('challengedTeamName') || 'O adversario';
+      await createAppMessage({
+        recipientId: challengerUser.id,
+        senderId: user.id,
+        kind: 'match_challenge_response',
+        title: decision === 'accepted' ? 'Desafio aceito' : 'Desafio recusado',
+        body:
+          decision === 'accepted'
+            ? `${challengedName} aceitou o desafio. Marque o confronto na Saida.`
+            : `${challengedName} recusou o desafio. Motivo: ${declineReason || 'nao informado'}.`,
+        relatedClass: 'MatchChallenge',
+        relatedId: challenge.id,
+        actionRoute: '/inbox?box=out',
+      });
+    }
+  }
+
+  return mapMatchChallengeRow(challenge);
+});
+
+Parse.Cloud.define('listMyMatchChallenges', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const asChallenger = new Parse.Query('MatchChallenge').equalTo('challengerUser', user);
+  const asChallenged = new Parse.Query('MatchChallenge').equalTo('challengedUser', user);
+  const rows = await Parse.Query.or(asChallenger, asChallenged)
+    .descending('createdAt')
+    .limit(50)
+    .find({ useMasterKey: true });
+  return rows.map(mapMatchChallengeRow);
+});
+
+Parse.Cloud.define('getAcceptedMatchChallenge', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const challengeId = String(request.params.challengeId || '').trim();
+  if (!challengeId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o desafio.');
+  }
+  const challenge = await new Parse.Query('MatchChallenge')
+    .include('challengerTeam')
+    .include('challengedTeam')
+    .get(challengeId, { useMasterKey: true });
+  if (challenge.get('status') !== 'accepted') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'O desafio precisa estar aceito.');
+  }
+  const challengerUser = challenge.get('challengerUser');
+  const challengedUser = challenge.get('challengedUser');
+  if (
+    !challengerUser ||
+    !challengedUser ||
+    (challengerUser.id !== user.id && challengedUser.id !== user.id)
+  ) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Sem acesso a este desafio.');
+  }
+  return {
+    ...mapMatchChallengeRow(challenge),
+    homeTeamId: challenge.get('challengerTeam') && challenge.get('challengerTeam').id,
+    awayTeamId: challenge.get('challengedTeam') && challenge.get('challengedTeam').id,
+  };
+});
+
+Parse.Cloud.define('getTeamMatchMatchdaySummary', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const eventId = String(request.params.eventId || '').trim();
+  if (!eventId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o evento.');
+  }
+  const event = await new Parse.Query('Event')
+    .include('homeTeam')
+    .include('awayTeam')
+    .get(eventId, { useMasterKey: true });
+  if (event.get('type') !== 'team_match') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Resumo disponivel apenas para confrontos.');
+  }
+
+  let actual = { homeScore: 0, awayScore: 0, goalScorers: [] };
+  if (typeof buildEventActualPredictionResults === 'function') {
+    actual = await buildEventActualPredictionResults(event);
+  }
+
+  const homeTeamName =
+    event.get('homeTeamName') ||
+    (event.get('homeTeam') && event.get('homeTeam').get
+      ? event.get('homeTeam').get('name')
+      : '') ||
+    'Mandante';
+  const awayTeamName =
+    event.get('awayTeamName') ||
+    (event.get('awayTeam') && event.get('awayTeam').get
+      ? event.get('awayTeam').get('name')
+      : '') ||
+    'Visitante';
+  const homeShieldFile =
+    event.get('homeTeam') && event.get('homeTeam').get
+      ? event.get('homeTeam').get('shieldImage')
+      : null;
+  const awayShieldFile =
+    event.get('awayTeam') && event.get('awayTeam').get
+      ? event.get('awayTeam').get('shieldImage')
+      : null;
+  const homeTeamShieldUrl =
+    homeShieldFile && homeShieldFile.url ? homeShieldFile.url() : undefined;
+  const awayTeamShieldUrl =
+    awayShieldFile && awayShieldFile.url ? awayShieldFile.url() : undefined;
+
+  const scorers = [];
+  const performances = await new Parse.Query('EventPerformance')
+    .equalTo('event', event)
+    .include('user')
+    .limit(200)
+    .find({ useMasterKey: true });
+
+  for (const perf of performances) {
+    // Confronto: lista de gols do placar usa apenas o apontamento do arbitro.
+    const goals =
+      event.get('type') === 'team_match'
+        ? Number(perf.get('refereeGoals') || 0)
+        : Math.max(Number(perf.get('goals') || 0), Number(perf.get('refereeGoals') || 0));
+    if (goals <= 0) continue;
+    const u = perf.get('user');
+    if (!u || !u.id) continue;
+    let age = null;
+    let position = '';
+    let avatarUrl = undefined;
+    try {
+      const full = await new Parse.Query(Parse.User).get(u.id, { useMasterKey: true });
+      age = ageFromBirthDate(full.get('birthDate'));
+      const avatar = full.get('avatar');
+      if (avatar && avatar.url) avatarUrl = avatar.url();
+      const profile = await new Parse.Query('AthleteProfile')
+        .equalTo('user', full)
+        .first({ useMasterKey: true });
+      if (profile) position = String(profile.get('primaryPosition') || '').trim();
+    } catch {
+      // ignore
+    }
+    const reg = await new Parse.Query('EventRegistration')
+      .equalTo('event', event)
+      .equalTo('user', u)
+      .first({ useMasterKey: true });
+    const teamSide = reg ? reg.get('teamSide') || null : null;
+    let teamName = '';
+    if (teamSide === 'home') teamName = homeTeamName;
+    else if (teamSide === 'away') teamName = awayTeamName;
+    scorers.push({
+      userId: u.id,
+      name: (u.get && (u.get('apelido') || u.get('name') || u.getUsername())) || 'Atleta',
+      goals,
+      position,
+      age,
+      avatarUrl,
+      teamSide,
+      teamName,
+    });
+  }
+  scorers.sort((a, b) => b.goals - a.goals);
+
+  let referee = null;
+  const refReg = await new Parse.Query('EventRegistration')
+    .equalTo('event', event)
+    .equalTo('role', 'referee')
+    .include('user')
+    .first({ useMasterKey: true });
+  let refereeUser = refReg && refReg.get('user') ? refReg.get('user') : null;
+  if (!refereeUser) {
+    const acceptedInvite = await new Parse.Query('RefereeInvitation')
+      .equalTo('event', event)
+      .equalTo('role', 'referee')
+      .equalTo('status', 'accepted')
+      .include('invitedUser')
+      .descending('updatedAt')
+      .first({ useMasterKey: true });
+    if (acceptedInvite && acceptedInvite.get('invitedUser')) {
+      refereeUser = acceptedInvite.get('invitedUser');
+    }
+  }
+  if (refereeUser) {
+    const ru = refereeUser;
+    let age = null;
+    let avatarUrl = undefined;
+    try {
+      const full = await new Parse.Query(Parse.User).get(ru.id, { useMasterKey: true });
+      age = ageFromBirthDate(full.get('birthDate'));
+      const avatar = full.get('avatar');
+      if (avatar && avatar.url) avatarUrl = avatar.url();
+    } catch {
+      // ignore
+    }
+    let score = null;
+    try {
+      // MuralVote de evento usa scope/scopeId (nao pointer event).
+      const votes = await new Parse.Query('MuralVote')
+        .equalTo('scope', 'event')
+        .equalTo('scopeId', event.id)
+        .equalTo('targetRole', 'referee')
+        .equalTo('targetUser', Parse.User.createWithoutData(ru.id))
+        .limit(200)
+        .find({ useMasterKey: true });
+      if (votes.length) {
+        const sum = votes.reduce((acc, v) => acc + Number(v.get('score') || 0), 0);
+        score = Math.round((sum / votes.length) * 10) / 10;
+      }
+    } catch {
+      score = null;
+    }
+    referee = {
+      userId: ru.id,
+      name: (ru.get && (ru.get('apelido') || ru.get('name') || ru.getUsername())) || 'Arbitro',
+      age,
+      avatarUrl,
+      score,
+    };
+  }
+
+  await event.fetchWithInclude(['homeTeam.president', 'awayTeam.president'], {
+    useMasterKey: true,
+  });
+
+  let canSeeConditions = false;
+  const admin = event.get('admin');
+  if (admin && admin.id === request.user.id) {
+    canSeeConditions = true;
+  } else {
+    for (const team of [event.get('homeTeam'), event.get('awayTeam')]) {
+      if (!team) continue;
+      const president = team.get('president');
+      if (president && president.id === request.user.id) {
+        canSeeConditions = true;
+        break;
+      }
+    }
+  }
+
+  return {
+    eventId: event.id,
+    homeTeamName,
+    awayTeamName,
+    homeTeamShieldUrl,
+    awayTeamShieldUrl,
+    homeScore: Number(actual.homeScore || 0),
+    awayScore: Number(actual.awayScore || 0),
+    scorers,
+    referee,
+    challengeConditions: canSeeConditions ? event.get('challengeConditions') || '' : '',
+    homeAcceptsUninvitedAthletes: !!event.get('homeAcceptsUninvitedAthletes'),
+    awayAcceptsUninvitedAthletes: !!event.get('awayAcceptsUninvitedAthletes'),
+    athleteConvocationBy:
+      event.get('athleteConvocationBy') === 'coach' ? 'coach' : 'president',
+  };
+});
+
+const TEAM_MATCH_REASON_MIN_LEN = 8;
+const TEAM_MATCH_RESCHEDULE_MIN_DELTA_MS =
+  typeof RESCHEDULE_MIN_DELTA_MS === 'number' ? RESCHEDULE_MIN_DELTA_MS : 15 * 60 * 1000;
+
+async function assertTeamMatchScheduleManager(event, user) {
+  const admin = event.get('admin');
+  if (admin && admin.id === user.id) return;
+
+  await event.fetchWithInclude(['homeTeam.president', 'awayTeam.president'], { useMasterKey: true });
+  for (const team of [event.get('homeTeam'), event.get('awayTeam')]) {
+    if (!team) continue;
+    const president = team.get('president');
+    if (president && president.id === user.id) return;
+  }
+
+  throw new Parse.Error(
+    Parse.Error.OPERATION_FORBIDDEN,
+    'Apenas presidentes dos times ou quem marcou o confronto podem alterar a agenda.'
+  );
+}
+
+function normalizeTeamMatchReason(raw) {
+  const reason = String(raw || '').trim();
+  if (reason.length < TEAM_MATCH_REASON_MIN_LEN) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      `Informe o motivo com pelo menos ${TEAM_MATCH_REASON_MIN_LEN} caracteres.`
+    );
+  }
+  return reason.slice(0, 500);
+}
+
+Parse.Cloud.define('cancelTeamMatch', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const eventId = String(request.params.eventId || '').trim();
+  const reason = normalizeTeamMatchReason(request.params.reason);
+  if (!eventId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o confronto.');
+  }
+
+  const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
+  if (event.get('type') !== 'team_match') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Disponivel apenas para confrontos.');
+  }
+  if (event.get('isFinished')) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Este confronto ja foi encerrado.');
+  }
+  const startTime = event.get('startTime');
+  const startMs = startTime instanceof Date ? startTime.getTime() : new Date(startTime || 0).getTime();
+  if (!Number.isNaN(startMs) && startMs <= Date.now()) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Nao e possivel cancelar apos o inicio.');
+  }
+
+  await assertTeamMatchScheduleManager(event, user);
+  clearPendingTeamMatchReschedule(event);
+  event.set('isFinished', true);
+  event.set('lastScheduleChangeReason', reason);
+  event.set('lastScheduleChangeBy', user);
+  event.set('lastScheduleChangeAt', new Date());
+  await event.save(null, { useMasterKey: true });
+
+  return { ok: true, eventId: event.id, isFinished: true };
+});
+
+async function loadTeamMatchPresidents(event) {
+  await event.fetchWithInclude(['homeTeam.president', 'awayTeam.president'], { useMasterKey: true });
+  const seen = new Set();
+  const presidents = [];
+  for (const team of [event.get('homeTeam'), event.get('awayTeam')]) {
+    if (!team) continue;
+    const president = team.get('president');
+    if (!president || !president.id || seen.has(president.id)) continue;
+    seen.add(president.id);
+    presidents.push(president);
+  }
+  return presidents;
+}
+
+function clearPendingTeamMatchReschedule(event) {
+  event.unset('pendingRescheduleStartTime');
+  event.unset('pendingRescheduleEndTime');
+  event.unset('pendingRescheduleReason');
+  event.unset('pendingRescheduleRequestedBy');
+  event.unset('pendingRescheduleRequestedAt');
+  event.unset('pendingRescheduleStatus');
+}
+
+function mapPendingRescheduleRow(event) {
+  const requestedBy = event.get('pendingRescheduleRequestedBy');
+  const start = event.get('pendingRescheduleStartTime');
+  const end = event.get('pendingRescheduleEndTime');
+  const currentStart = event.get('startTime');
+  return {
+    eventId: event.id,
+    eventName: event.get('name') || '',
+    homeTeamName: event.get('homeTeamName') || 'Mandante',
+    awayTeamName: event.get('awayTeamName') || 'Visitante',
+    currentStartTime: currentStart ? currentStart.toISOString() : null,
+    proposedStartTime: start ? start.toISOString() : null,
+    proposedEndTime: end ? end.toISOString() : null,
+    reason: event.get('pendingRescheduleReason') || '',
+    requestedByUserId: requestedBy && requestedBy.id ? requestedBy.id : '',
+    requestedAt: event.get('pendingRescheduleRequestedAt')
+      ? event.get('pendingRescheduleRequestedAt').toISOString()
+      : null,
+    status: event.get('pendingRescheduleStatus') || 'pending',
+  };
+}
+
+async function applyTeamMatchReschedule(event, user, startTime, endTime, reason) {
+  event.set('startTime', startTime);
+  event.set('endTime', endTime);
+  event.set('lastScheduleChangeReason', reason);
+  event.set('lastScheduleChangeBy', user);
+  event.set('lastScheduleChangeAt', new Date());
+  clearPendingTeamMatchReschedule(event);
+  await event.save(null, { useMasterKey: true });
+}
+
+/** Propoe remarcacao; se nao houver outro presidente, aplica na hora. */
+Parse.Cloud.define('rescheduleTeamMatch', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const eventId = String(request.params.eventId || '').trim();
+  const reason = normalizeTeamMatchReason(request.params.reason);
+  if (!eventId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o confronto.');
+  }
+
+  const startTime = request.params.startTime ? new Date(request.params.startTime) : null;
+  const endTime = request.params.endTime ? new Date(request.params.endTime) : null;
+  if (!startTime || Number.isNaN(startTime.getTime()) || !endTime || Number.isNaN(endTime.getTime())) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe data e hora do confronto.');
+  }
+  if (endTime <= startTime) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'O termino deve ser apos o inicio.');
+  }
+
+  const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
+  if (event.get('type') !== 'team_match') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Disponivel apenas para confrontos.');
+  }
+  if (event.get('isFinished')) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Este confronto ja foi encerrado.');
+  }
+  if (event.get('pendingRescheduleStatus') === 'pending') {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'Ja existe uma proposta de remarcacao pendente para este confronto.'
+    );
+  }
+
+  const oldStart = event.get('startTime');
+  const oldStartMs = oldStart instanceof Date ? oldStart.getTime() : new Date(oldStart || 0).getTime();
+  if (!Number.isNaN(oldStartMs) && oldStartMs <= Date.now()) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Nao e possivel remarcar apos o inicio.');
+  }
+  if (
+    !Number.isNaN(oldStartMs) &&
+    Math.abs(startTime.getTime() - oldStartMs) < TEAM_MATCH_RESCHEDULE_MIN_DELTA_MS
+  ) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'A nova data deve diferir pelo menos 15 minutos da anterior.'
+    );
+  }
+
+  await assertTeamMatchScheduleManager(event, user);
+  const presidents = await loadTeamMatchPresidents(event);
+  const counterparts = presidents.filter((president) => president.id !== user.id);
+
+  if (!counterparts.length) {
+    await applyTeamMatchReschedule(event, user, startTime, endTime, reason);
+    return {
+      ok: true,
+      pending: false,
+      eventId: event.id,
+      startTime: startTime.toISOString(),
+      endTime: endTime.toISOString(),
+    };
+  }
+
+  event.set('pendingRescheduleStartTime', startTime);
+  event.set('pendingRescheduleEndTime', endTime);
+  event.set('pendingRescheduleReason', reason);
+  event.set('pendingRescheduleRequestedBy', user);
+  event.set('pendingRescheduleRequestedAt', new Date());
+  event.set('pendingRescheduleStatus', 'pending');
+  await event.save(null, { useMasterKey: true });
+
+  const eventName = event.get('name') || 'confronto';
+  const dateLabel =
+    typeof formatEventPushDate === 'function' ? formatEventPushDate(startTime) : '';
+  for (const counterpart of counterparts) {
+    try {
+      await sendPushToUser(counterpart.id, {
+        title: 'Remarcacao de confronto',
+        alert: dateLabel
+          ? `Proposta de remarcar "${eventName}" para ${dateLabel}. Veja na caixa de entrada.`
+          : `Proposta de remarcar "${eventName}". Veja na caixa de entrada.`,
+        data: {
+          type: 'team_match_reschedule_request',
+          eventId: event.id,
+        },
+      });
+    } catch (error) {
+      console.error('rescheduleTeamMatch push failed', error);
+    }
+  }
+
+  if (typeof createAppMessages === 'function') {
+    await createAppMessages(
+      counterparts.map((counterpart) => counterpart.id),
+      {
+        senderId: user.id,
+        kind: 'team_match_reschedule_request',
+        title: 'Proposta de remarcacao',
+        body:
+          `Proposta de remarcar "${eventName}"` +
+          (dateLabel ? ` para ${dateLabel}.` : '.') +
+          (reason ? ` Motivo: ${reason}.` : '') +
+          ' Aceite ou recuse na Entrada.',
+        relatedClass: 'Event',
+        relatedId: event.id,
+        actionRoute: '/inbox',
+      }
+    );
+  }
+
+  return {
+    ok: true,
+    pending: true,
+    eventId: event.id,
+    proposedStartTime: startTime.toISOString(),
+    proposedEndTime: endTime.toISOString(),
+    awaitingPresidents: counterparts.length,
+  };
+});
+
+Parse.Cloud.define('respondTeamMatchReschedule', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const eventId = String(request.params.eventId || '').trim();
+  const decision = String(request.params.decision || '').trim();
+  if (!eventId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o confronto.');
+  }
+  if (decision !== 'accepted' && decision !== 'declined') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe accepted ou declined.');
+  }
+
+  const event = await new Parse.Query('Event')
+    .include('pendingRescheduleRequestedBy')
+    .get(eventId, { useMasterKey: true });
+  if (event.get('type') !== 'team_match') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Disponivel apenas para confrontos.');
+  }
+  if (event.get('pendingRescheduleStatus') !== 'pending') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Nao ha proposta de remarcacao pendente.');
+  }
+
+  const requestedBy = event.get('pendingRescheduleRequestedBy');
+  if (requestedBy && requestedBy.id === user.id) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Quem pediu a remarcacao nao pode aceitar a propria proposta.'
+    );
+  }
+
+  const presidents = await loadTeamMatchPresidents(event);
+  const isCounterpart = presidents.some((president) => president.id === user.id);
+  if (!isCounterpart) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Apenas o presidente do time adversario pode responder a remarcacao.'
+    );
+  }
+
+  const proposedStart = event.get('pendingRescheduleStartTime');
+  const proposedEnd = event.get('pendingRescheduleEndTime');
+  const reason = String(event.get('pendingRescheduleReason') || '').trim();
+  const eventName = event.get('name') || 'confronto';
+  const requesterId = requestedBy && requestedBy.id ? requestedBy.id : '';
+
+  if (decision === 'declined') {
+    const declineReason = String(request.params.declineReason || '').trim().slice(0, 500);
+    clearPendingTeamMatchReschedule(event);
+    await event.save(null, { useMasterKey: true });
+    if (requesterId) {
+      try {
+        await sendPushToUser(requesterId, {
+          title: 'Remarcacao recusada',
+          alert: declineReason
+            ? `A remarcacao de "${eventName}" foi recusada. Motivo: ${declineReason}`
+            : `A remarcacao de "${eventName}" foi recusada.`,
+          data: {
+            type: 'team_match_reschedule_response',
+            eventId: event.id,
+            decision: 'declined',
+          },
+        });
+      } catch (error) {
+        console.error('respondTeamMatchReschedule decline push failed', error);
+      }
+
+      if (typeof createAppMessage === 'function') {
+        await createAppMessage({
+          recipientId: requesterId,
+          senderId: user.id,
+          kind: 'team_match_reschedule_response',
+          title: 'Remarcacao recusada',
+          body:
+            `A remarcacao de "${eventName}" foi recusada pelo adversario.` +
+            (declineReason ? ` Motivo: ${declineReason}.` : ''),
+          relatedClass: 'Event',
+          relatedId: event.id,
+          actionRoute: `/event/${event.id}`,
+        });
+      }
+    }
+    return { ok: true, decision: 'declined', eventId: event.id };
+  }
+
+  if (
+    !proposedStart ||
+    !proposedEnd ||
+    Number.isNaN(new Date(proposedStart).getTime()) ||
+    Number.isNaN(new Date(proposedEnd).getTime())
+  ) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Proposta de remarcacao invalida.');
+  }
+
+  await applyTeamMatchReschedule(
+    event,
+    user,
+    new Date(proposedStart),
+    new Date(proposedEnd),
+    reason || 'Remarcacao aceita pelo adversario'
+  );
+
+  if (requesterId) {
+    const acceptedDateLabel =
+      typeof formatEventPushDate === 'function'
+        ? formatEventPushDate(event.get('startTime'))
+        : '';
+    try {
+      await sendPushToUser(requesterId, {
+        title: 'Remarcacao aceita',
+        alert: acceptedDateLabel
+          ? `Remarcacao de "${eventName}" aceita para ${acceptedDateLabel}.`
+          : `Remarcacao de "${eventName}" aceita.`,
+        data: {
+          type: 'team_match_reschedule_response',
+          eventId: event.id,
+          decision: 'accepted',
+        },
+      });
+    } catch (error) {
+      console.error('respondTeamMatchReschedule accept push failed', error);
+    }
+
+    if (typeof createAppMessage === 'function') {
+      await createAppMessage({
+        recipientId: requesterId,
+        senderId: user.id,
+        kind: 'team_match_reschedule_response',
+        title: 'Remarcacao aceita',
+        body:
+          `O adversario aceitou remarcar "${eventName}"` +
+          (acceptedDateLabel ? ` para ${acceptedDateLabel}.` : '.'),
+        relatedClass: 'Event',
+        relatedId: event.id,
+        actionRoute: `/event/${event.id}`,
+      });
+    }
+  }
+
+  return {
+    ok: true,
+    decision: 'accepted',
+    eventId: event.id,
+    startTime: event.get('startTime') ? event.get('startTime').toISOString() : null,
+    endTime: event.get('endTime') ? event.get('endTime').toISOString() : null,
+  };
+});
+
+Parse.Cloud.define('listPendingTeamMatchReschedules', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const teams = await new Parse.Query('AmateurTeam')
+    .equalTo('president', user)
+    .limit(5)
+    .find({ useMasterKey: true });
+  if (!teams.length) return [];
+
+  const homeQ = new Parse.Query('Event')
+    .equalTo('type', 'team_match')
+    .equalTo('pendingRescheduleStatus', 'pending')
+    .containedIn('homeTeam', teams);
+  const awayQ = new Parse.Query('Event')
+    .equalTo('type', 'team_match')
+    .equalTo('pendingRescheduleStatus', 'pending')
+    .containedIn('awayTeam', teams);
+  const rows = await Parse.Query.or(homeQ, awayQ)
+    .include('pendingRescheduleRequestedBy')
+    .descending('pendingRescheduleRequestedAt')
+    .limit(30)
+    .find({ useMasterKey: true });
+
+  return rows
+    .filter((event) => {
+      const requestedBy = event.get('pendingRescheduleRequestedBy');
+      return !(requestedBy && requestedBy.id === user.id);
+    })
+    .map(mapPendingRescheduleRow);
+});
+
+Parse.Cloud.define('getTeamMatchPendingReschedule', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const eventId = String(request.params.eventId || '').trim();
+  if (!eventId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o confronto.');
+  }
+  const event = await new Parse.Query('Event')
+    .include('pendingRescheduleRequestedBy')
+    .get(eventId, { useMasterKey: true });
+  if (event.get('pendingRescheduleStatus') !== 'pending') {
+    return null;
+  }
+  return mapPendingRescheduleRow(event);
+});
+
+function mapTeamMatchJoinRequestRow(row) {
+  const event = row.get('event');
+  const athlete = row.get('athlete');
+  const president = row.get('president');
+  return {
+    objectId: row.id,
+    status: row.get('status') || 'pending',
+    teamSide: row.get('teamSide') || '',
+    teamName: row.get('teamName') || '',
+    eventId: event && event.id ? event.id : '',
+    eventName: row.get('eventName') || (event && event.get ? event.get('name') : '') || 'Confronto',
+    eventStartTime: (() => {
+      const start =
+        row.get('eventStartTime') || (event && event.get ? event.get('startTime') : null);
+      return start ? start.toISOString() : null;
+    })(),
+    athleteUserId: athlete && athlete.id ? athlete.id : '',
+    athleteApelido: row.get('athleteApelido') || '',
+    athleteFullName: row.get('athleteFullName') || '',
+    athleteAvatarUrl: row.get('athleteAvatarUrl') || '',
+    presidentUserId: president && president.id ? president.id : '',
+    presidentApelido: row.get('presidentApelido') || '',
+    message: row.get('message') || '',
+    declineReason: row.get('declineReason') || '',
+    createdAt: row.get('createdAt') ? row.get('createdAt').toISOString() : null,
+    respondedAt: row.get('respondedAt') ? row.get('respondedAt').toISOString() : null,
+  };
+}
+
+async function loadTeamMatchSidePresident(event, teamSide) {
+  await event.fetchWithInclude(['homeTeam.president', 'awayTeam.president'], {
+    useMasterKey: true,
+  });
+  const team = teamSide === 'away' ? event.get('awayTeam') : event.get('homeTeam');
+  if (!team || !team.id) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Time do confronto nao encontrado.');
+  }
+  let president = team.get('president');
+  if (president && president.id && typeof president.fetch === 'function') {
+    try {
+      await president.fetch({ useMasterKey: true });
+    } catch {
+      /* pointer */
+    }
+  }
+  if (!president || !president.id) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Time sem presidente.');
+  }
+  return {
+    team,
+    president,
+    teamName: event.get(teamSide === 'away' ? 'awayTeamName' : 'homeTeamName') || team.get('name') || '',
+  };
+}
+
+Parse.Cloud.define('setTeamMatchAcceptsUninvitedAthletes', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const eventId = String(request.params.eventId || '').trim();
+  const teamSide = String(request.params.teamSide || '').trim();
+  const accepts = !!request.params.accepts;
+  if (!eventId || (teamSide !== 'home' && teamSide !== 'away')) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o confronto e o time (home/away).');
+  }
+  const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
+  if (event.get('type') !== 'team_match') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Disponivel apenas para confrontos.');
+  }
+  if (event.get('isFinished')) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Confronto ja finalizado.');
+  }
+  const { president } = await loadTeamMatchSidePresident(event, teamSide);
+  if (president.id !== user.id) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Apenas o presidente deste time pode alterar a opcao.'
+    );
+  }
+  const field =
+    teamSide === 'away' ? 'awayAcceptsUninvitedAthletes' : 'homeAcceptsUninvitedAthletes';
+  event.set(field, accepts);
+  await event.save(null, { useMasterKey: true });
+  return {
+    eventId: event.id,
+    homeAcceptsUninvitedAthletes: !!event.get('homeAcceptsUninvitedAthletes'),
+    awayAcceptsUninvitedAthletes: !!event.get('awayAcceptsUninvitedAthletes'),
+  };
+});
+
+Parse.Cloud.define('requestTeamMatchParticipation', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const eventId = String(request.params.eventId || '').trim();
+  const teamSide = String(request.params.teamSide || '').trim();
+  const message = String(request.params.message || '').trim().slice(0, 500);
+  if (!eventId || (teamSide !== 'home' && teamSide !== 'away')) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o confronto e o time desejado.');
+  }
+
+  const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
+  if (event.get('type') !== 'team_match') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Solicitacao disponivel apenas para confrontos.');
+  }
+  if (event.get('isFinished') || new Date() >= event.get('startTime')) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Nao e possivel solicitar neste confronto.');
+  }
+
+  const acceptsField =
+    teamSide === 'away' ? 'awayAcceptsUninvitedAthletes' : 'homeAcceptsUninvitedAthletes';
+  if (!event.get(acceptsField)) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'Este time nao esta aceitando atletas nao convocados.'
+    );
+  }
+
+  const existingReg = await new Parse.Query('EventRegistration')
+    .equalTo('event', event)
+    .equalTo('user', user)
+    .first({ useMasterKey: true });
+  if (existingReg) {
+    throw new Parse.Error(Parse.Error.DUPLICATE_VALUE, 'Voce ja esta inscrito neste confronto.');
+  }
+
+  const pendingInvite = await new Parse.Query('RefereeInvitation')
+    .equalTo('event', event)
+    .equalTo('invitedUser', user)
+    .equalTo('role', 'athlete')
+    .containedIn('status', ['pending', 'accepted'])
+    .first({ useMasterKey: true });
+  if (pendingInvite) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'Voce ja possui convite de convocacao para este confronto.'
+    );
+  }
+
+  const duplicate = await new Parse.Query('TeamMatchJoinRequest')
+    .equalTo('event', event)
+    .equalTo('athlete', user)
+    .equalTo('status', 'pending')
+    .first({ useMasterKey: true });
+  if (duplicate) {
+    throw new Parse.Error(Parse.Error.DUPLICATE_VALUE, 'Ja existe uma solicitacao pendente.');
+  }
+
+  const startTime = event.get('startTime');
+  const endTime = event.get('endTime');
+  if (typeof findUserScheduleConflictDetail === 'function') {
+    const conflict = await findUserScheduleConflictDetail(user.id, startTime, endTime, eventId);
+    if (conflict.conflict) {
+      throw new Parse.Error(
+        Parse.Error.VALIDATION_ERROR,
+        `Conflito de agenda com "${conflict.eventName}".`
+      );
+    }
+  }
+
+  const { president, teamName } = await loadTeamMatchSidePresident(event, teamSide);
+  if (president.id === user.id) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Presidente nao solicita participacao no proprio time.');
+  }
+
+  try {
+    await user.fetch({ useMasterKey: true });
+  } catch {
+    /* sessao */
+  }
+  const athleteApelido = String(user.get('apelido') || '').trim();
+  const athleteFullName = String(user.get('name') || '').trim();
+  const athleteAvatar =
+    typeof resolveUserAvatarUrl === 'function' ? resolveUserAvatarUrl(user) : String(user.get('avatarUrl') || '');
+
+  let presidentApelido = '';
+  try {
+    await president.fetch({ useMasterKey: true });
+    presidentApelido = String(president.get('apelido') || president.get('name') || '').trim();
+  } catch {
+    presidentApelido = '';
+  }
+
+  const row = new Parse.Object('TeamMatchJoinRequest');
+  row.set('event', event);
+  row.set('athlete', user);
+  row.set('president', president);
+  row.set('teamSide', teamSide);
+  row.set('teamName', teamName);
+  row.set('eventName', event.get('name') || `${event.get('homeTeamName')} x ${event.get('awayTeamName')}`);
+  row.set('eventStartTime', startTime);
+  row.set('status', 'pending');
+  row.set('message', message);
+  row.set('athleteApelido', athleteApelido);
+  row.set('athleteFullName', athleteFullName);
+  if (athleteAvatar) row.set('athleteAvatarUrl', athleteAvatar);
+  row.set('presidentApelido', presidentApelido);
+  const acl = new Parse.ACL();
+  acl.setReadAccess(user.id, true);
+  acl.setWriteAccess(user.id, true);
+  acl.setReadAccess(president.id, true);
+  acl.setWriteAccess(president.id, true);
+  row.setACL(acl);
+  await row.save(null, { useMasterKey: true });
+
+  try {
+    await sendPushToUser(president.id, {
+      title: 'Solicitacao de participacao',
+      alert: `${athleteApelido || athleteFullName || 'Um atleta'} pediu para jogar por ${teamName}.`,
+      data: {
+        type: 'team_match_join_request',
+        requestId: row.id,
+        eventId: event.id,
+      },
+    });
+  } catch (error) {
+    console.error('requestTeamMatchParticipation push failed', error);
+  }
+
+  if (typeof createAppMessage === 'function') {
+    const athleteName = athleteApelido || athleteFullName || 'Um atleta';
+    const dateLabel =
+      typeof formatEventPushDate === 'function' ? formatEventPushDate(startTime) : '';
+    await createAppMessage({
+      recipientId: president.id,
+      senderId: user.id,
+      kind: 'team_match_join_request',
+      title: `Pedido de participacao de ${athleteName}`,
+      body:
+        `${athleteName} pediu para jogar por ${teamName} em "${row.get('eventName')}"` +
+        (dateLabel ? ` (${dateLabel}).` : '.') +
+        ' Autorize ou recuse na Entrada.',
+      relatedClass: 'TeamMatchJoinRequest',
+      relatedId: row.id,
+      actionRoute: '/inbox',
+    });
+  }
+
+  return mapTeamMatchJoinRequestRow(row);
+});
+
+Parse.Cloud.define('respondTeamMatchParticipation', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const requestId = String(request.params.requestId || '').trim();
+  const decision = String(request.params.decision || '').trim();
+  const declineReason = String(request.params.declineReason || '').trim().slice(0, 500);
+  if (!requestId || (decision !== 'accepted' && decision !== 'declined')) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe a solicitacao e a decisao.');
+  }
+
+  const row = await new Parse.Query('TeamMatchJoinRequest')
+    .include('event')
+    .include('athlete')
+    .include('president')
+    .get(requestId, { useMasterKey: true });
+  const president = row.get('president');
+  if (!president || president.id !== user.id) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Apenas o presidente do time pode responder.');
+  }
+  if (row.get('status') !== 'pending') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Esta solicitacao ja foi respondida.');
+  }
+
+  const event = row.get('event');
+  const athlete = row.get('athlete');
+  if (!event || !athlete) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Solicitacao incompleta.');
+  }
+
+  if (decision === 'declined') {
+    row.set('status', 'declined');
+    if (declineReason) row.set('declineReason', declineReason);
+    row.set('respondedAt', new Date());
+    await row.save(null, { useMasterKey: true });
+    try {
+      await sendPushToUser(athlete.id, {
+        title: 'Participacao recusada',
+        alert: `${row.get('teamName') || 'O time'} recusou sua solicitacao no confronto.`,
+        data: {
+          type: 'team_match_join_response',
+          requestId: row.id,
+          eventId: event.id,
+          decision: 'declined',
+        },
+      });
+    } catch (error) {
+      console.error('respondTeamMatchParticipation decline push failed', error);
+    }
+
+    if (typeof createAppMessage === 'function') {
+      await createAppMessage({
+        recipientId: athlete.id,
+        senderId: user.id,
+        kind: 'team_match_join_response',
+        title: 'Participacao recusada',
+        body:
+          `${row.get('teamName') || 'O time'} recusou sua solicitacao em "${row.get('eventName')}".` +
+          (declineReason ? ` Motivo: ${declineReason}.` : ''),
+        relatedClass: 'TeamMatchJoinRequest',
+        relatedId: row.id,
+        actionRoute: `/event/${event.id}`,
+      });
+    }
+    return mapTeamMatchJoinRequestRow(row);
+  }
+
+  const startTime = event.get('startTime');
+  const endTime = event.get('endTime');
+  if (typeof findUserScheduleConflictDetail === 'function') {
+    const conflict = await findUserScheduleConflictDetail(athlete.id, startTime, endTime, event.id);
+    if (conflict.conflict) {
+      throw new Parse.Error(
+        Parse.Error.VALIDATION_ERROR,
+        `Atleta com conflito de agenda em "${conflict.eventName}".`
+      );
+    }
+  }
+
+  const existingReg = await new Parse.Query('EventRegistration')
+    .equalTo('event', event)
+    .equalTo('user', athlete)
+    .first({ useMasterKey: true });
+  if (!existingReg) {
+    try {
+      await athlete.fetch({ useMasterKey: true });
+    } catch {
+      /* */
+    }
+    const apelido =
+      String(row.get('athleteApelido') || athlete.get('apelido') || athlete.get('name') || '').trim() ||
+      athlete.getUsername() ||
+      'Atleta';
+    const registration = new Parse.Object('EventRegistration');
+    registration.set('event', event);
+    registration.set('user', athlete);
+    registration.set('role', 'athlete');
+    registration.set('apelido', apelido);
+    registration.set('committed', true);
+    registration.set('membershipType', 'convidado');
+    registration.set('attendance', 'pending');
+    registration.set('paymentConfirmed', true);
+    registration.set('paymentExempt', true);
+    registration.set('isEffectivelyConfirmed', true);
+    registration.set('invitedByContract', true);
+    registration.set('contractOfferedAmount', 0);
+    registration.set('teamSide', row.get('teamSide'));
+    const avatar = row.get('athleteAvatarUrl') || '';
+    if (avatar) registration.set('avatarUrl', avatar);
+    await registration.save(null, { useMasterKey: true });
+  }
+
+  row.set('status', 'accepted');
+  row.set('respondedAt', new Date());
+  await row.save(null, { useMasterKey: true });
+
+  try {
+    await sendPushToUser(athlete.id, {
+      title: 'Participacao aceita',
+      alert: `${row.get('teamName') || 'O time'} aceitou voce no confronto.`,
+      data: {
+        type: 'team_match_join_response',
+        requestId: row.id,
+        eventId: event.id,
+        decision: 'accepted',
+      },
+    });
+  } catch (error) {
+    console.error('respondTeamMatchParticipation accept push failed', error);
+  }
+
+  if (typeof createAppMessage === 'function') {
+    const dateLabel =
+      typeof formatEventPushDate === 'function' ? formatEventPushDate(startTime) : '';
+    await createAppMessage({
+      recipientId: athlete.id,
+      senderId: user.id,
+      kind: 'team_match_join_response',
+      title: 'Participacao aceita',
+      body:
+        `${row.get('teamName') || 'O time'} aceitou voce em "${row.get('eventName')}"` +
+        (dateLabel ? ` (${dateLabel}).` : '.'),
+      relatedClass: 'TeamMatchJoinRequest',
+      relatedId: row.id,
+      actionRoute: `/event/${event.id}`,
+    });
+  }
+
+  return mapTeamMatchJoinRequestRow(row);
+});
+
+Parse.Cloud.define('listMyTeamMatchJoinRequests', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const asAthlete = new Parse.Query('TeamMatchJoinRequest').equalTo('athlete', user);
+  const asPresident = new Parse.Query('TeamMatchJoinRequest').equalTo('president', user);
+  const rows = await Parse.Query.or(asAthlete, asPresident)
+    .descending('createdAt')
+    .limit(80)
+    .find({ useMasterKey: true });
+  return rows.map(mapTeamMatchJoinRequestRow);
+});
+
+/** Convocacao de atletas no confronto � presidente ou treinador por time */
+
+function normalizeAthleteConvocationBy(value) {
+  return value === 'coach' ? 'coach' : 'president';
+}
+
+async function resolveCoachManageSidesForTeamMatch(event, user) {
+  const invitation = await new Parse.Query('RefereeInvitation')
+    .equalTo('event', event)
+    .equalTo('invitedUser', user)
+    .equalTo('role', 'coach')
+    .containedIn('status', ['pending', 'accepted'])
+    .descending('createdAt')
+    .first({ useMasterKey: true });
+  const registration = await new Parse.Query('EventRegistration')
+    .equalTo('event', event)
+    .equalTo('user', user)
+    .equalTo('role', 'coach')
+    .first({ useMasterKey: true });
+
+  if (!invitation && !registration) return [];
+
+  const explicit =
+    (invitation && invitation.get('teamSide')) ||
+    (registration && registration.get('teamSide')) ||
+    '';
+  if (explicit === 'home' || explicit === 'away') return [explicit];
+
+  const invitedBy =
+    (invitation && invitation.get('invitedBy')) ||
+    (registration && registration.get('invitedBy')) ||
+    null;
+  if (!invitedBy || !invitedBy.id) return [];
+
+  const sides = [];
+  for (const side of ['home', 'away']) {
+    const team = event.get(side === 'away' ? 'awayTeam' : 'homeTeam');
+    const president = team && team.get ? team.get('president') : null;
+    if (president && president.id === invitedBy.id) sides.push(side);
+  }
+  return sides;
+}
+
+async function resolveTeamMatchConvocationAccess(event, user) {
+  const mode = normalizeAthleteConvocationBy(event.get('athleteConvocationBy'));
+  await event.fetchWithInclude(['homeTeam.president', 'awayTeam.president'], {
+    useMasterKey: true,
+  });
+
+  const manageSides = [];
+  for (const side of ['home', 'away']) {
+    const team = event.get(side === 'away' ? 'awayTeam' : 'homeTeam');
+    const president = team && team.get ? team.get('president') : null;
+    const isPresident = !!(president && president.id === user.id);
+    if (isPresident) {
+      manageSides.push(side);
+      continue;
+    }
+  }
+
+  if (mode === 'coach') {
+    const coachSides = await resolveCoachManageSidesForTeamMatch(event, user);
+    for (const side of coachSides) {
+      if (!manageSides.includes(side)) manageSides.push(side);
+    }
+  } else {
+    // Modo presidente: apenas presidentes (ja preenchido).
+  }
+
+  const admin = event.get('admin');
+  const canSetMode = !!(admin && admin.id === user.id);
+
+  return {
+    athleteConvocationBy: mode,
+    manageSides,
+    canManage: manageSides.length > 0,
+    canSetMode,
+  };
+}
+
+Parse.Cloud.define('getTeamMatchConvocationAccess', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const eventId = String(request.params.eventId || '').trim();
+  if (!eventId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o evento.');
+  }
+  const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
+  if (event.get('type') !== 'team_match') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Disponivel apenas para confrontos.');
+  }
+  return resolveTeamMatchConvocationAccess(event, user);
+});
+
+Parse.Cloud.define('setTeamMatchAthleteConvocationBy', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const eventId = String(request.params.eventId || '').trim();
+  const value = normalizeAthleteConvocationBy(request.params.athleteConvocationBy);
+  if (!eventId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o evento.');
+  }
+  const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
+  if (event.get('type') !== 'team_match') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Disponivel apenas para confrontos.');
+  }
+  const admin = event.get('admin');
+  if (!admin || admin.id !== user.id) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Apenas quem criou o confronto pode definir quem faz a convocacao.'
+    );
+  }
+  event.set('athleteConvocationBy', value);
+  await event.save(null, { useMasterKey: true });
+  return { eventId: event.id, athleteConvocationBy: value };
+});
+
+Parse.Cloud.define('listTeamMatchConvocations', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const eventId = String(request.params.eventId || '').trim();
+  const teamSide = String(request.params.teamSide || '').trim();
+  if (!eventId || (teamSide !== 'home' && teamSide !== 'away')) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe evento e time (home/away).');
+  }
+  const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
+  if (event.get('type') !== 'team_match') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Disponivel apenas para confrontos.');
+  }
+  const access = await resolveTeamMatchConvocationAccess(event, user);
+  if (!access.manageSides.includes(teamSide)) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Voce nao pode gerenciar a convocacao deste time.'
+    );
+  }
+
+  const invitations = await new Parse.Query('RefereeInvitation')
+    .equalTo('event', event)
+    .equalTo('role', 'athlete')
+    .equalTo('teamSide', teamSide)
+    .containedIn('status', ['pending', 'accepted'])
+    .include('invitedUser')
+    .limit(200)
+    .find({ useMasterKey: true });
+
+  const registrations = await new Parse.Query('EventRegistration')
+    .equalTo('event', event)
+    .equalTo('role', 'athlete')
+    .equalTo('teamSide', teamSide)
+    .include('user')
+    .limit(200)
+    .find({ useMasterKey: true });
+
+  const byUserId = new Map();
+  for (const invitation of invitations) {
+    const invited = invitation.get('invitedUser');
+    if (!invited || !invited.id) continue;
+    byUserId.set(invited.id, {
+      userId: invited.id,
+      invitationId: invitation.id,
+      registrationId: null,
+      status: invitation.get('status') || 'pending',
+      apelido:
+        invitation.get('invitedUserApelido') ||
+        (invited.get && (invited.get('apelido') || invited.get('name'))) ||
+        'Atleta',
+      avatarUrl: invitation.get('invitedUserAvatarUrl') || undefined,
+      offeredAmount: Number(invitation.get('offeredAmount') || 0),
+      teamSide,
+    });
+  }
+  for (const registration of registrations) {
+    const regUser = registration.get('user');
+    if (!regUser || !regUser.id) continue;
+    const existing = byUserId.get(regUser.id) || {
+      userId: regUser.id,
+      invitationId: null,
+      status: 'accepted',
+      apelido: registration.get('apelido') || 'Atleta',
+      avatarUrl: registration.get('avatarUrl') || undefined,
+      offeredAmount: Number(registration.get('contractOfferedAmount') || 0),
+      teamSide,
+    };
+    existing.registrationId = registration.id;
+    existing.status = 'accepted';
+    if (!existing.apelido) existing.apelido = registration.get('apelido') || 'Atleta';
+    byUserId.set(regUser.id, existing);
+  }
+
+  return {
+    teamSide,
+    teamName:
+      teamSide === 'away'
+        ? event.get('awayTeamName') || 'Visitante'
+        : event.get('homeTeamName') || 'Mandante',
+    rows: Array.from(byUserId.values()).sort((a, b) =>
+      String(a.apelido).localeCompare(String(b.apelido), 'pt-BR')
+    ),
+  };
+});
+
+Parse.Cloud.define('createTeamMatchAthleteInvitation', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const eventId = String(request.params.eventId || '').trim();
+  const invitedUserId = String(request.params.invitedUserId || '').trim();
+  const teamSide = String(request.params.teamSide || '').trim();
+  const offeredAmount = Number(request.params.offeredAmount || 0);
+  const responseDeadline = request.params.responseDeadline
+    ? new Date(request.params.responseDeadline)
+    : null;
+  if (!eventId || !invitedUserId || (teamSide !== 'home' && teamSide !== 'away')) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'Informe evento, atleta e time (home/away).'
+    );
+  }
+  if (!responseDeadline || Number.isNaN(responseDeadline.getTime()) || responseDeadline <= new Date()) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'Informe um prazo futuro para resposta do convite.'
+    );
+  }
+  if (offeredAmount < 0) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Valor da convocacao invalido.');
+  }
+
+  const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
+  if (event.get('type') !== 'team_match') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Disponivel apenas para confrontos.');
+  }
+  const access = await resolveTeamMatchConvocationAccess(event, user);
+  if (!access.manageSides.includes(teamSide)) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Voce nao pode convocar atletas neste time.'
+    );
+  }
+
+  const invitedUser = Parse.User.createWithoutData(invitedUserId);
+  const sameSideExisting = await new Parse.Query('RefereeInvitation')
+    .equalTo('event', event)
+    .equalTo('invitedUser', invitedUser)
+    .equalTo('role', 'athlete')
+    .equalTo('teamSide', teamSide)
+    .containedIn('status', ['pending', 'accepted'])
+    .first({ useMasterKey: true });
+  if (sameSideExisting) {
+    throw new Parse.Error(
+      Parse.Error.DUPLICATE_VALUE,
+      'Este atleta ja possui convocacao ativa neste time para o confronto.'
+    );
+  }
+
+  const invitation = await createTeamMatchInvitation(
+    event,
+    invitedUserId,
+    user,
+    teamSide,
+    responseDeadline,
+    offeredAmount
+  );
+  if (!invitation) {
+    throw new Parse.Error(
+      Parse.Error.DUPLICATE_VALUE,
+      'Este atleta ja esta inscrito neste confronto.'
+    );
+  }
+
+  const invitedUserApelido = String(request.params.invitedUserApelido || '').trim();
+  const invitedUserFullName = String(request.params.invitedUserFullName || '').trim();
+  const invitedUserAvatarUrl = String(request.params.invitedUserAvatarUrl || '').trim();
+  if (invitedUserApelido) invitation.set('invitedUserApelido', invitedUserApelido);
+  if (invitedUserFullName) invitation.set('invitedUserFullName', invitedUserFullName);
+  if (invitedUserAvatarUrl) invitation.set('invitedUserAvatarUrl', invitedUserAvatarUrl);
+  await invitation.save(null, { useMasterKey: true });
+
+  try {
+    await sendPushToUser(invitedUserId, {
+      title: 'Convocacao para confronto',
+      alert:
+        (event.get('name') || 'Confronto') +
+        ': voce foi convocado. Responda na caixa de entrada.',
+      data: {
+        type: 'referee_invitation',
+        invitationId: invitation.id,
+        eventId: event.id,
+        role: 'athlete',
+      },
+    });
+  } catch (error) {
+    console.error('createTeamMatchAthleteInvitation push failed', error);
+  }
+
+  return {
+    invitationId: invitation.id,
+    status: invitation.get('status') || 'pending',
+    teamSide,
+  };
+});
+
+Parse.Cloud.define('removeTeamMatchAthleteConvocation', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const eventId = String(request.params.eventId || '').trim();
+  const athleteUserId = String(request.params.athleteUserId || '').trim();
+  const teamSideParam = String(request.params.teamSide || '').trim();
+  if (!eventId || !athleteUserId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe evento e atleta.');
+  }
+
+  const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
+  if (event.get('type') !== 'team_match') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Disponivel apenas para confrontos.');
+  }
+
+  const athlete = Parse.User.createWithoutData(athleteUserId);
+  const invitation = await new Parse.Query('RefereeInvitation')
+    .equalTo('event', event)
+    .equalTo('invitedUser', athlete)
+    .equalTo('role', 'athlete')
+    .containedIn('status', ['pending', 'accepted'])
+    .first({ useMasterKey: true });
+  const registration = await new Parse.Query('EventRegistration')
+    .equalTo('event', event)
+    .equalTo('user', athlete)
+    .first({ useMasterKey: true });
+
+  const teamSide =
+    teamSideParam === 'home' || teamSideParam === 'away'
+      ? teamSideParam
+      : (invitation && invitation.get('teamSide')) ||
+        (registration && registration.get('teamSide')) ||
+        '';
+  if (teamSide !== 'home' && teamSide !== 'away') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Nao foi possivel identificar o time.');
+  }
+
+  const access = await resolveTeamMatchConvocationAccess(event, user);
+  if (!access.manageSides.includes(teamSide)) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Voce nao pode excluir convocacoes deste time.'
+    );
+  }
+
+  if (invitation) {
+    invitation.set('status', 'cancelled');
+    invitation.set('cancelledAt', new Date());
+    invitation.set('cancelledBy', user);
+    invitation.set('cancelReason', 'Removido da convocacao');
+    await invitation.save(null, { useMasterKey: true });
+  }
+  if (registration) {
+    await registration.destroy({ useMasterKey: true });
+  }
+  if (!invitation && !registration) {
+    throw new Parse.Error(Parse.Error.OBJECT_NOT_FOUND, 'Convocacao nao encontrada.');
+  }
+
+  const removerName =
+    (user.get('apelido') || user.get('name') || user.getUsername() || 'A comissao').trim();
+  const teamName =
+    teamSide === 'away'
+      ? event.get('awayTeamName') || 'Visitante'
+      : event.get('homeTeamName') || 'Mandante';
+
+  try {
+    await sendPushToUser(athleteUserId, {
+      title: 'Convocacao removida',
+      alert:
+        removerName +
+        ' removeu voce da convocacao de ' +
+        teamName +
+        ' no confronto ' +
+        (event.get('name') || '') +
+        '.',
+      data: {
+        type: 'team_match_convocation_removed',
+        eventId: event.id,
+        teamSide,
+        removedByUserId: user.id,
+      },
+    });
+  } catch (error) {
+    console.error('removeTeamMatchAthleteConvocation push failed', error);
+  }
+
+  return { ok: true, eventId: event.id, athleteUserId, teamSide };
+});
+
+Parse.Cloud.define('getTeamMatchGoalkeeperAlerts', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const eventId = String(request.params.eventId || '').trim();
+  if (!eventId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o evento.');
+  }
+
+  const event = await new Parse.Query('Event')
+    .include('homeTeam.president')
+    .include('awayTeam.president')
+    .get(eventId, { useMasterKey: true });
+  if (event.get('type') !== 'team_match') {
+    return { alerts: [] };
+  }
+
+  const alertSides = [];
+  for (const side of ['home', 'away']) {
+    const team = event.get(side === 'away' ? 'awayTeam' : 'homeTeam');
+    const president = team && team.get ? team.get('president') : null;
+    if (president && president.id === user.id) {
+      alertSides.push(side);
+    }
+  }
+  const coachSides = await resolveCoachManageSidesForTeamMatch(event, user);
+  for (const side of coachSides) {
+    if (!alertSides.includes(side)) alertSides.push(side);
+  }
+  if (!alertSides.length) {
+    return { alerts: [] };
+  }
+
+  const participationFee = Number(event.get('participationFee') || 0);
+  const isGk =
+    typeof isGoalkeeperPosition === 'function'
+      ? isGoalkeeperPosition
+      : (position) => String(position || '').trim().toLowerCase() === 'goleiro';
+
+  const alerts = [];
+  for (const teamSide of alertSides) {
+    const invitations = await new Parse.Query('RefereeInvitation')
+      .equalTo('event', event)
+      .equalTo('role', 'athlete')
+      .equalTo('teamSide', teamSide)
+      .containedIn('status', ['pending', 'accepted'])
+      .include('invitedUser')
+      .limit(200)
+      .find({ useMasterKey: true });
+
+    const registrations = await new Parse.Query('EventRegistration')
+      .equalTo('event', event)
+      .equalTo('teamSide', teamSide)
+      .containedIn('role', ['athlete', 'goalkeeper'])
+      .include('user')
+      .include('athlete')
+      .limit(200)
+      .find({ useMasterKey: true });
+
+    const regByUserId = new Map();
+    for (const reg of registrations) {
+      const uid = reg.get('user') && reg.get('user').id ? String(reg.get('user').id) : '';
+      if (uid) regByUserId.set(uid, reg);
+    }
+
+    const candidateUserIds = new Set();
+    for (const inv of invitations) {
+      const iu = inv.get('invitedUser');
+      if (iu && iu.id) candidateUserIds.add(String(iu.id));
+    }
+    for (const uid of regByUserId.keys()) {
+      candidateUserIds.add(uid);
+    }
+
+    const unconfirmedNames = [];
+    for (const userId of candidateUserIds) {
+      let position = '';
+      const reg = regByUserId.get(userId);
+      if (reg) {
+        const athlete = reg.get('athlete');
+        if (athlete && athlete.get) {
+          position = String(athlete.get('primaryPosition') || '');
+        }
+        if (reg.get('role') === 'goalkeeper') {
+          position = position || 'goleiro';
+        }
+      }
+      if (!isGk(position)) {
+        try {
+          const profile = await new Parse.Query('AthleteProfile')
+            .equalTo('user', Parse.User.createWithoutData(userId))
+            .first({ useMasterKey: true });
+          if (profile) position = String(profile.get('primaryPosition') || '');
+        } catch {
+          // ignore
+        }
+      }
+      if (!isGk(position)) continue;
+
+      const confirmed =
+        reg &&
+        typeof computeRegistrationEffectiveConfirmation === 'function'
+          ? computeRegistrationEffectiveConfirmation(reg, participationFee)
+          : !!(reg && reg.get('isEffectivelyConfirmed'));
+      if (confirmed) continue;
+
+      let name = 'Goleiro';
+      if (reg) {
+        name =
+          reg.get('apelido') ||
+          reg.get('userDisplayName') ||
+          reg.get('userApelido') ||
+          name;
+      } else {
+        try {
+          const u = await new Parse.Query(Parse.User).get(userId, { useMasterKey: true });
+          name = u.get('apelido') || u.get('name') || u.getUsername() || name;
+        } catch {
+          // ignore
+        }
+      }
+      unconfirmedNames.push(String(name));
+    }
+
+    if (!unconfirmedNames.length) continue;
+
+    const teamName =
+      teamSide === 'away'
+        ? event.get('awayTeamName') || 'Visitante'
+        : event.get('homeTeamName') || 'Mandante';
+    alerts.push({
+      teamSide,
+      teamName,
+      unconfirmedCount: unconfirmedNames.length,
+      names: unconfirmedNames,
+    });
+  }
+
+  return { alerts };
+});
+
+function normalizeRefereePaymentMode(value) {
+  const v = String(value || '').trim();
+  if (v === 'free' || v === 'split_50' || v === 'home_pays') return v;
+  return 'free';
+}
+
+function refereePaymentModeLabel(mode) {
+  if (mode === 'split_50') return '50% para cada presidente';
+  if (mode === 'home_pays') return '100% mandante';
+  return 'Arbitragem gratuita';
+}
+
+async function resolvePresidentUserIdForTeamSide(event, teamSide) {
+  await event.fetchWithInclude(['homeTeam.president', 'awayTeam.president'], { useMasterKey: true });
+  const team = event.get(teamSide === 'away' ? 'awayTeam' : 'homeTeam');
+  const president = team && team.get ? team.get('president') : null;
+  return president && president.id ? String(president.id) : '';
+}
+
+async function assertUserIsPresidentOfTeamSide(event, user, teamSide) {
+  const presidentId = await resolvePresidentUserIdForTeamSide(event, teamSide);
+  if (!presidentId || presidentId !== user.id) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Apenas o presidente deste time pode enviar esta proposta de arbitragem.'
+    );
+  }
+}
+
+function mapRefereeHiringApprovalRow(invitation) {
+  const event = invitation.get('event');
+  const invited = invitation.get('invitedUser');
+  const invitedBy = invitation.get('invitedBy');
+  return {
+    invitationId: invitation.id,
+    eventId: event && event.id ? event.id : '',
+    eventName: event && event.get ? event.get('name') || '' : '',
+    eventStartTime:
+      event && event.get && event.get('startTime') ? event.get('startTime').toISOString() : null,
+    status: invitation.get('status') || 'pending',
+    refereeHiringApprovalStatus: invitation.get('refereeHiringApprovalStatus') || '',
+    refereeHiringRequestedByTeamSide: invitation.get('refereeHiringRequestedByTeamSide') || '',
+    refereePaymentMode: invitation.get('refereePaymentMode') || 'free',
+    refereePaymentModeLabel: refereePaymentModeLabel(invitation.get('refereePaymentMode')),
+    offeredAmount: Number(invitation.get('offeredAmount') || 0),
+    invitedUserId: invited && invited.id ? invited.id : '',
+    invitedUserName:
+      invitation.get('invitedUserApelido') ||
+      invitation.get('invitedUserFullName') ||
+      (invited && invited.get
+        ? invited.get('apelido') || invited.get('name') || invited.getUsername()
+        : '') ||
+      'Arbitro',
+    invitedById: invitedBy && invitedBy.id ? invitedBy.id : '',
+    invitedByName: invitation.get('invitedByName') || 'Presidente',
+    responseDeadline:
+      invitation.get('responseDeadline') && invitation.get('responseDeadline').toISOString
+        ? invitation.get('responseDeadline').toISOString()
+        : null,
+  };
+}
+
+Parse.Cloud.define('createTeamMatchRefereeHiringInvitation', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const eventId = String(request.params.eventId || '').trim();
+  const invitedUserId = String(request.params.invitedUserId || '').trim();
+  const requestedByTeamSide =
+    request.params.requestedByTeamSide === 'away' ? 'away' : request.params.requestedByTeamSide === 'home' ? 'home' : '';
+  const refereePaymentMode = normalizeRefereePaymentMode(request.params.refereePaymentMode);
+  const offeredAmount = Number(request.params.offeredAmount ?? 0);
+  const responseDeadlineRaw = request.params.responseDeadline;
+  const responseDeadline = responseDeadlineRaw ? new Date(responseDeadlineRaw) : null;
+
+  if (!eventId || !invitedUserId || !requestedByTeamSide) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe evento, arbitro e time proponente.');
+  }
+  if (offeredAmount < 0) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe um valor valido.');
+  }
+  if (!responseDeadline || Number.isNaN(responseDeadline.getTime()) || responseDeadline <= new Date()) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe prazo valido para resposta.');
+  }
+
+  const event = await new Parse.Query('Event')
+    .include('homeTeam.president')
+    .include('awayTeam.president')
+    .get(eventId, { useMasterKey: true });
+  if (event.get('type') !== 'team_match') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Disponivel apenas para confrontos.');
+  }
+  if (event.get('isFinished')) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Evento ja encerrado.');
+  }
+
+  await assertUserIsPresidentOfTeamSide(event, user, requestedByTeamSide);
+
+  const oppositeSide = requestedByTeamSide === 'home' ? 'away' : 'home';
+  const approverUserId = await resolvePresidentUserIdForTeamSide(event, oppositeSide);
+  if (!approverUserId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Presidente adversario nao encontrado.');
+  }
+
+  const invitedUser = Parse.User.createWithoutData(invitedUserId);
+  const duplicate = await new Parse.Query('RefereeInvitation')
+    .equalTo('event', event)
+    .equalTo('invitedUser', invitedUser)
+    .equalTo('role', 'referee')
+    .containedIn('status', ['pending', 'accepted'])
+    .first({ useMasterKey: true });
+  if (duplicate) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Este arbitro ja possui convite ativo neste confronto.');
+  }
+
+  const invitation = new Parse.Object('RefereeInvitation');
+  invitation.set('event', event);
+  invitation.set('invitedUser', invitedUser);
+  invitation.set('invitedBy', user);
+  invitation.set('role', 'referee');
+  invitation.set('status', 'pending');
+  invitation.set('offeredAmount', offeredAmount);
+  invitation.set('responseDeadline', responseDeadline);
+  invitation.set('refereeHiringRequestedByTeamSide', requestedByTeamSide);
+  invitation.set('refereeHiringApprovalStatus', 'pending');
+  invitation.set('refereeHiringApproverUserId', approverUserId);
+  invitation.set('refereePaymentMode', refereePaymentMode);
+  invitation.set('presenceConfirmed', false);
+  invitation.set('paymentConfirmedByAdmin', false);
+  invitation.set('paymentConfirmedByReferee', false);
+  invitation.set('workCompleted', false);
+  invitation.set('paymentReleased', false);
+  invitation.set('excusedFault', false);
+
+  if (request.params.invitedUserApelido) {
+    invitation.set('invitedUserApelido', String(request.params.invitedUserApelido));
+  }
+  if (request.params.invitedUserFullName) {
+    invitation.set('invitedUserFullName', String(request.params.invitedUserFullName));
+  }
+  if (request.params.invitedUserAvatarUrl) {
+    invitation.set('invitedUserAvatarUrl', String(request.params.invitedUserAvatarUrl));
+  }
+
+  const inviterApelido = (user.get('apelido') || '').trim();
+  const inviterFullName = (user.get('name') || '').trim();
+  invitation.set('invitedByName', inviterApelido || inviterFullName || user.getUsername() || 'Presidente');
+  if (inviterApelido) invitation.set('invitedByApelido', inviterApelido);
+  if (inviterFullName) invitation.set('invitedByFullName', inviterFullName);
+
+  const saved = await invitation.save(null, { useMasterKey: true });
+
+  try {
+    await sendPushToUser(approverUserId, {
+      title: 'Aprovar arbitragem',
+      alert:
+        (invitation.get('invitedByName') || 'O outro time') +
+        ' propôs contratar um arbitro para o confronto. Toque para aprovar ou recusar.',
+      data: {
+        type: 'team_match_referee_hiring_approval',
+        invitationId: saved.id,
+        eventId: event.id,
+      },
+    });
+  } catch (error) {
+    console.error('createTeamMatchRefereeHiringInvitation push failed', error);
+  }
+
+  if (typeof createAppMessage === 'function') {
+    const refereeName =
+      invitation.get('invitedUserApelido') ||
+      invitation.get('invitedUserFullName') ||
+      'um arbitro';
+    await createAppMessage({
+      recipientId: approverUserId,
+      senderId: user.id,
+      kind: 'team_match_referee_hiring_approval',
+      title: 'Aprovar contratacao de arbitro',
+      body:
+        `${invitation.get('invitedByName') || 'O outro time'} propos contratar ${refereeName} ` +
+        `para "${event.get('name') || 'o confronto'}". Pagamento: ` +
+        `${refereePaymentModeLabel(refereePaymentMode)}. Aprove ou recuse na Entrada.`,
+      relatedClass: 'RefereeInvitation',
+      relatedId: saved.id,
+      actionRoute: '/inbox',
+    });
+  }
+
+  return mapRefereeHiringApprovalRow(saved);
+});
+
+Parse.Cloud.define('respondTeamMatchRefereeHiringApproval', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const invitationId = String(request.params.invitationId || '').trim();
+  const decision = request.params.decision === 'approved' ? 'approved' : 'rejected';
+  if (!invitationId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o convite.');
+  }
+
+  const invitation = await new Parse.Query('RefereeInvitation')
+    .include('event')
+    .include('invitedUser')
+    .include('invitedBy')
+    .get(invitationId, { useMasterKey: true });
+
+  if (invitation.get('role') !== 'referee') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Convite invalido.');
+  }
+  const approverId = String(invitation.get('refereeHiringApproverUserId') || '');
+  if (approverId !== user.id) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Voce nao pode responder esta aprovacao.');
+  }
+  if (invitation.get('refereeHiringApprovalStatus') !== 'pending') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Esta aprovacao ja foi respondida.');
+  }
+
+  invitation.set('refereeHiringApprovalStatus', decision);
+  invitation.set('refereeHiringRespondedAt', new Date());
+
+  const event = invitation.get('event');
+  const invitedUser = invitation.get('invitedUser');
+  const invitedBy = invitation.get('invitedBy');
+
+  if (decision === 'rejected') {
+    invitation.set('status', 'declined');
+    invitation.set('responseAt', new Date());
+    await invitation.save(null, { useMasterKey: true });
+    if (invitedBy && invitedBy.id) {
+      try {
+        await sendPushToUser(invitedBy.id, {
+          title: 'Arbitragem recusada',
+          alert:
+            'O presidente adversario nao concordou com a contratacao do arbitro. Envie uma nova proposta.',
+          data: {
+            type: 'team_match_referee_hiring_rejected',
+            invitationId: invitation.id,
+            eventId: event && event.id ? event.id : '',
+          },
+        });
+      } catch (error) {
+        console.error('respondTeamMatchRefereeHiringApproval reject push failed', error);
+      }
+
+      if (typeof createAppMessage === 'function') {
+        await createAppMessage({
+          recipientId: invitedBy.id,
+          senderId: user.id,
+          kind: 'team_match_referee_hiring_rejected',
+          title: 'Arbitragem recusada pelo adversario',
+          body:
+            'O presidente adversario nao concordou com a contratacao do arbitro em ' +
+            `"${(event && event.get && event.get('name')) || 'o confronto'}". ` +
+            'Envie uma nova proposta no confronto.',
+          relatedClass: 'RefereeInvitation',
+          relatedId: invitation.id,
+          actionRoute: event && event.id ? `/event/${event.id}` : '/inbox',
+        });
+      }
+    }
+    return mapRefereeHiringApprovalRow(invitation);
+  }
+
+  await invitation.save(null, { useMasterKey: true });
+
+  if (invitedUser && invitedUser.id) {
+    try {
+      await sendPushToUser(invitedUser.id, {
+        title: 'Convite de arbitragem',
+        alert:
+          'Voce foi convidado para arbitrar um confronto entre times. Toque para ver o convite.',
+        data: {
+          type: 'hiring_invite',
+          invitationId: invitation.id,
+          eventId: event && event.id ? event.id : '',
+        },
+      });
+    } catch (error) {
+      console.error('respondTeamMatchRefereeHiringApproval approve push failed', error);
+    }
+
+    if (typeof createAppMessage === 'function') {
+      const dateLabel =
+        typeof formatEventPushDate === 'function' && event && event.get
+          ? formatEventPushDate(event.get('startTime'))
+          : '';
+      await createAppMessage({
+        recipientId: invitedUser.id,
+        senderId: invitedBy && invitedBy.id ? invitedBy.id : '',
+        kind: 'hiring_invite',
+        title: 'Convite para arbitrar confronto',
+        body:
+          `Os dois presidentes aprovaram sua arbitragem em "${(event && event.get && event.get('name')) || 'um confronto'}"` +
+          (dateLabel ? ` (${dateLabel}).` : '.') +
+          ' Aceite ou recuse o convite na Entrada.',
+        relatedClass: 'RefereeInvitation',
+        relatedId: invitation.id,
+        actionRoute: '/inbox',
+      });
+    }
+  }
+
+  return mapRefereeHiringApprovalRow(invitation);
+});
+
+Parse.Cloud.define('listTeamMatchRefereeHiringApprovals', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const mailbox = request.params.mailbox === 'out' ? 'out' : 'in';
+
+  if (mailbox === 'in') {
+    const rows = await new Parse.Query('RefereeInvitation')
+      .equalTo('refereeHiringApproverUserId', user.id)
+      .equalTo('refereeHiringApprovalStatus', 'pending')
+      .equalTo('role', 'referee')
+      .include('event')
+      .include('invitedUser')
+      .include('invitedBy')
+      .descending('createdAt')
+      .limit(40)
+      .find({ useMasterKey: true });
+    return rows.map(mapRefereeHiringApprovalRow);
+  }
+
+  const rows = await new Parse.Query('RefereeInvitation')
+    .equalTo('invitedBy', user)
+    .equalTo('role', 'referee')
+    .exists('refereeHiringApprovalStatus')
+    .containedIn('refereeHiringApprovalStatus', ['pending', 'rejected'])
+    .include('event')
+    .include('invitedUser')
+    .include('invitedBy')
+    .descending('createdAt')
+    .limit(40)
+    .find({ useMasterKey: true });
+  return rows.map(mapRefereeHiringApprovalRow);
+});
+
+Parse.Cloud.beforeSave('RefereeInvitation', async (request) => {
+  const invitation = request.object;
+  if (!invitation || !invitation.id) return;
+  if (!invitation.dirty('status')) return;
+  const nextStatus = invitation.get('status');
+  if (nextStatus !== 'accepted') return;
+
+  const eventPtr = invitation.get('event');
+  if (!eventPtr || !eventPtr.id) return;
+  let event = eventPtr;
+  if (!event.get || !event.get('type')) {
+    event = await new Parse.Query('Event').get(eventPtr.id, { useMasterKey: true });
+  }
+  if (event.get('type') !== 'team_match' || invitation.get('role') !== 'referee') return;
+
+  const approval = invitation.get('refereeHiringApprovalStatus');
+  if (approval && approval !== 'approved') {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Este convite de arbitro ainda aguarda aprovacao do presidente adversario.'
+    );
+  }
+});
+
+// --- 17-team-match-stats.js ---
+
+/** Estatisticas de confrontos (times e usuarios) */
+
+function teamMatchWinRatePercent(wins, draws, played) {
+  if (!played || played <= 0) return 0;
+  return Math.round(((wins * 3 + draws) / (played * 3)) * 1000) / 10;
+}
+
+async function eventCountsForTeamMatchRanking(event) {
+  if (event.get('isFinished')) return true;
+  const start = event.get('startTime');
+  if (!start || start > new Date()) return false;
+  try {
+    if (typeof buildEventActualPredictionResults === 'function') {
+      const actual = await buildEventActualPredictionResults(event);
+      return !!(actual && actual.ready);
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+async function loadFinishedTeamMatchEventsForTeam(teamId, limit) {
+  const teamPtr = Parse.Object.extend('AmateurTeam').createWithoutData(teamId);
+  const homeQ = new Parse.Query('Event').equalTo('type', 'team_match').equalTo('homeTeam', teamPtr);
+  const awayQ = new Parse.Query('Event').equalTo('type', 'team_match').equalTo('awayTeam', teamPtr);
+  const cap = Math.min(Math.max(Number(limit) || 500, 1), 500);
+  const candidates = await Parse.Query.or(homeQ, awayQ)
+    .lessThan('startTime', new Date())
+    .descending('startTime')
+    .limit(cap)
+    .find({ useMasterKey: true });
+  const events = [];
+  for (const event of candidates) {
+    if (await eventCountsForTeamMatchRanking(event)) {
+      events.push(event);
+    }
+  }
+  return events;
+}
+
+async function teamMatchResultForTeam(event, teamId) {
+  let actual = { ready: false, homeScore: 0, awayScore: 0 };
+  try {
+    if (typeof buildEventActualPredictionResults === 'function') {
+      actual = await buildEventActualPredictionResults(event);
+    }
+  } catch {
+    return null;
+  }
+  if (!event.get('isFinished') && (!actual || actual.ready === false)) {
+    return null;
+  }
+  const isHome = event.get('homeTeam') && event.get('homeTeam').id === teamId;
+  const teamScore = isHome ? Number(actual.homeScore || 0) : Number(actual.awayScore || 0);
+  const oppScore = isHome ? Number(actual.awayScore || 0) : Number(actual.homeScore || 0);
+  if (teamScore > oppScore) return 'W';
+  if (teamScore < oppScore) return 'L';
+  return 'D';
+}
+
+async function computeAmateurTeamMatchRecord(teamId, limit) {
+  const events = await loadFinishedTeamMatchEventsForTeam(teamId, limit);
+  let wins = 0;
+  let losses = 0;
+  let draws = 0;
+  for (const event of events) {
+    const r = await teamMatchResultForTeam(event, teamId);
+    if (r === 'W') wins += 1;
+    else if (r === 'L') losses += 1;
+    else if (r === 'D') draws += 1;
+  }
+  const played = wins + losses + draws;
+  return {
+    matchesPlayed: played,
+    wins,
+    losses,
+    draws,
+    winRatePercent: teamMatchWinRatePercent(wins, draws, played),
+  };
+}
+
+async function resolveCoachTeamSideForStats(event, userId, reg) {
+  const explicit = reg && reg.get ? reg.get('teamSide') : '';
+  if (explicit === 'home' || explicit === 'away') return explicit;
+  const invitation = await new Parse.Query('RefereeInvitation')
+    .equalTo('event', event)
+    .equalTo('invitedUser', Parse.User.createWithoutData(userId))
+    .equalTo('role', 'coach')
+    .equalTo('status', 'accepted')
+    .descending('createdAt')
+    .first({ useMasterKey: true });
+  const invSide = invitation ? invitation.get('teamSide') : '';
+  if (invSide === 'home' || invSide === 'away') return invSide;
+  const invitedBy =
+    (invitation && invitation.get('invitedBy')) || (reg && reg.get && reg.get('invitedBy')) || null;
+  if (!invitedBy || !invitedBy.id) return '';
+  const matches = [];
+  for (const side of ['home', 'away']) {
+    let team = event.get(side === 'away' ? 'awayTeam' : 'homeTeam');
+    if (!team || !team.id) continue;
+    let president = team.get ? team.get('president') : null;
+    if (!president) {
+      try {
+        team = await new Parse.Query('AmateurTeam').get(team.id, { useMasterKey: true });
+        president = team.get('president');
+      } catch {
+        president = null;
+      }
+    }
+    if (president && president.id === invitedBy.id) matches.push(side);
+  }
+  return matches.length === 1 ? matches[0] : '';
+}
+
+async function computeUserTeamMatchRecord(userId, roleContext) {
+  const userPtr = Parse.User.createWithoutData(userId);
+  const regQuery = new Parse.Query('EventRegistration')
+    .equalTo('user', userPtr)
+    .containedIn('role', roleContext === 'coach' ? ['coach'] : ['athlete', 'goalkeeper'])
+    .limit(500);
+  const registrations = await regQuery.find({ useMasterKey: true });
+  if (!registrations.length) {
+    return { matchesPlayed: 0, wins: 0, losses: 0, draws: 0, winRatePercent: 0 };
+  }
+
+  const eventIds = [...new Set(registrations.map((r) => r.get('event') && r.get('event').id).filter(Boolean))];
+  const events = [];
+  for (let i = 0; i < eventIds.length; i += 50) {
+    const batch = eventIds.slice(i, i + 50);
+    const q = new Parse.Query('Event');
+    q.containedIn('objectId', batch);
+    q.equalTo('type', 'team_match');
+    q.lessThan('startTime', new Date());
+    events.push(...(await q.find({ useMasterKey: true })));
+  }
+  const eventById = new Map(events.map((e) => [e.id, e]));
+  const regByEvent = new Map();
+  for (const reg of registrations) {
+    const ev = reg.get('event');
+    if (!ev || !ev.id) continue;
+    regByEvent.set(ev.id, reg);
+  }
+
+  let wins = 0;
+  let losses = 0;
+  let draws = 0;
+  for (const [eventId, reg] of regByEvent.entries()) {
+    const event = eventById.get(eventId);
+    if (!event) continue;
+    if (!(await eventCountsForTeamMatchRanking(event))) continue;
+    const participationFee = Number(event.get('participationFee') || 0);
+    if (!computeRegistrationEffectiveConfirmation(reg, participationFee)) continue;
+
+    if (roleContext === 'athlete') {
+      const role = reg.get('role');
+      let athlete = reg.get('athlete');
+      if (athlete && !athlete.get && athlete.id) {
+        try {
+          athlete = await new Parse.Query('AthleteProfile').get(athlete.id, { useMasterKey: true });
+        } catch {
+          athlete = null;
+        }
+      }
+      const pos = athlete && athlete.get ? String(athlete.get('primaryPosition') || '') : '';
+      const isGk =
+        role === 'goalkeeper' ||
+        (typeof isGoalkeeperPosition === 'function'
+          ? isGoalkeeperPosition(pos)
+          : String(pos).trim().toLowerCase() === 'goleiro');
+      // Top rankings excluem goleiros; record inclui todos os atletas confirmados.
+    }
+
+    const side =
+      roleContext === 'coach'
+        ? await resolveCoachTeamSideForStats(event, userId, reg)
+        : reg.get('teamSide');
+    if (side !== 'home' && side !== 'away') continue;
+
+    let actual = { ready: false, homeScore: 0, awayScore: 0 };
+    try {
+      if (typeof buildEventActualPredictionResults === 'function') {
+        actual = await buildEventActualPredictionResults(event);
+      }
+    } catch {
+      continue;
+    }
+    if (!event.get('isFinished') && (!actual || actual.ready === false)) {
+      continue;
+    }
+    const teamScore = side === 'home' ? Number(actual.homeScore || 0) : Number(actual.awayScore || 0);
+    const oppScore = side === 'home' ? Number(actual.awayScore || 0) : Number(actual.homeScore || 0);
+    if (teamScore > oppScore) wins += 1;
+    else if (teamScore < oppScore) losses += 1;
+    else draws += 1;
+  }
+
+  const played = wins + losses + draws;
+  return {
+    matchesPlayed: played,
+    wins,
+    losses,
+    draws,
+    winRatePercent: teamMatchWinRatePercent(wins, draws, played),
+  };
+}
+
+Parse.Cloud.define('getUserTeamMatchRecord', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const userId = String(request.params.userId || request.user.id || '').trim();
+  const roleContext = request.params.roleContext === 'coach' ? 'coach' : 'athlete';
+  if (!userId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o usuario.');
+  }
+  return computeUserTeamMatchRecord(userId, roleContext);
+});
+
+Parse.Cloud.define('getPresidentTeamMatchRecord', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const userId = String(request.params.userId || request.user.id || '').trim();
+  if (!userId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o usuario.');
+  }
+  const president = Parse.User.createWithoutData(userId);
+  const teams = await new Parse.Query('AmateurTeam')
+    .equalTo('president', president)
+    .limit(20)
+    .find({ useMasterKey: true });
+  let matchesPlayed = 0;
+  let wins = 0;
+  let losses = 0;
+  let draws = 0;
+  for (const team of teams) {
+    const row = await computeAmateurTeamMatchRecord(team.id, 500);
+    matchesPlayed += row.matchesPlayed;
+    wins += row.wins;
+    losses += row.losses;
+    draws += row.draws;
+  }
+  return {
+    matchesPlayed,
+    wins,
+    losses,
+    draws,
+    winRatePercent: teamMatchWinRatePercent(wins, draws, matchesPlayed),
+    teamsPresided: teams.length,
+  };
+});
+
+Parse.Cloud.define('getAmateurTeamMatchRecord', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const teamId = String(request.params.teamId || '').trim();
+  if (!teamId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o time.');
+  }
+  return computeAmateurTeamMatchRecord(teamId, 500);
+});
+
+function incrementLocationBucket(map, key, label) {
+  if (!key) return;
+  const current = map.get(key) || { key, label, count: 0 };
+  current.count += 1;
+  map.set(key, current);
+}
+
+function buildEventLocationStats(events) {
+  const byState = new Map();
+  const byCity = new Map();
+  const byNeighborhood = new Map();
+  for (const event of events) {
+    const address = event.get('address') || {};
+    let state = String(address.state || address.uf || '').trim().toUpperCase();
+    if (state === 'FE') state = 'DF';
+    const city = String(address.city || '').trim();
+    const neighborhood = String(address.neighborhood || address.district || '').trim();
+    incrementLocationBucket(byState, state, state || '—');
+    const cityKey = state && city ? `${state}|${city}` : city;
+    incrementLocationBucket(byCity, cityKey, city ? `${city}${state ? ' - ' + state : ''}` : '—');
+    const nbKey = cityKey && neighborhood ? `${cityKey}|${neighborhood}` : neighborhood;
+    incrementLocationBucket(byNeighborhood, nbKey, neighborhood || '—');
+  }
+  const sortDesc = (entries) => entries.sort((a, b) => b.count - a.count);
+  return {
+    byState: sortDesc(Array.from(byState.values())),
+    byCity: sortDesc(Array.from(byCity.values())),
+    byNeighborhood: sortDesc(Array.from(byNeighborhood.values())),
+  };
+}
+
+function teamMatchStandingPoints(wins, draws) {
+  return Number(wins || 0) * 3 + Number(draws || 0);
+}
+
+function sliceTopRankWithTies(sorted, topN, scoreKey = 'combinedScore') {
+  if (!sorted.length) return [];
+  if (sorted.length <= topN) return sorted;
+  const threshold = sorted[topN - 1][scoreKey];
+  return sorted.filter((row) => (row[scoreKey] || 0) >= threshold);
+}
+
+async function enrichTopTeamRankEntries(entries) {
+  const out = [];
+  for (const entry of entries) {
+    try {
+      const team = await new Parse.Query('AmateurTeam')
+        .include('president')
+        .get(entry.teamId, { useMasterKey: true });
+      const president = team.get('president');
+      const shieldImage = team.get('shieldImage');
+      let presidentAvatarUrl;
+      let presidentName = '';
+      if (president && president.get) {
+        presidentName =
+          president.get('apelido') || president.get('name') || president.getUsername() || '';
+        if (typeof resolveStoredAvatarUrl === 'function') {
+          presidentAvatarUrl = resolveStoredAvatarUrl(president) || undefined;
+        } else {
+          presidentAvatarUrl = (president.get('avatarUrl') || '').trim() || undefined;
+        }
+      }
+      out.push({
+        ...entry,
+        teamName: team.get('name') || entry.teamName || 'Time',
+        shieldImageUrl: shieldImage && shieldImage.url ? shieldImage.url() : undefined,
+        foundedAt: team.get('foundedAt') ? team.get('foundedAt').toISOString() : null,
+        homeVenue: team.get('homeVenue') || '',
+        presidentId: president && president.id ? president.id : '',
+        presidentName,
+        presidentAvatarUrl,
+      });
+    } catch {
+      out.push(entry);
+    }
+  }
+  return out;
+}
+
+async function countAmateurTeamsCoached(userId) {
+  const userPtr = Parse.User.createWithoutData(userId);
+  const regs = await new Parse.Query('EventRegistration')
+    .equalTo('user', userPtr)
+    .equalTo('role', 'coach')
+    .limit(2000)
+    .find({ useMasterKey: true });
+  const teamIds = new Set();
+  for (const reg of regs) {
+    let event = reg.get('event');
+    if (!event || !event.id) continue;
+    if (!event.get || !event.get('type')) {
+      try {
+        event = await new Parse.Query('Event').get(event.id, { useMasterKey: true });
+      } catch {
+        continue;
+      }
+    }
+    if (event.get('type') !== 'team_match') continue;
+    const side = await resolveCoachTeamSideForStats(event, userId, reg);
+    if (side !== 'home' && side !== 'away') continue;
+    const home = event.get('homeTeam');
+    const away = event.get('awayTeam');
+    const tid =
+      side === 'home' && home && home.id
+        ? home.id
+        : side === 'away' && away && away.id
+          ? away.id
+          : null;
+    if (tid) teamIds.add(String(tid));
+  }
+  return teamIds.size;
+}
+
+async function buildTopTeamsByMatchPoints(topN = 10) {
+  const teams = await new Parse.Query('AmateurTeam').limit(300).find({ useMasterKey: true });
+  const teamRecords = [];
+  for (const team of teams) {
+    const record = await computeAmateurTeamMatchRecord(team.id, 500);
+    if (!record.matchesPlayed) continue;
+    const points = teamMatchStandingPoints(record.wins, record.draws);
+    teamRecords.push({
+      teamId: team.id,
+      teamName: team.get('name') || 'Time',
+      ...record,
+      combinedScore: points,
+      totalScore: points,
+    });
+  }
+
+  teamRecords.sort((a, b) => {
+    const diff = (b.combinedScore || 0) - (a.combinedScore || 0);
+    if (diff !== 0) return diff;
+    return (b.winRatePercent || 0) - (a.winRatePercent || 0);
+  });
+  const sliced = sliceTopRankWithTies(teamRecords, topN);
+  return enrichTopTeamRankEntries(sliced);
+}
+
+async function buildTopCoachesByMatchPoints(topN = 10) {
+  const coachRegs = await new Parse.Query('EventRegistration')
+    .equalTo('role', 'coach')
+    .limit(2000)
+    .find({ useMasterKey: true });
+  const coachIds = new Set();
+  for (const reg of coachRegs) {
+    const user = reg.get('user');
+    if (user && user.id) coachIds.add(String(user.id));
+  }
+
+  const entries = [];
+  for (const userId of coachIds) {
+    const record = await computeUserTeamMatchRecord(userId, 'coach');
+    if (!record.matchesPlayed) continue;
+    const points = teamMatchStandingPoints(record.wins, record.draws);
+    const teamsCoachedCount = await countAmateurTeamsCoached(userId);
+    entries.push({
+      userId,
+      userName: 'Treinador',
+      role: 'coach',
+      matchesPlayed: record.matchesPlayed,
+      wins: record.wins,
+      losses: record.losses,
+      draws: record.draws,
+      winRatePercent: record.winRatePercent,
+      teamsCoachedCount,
+      combinedScore: points,
+      totalScore: points,
+    });
+  }
+
+  entries.sort((a, b) => {
+    const diff = (b.combinedScore || 0) - (a.combinedScore || 0);
+    if (diff !== 0) return diff;
+    return (b.matchesPlayed || 0) - (a.matchesPlayed || 0);
+  });
+
+  let slice = sliceTopRankWithTies(entries, topN);
+  if (typeof enrichMuralRankingNames === 'function') {
+    const enriched = await enrichMuralRankingNames('app', undefined, { coach: slice });
+    slice = enriched.coach || slice;
+    if (typeof loadUserAgesForRanking === 'function') {
+      const ageByUserId = await loadUserAgesForRanking(slice.map((row) => row.userId));
+      slice = slice.map((row) => ({
+        ...row,
+        age: ageByUserId.get(row.userId) || undefined,
+      }));
+      slice.sort((a, b) => {
+        const diff = (b.combinedScore || 0) - (a.combinedScore || 0);
+        if (diff !== 0) return diff;
+        return (b.age || 0) - (a.age || 0);
+      });
+      slice = sliceTopRankWithTies(slice, topN);
+    }
+  }
+  return slice;
+}
+
+/* ---------- Cards de destaque da aba Confrontos ---------- */
+
+/** Teto de confrontos considerados nos cards (os mais recentes que contam). */
+const TEAM_MATCH_SPOTLIGHT_EVENT_LIMIT = 300;
+const TEAM_MATCH_BEST_DEFENSE_MIN_MATCHES = 3;
+const TEAM_MATCH_DEFENDER_POSITIONS = ['zagueiro', 'lateral direito', 'lateral esquerdo'];
+
+function normalizeTeamMatchPositionLabel(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+function isTeamMatchDefenderPosition(value) {
+  return TEAM_MATCH_DEFENDER_POSITIONS.includes(normalizeTeamMatchPositionLabel(value));
+}
+
+function teamMatchRoundOneDecimal(value) {
+  return Math.round(Number(value || 0) * 10) / 10;
+}
+
+/** Mesmo criterio de pontuacao de desempenho usado no mural (sem o peso 3x do confronto). */
+function teamMatchPerformancePoints(perf) {
+  if (typeof computeEffectivePerformanceScore === 'function') {
+    return Number(computeEffectivePerformanceScore(perf, 'referee') || 0);
+  }
+  const stored =
+    typeof computeStoredPerformancePoints === 'function' ? computeStoredPerformancePoints(perf) : 0;
+  return Number(perf.get('points') || 0) + Number(stored || 0);
+}
+
+function teamMatchRefereeGoals(perf) {
+  if (typeof mapPerformanceToRefereeSumula === 'function') {
+    return Number(mapPerformanceToRefereeSumula(perf).goals || 0);
+  }
+  return Number(perf.get('refereeGoals') || 0);
+}
+
+/** Lados (home/away) dos atletas efetivamente confirmados, em lote por evento. */
+async function loadTeamMatchSidesByEvent(events) {
+  const byEvent = new Map();
+  const feeByEvent = new Map();
+  for (const event of events) {
+    byEvent.set(event.id, { home: new Set(), away: new Set() });
+    feeByEvent.set(event.id, Number(event.get('participationFee') || 0));
+  }
+  const eventIds = events.map((event) => event.id);
+  for (let i = 0; i < eventIds.length; i += 50) {
+    const chunk = eventIds.slice(i, i + 50);
+    const registrations = await new Parse.Query('EventRegistration')
+      .containedIn(
+        'event',
+        chunk.map((id) => Parse.Object.extend('Event').createWithoutData(id))
+      )
+      .containedIn('role', ['athlete', 'goalkeeper'])
+      .limit(5000)
+      .find({ useMasterKey: true });
+    for (const registration of registrations) {
+      const event = registration.get('event');
+      const eventId = event && event.id ? String(event.id) : '';
+      const sides = byEvent.get(eventId);
+      if (!sides) continue;
+      const side = registration.get('teamSide');
+      if (side !== 'home' && side !== 'away') continue;
+      if (
+        typeof computeRegistrationEffectiveConfirmation === 'function' &&
+        !computeRegistrationEffectiveConfirmation(registration, feeByEvent.get(eventId) || 0)
+      ) {
+        continue;
+      }
+      const user = registration.get('user');
+      const participantId = String(
+        registration.get('participantUserId') || (user && user.id ? user.id : '')
+      );
+      if (!participantId) continue;
+      sides[side].add(participantId);
+    }
+  }
+  return byEvent;
+}
+
+async function loadTeamMatchPersonDisplayById(userIds) {
+  const ids = Array.from(new Set((userIds || []).map(String).filter(Boolean)));
+  const byId = new Map();
+  for (let i = 0; i < ids.length; i += 100) {
+    const users = await new Parse.Query(Parse.User)
+      .containedIn('objectId', ids.slice(i, i + 100))
+      .limit(100)
+      .find({ useMasterKey: true });
+    for (const user of users) {
+      byId.set(
+        user.id,
+        typeof personDisplayFromUser === 'function'
+          ? personDisplayFromUser(user)
+          : {
+              name: String(user.get('apelido') || user.get('name') || user.getUsername() || ''),
+              avatarUrl: String(user.get('avatarUrl') || ''),
+            }
+      );
+    }
+  }
+  return byId;
+}
+
+async function loadTeamMatchDefenderUserIds(userIds) {
+  const ids = Array.from(new Set((userIds || []).map(String).filter(Boolean)));
+  const defenders = new Set();
+  for (let i = 0; i < ids.length; i += 100) {
+    const profiles = await new Parse.Query('AthleteProfile')
+      .containedIn(
+        'user',
+        ids.slice(i, i + 100).map((id) => Parse.User.createWithoutData(id))
+      )
+      .limit(500)
+      .find({ useMasterKey: true });
+    for (const profile of profiles) {
+      if (!isTeamMatchDefenderPosition(profile.get('primaryPosition'))) continue;
+      const user = profile.get('user');
+      if (user && user.id) defenders.add(String(user.id));
+    }
+  }
+  return defenders;
+}
+
+/**
+ * Agrega os confrontos ja carregados (uma unica passada) e devolve os quatro cards
+ * de destaque: melhor time, maior invencibilidade, melhor ataque e melhor defesa.
+ */
+async function buildTeamMatchSpotlightCards(events, performanceRaw) {
+  const empty = {
+    teamRows: [],
+    bestTeam: null,
+    longestUnbeaten: null,
+    bestAttack: null,
+    bestDefense: null,
+  };
+  if (!events.length) return empty;
+
+  const eventById = new Map(events.map((event) => [event.id, event]));
+  const sidesByEvent = await loadTeamMatchSidesByEvent(events);
+
+  const perfByEvent = new Map();
+  for (const perf of performanceRaw || []) {
+    const event = perf.get('event');
+    const eventId = event && event.id ? String(event.id) : '';
+    if (!eventId || !eventById.has(eventId)) continue;
+    if (!perfByEvent.has(eventId)) perfByEvent.set(eventId, []);
+    perfByEvent.get(eventId).push(perf);
+  }
+
+  const teams = new Map();
+  const ensureTeam = (teamId, teamName) => {
+    let agg = teams.get(teamId);
+    if (!agg) {
+      agg = {
+        teamId,
+        teamName: teamName || 'Time',
+        matchesPlayed: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        goalsFor: 0,
+        goalsAgainst: 0,
+        matches: [],
+        goalsByUser: new Map(),
+        pointsByUser: new Map(),
+      };
+      teams.set(teamId, agg);
+    }
+    if (!agg.teamName && teamName) agg.teamName = teamName;
+    return agg;
+  };
+
+  // events ja vem do mais recente para o mais antigo (descending startTime).
+  for (const event of events) {
+    const home = event.get('homeTeam');
+    const away = event.get('awayTeam');
+    const homeId = home && home.id ? String(home.id) : '';
+    const awayId = away && away.id ? String(away.id) : '';
+    if (!homeId && !awayId) continue;
+
+    const sides = sidesByEvent.get(event.id) || { home: new Set(), away: new Set() };
+    const score = { home: 0, away: 0 };
+    const goalsBySide = { home: new Map(), away: new Map() };
+    const pointsBySide = { home: new Map(), away: new Map() };
+
+    for (const perf of perfByEvent.get(event.id) || []) {
+      const participantId = getPerformanceParticipantId(perf);
+      if (!participantId) continue;
+      const side = sides.home.has(participantId)
+        ? 'home'
+        : sides.away.has(participantId)
+          ? 'away'
+          : '';
+      if (!side) continue;
+
+      // Placar do confronto = soma dos refereeGoals por lado (mesma regra da sumula).
+      const goals = teamMatchRefereeGoals(perf);
+      if (goals > 0) {
+        score[side] += goals;
+        goalsBySide[side].set(participantId, (goalsBySide[side].get(participantId) || 0) + goals);
+      }
+      const points = teamMatchPerformancePoints(perf);
+      if (points) {
+        pointsBySide[side].set(participantId, (pointsBySide[side].get(participantId) || 0) + points);
+      }
+    }
+
+    const startTime = event.get('startTime') || null;
+    const applySide = (teamId, teamName, side) => {
+      if (!teamId) return;
+      const scored = side === 'home' ? score.home : score.away;
+      const conceded = side === 'home' ? score.away : score.home;
+      const agg = ensureTeam(teamId, teamName);
+      agg.matchesPlayed += 1;
+      agg.goalsFor += scored;
+      agg.goalsAgainst += conceded;
+      if (scored > conceded) agg.wins += 1;
+      else if (scored < conceded) agg.losses += 1;
+      else agg.draws += 1;
+      agg.matches.push({
+        result: scored > conceded ? 'W' : scored < conceded ? 'L' : 'D',
+        startTime,
+      });
+      for (const [userId, goals] of goalsBySide[side].entries()) {
+        agg.goalsByUser.set(userId, (agg.goalsByUser.get(userId) || 0) + goals);
+      }
+      for (const [userId, points] of pointsBySide[side].entries()) {
+        agg.pointsByUser.set(userId, (agg.pointsByUser.get(userId) || 0) + points);
+      }
+    };
+
+    applySide(homeId, event.get('homeTeamName') || '', 'home');
+    applySide(awayId, event.get('awayTeamName') || '', 'away');
+  }
+
+  const rows = Array.from(teams.values());
+  if (!rows.length) return empty;
+
+  const withRate = rows.map((row) => ({
+    ...row,
+    winRatePercent: teamMatchWinRatePercent(row.wins, row.draws, row.matchesPlayed),
+  }));
+
+  // 1) Melhor time: mais confrontos realizados; empate pelo maior aproveitamento.
+  const bestTeamRow =
+    [...withRate].sort((a, b) => {
+      const diff = b.matchesPlayed - a.matchesPlayed;
+      if (diff !== 0) return diff;
+      return b.winRatePercent - a.winRatePercent;
+    })[0] || null;
+
+  // 2) Maior invencibilidade: mesma regra de buildUnbeatenSummary (15-amateur-teams.js).
+  const now = new Date();
+  let longestUnbeatenRow = null;
+  for (const row of withRate) {
+    const streak = [];
+    for (const match of row.matches) {
+      if (match.result === 'L') break;
+      streak.push(match);
+    }
+    if (!streak.length) continue;
+    const since = streak[streak.length - 1].startTime
+      ? new Date(streak[streak.length - 1].startTime)
+      : now;
+    const summary =
+      typeof buildUnbeatenSummary === 'function'
+        ? buildUnbeatenSummary(row.matches, now)
+        : { unbeatenFor: '' };
+    const candidate = {
+      row,
+      matchesInStreak: streak.length,
+      sinceStartTime: since,
+      unbeatenDays: Math.max(0, Math.floor((now.getTime() - since.getTime()) / 86400000)),
+      unbeatenLabel: summary.unbeatenFor || '',
+    };
+    if (
+      !longestUnbeatenRow ||
+      candidate.matchesInStreak > longestUnbeatenRow.matchesInStreak ||
+      (candidate.matchesInStreak === longestUnbeatenRow.matchesInStreak &&
+        candidate.unbeatenDays > longestUnbeatenRow.unbeatenDays)
+    ) {
+      longestUnbeatenRow = candidate;
+    }
+  }
+
+  // 3) Melhor ataque: mais gols feitos.
+  const bestAttackRow =
+    [...withRate].sort((a, b) => {
+      const diff = b.goalsFor - a.goalsFor;
+      if (diff !== 0) return diff;
+      const perMatch =
+        (b.goalsFor / (b.matchesPlayed || 1)) - (a.goalsFor / (a.matchesPlayed || 1));
+      if (perMatch !== 0) return perMatch;
+      return b.matchesPlayed - a.matchesPlayed;
+    })[0] || null;
+
+  // 4) Melhor defesa: menos gols sofridos, com minimo de confrontos para evitar quem jogou uma vez.
+  const maxPlayed = withRate.reduce((max, row) => Math.max(max, row.matchesPlayed), 0);
+  const minMatches = Math.max(1, Math.min(TEAM_MATCH_BEST_DEFENSE_MIN_MATCHES, maxPlayed));
+  const defenseCandidates = withRate.filter((row) => row.matchesPlayed >= minMatches);
+  const bestDefenseRow =
+    [...defenseCandidates].sort((a, b) => {
+      const diff = a.goalsAgainst - b.goalsAgainst;
+      if (diff !== 0) return diff;
+      const perMatch =
+        (a.goalsAgainst / (a.matchesPlayed || 1)) - (b.goalsAgainst / (b.matchesPlayed || 1));
+      if (perMatch !== 0) return perMatch;
+      return b.matchesPlayed - a.matchesPlayed;
+    })[0] || null;
+
+  const selectedIds = Array.from(
+    new Set(
+      [
+        bestTeamRow && bestTeamRow.teamId,
+        longestUnbeatenRow && longestUnbeatenRow.row.teamId,
+        bestAttackRow && bestAttackRow.teamId,
+        bestDefenseRow && bestDefenseRow.teamId,
+      ].filter(Boolean)
+    )
+  );
+  const enriched = await enrichTopTeamRankEntries(
+    selectedIds.map((teamId) => ({
+      teamId,
+      teamName: (teams.get(teamId) || {}).teamName || 'Time',
+    }))
+  );
+  const enrichedById = new Map(enriched.map((entry) => [entry.teamId, entry]));
+  const teamIdentity = (teamId) => {
+    const entry = enrichedById.get(teamId) || {};
+    return {
+      teamId,
+      teamName: entry.teamName || (teams.get(teamId) || {}).teamName || 'Time',
+      shieldImageUrl: entry.shieldImageUrl,
+      presidentId: entry.presidentId || '',
+      presidentName: entry.presidentName || '',
+      presidentAvatarUrl: entry.presidentAvatarUrl,
+    };
+  };
+
+  // Artilheiro do melhor ataque e defensor do melhor defesa (lote unico de usuarios).
+  let topScorerEntry = null;
+  if (bestAttackRow) {
+    const sorted = Array.from(bestAttackRow.goalsByUser.entries()).sort((a, b) => b[1] - a[1]);
+    if (sorted.length && sorted[0][1] > 0) {
+      topScorerEntry = { userId: sorted[0][0], goals: sorted[0][1] };
+    }
+  }
+
+  let topDefenderEntry = null;
+  if (bestDefenseRow && bestDefenseRow.pointsByUser.size) {
+    const defenderIds = await loadTeamMatchDefenderUserIds(
+      Array.from(bestDefenseRow.pointsByUser.keys())
+    );
+    const sorted = Array.from(bestDefenseRow.pointsByUser.entries())
+      .filter(([userId]) => defenderIds.has(userId))
+      .sort((a, b) => b[1] - a[1]);
+    if (sorted.length) {
+      topDefenderEntry = { userId: sorted[0][0], points: sorted[0][1] };
+    }
+  }
+
+  const personById = await loadTeamMatchPersonDisplayById([
+    topScorerEntry && topScorerEntry.userId,
+    topDefenderEntry && topDefenderEntry.userId,
+  ]);
+  const personOf = (userId) => personById.get(userId) || { name: '', avatarUrl: '' };
+
+  return {
+    teamRows: withRate.map((row) => ({
+      teamId: row.teamId,
+      teamName: row.teamName,
+      matchesPlayed: row.matchesPlayed,
+      wins: row.wins,
+      losses: row.losses,
+      draws: row.draws,
+      winRatePercent: row.winRatePercent,
+    })),
+    bestTeam: bestTeamRow
+      ? {
+          ...teamIdentity(bestTeamRow.teamId),
+          matchesPlayed: bestTeamRow.matchesPlayed,
+          wins: bestTeamRow.wins,
+          draws: bestTeamRow.draws,
+          losses: bestTeamRow.losses,
+          winRatePercent: bestTeamRow.winRatePercent,
+        }
+      : null,
+    longestUnbeaten: longestUnbeatenRow
+      ? {
+          ...teamIdentity(longestUnbeatenRow.row.teamId),
+          unbeatenDays: longestUnbeatenRow.unbeatenDays,
+          unbeatenLabel: longestUnbeatenRow.unbeatenLabel,
+          matchesInStreak: longestUnbeatenRow.matchesInStreak,
+          sinceStartTime: longestUnbeatenRow.sinceStartTime.toISOString(),
+        }
+      : null,
+    bestAttack: bestAttackRow
+      ? {
+          ...teamIdentity(bestAttackRow.teamId),
+          goalsFor: bestAttackRow.goalsFor,
+          matchesPlayed: bestAttackRow.matchesPlayed,
+          goalsPerMatch: teamMatchRoundOneDecimal(
+            bestAttackRow.goalsFor / (bestAttackRow.matchesPlayed || 1)
+          ),
+          topScorer: topScorerEntry
+            ? {
+                userId: topScorerEntry.userId,
+                name: personOf(topScorerEntry.userId).name || 'Atleta',
+                avatarUrl: personOf(topScorerEntry.userId).avatarUrl || '',
+                goals: topScorerEntry.goals,
+                goalsPerMatch: teamMatchRoundOneDecimal(
+                  topScorerEntry.goals / (bestAttackRow.matchesPlayed || 1)
+                ),
+              }
+            : null,
+        }
+      : null,
+    bestDefense: bestDefenseRow
+      ? {
+          ...teamIdentity(bestDefenseRow.teamId),
+          goalsAgainst: bestDefenseRow.goalsAgainst,
+          matchesPlayed: bestDefenseRow.matchesPlayed,
+          goalsAgainstPerMatch: teamMatchRoundOneDecimal(
+            bestDefenseRow.goalsAgainst / (bestDefenseRow.matchesPlayed || 1)
+          ),
+          topDefender: topDefenderEntry
+            ? {
+                userId: topDefenderEntry.userId,
+                name: personOf(topDefenderEntry.userId).name || 'Atleta',
+                avatarUrl: personOf(topDefenderEntry.userId).avatarUrl || '',
+                points: teamMatchRoundOneDecimal(topDefenderEntry.points),
+                pointsPerMatch: teamMatchRoundOneDecimal(
+                  topDefenderEntry.points / (bestDefenseRow.matchesPlayed || 1)
+                ),
+              }
+            : null,
+        }
+      : null,
+  };
+}
+
+Parse.Cloud.define('getMuralTeamMatchDashboard', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+
+  const locationFilter =
+    typeof normalizeMuralLocationFilter === 'function'
+      ? normalizeMuralLocationFilter(request.params)
+      : { state: '', city: '', neighborhood: '', active: false };
+
+  const candidateQuery = new Parse.Query('Event')
+    .equalTo('type', 'team_match')
+    .lessThan('startTime', new Date())
+    .descending('startTime')
+    .limit(500);
+  if (locationFilter.active && typeof applyMuralLocationFilterToEventQuery === 'function') {
+    candidateQuery.exists('address');
+    applyMuralLocationFilterToEventQuery(candidateQuery, locationFilter);
+  }
+  const candidateEvents = await candidateQuery.find({ useMasterKey: true });
+  const finishedEvents = [];
+  for (const event of candidateEvents) {
+    if (await eventCountsForTeamMatchRanking(event)) {
+      finishedEvents.push(event);
+    }
+  }
+
+  const totalConfrontos = finishedEvents.length;
+  const locationStats = buildEventLocationStats(finishedEvents);
+
+  const eventIds = finishedEvents.map((e) => e.id);
+  let performanceRaw = [];
+  for (let i = 0; i < eventIds.length; i += 50) {
+    const batch = eventIds.slice(i, i + 50);
+    const q = new Parse.Query('EventPerformance');
+    q.containedIn('event', batch.map((id) => Parse.Object.createWithoutData('Event', id)));
+    q.limit(3000);
+    performanceRaw.push(...(await q.find({ useMasterKey: true })));
+  }
+
+  const spotlight = await buildTeamMatchSpotlightCards(
+    finishedEvents.slice(0, TEAM_MATCH_SPOTLIGHT_EVENT_LIMIT),
+    performanceRaw
+  );
+
+  let teamRecords;
+  if (locationFilter.active) {
+    // Com recorte de regiao os registros vem da agregacao dos confrontos filtrados.
+    teamRecords = spotlight.teamRows;
+  } else {
+    const teams = await new Parse.Query('AmateurTeam').limit(300).find({ useMasterKey: true });
+    teamRecords = [];
+    for (const team of teams) {
+      const record = await computeAmateurTeamMatchRecord(team.id, 500);
+      if (!record.matchesPlayed) continue;
+      teamRecords.push({
+        teamId: team.id,
+        teamName: team.get('name') || 'Time',
+        ...record,
+      });
+    }
+  }
+
+  const pickTeamExtreme = (field, preferHigh) => {
+    const sorted = [...teamRecords].sort((a, b) =>
+      preferHigh ? b[field] - a[field] : a[field] - b[field]
+    );
+    return sorted[0] || null;
+  };
+
+  const teamHighlights = {
+    mostMatches: pickTeamExtreme('matchesPlayed', true),
+    mostWins: pickTeamExtreme('wins', true),
+    mostLosses: pickTeamExtreme('losses', true),
+    mostDraws: pickTeamExtreme('draws', true),
+    bestWinRate: [...teamRecords].sort((a, b) => b.winRatePercent - a.winRatePercent)[0] || null,
+  };
+
+  const performanceRows =
+    typeof mapPerformanceRowsForMural === 'function'
+      ? await mapPerformanceRowsForMural('app', undefined, performanceRaw)
+      : [];
+  const teamMatchPerfRows =
+    typeof normalizePerformanceScoresForBucket === 'function'
+      ? normalizePerformanceScoresForBucket(performanceRows, 'teamMatch')
+      : performanceRows;
+
+  const voteRows =
+    typeof mapMuralVoteRowsForScope === 'function'
+      ? await mapMuralVoteRowsForScope('app', undefined, locationFilter)
+      : [];
+  const teamMatchVoteRows =
+    typeof filterVoteRowsByEventBucket === 'function' && typeof unweightVoteRows === 'function'
+      ? unweightVoteRows(filterVoteRowsByEventBucket(voteRows, 'teamMatch'))
+      : voteRows;
+
+  let rankingsTeamMatch =
+    typeof buildPeladaMuralRankings === 'function'
+      ? buildPeladaMuralRankings(teamMatchPerfRows, teamMatchVoteRows, 10)
+      : { athlete: [], goalkeeper: [], referee: [] };
+  if (typeof enrichMuralRankingNames === 'function') {
+    rankingsTeamMatch = await enrichMuralRankingNames('app', undefined, rankingsTeamMatch);
+  }
+  if (typeof finalizeEventGoalkeeperRankings === 'function') {
+    rankingsTeamMatch = await finalizeEventGoalkeeperRankings(rankingsTeamMatch);
+  }
+
+  const topAthletes = (rankingsTeamMatch.athlete || []).slice(0, 10);
+  const topGoalkeepers = (rankingsTeamMatch.goalkeeper || []).slice(0, 10);
+  const topReferees = (rankingsTeamMatch.referee || []).slice(0, 10);
+
+  const topScorers =
+    typeof buildPerformanceTopEntries === 'function'
+      ? buildPerformanceTopEntries(performanceRaw, 'goals', 10)
+      : [];
+  const topAssists =
+    typeof buildPerformanceTopEntries === 'function'
+      ? buildPerformanceTopEntries(performanceRaw, 'assists', 10)
+      : [];
+  const topPasses =
+    typeof buildPerformanceTopEntries === 'function'
+      ? buildPerformanceTopEntries(performanceRaw, 'passesCompleted', 10)
+      : [];
+
+  let topTeams = [];
+  if (locationFilter.active) {
+    // Reaproveita a agregacao filtrada em vez de varrer todos os times do app.
+    const ranked = teamRecords
+      .map((row) => ({
+        ...row,
+        combinedScore: teamMatchStandingPoints(row.wins, row.draws),
+        totalScore: teamMatchStandingPoints(row.wins, row.draws),
+      }))
+      .sort((a, b) => {
+        const diff = (b.combinedScore || 0) - (a.combinedScore || 0);
+        if (diff !== 0) return diff;
+        return (b.winRatePercent || 0) - (a.winRatePercent || 0);
+      });
+    topTeams = await enrichTopTeamRankEntries(sliceTopRankWithTies(ranked, 10));
+  } else if (typeof buildTopTeamsByMatchPoints === 'function') {
+    topTeams = await buildTopTeamsByMatchPoints(10);
+  }
+  const topCoaches =
+    typeof buildTopCoachesByMatchPoints === 'function' ? await buildTopCoachesByMatchPoints(10) : [];
+
+  return {
+    totalConfrontos,
+    locationStats,
+    teamHighlights,
+    topAthletes,
+    topGoalkeepers,
+    topReferees,
+    topScorers,
+    topAssists,
+    topPasses,
+    topTeams,
+    topCoaches,
+    appliedLocation: {
+      state: locationFilter.state,
+      city: locationFilter.city,
+      neighborhood: locationFilter.neighborhood,
+    },
+    bestTeam: spotlight.bestTeam,
+    longestUnbeaten: spotlight.longestUnbeaten,
+    bestAttack: spotlight.bestAttack,
+    bestDefense: spotlight.bestDefense,
+  };
+});
+
+// --- 18-app-mailbox.js ---
+
+/**
+ * Caixa de mensagens do app (classe AppMessage).
+ *
+ * Registro permanente do que o usuario recebeu (Entrada) e enviou (Saida).
+ * As pendencias com botao continuam vindo das classes de origem (RefereeInvitation,
+ * MatchChallenge, TeamMatchJoinRequest...) — aqui fica o historico que nao desaparece
+ * quando o assunto e resolvido.
+ *
+ * Escrita somente pela nuvem: use createAppMessage / createAppMessages ao lado do push.
+ */
+
+const APP_MESSAGE_CLASS = 'AppMessage';
+const APP_MESSAGE_LIST_DEFAULT_LIMIT = 50;
+const APP_MESSAGE_LIST_MAX_LIMIT = 100;
+const APP_MESSAGE_MARK_ALL_BATCH = 200;
+const APP_MESSAGE_FANOUT_MAX = 300;
+const APP_MESSAGE_TITLE_MAX = 140;
+const APP_MESSAGE_BODY_MAX = 1000;
+const APP_MESSAGE_SEARCH_MAX = 600;
+const APP_MESSAGE_SYSTEM_NAME = 'Controle de Bola';
+
+function normalizeAppMailboxText(value) {
+  return String(value == null ? '' : value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function escapeAppMailboxRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function appMailboxUserDisplayName(user) {
+  if (!user || !user.get) return '';
+  const apelido = String(user.get('apelido') || '').trim();
+  if (apelido) return apelido;
+  const name = String(user.get('name') || '').trim();
+  if (name) return name;
+  try {
+    return String(user.getUsername() || '').trim();
+  } catch {
+    return '';
+  }
+}
+
+function appMailboxUserAvatarUrl(user) {
+  if (!user || !user.get) return '';
+  if (typeof resolveUserAvatarUrl === 'function') return resolveUserAvatarUrl(user);
+  return String(user.get('avatarUrl') || '').trim();
+}
+
+/** Nome + avatar dos dois lados, em lote, para o searchText. Nunca lanca. */
+async function loadAppMailboxUserCards(userIds) {
+  const cards = new Map();
+  const ids = [
+    ...new Set((userIds || []).map((id) => String(id || '').trim()).filter(Boolean)),
+  ];
+  if (!ids.length) return cards;
+
+  try {
+    for (let i = 0; i < ids.length; i += 100) {
+      const rows = await new Parse.Query(Parse.User)
+        .containedIn('objectId', ids.slice(i, i + 100))
+        .select(['apelido', 'name', 'username', 'avatarUrl', 'avatar'])
+        .limit(100)
+        .find({ useMasterKey: true });
+      for (const row of rows) {
+        cards.set(row.id, {
+          name: appMailboxUserDisplayName(row),
+          avatarUrl: appMailboxUserAvatarUrl(row),
+        });
+      }
+    }
+  } catch (error) {
+    console.error('loadAppMailboxUserCards failed', error);
+  }
+
+  return cards;
+}
+
+function buildAppMessageSearchText(parts) {
+  const merged = (parts || [])
+    .map((part) => normalizeAppMailboxText(part))
+    .filter(Boolean)
+    .join(' ');
+  return merged.slice(0, APP_MESSAGE_SEARCH_MAX);
+}
+
+async function saveAppMessageRow(payload, cards) {
+  const recipientId = String((payload && payload.recipientId) || '').trim();
+  if (!recipientId) return null;
+
+  const senderId = String((payload && payload.senderId) || '').trim();
+  // Nao faz sentido guardar mensagem do usuario para ele mesmo.
+  if (senderId && senderId === recipientId) return null;
+
+  const title = String((payload && payload.title) || '')
+    .trim()
+    .slice(0, APP_MESSAGE_TITLE_MAX);
+  const body = String((payload && payload.body) || '')
+    .trim()
+    .slice(0, APP_MESSAGE_BODY_MAX);
+  if (!title && !body) return null;
+
+  const recipientCard = cards ? cards.get(recipientId) : null;
+  const senderCard = senderId && cards ? cards.get(senderId) : null;
+
+  const row = new Parse.Object(APP_MESSAGE_CLASS);
+  row.set('recipient', Parse.User.createWithoutData(recipientId));
+  if (senderId) row.set('sender', Parse.User.createWithoutData(senderId));
+  row.set('kind', String((payload && payload.kind) || 'app_message').trim().slice(0, 60));
+  row.set('title', title);
+  row.set('body', body);
+  row.set('sentAt', new Date());
+  row.set('relatedClass', String((payload && payload.relatedClass) || '').trim().slice(0, 60));
+  row.set('relatedId', String((payload && payload.relatedId) || '').trim().slice(0, 60));
+  row.set('actionRoute', String((payload && payload.actionRoute) || '').trim().slice(0, 200));
+  row.set(
+    'searchText',
+    buildAppMessageSearchText([
+      title,
+      body,
+      recipientCard ? recipientCard.name : '',
+      senderCard ? senderCard.name : '',
+      senderId ? '' : APP_MESSAGE_SYSTEM_NAME,
+    ])
+  );
+
+  // Leitura so para os dois lados; escrita somente via Cloud (Master Key).
+  const acl = new Parse.ACL();
+  acl.setPublicReadAccess(false);
+  acl.setPublicWriteAccess(false);
+  acl.setReadAccess(recipientId, true);
+  if (senderId) acl.setReadAccess(senderId, true);
+  row.setACL(acl);
+
+  await row.save(null, { useMasterKey: true });
+  return row;
+}
+
+/**
+ * Grava uma mensagem na caixa do destinatario.
+ * Nunca lanca: a notificacao nao pode derrubar o fluxo que a chamou.
+ */
+async function createAppMessage(payload) {
+  try {
+    const recipientId = String((payload && payload.recipientId) || '').trim();
+    if (!recipientId) return null;
+    const senderId = String((payload && payload.senderId) || '').trim();
+    if (senderId && senderId === recipientId) return null;
+
+    const cards = await loadAppMailboxUserCards([recipientId, senderId]);
+    return await saveAppMessageRow(payload, cards);
+  } catch (error) {
+    console.error('createAppMessage failed', error);
+    return null;
+  }
+}
+
+/** Mesma mensagem para varios destinatarios (nomes resolvidos em um lote). */
+async function createAppMessages(recipientIds, payload) {
+  try {
+    const senderId = String((payload && payload.senderId) || '').trim();
+    const ids = [
+      ...new Set((recipientIds || []).map((id) => String(id || '').trim()).filter(Boolean)),
+    ]
+      .filter((id) => id !== senderId)
+      .slice(0, APP_MESSAGE_FANOUT_MAX);
+    if (!ids.length) return 0;
+
+    const cards = await loadAppMailboxUserCards([...ids, senderId]);
+    let created = 0;
+    for (const recipientId of ids) {
+      try {
+        const row = await saveAppMessageRow({ ...payload, recipientId }, cards);
+        if (row) created += 1;
+      } catch (error) {
+        console.error('createAppMessages row failed', error);
+      }
+    }
+    return created;
+  } catch (error) {
+    console.error('createAppMessages failed', error);
+    return 0;
+  }
+}
+
+function mapAppMessageRow(row, box) {
+  const sender = row.get('sender');
+  const recipient = row.get('recipient');
+  const counterpart = box === 'out' ? recipient : sender;
+  const counterpartName = appMailboxUserDisplayName(counterpart);
+  const sentAt = row.get('sentAt') || row.createdAt;
+  const readAt = row.get('readAt');
+
+  return {
+    objectId: row.id,
+    box,
+    kind: row.get('kind') || '',
+    title: row.get('title') || '',
+    body: row.get('body') || '',
+    sentAt: sentAt instanceof Date ? sentAt.toISOString() : null,
+    readAt: readAt instanceof Date ? readAt.toISOString() : null,
+    unread: !readAt,
+    relatedClass: row.get('relatedClass') || '',
+    relatedId: row.get('relatedId') || '',
+    actionRoute: row.get('actionRoute') || '',
+    counterpartUserId: counterpart && counterpart.id ? counterpart.id : '',
+    counterpartName:
+      counterpartName || (box === 'out' ? 'Destinatario' : APP_MESSAGE_SYSTEM_NAME),
+    counterpartAvatarUrl: appMailboxUserAvatarUrl(counterpart),
+  };
+}
+
+/** A classe so passa a existir na 1a mensagem (ou no configure). Antes disso, caixa vazia. */
+function isMissingAppMessageClassError(error) {
+  const code = error && error.code;
+  const message = String((error && error.message) || '');
+  return code === Parse.Error.INVALID_CLASS_NAME || /class .*(does ?n'?o?t exist)/i.test(message);
+}
+
+function assertAppMailboxUser(request) {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login para ver suas mensagens.');
+  }
+  return user;
+}
+
+Parse.Cloud.define('listAppMessages', async (request) => {
+  const user = assertAppMailboxUser(request);
+
+  const box = request.params.box === 'out' ? 'out' : 'in';
+  const search = String(request.params.search || '').trim();
+
+  const rawLimit = Number(request.params.limit);
+  const limit =
+    Number.isFinite(rawLimit) && rawLimit > 0
+      ? Math.min(Math.trunc(rawLimit), APP_MESSAGE_LIST_MAX_LIMIT)
+      : APP_MESSAGE_LIST_DEFAULT_LIMIT;
+
+  const rawSkip = Number(request.params.skip);
+  const skip = Number.isFinite(rawSkip) && rawSkip > 0 ? Math.trunc(rawSkip) : 0;
+
+  const query = new Parse.Query(APP_MESSAGE_CLASS);
+  if (box === 'out') {
+    query.equalTo('sender', user);
+  } else {
+    query.equalTo('recipient', user);
+  }
+
+  const term = normalizeAppMailboxText(search);
+  if (term) {
+    query.matches('searchText', escapeAppMailboxRegExp(term), 'i');
+  }
+
+  query.include(box === 'out' ? 'recipient' : 'sender');
+  query.descending('sentAt');
+  query.skip(skip);
+  query.limit(limit);
+
+  let rows = [];
+  try {
+    rows = await query.find({ useMasterKey: true });
+  } catch (error) {
+    if (!isMissingAppMessageClassError(error)) throw error;
+    return [];
+  }
+  return rows.map((row) => mapAppMessageRow(row, box));
+});
+
+Parse.Cloud.define('markAppMessageRead', async (request) => {
+  const user = assertAppMailboxUser(request);
+  const messageId = String(request.params.messageId || '').trim();
+  if (!messageId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe a mensagem.');
+  }
+
+  const row = await new Parse.Query(APP_MESSAGE_CLASS).get(messageId, { useMasterKey: true });
+  const recipient = row.get('recipient');
+  if (!recipient || recipient.id !== user.id) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Apenas o destinatario pode marcar esta mensagem como lida.'
+    );
+  }
+
+  let readAt = row.get('readAt');
+  if (!(readAt instanceof Date)) {
+    readAt = new Date();
+    row.set('readAt', readAt);
+    await row.save(null, { useMasterKey: true });
+  }
+
+  return { ok: true, messageId, readAt: readAt.toISOString() };
+});
+
+Parse.Cloud.define('markAllAppMessagesRead', async (request) => {
+  const user = assertAppMailboxUser(request);
+
+  let rows = [];
+  try {
+    rows = await new Parse.Query(APP_MESSAGE_CLASS)
+      .equalTo('recipient', user)
+      .doesNotExist('readAt')
+      .limit(APP_MESSAGE_MARK_ALL_BATCH)
+      .find({ useMasterKey: true });
+  } catch (error) {
+    if (!isMissingAppMessageClassError(error)) throw error;
+    return { ok: true, updated: 0, hasMore: false };
+  }
+
+  if (!rows.length) {
+    return { ok: true, updated: 0, hasMore: false };
+  }
+
+  const readAt = new Date();
+  for (const row of rows) {
+    row.set('readAt', readAt);
+  }
+  await Parse.Object.saveAll(rows, { useMasterKey: true });
+
+  return {
+    ok: true,
+    updated: rows.length,
+    hasMore: rows.length === APP_MESSAGE_MARK_ALL_BATCH,
+  };
+});
+
+Parse.Cloud.define('countUnreadAppMessages', async (request) => {
+  const user = assertAppMailboxUser(request);
+
+  try {
+    const count = await new Parse.Query(APP_MESSAGE_CLASS)
+      .equalTo('recipient', user)
+      .doesNotExist('readAt')
+      .count({ useMasterKey: true });
+    return { count };
+  } catch (error) {
+    if (!isMissingAppMessageClassError(error)) throw error;
+    return { count: 0 };
+  }
+});
+
+Parse.Cloud.define('configureAppMailboxClassPermissions', async (request) => {
+  if (!request.master && !request.user) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Faca login no app ou chame com Master Key / REST API Key.'
+    );
+  }
+
+  const authRead = { requiresAuthentication: true };
+  const denied = {};
+  const clp = {
+    find: authRead,
+    get: authRead,
+    count: authRead,
+    create: denied,
+    update: denied,
+    delete: denied,
+    addField: denied,
+    protectedFields: {},
+  };
+
+  // 1a execucao cria a classe com os campos; nas seguintes apenas o CLP e reaplicado.
+  let created = false;
+  try {
+    const schema = new Parse.Schema(APP_MESSAGE_CLASS);
+    schema.addPointer('recipient', '_User');
+    schema.addPointer('sender', '_User');
+    schema.addString('kind');
+    schema.addString('title');
+    schema.addString('body');
+    schema.addDate('sentAt');
+    schema.addDate('readAt');
+    schema.addString('relatedClass');
+    schema.addString('relatedId');
+    schema.addString('actionRoute');
+    schema.addString('searchText');
+    schema.setCLP(clp);
+    await schema.save();
+    created = true;
+  } catch {
+    const schema = new Parse.Schema(APP_MESSAGE_CLASS);
+    schema.setCLP(clp);
+    await schema.update();
+  }
+
+  return {
+    ok: true,
+    className: APP_MESSAGE_CLASS,
+    created,
+    updated: !created,
+    message: 'CLP atualizado para AppMessage (leitura autenticada, escrita so via Cloud).',
   };
 });

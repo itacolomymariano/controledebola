@@ -36,17 +36,34 @@ export class LegendsHubPage {
     }
   }
 
+  get hasSearchTerm(): boolean {
+    return this.search.trim().length >= 2;
+  }
+
+  get hasMatches(): boolean {
+    return this.athletes.length > 0 || this.teams.length > 0;
+  }
+
   onSearchChange(value: string): void {
     this.search = value;
     void this.load();
   }
 
   openAthleteForm(): void {
-    void this.router.navigateByUrl('/legends/athlete/new');
+    void this.router.navigate(['/legends/athlete/new'], {
+      queryParams: this.legendFormQueryParams(),
+    });
   }
 
   openTeamForm(): void {
-    void this.router.navigateByUrl('/legends/team/new');
+    void this.router.navigate(['/legends/team/new'], {
+      queryParams: this.legendFormQueryParams(),
+    });
+  }
+
+  private legendFormQueryParams(): Record<string, string> {
+    const term = this.search.trim();
+    return term.length >= 2 ? { name: term, apelido: term } : {};
   }
 
   openAthlete(athlete: AmateurLegendAthlete): void {

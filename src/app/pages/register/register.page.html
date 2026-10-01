@@ -4,6 +4,9 @@
       <ion-button (click)="goBack()">{{ 'register.back' | t }}</ion-button>
     </ion-buttons>
     <ion-title>{{ 'register.title' | t }}</ion-title>
+    <ion-buttons slot="end">
+      <app-help-balloon textKey="screen.help.register"></app-help-balloon>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -42,6 +45,27 @@
     @if (form.get('email')?.touched && form.get('email')?.hasError('invalidEmail')) {
       <ion-note color="danger" class="ion-padding-horizontal">{{ 'register.emailInvalid' | t }}</ion-note>
     }
+
+    <ion-item>
+      <ion-input
+        [label]="'register.cpf' | t"
+        labelPlacement="stacked"
+        formControlName="cpf"
+        inputmode="numeric"
+        maxlength="14"
+        (ionInput)="onCpfInput($event)"
+      ></ion-input>
+    </ion-item>
+    @if (form.get('cpf')?.touched && form.get('cpf')?.hasError('required')) {
+      <ion-note color="danger" class="ion-padding-horizontal">{{ 'register.cpfRequired' | t }}</ion-note>
+    }
+    @if (form.get('cpf')?.touched && form.get('cpf')?.hasError('invalidCpf')) {
+      <ion-note color="danger" class="ion-padding-horizontal">{{ 'register.cpfInvalid' | t }}</ion-note>
+    }
+    <ion-note color="medium" class="ion-padding-horizontal">
+      {{ 'register.cpfHint' | t }}
+    </ion-note>
+
     <ion-item>
       <ion-input
         [label]="'register.phone' | t"

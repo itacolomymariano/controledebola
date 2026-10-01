@@ -1,0 +1,14 @@
+.match-shields {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-inline-end: 4px;
+}
+
+.match-shield {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 4px;
+  background: var(--ion-color-light);
+}

@@ -10,24 +10,7 @@
         <ion-button (click)="editPelada()">Editar</ion-button>
       </ion-buttons>
     }
-  </ion-toolbar>
-  @if (pelada) {
-    <ion-toolbar>
-      <ion-segment class="segment-scroll" scrollable="true" [value]="segment" (ionChange)="onSegmentChange($event)">
-        <ion-segment-button value="eventos">Eventos</ion-segment-button>
-        <ion-segment-button value="socios">Socios</ion-segment-button>
-        <ion-segment-button value="cotinhas">Cotinhas</ion-segment-button>
-        @if (showCaixaTab) {
-          <ion-segment-button value="caixa">Caixa</ion-segment-button>
-        }
-        <ion-segment-button value="mensalidades">Mensalidades</ion-segment-button>
-        <ion-segment-button value="mural">Mural</ion-segment-button>
-        @if (isAdmin) {
-          <ion-segment-button value="configuracoes">Configuracoes</ion-segment-button>
-        }
-      </ion-segment>
     </ion-toolbar>
-  }
 </ion-header>
 
 <ion-content>
@@ -48,6 +31,23 @@
     </ion-card>
   }
 
+  @if (pelada) {
+    <div class="pelada-tabs" role="tablist">
+      @for (tab of visibleTabs; track tab.id) {
+        <button
+          type="button"
+          role="tab"
+          class="pelada-tab"
+          [class.pelada-tab-active]="segment === tab.id"
+          [attr.aria-selected]="segment === tab.id"
+          (pointerup)="onTabPointer($event, tab.id)"
+        >
+          {{ tab.label }}
+        </button>
+      }
+    </div>
+  }
+
   @if (!loading && pelada) {
     <ion-card class="ion-margin">
       <ion-card-header>
@@ -62,11 +62,21 @@
         @if (pelada.monthlyFee > 0) {
           <p>Mensalidade: {{ formatCurrency(pelada.monthlyFee) }}</p>
         }
+        <ion-button fill="outline" size="small" class="ion-margin-top" (click)="selectSegment('mural')">
+          Mural
+        </ion-button>
       </ion-card-content>
     </ion-card>
 
     <div class="segment-content ion-padding">
       @if (segment === 'eventos') {
+        @if (isAdmin) {
+          <ion-button expand="block" (click)="createEvent()">Novo evento</ion-button>
+        } @else {
+          <ion-note class="ion-margin-bottom">
+            So o administrador da pelada pode criar evento e confronto entre times.
+          </ion-note>
+        }
         @if (isAdmin && (loadingProfileRequests || profilePresentationRequests.length)) {
           <ion-card>
             <ion-card-header>
@@ -166,9 +176,6 @@
             </ion-item>
           }
         </ion-list>
-        @if (isAdmin) {
-          <ion-button expand="block" (click)="createEvent()">Novo evento</ion-button>
-        }
       }
 
       @if (segment === 'socios') {
@@ -592,6 +599,19 @@
       }
 
       @if (segment === 'mural') {
+        <h2 class="ion-padding-start">Mural da pelada</h2>
+        @if (muralLoading) {
+          <div class="ion-text-center ion-padding">
+            <ion-spinner name="crescent"></ion-spinner>
+            <p>Carregando mural...</p>
+          </div>
+        }
+        @if (muralError) {
+          <ion-card color="warning" class="ion-margin">
+            <ion-card-content>{{ muralError }}</ion-card-content>
+          </ion-card>
+        }
+        @if (!muralLoading) {
         <app-mural-participant-stats
           [stats]="participantStats"
           scope="pelada"
@@ -654,7 +674,7 @@
               @if (!muralRankings[role]?.length) {
                 <ion-note>Sem dados ainda.</ion-note>
               }
-              @for (entry of muralRankings[role]; track entry.userId; let i = $index) {
+              @for (entry of muralRankings[role] ?? []; track entry.userId; let i = $index) {
                 <div class="rank-row ion-margin-bottom">
                   <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="sm"></app-user-avatar>
                   <span>{{ i + 1 }}. {{ entry.userName }}</span>
@@ -664,8 +684,16 @@
             </ion-card-content>
           </ion-card>
         }
+        }
       }
     </div>
+  }
+  @if (isAdmin && segment === 'eventos') {
+    <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+      <ion-fab-button (click)="createEvent()" [attr.aria-label]="'Novo evento'">
+        <ion-icon name="add"></ion-icon>
+      </ion-fab-button>
+    </ion-fab>
   }
 </ion-content>
 

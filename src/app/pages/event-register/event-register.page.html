@@ -125,6 +125,19 @@
         Definido automaticamente conforme seu cadastro na pelada deste evento.
       </ion-note>
 
+      @if (requiresTeamSide) {
+        <ion-item>
+          <ion-select
+            label="Time neste confronto"
+            labelPlacement="stacked"
+            formControlName="teamSide"
+          >
+            <ion-select-option value="home">{{ homeTeamLabel }}</ion-select-option>
+            <ion-select-option value="away">{{ awayTeamLabel }}</ion-select-option>
+          </ion-select>
+        </ion-item>
+      }
+
       @if (selectedRole === 'athlete' && athleteProfile) {
         <ion-item>
           <ion-label class="ion-text-wrap">

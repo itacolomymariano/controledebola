@@ -15,6 +15,8 @@ import {
   PhysicalTrainerProfileStats,
   SupportRoleProfileStats,
 } from '../../core/models/support-role-tools.model';
+import { TeamMatchRecord } from '../../core/models/athlete-search.model';
+import { AthleteSearchService } from '../../core/services/athlete-search.service';
 import { ProfileSearchService } from '../../core/services/profile-search.service';
 import { SupportRoleToolsService } from '../../core/services/support-role-tools.service';
 import {
@@ -38,10 +40,12 @@ export class ProfileViewPage {
   historyMode = 'none';
   displayFields: RoleProfileFieldDef[] = [];
   operationStats: SupportRoleProfileStats | null = null;
+  coachTeamMatchRecord: TeamMatchRecord | null = null;
 
   constructor(
     private readonly route: ActivatedRoute,
     private readonly router: Router,
+    private readonly athleteSearchService: AthleteSearchService,
     private readonly profileSearchService: ProfileSearchService,
     private readonly supportTools: SupportRoleToolsService
   ) {}
@@ -118,6 +122,7 @@ export class ProfileViewPage {
     this.displayFields =
       role && isProfessionalRole(role) ? ROLE_PROFILE_FIELDS[role].filter((field) => field.type !== 'pix') : [];
     this.operationStats = null;
+    this.coachTeamMatchRecord = null;
 
     try {
       if (!role || !userId) {
@@ -137,6 +142,12 @@ export class ProfileViewPage {
         role === 'physical_trainer'
       ) {
         this.operationStats = await this.supportTools.getProfileStats(role, userId);
+      }
+      if (role === 'coach') {
+        this.coachTeamMatchRecord = await this.athleteSearchService.getUserTeamMatchRecord(
+          userId,
+          'coach'
+        );
       }
     } catch (error: unknown) {
       this.profile = null;

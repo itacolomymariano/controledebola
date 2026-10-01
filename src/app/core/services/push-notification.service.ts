@@ -177,6 +177,14 @@ export class PushNotificationService {
     }
   }
 
+  async sendTestPushToSelf(): Promise<{ devicesMatched: number; targetedUsers: number }> {
+    const result = await Parse.Cloud.run('sendTestPushToSelf');
+    return {
+      devicesMatched: Number(result?.devicesMatched) || 0,
+      targetedUsers: Number(result?.targetedUsers) || 0,
+    };
+  }
+
   async sendEventConfirmedParticipantNotification(
     eventId: string,
     title: string,
@@ -283,16 +291,30 @@ export class PushNotificationService {
       case 'hiring_invite':
         await this.router.navigateByUrl('/inbox');
         break;
+      case 'match_challenge':
+      case 'match_challenge_response':
+      case 'team_match_reschedule_request':
+      case 'team_match_reschedule_response':
+      case 'team_match_join_request':
+      case 'team_match_join_response':
+        await this.router.navigateByUrl('/inbox');
+        break;
       case 'hiring_response':
       case 'profile_presentation_approved':
       case 'profile_presentation_rejected':
       case 'new_pelada_event':
+      case 'team_match_created':
       case 'event_admin_message':
+      case 'event_journal_reportage':
       case 'event_reminder_2h':
       case 'event_rescheduled':
       case 'event_cancelled':
         if (data.eventId) {
-          await this.router.navigate(['/event', data.eventId]);
+          if (data.type === 'event_journal_reportage') {
+            await this.router.navigate(['/event', data.eventId, 'mural', 'media', 'journal']);
+          } else {
+            await this.router.navigate(['/event', data.eventId]);
+          }
         } else {
           await this.router.navigateByUrl('/tabs/peladas');
         }

@@ -37,3 +37,27 @@ export interface AthletePublicProfile {
   teamMatchRate?: number;
   primaryPosition: string;
 }
+
+/** Indicadores dos ultimos N meses (padrao 3). */
+export interface TeamMatchRecord {
+  matchesPlayed: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  winRatePercent: number;
+  teamsPresided?: number;
+}
+
+export interface AthleteActivityIndicators {
+  windowStart: string;
+  windowEnd: string;
+  months: number;
+  gamesPlayed: number;
+  peladasPlayed: number;
+  gamesAbsent: number;
+  peladasAbsent: number;
+  teamMatchInvitesReceived: number;
+  teamMatchInvitesDeclined: number;
+  peladaInvitesReceived: number;
+  peladaInvitesDeclined: number;
+}

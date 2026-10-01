@@ -12,6 +12,16 @@
     </div>
   </ion-card-header>
   <ion-card-content>
+    <ion-button
+      expand="block"
+      fill="outline"
+      type="button"
+      class="ion-margin-bottom"
+      (click)="notifyParticipants.emit()"
+    >
+      <ion-icon slot="start" name="notifications-outline"></ion-icon>
+      Notificar participantes
+    </ion-button>
     <form [formGroup]="adminForm" novalidate (ngSubmit)="onSave($event)">
       <ion-list lines="full">
         <ion-item-divider>

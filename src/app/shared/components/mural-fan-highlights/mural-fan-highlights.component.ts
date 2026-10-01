@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { MuralShareContext } from '../../../core/models/mural-share.model';
 import { MuralScope } from '../../../core/models/mural.model';
 import { FanHighlightEntry } from '../../../core/models/support-role-tools.model';
@@ -14,13 +14,17 @@ export class MuralFanHighlightsComponent implements OnChanges {
   @Input({ required: true }) scope!: MuralScope;
   @Input() scopeId?: string;
   @Input() shareContext: MuralShareContext | null = null;
+  @Input() filterCaption = '';
 
   loading = false;
   entries: FanHighlightEntry[] = [];
 
   constructor(private readonly supportTools: SupportRoleToolsService) {}
 
-  ngOnChanges(): void {
+  ngOnChanges(changes: SimpleChanges): void {
+    if (!changes['scope'] && !changes['scopeId']) {
+      return;
+    }
     void this.load();
   }
 

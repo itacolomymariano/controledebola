@@ -5,6 +5,7 @@ import {
   RefereeSumulaAthlete,
   RefereeSumulaBoard,
   REFEREE_SUMULA_STAT_FIELDS,
+  REFEREE_SUMULA_GOALKEEPER_STAT_FIELDS,
   REFEREE_SUMULA_STAT_LABELS,
   RefereeSumulaStatField,
 } from '../../core/models/referee-sumula.model';
@@ -12,6 +13,12 @@ import { RefereeSumulaService } from '../../core/services/referee-sumula.service
 import { normalizeSearchText } from '../../core/utils/search-text.util';
 
 type SyncStatus = 'idle' | 'saving' | 'saved' | 'error';
+
+interface SumulaTeamSection {
+  side: 'home' | 'away' | 'other';
+  title: string;
+  athletes: RefereeSumulaAthlete[];
+}
 
 @Component({
   selector: 'app-event-sumula',
@@ -26,10 +33,12 @@ export class EventSumulaPage {
   board: RefereeSumulaBoard | null = null;
   athletes: RefereeSumulaAthlete[] = [];
   filteredAthletes: RefereeSumulaAthlete[] = [];
+  teamSections: SumulaTeamSection[] = [];
   searchTerm = '';
   syncStatus: SyncStatus = 'idle';
   dirty = false;
   statFields = REFEREE_SUMULA_STAT_FIELDS;
+  goalkeeperExtraFields = REFEREE_SUMULA_GOALKEEPER_STAT_FIELDS;
   statLabels = REFEREE_SUMULA_STAT_LABELS;
 
   /** Evita aplicar resposta de carregamento de outro evento (pagina cacheada pelo Ionic). */
@@ -64,12 +73,39 @@ export class EventSumulaPage {
     return this.board?.canEdit === false && !this.board?.locked;
   }
 
+  get isTeamMatch(): boolean {
+    return this.board?.eventType === 'team_match';
+  }
+
+  get homeTeamName(): string {
+    return this.board?.homeTeamName || 'Mandante';
+  }
+
+  get awayTeamName(): string {
+    return this.board?.awayTeamName || 'Visitante';
+  }
+
+  /** Placar vivo: soma dos gols anotados pelo arbitro por time. */
+  get homeScore(): number {
+    if (!this.isTeamMatch) return 0;
+    return this.sumGoalsForSide('home');
+  }
+
+  get awayScore(): number {
+    if (!this.isTeamMatch) return 0;
+    return this.sumGoalsForSide('away');
+  }
+
   get lockMessage(): string {
     if (this.board?.locked) {
-      return 'Evento encerrado — sumula em modo consulta para qualquer perfil.';
+      return this.isTeamMatch
+        ? 'Evento encerrado — sumula em consulta para todos os usuarios.'
+        : 'Evento encerrado — sumula em modo consulta para qualquer perfil.';
     }
     if (this.isViewOnly) {
-      return 'Fora do periodo de sumula (juiz) — edicao indisponivel. Apos o encerramento do evento, a sumula fica em consulta para todos.';
+      return this.isTeamMatch
+        ? 'Consulta disponivel para todos. Edicao apenas pelo arbitro na faixa de data/hora da sumula.'
+        : 'Fora do periodo de sumula (juiz) — edicao indisponivel. Apos o encerramento do evento, a sumula fica em consulta para todos.';
     }
     return 'Sumula em modo consulta.';
   }
@@ -92,19 +128,77 @@ export class EventSumulaPage {
     this.applyFilter();
   }
 
-  adjustStat(athlete: RefereeSumulaAthlete, field: RefereeSumulaStatField, delta: 1 | -1): void {
+  fieldsForAthlete(athlete: RefereeSumulaAthlete): RefereeSumulaStatField[] {
+    if (athlete.role === 'goalkeeper') {
+      return [...this.statFields.slice(0, 1), ...this.goalkeeperExtraFields, ...this.statFields.slice(1)];
+    }
+    return this.statFields;
+  }
+
+  async adjustStat(
+    athlete: RefereeSumulaAthlete,
+    field: RefereeSumulaStatField,
+    delta: 1 | -1
+  ): Promise<void> {
     if (this.isLocked) return;
 
-    const statsKey = field === 'foulsCommitted' ? 'fouls' : field;
-    const current = athlete.stats[statsKey as 'goals' | 'fouls' | 'yellowCards' | 'redCards'];
+    const statsKey =
+      field === 'foulsCommitted' ? 'fouls' : field === 'goalsConceded' ? 'goalsConceded' : field;
+    const current = Number(
+      athlete.stats[statsKey as keyof typeof athlete.stats] as number | undefined
+    ) || 0;
     if (delta < 0 && current <= 0) return;
 
-    athlete.stats[statsKey as 'goals' | 'fouls' | 'yellowCards' | 'redCards'] = Math.max(
-      0,
-      current + delta
-    );
+    const next = Math.max(0, current + delta);
+
+    if (this.isTeamMatch && field === 'goalsConceded' && delta > 0) {
+      const side = athlete.teamSide === 'home' || athlete.teamSide === 'away' ? athlete.teamSide : null;
+      if (side) {
+        const teamConceded = this.sumConcededForSide(side) - current + next;
+        const opponentGoals = this.sumGoalsForSide(side === 'home' ? 'away' : 'home');
+        if (teamConceded > opponentGoals) {
+          const alert = await this.alertCtrl.create({
+            header: 'Limite de gols sofridos',
+            message: `A soma de gols sofridos dos goleiros deste time nao pode ultrapassar os gols do adversario (${opponentGoals}).`,
+            buttons: ['OK'],
+          });
+          await alert.present();
+          return;
+        }
+      }
+    }
+
+    if (this.isTeamMatch && field === 'goals' && delta < 0) {
+      const side = athlete.teamSide === 'home' || athlete.teamSide === 'away' ? athlete.teamSide : null;
+      if (side) {
+        const nextTeamGoals = this.sumGoalsForSide(side) - current + next;
+        const opponentConceded = this.sumConcededForSide(side === 'home' ? 'away' : 'home');
+        if (opponentConceded > nextTeamGoals) {
+          const alert = await this.alertCtrl.create({
+            header: 'Ajuste invalido',
+            message:
+              'Reduzir estes gols deixaria os gols sofridos dos goleiros adversarios acima do placar. Ajuste os gols sofridos primeiro.',
+            buttons: ['OK'],
+          });
+          await alert.present();
+          return;
+        }
+      }
+    }
+
+    if (statsKey === 'fouls') athlete.stats.fouls = next;
+    else if (statsKey === 'goalsConceded') athlete.stats.goalsConceded = next;
+    else if (statsKey === 'goals') athlete.stats.goals = next;
+    else if (statsKey === 'yellowCards') athlete.stats.yellowCards = next;
+    else if (statsKey === 'redCards') athlete.stats.redCards = next;
+    else if (statsKey === 'penaltiesCommitted') athlete.stats.penaltiesCommitted = next;
+    else if (statsKey === 'penaltiesSuffered') athlete.stats.penaltiesSuffered = next;
     this.dirty = true;
     this.syncStatus = 'idle';
+    if (field === 'goals' && this.board) {
+      this.board.homeScore = this.homeScore;
+      this.board.awayScore = this.awayScore;
+    }
     this.cdr.markForCheck();
   }
 
@@ -160,6 +254,7 @@ export class EventSumulaPage {
   statValue(athlete: RefereeSumulaAthlete, field: RefereeSumulaStatField): number {
     if (field === 'foulsCommitted') return athlete.stats.fouls;
     if (field === 'goals') return athlete.stats.goals;
+    if (field === 'goalsConceded') return athlete.stats.goalsConceded || 0;
     if (field === 'yellowCards') return athlete.stats.yellowCards;
     if (field === 'redCards') return athlete.stats.redCards;
     if (field === 'penaltiesCommitted') return athlete.stats.penaltiesCommitted;
@@ -171,10 +266,26 @@ export class EventSumulaPage {
     this.board = null;
     this.athletes = [];
     this.filteredAthletes = [];
+    this.teamSections = [];
     this.searchTerm = '';
     this.dirty = false;
     this.syncStatus = 'idle';
     this.saving = false;
+  }
+
+  /** Placar: somente gols marcados (nao inclui gols sofridos de goleiro). */
+  private sumGoalsForSide(side: 'home' | 'away'): number {
+    return this.athletes.reduce((total, athlete) => {
+      if (athlete.teamSide !== side) return total;
+      return total + Math.max(0, Number(athlete.stats.goals || 0));
+    }, 0);
+  }
+
+  private sumConcededForSide(side: 'home' | 'away'): number {
+    return this.athletes.reduce((total, athlete) => {
+      if (athlete.teamSide !== side || athlete.role !== 'goalkeeper') return total;
+      return total + Math.max(0, Number(athlete.stats.goalsConceded || 0));
+    }, 0);
   }
 
   private async load(): Promise<void> {
@@ -231,14 +342,44 @@ export class EventSumulaPage {
     const term = normalizeSearchText(this.searchTerm);
     if (!term) {
       this.filteredAthletes = [...this.athletes];
+    } else {
+      this.filteredAthletes = this.athletes.filter((athlete) => {
+        const haystack = normalizeSearchText(
+          `${athlete.apelido} ${athlete.userName} ${athlete.primaryPosition ?? ''} ${athlete.teamName ?? ''}`
+        );
+        return haystack.includes(term);
+      });
+    }
+    this.rebuildTeamSections();
+  }
+
+  private rebuildTeamSections(): void {
+    if (!this.isTeamMatch) {
+      this.teamSections = this.filteredAthletes.length
+        ? [{ side: 'other', title: 'Atletas', athletes: this.filteredAthletes }]
+        : [];
       return;
     }
 
-    this.filteredAthletes = this.athletes.filter((athlete) => {
-      const haystack = normalizeSearchText(
-        `${athlete.apelido} ${athlete.userName} ${athlete.primaryPosition ?? ''}`
-      );
-      return haystack.includes(term);
-    });
+    const home: RefereeSumulaAthlete[] = [];
+    const away: RefereeSumulaAthlete[] = [];
+    const other: RefereeSumulaAthlete[] = [];
+    for (const athlete of this.filteredAthletes) {
+      if (athlete.teamSide === 'home') home.push(athlete);
+      else if (athlete.teamSide === 'away') away.push(athlete);
+      else other.push(athlete);
+    }
+
+    const sections: SumulaTeamSection[] = [];
+    if (home.length) {
+      sections.push({ side: 'home', title: this.homeTeamName, athletes: home });
+    }
+    if (away.length) {
+      sections.push({ side: 'away', title: this.awayTeamName, athletes: away });
+    }
+    if (other.length) {
+      sections.push({ side: 'other', title: 'Sem time definido', athletes: other });
+    }
+    this.teamSections = sections;
   }
 }

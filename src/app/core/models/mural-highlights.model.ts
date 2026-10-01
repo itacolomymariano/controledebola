@@ -18,6 +18,8 @@ export interface MuralShowcaseEntry {
   score?: number;
   scoreLabel?: string;
   age?: number;
+  /** Ex.: "Há: 3 dia(s)" — mural App por aba. */
+  tenureLabel?: string;
 }
 
 export interface MuralBirthdayEntry extends MuralShowcaseEntry {
@@ -30,16 +32,30 @@ export interface MuralAgeBandWinners {
   plus60: MuralShowcaseEntry | null;
 }
 
+/** Goleador: lista por faixa (empate = varios cards). */
+export interface MuralAgeBandWinnerLists {
+  sub30: MuralShowcaseEntry[];
+  sub60: MuralShowcaseEntry[];
+  plus60: MuralShowcaseEntry[];
+}
+
 export interface MuralFavoriteTeamEntry {
   teamName: string;
   count: number;
+  tenureLabel?: string;
 }
 
 export interface MuralHighlights {
   craque: MuralAgeBandWinners;
-  goleador: MuralAgeBandWinners;
-  goleadorOverall?: MuralShowcaseEntry | null;
+  craquePelada?: MuralShowcaseEntry | null;
+  craqueConfronto?: MuralShowcaseEntry | null;
+  goleador: MuralAgeBandWinnerLists;
+  goleadorOverall?: MuralShowcaseEntry[];
+  goleadorPelada?: MuralShowcaseEntry[];
+  goleadorConfronto?: MuralShowcaseEntry[];
   melhorGoleiro: MuralAgeBandWinners;
+  melhorGoleiroPelada?: MuralShowcaseEntry | null;
+  melhorGoleiroConfronto?: MuralShowcaseEntry | null;
   timeMaisAmado?: MuralFavoriteTeamEntry | null;
   promessa: MuralShowcaseEntry | null;
   master: MuralShowcaseEntry | null;

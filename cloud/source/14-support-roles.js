@@ -328,8 +328,44 @@ Parse.Cloud.define('getCoachEventBoard', async (request) => {
     query = query.equalTo('coachUser', request.user);
   }
   const row = await query.descending('updatedAt').first({ useMasterKey: true });
-  return row ? mapCoachBoard(row) : null;
+  if (event.get('type') !== 'team_match') {
+    return row ? mapCoachBoard(row) : null;
+  }
+  const ctx = await resolveCoachTeamMatchContext(event, request.user);
+  const base = row
+    ? mapCoachBoard(row)
+    : {
+        objectId: '',
+        eventId: event.id,
+        checklist: { talkedToTeam: false, ledWarmup: false, lineupDefined: false },
+        teamNotes: [],
+        suggestedStarters: [],
+        rotationNotes: '',
+      };
+  return {
+    ...base,
+    isTeamMatch: true,
+    coachSides: ctx.coachSides,
+    homeTeamName: ctx.homeTeamName,
+    awayTeamName: ctx.awayTeamName,
+  };
 });
+
+async function resolveCoachTeamMatchContext(event, user) {
+  await event.fetchWithInclude(['homeTeam.president', 'awayTeam.president'], {
+    useMasterKey: true,
+  });
+  const homeTeam = event.get('homeTeam');
+  const awayTeam = event.get('awayTeam');
+  const coachSides = await resolveCoachManageSidesForTeamMatch(event, user);
+  return {
+    coachSides,
+    homeTeamName:
+      event.get('homeTeamName') || (homeTeam && homeTeam.get ? homeTeam.get('name') : '') || 'Mandante',
+    awayTeamName:
+      event.get('awayTeamName') || (awayTeam && awayTeam.get ? awayTeam.get('name') : '') || 'Visitante',
+  };
+}
 
 Parse.Cloud.define('saveCoachEventBoard', async (request) => {
   if (!request.user) {
@@ -338,7 +374,7 @@ Parse.Cloud.define('saveCoachEventBoard', async (request) => {
   const eventId = String(request.params.eventId || '').trim();
   const { event } = await assertConfirmedSupportRole(request.user, eventId, 'coach');
   const checklistIn = request.params.checklist || {};
-  const teamNotes = Array.isArray(request.params.teamNotes)
+  let teamNotes = Array.isArray(request.params.teamNotes)
     ? request.params.teamNotes.map((note) => ({
         teamIndex: Math.max(0, Number(note.teamIndex) || 0),
         teamName: trimSupportText(note.teamName, 40),
@@ -346,7 +382,7 @@ Parse.Cloud.define('saveCoachEventBoard', async (request) => {
         focus: trimSupportText(note.focus, 120),
       }))
     : [];
-  const suggestedStarters = Array.isArray(request.params.suggestedStarters)
+  let suggestedStarters = Array.isArray(request.params.suggestedStarters)
     ? request.params.suggestedStarters.map((line) => ({
         teamIndex: Math.max(0, Number(line.teamIndex) || 0),
         userIds: Array.isArray(line.userIds)
@@ -364,6 +400,37 @@ Parse.Cloud.define('saveCoachEventBoard', async (request) => {
     row.set('event', event);
     row.set('coachUser', request.user);
   }
+  let teamMatchCtx = null;
+  if (event.get('type') === 'team_match') {
+    const ctx = await resolveCoachTeamMatchContext(event, request.user);
+    teamMatchCtx = ctx;
+    const allowed = new Set(
+      ctx.coachSides.map((side) => (side === 'away' ? 1 : side === 'home' ? 0 : -1))
+    );
+    if (!allowed.size) {
+      throw new Parse.Error(
+        Parse.Error.OPERATION_FORBIDDEN,
+        'Voce nao esta vinculado a nenhum dos times deste confronto.'
+      );
+    }
+    const names = [ctx.homeTeamName, ctx.awayTeamName];
+    const prevNotes = Array.isArray(row.get('teamNotes')) ? row.get('teamNotes') : [];
+    const prevStarters = Array.isArray(row.get('suggestedStarters'))
+      ? row.get('suggestedStarters')
+      : [];
+    const mergedNotes = [];
+    const mergedStarters = [];
+    for (const idx of [0, 1]) {
+      const source = allowed.has(idx) ? teamNotes : prevNotes;
+      const note = source.find((n) => Number(n && n.teamIndex) === idx);
+      if (note) mergedNotes.push({ ...note, teamIndex: idx, teamName: names[idx] });
+      const starterSource = allowed.has(idx) ? suggestedStarters : prevStarters;
+      const line = starterSource.find((l) => Number(l && l.teamIndex) === idx);
+      if (line) mergedStarters.push({ ...line, teamIndex: idx });
+    }
+    teamNotes = mergedNotes;
+    suggestedStarters = mergedStarters;
+  }
   row.set('checklist', {
     talkedToTeam: !!checklistIn.talkedToTeam,
     ledWarmup: !!checklistIn.ledWarmup,
@@ -373,6 +440,15 @@ Parse.Cloud.define('saveCoachEventBoard', async (request) => {
   row.set('suggestedStarters', suggestedStarters);
   row.set('rotationNotes', trimSupportText(request.params.rotationNotes, 400));
   await row.save(null, { useMasterKey: true });
+  if (teamMatchCtx) {
+    return {
+      ...mapCoachBoard(row),
+      isTeamMatch: true,
+      coachSides: teamMatchCtx.coachSides,
+      homeTeamName: teamMatchCtx.homeTeamName,
+      awayTeamName: teamMatchCtx.awayTeamName,
+    };
+  }
   return mapCoachBoard(row);
 });
 

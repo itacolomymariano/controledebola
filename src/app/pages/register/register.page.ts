@@ -7,6 +7,7 @@ import { MIN_PASSWORD_LENGTH } from '../../core/constants/auth.constants';
 import { Subscription, merge } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { AppStorageService } from '../../core/services/app-storage.service';
+import { BiometricUnlockService } from '../../core/services/biometric-unlock.service';
 import { PostAuthNavigationService } from '../../core/services/post-auth-navigation.service';
 import Parse from 'parse';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
@@ -15,6 +16,7 @@ import {
   emailFormatValidator,
   phoneFormatValidator,
 } from '../../core/utils/contact-validation.util';
+import { formatCpfMask, isValidCpf, normalizeCpfDigits } from '../../core/utils/cpf.util';
 
 function passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
   const password = control.get('password')?.value;
@@ -28,6 +30,12 @@ function signupCaptchaValidator(control: AbstractControl): ValidationErrors | nu
     return { required: true };
   }
   return /^\d+$/.test(String(raw).trim()) ? null : { invalidCaptcha: true };
+}
+
+function cpfValidator(control: AbstractControl): ValidationErrors | null {
+  const raw = String(control.value || '').trim();
+  if (!raw) return { required: true };
+  return isValidCpf(raw) ? null : { invalidCpf: true };
 }
 
 const LOCAL_SIGNUP_CHALLENGE_ID = 'local';
@@ -61,6 +69,7 @@ export class RegisterPage implements OnInit, OnDestroy {
         ],
       ],
       email: ['', [Validators.required, emailFormatValidator]],
+      cpf: ['', [Validators.required, cpfValidator]],
       phone: ['', phoneFormatValidator],
       password: ['', [Validators.required, Validators.minLength(MIN_PASSWORD_LENGTH)]],
       confirmPassword: ['', Validators.required],
@@ -80,6 +89,7 @@ export class RegisterPage implements OnInit, OnDestroy {
     private readonly loadingCtrl: LoadingController,
     private readonly alertCtrl: AlertController,
     private readonly storage: AppStorageService,
+    private readonly biometric: BiometricUnlockService,
     private readonly postAuthNav: PostAuthNavigationService,
     private readonly cdr: ChangeDetectorRef
   ) {}
@@ -210,6 +220,7 @@ export class RegisterPage implements OnInit, OnDestroy {
         name: v.name!.trim(),
         apelido: v.apelido!.trim(),
         email: v.email || undefined,
+        cpf: normalizeCpfDigits(String(v.cpf || '')),
         phone: v.phone || undefined,
         password: v.password!,
         address: v.address!,
@@ -237,7 +248,15 @@ export class RegisterPage implements OnInit, OnDestroy {
       message: 'Deseja ativar login por biometria neste dispositivo?',
       buttons: [
         { text: 'Agora nao', role: 'cancel' },
-        { text: 'Ativar', handler: () => void this.storage.setBiometricEnabled(true) },
+        {
+          text: 'Ativar',
+          handler: () => {
+            const { email, password } = this.form.getRawValue();
+            if (email && password) {
+              void this.biometric.enable(email, password);
+            }
+          },
+        },
       ],
     });
     await alert.present();
@@ -246,5 +265,12 @@ export class RegisterPage implements OnInit, OnDestroy {
   private async showError(message: string): Promise<void> {
     const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
     await alert.present();
+  }
+
+  onCpfInput(event: CustomEvent): void {
+    const raw = String((event.detail as { value?: string })?.value || '');
+    const masked = formatCpfMask(raw);
+    this.form.get('cpf')?.setValue(masked, { emitEvent: true });
+    this.form.get('cpf')?.updateValueAndValidity({ emitEvent: false });
   }
 }

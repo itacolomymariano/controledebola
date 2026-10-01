@@ -1,6 +1,9 @@
 ﻿<ion-header>
   <ion-toolbar>
-    <ion-title>Eventos</ion-title>
+    <ion-title>Confrontos</ion-title>
+    <ion-buttons slot="end">
+      <app-screen-help helpId="confrontos-help" bodyKey="confrontos.help"></app-screen-help>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -24,39 +27,85 @@
     </ion-card>
   }
 
-  @if (!loading && !errorMessage && eventRows.length === 0) {
-    <ion-list>
-      <ion-item>
-        <ion-icon name="calendar-outline" slot="start"></ion-icon>
-        <ion-label>
-          <h2>Nenhum evento cadastrado</h2>
-          <p>Toque no + para criar o primeiro evento.</p>
-        </ion-label>
-      </ion-item>
-    </ion-list>
+  @if (!loading && !errorMessage) {
+    <div class="ion-padding-horizontal ion-padding-top">
+      <ion-button expand="block" (click)="createDesafio()">
+        Marcar novo confronto/jogo
+      </ion-button>
+    </div>
   }
 
-  @if (!loading && eventRows.length > 0) {
+  @if (!loading && acceptedChallenges.length > 0) {
     <ion-list>
-      @for (row of eventRows; track row.event.objectId) {
-        <ion-item button (click)="openEvent(row)">
-          <ion-icon name="football-outline" slot="start"></ion-icon>
+      <ion-list-header>
+        <ion-label>Desafios aceitos — marcar data</ion-label>
+      </ion-list-header>
+      @for (challenge of acceptedChallenges; track challenge.objectId) {
+        <ion-item button (click)="scheduleAccepted(challenge)">
           <ion-label>
-            <h2>{{ row.event.name }}</h2>
-            @for (badge of row.badges; track badge.label) {
-              <ion-badge [color]="badge.color">{{ badge.label }}</ion-badge>
-            }
-            <p>{{ row.typeLabel }} · {{ row.dateLabel }} · {{ row.feeLabel }}</p>
-            <p>{{ row.locationLabel }}</p>
-            <p>Admin: {{ row.event.adminName }}</p>
+            <h2>{{ challenge.challengerTeamName }} x {{ challenge.challengedTeamName }}</h2>
+            <p>Toque para definir data, local e convocacao</p>
           </ion-label>
         </ion-item>
       }
     </ion-list>
   }
 
+  @if (!loading && !errorMessage && rows.length === 0 && acceptedChallenges.length === 0) {
+    <ion-list>
+      <ion-item>
+        <ion-icon name="swap-horizontal-outline" slot="start"></ion-icon>
+        <ion-label>
+          <h2>Nenhum confronto</h2>
+          <p>Use o botão acima para marcar um novo confronto.</p>
+        </ion-label>
+      </ion-item>
+    </ion-list>
+  }
+
+  @if (!loading && rows.length > 0) {
+    <ion-list>
+      <ion-list-header>
+        <ion-label>Confrontos marcados</ion-label>
+      </ion-list-header>
+      @for (row of rows; track row.match.objectId) {
+        <ion-item button (click)="openMatch(row)" class="list-card-with-action">
+          <ion-icon name="football-outline" slot="start"></ion-icon>
+          <ion-label>
+            <h2>
+              <app-team-match-headline
+                [homeTeamName]="row.match.homeTeamName"
+                [awayTeamName]="row.match.awayTeamName"
+                [homeTeamShieldUrl]="row.match.homeTeamShieldUrl"
+                [awayTeamShieldUrl]="row.match.awayTeamShieldUrl"
+              ></app-team-match-headline>
+            </h2>
+            @if (row.badge) {
+              <ion-badge color="tertiary">{{ row.badge }}</ion-badge>
+            }
+            @if (row.match.nearby) {
+              <ion-badge color="success" class="ion-margin-start">Proximo</ion-badge>
+            }
+            <p>{{ row.dateLabel }}</p>
+            @if (row.locationLabel) {
+              <p>{{ row.locationLabel }}</p>
+            }
+          </ion-label>
+          <ion-button
+            slot="end"
+            fill="solid"
+            size="small"
+            (click)="openMatch(row); $event.stopPropagation()"
+          >
+            Entrar
+          </ion-button>
+        </ion-item>
+      }
+    </ion-list>
+  }
+
   <ion-fab slot="fixed" vertical="bottom" horizontal="end">
-    <ion-fab-button (click)="createEvent()">
+    <ion-fab-button (click)="createDesafio()">
       <ion-icon name="add"></ion-icon>
     </ion-fab-button>
   </ion-fab>

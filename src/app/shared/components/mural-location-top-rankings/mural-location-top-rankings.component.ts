@@ -1,5 +1,9 @@
 import { Component, Input } from '@angular/core';
-import { MURAL_TARGET_ROLES, MuralTargetRole } from '../../../core/models/event-performance.model';
+import {
+  MURAL_TARGET_ROLE_LABELS,
+  MURAL_TARGET_ROLES,
+  MuralTargetRole,
+} from '../../../core/models/event-performance.model';
 import { MuralLocationTopGroup, MuralLocationTopRankings } from '../../../core/models/mural-location-top.model';
 import { MuralShareContext } from '../../../core/models/mural-share.model';
 import { MuralRankingEntry } from '../../../core/models/mural.model';
@@ -13,20 +17,7 @@ import {
 
 type TopRankingsLevel = 'states' | 'stateDetail' | 'cities' | 'cityDetail' | 'neighborhoods' | 'neighborhoodDetail';
 
-const ROLE_LABELS: Record<MuralTargetRole, string> = {
-  athlete: 'Atletas',
-  goalkeeper: 'Goleiros',
-  referee: 'Juízes / Árbitros',
-  scout: 'Scouts / Mesários',
-  journalist: 'Jornalistas',
-  cameraman: 'Cinegrafistas',
-  narrator: 'Narradores',
-  coach: 'Treinadores',
-  physical_trainer: 'Preparadores Físicos',
-  masseur: 'Massagistas',
-  kitman: 'Roupeiros',
-  gandula: 'Gandulas',
-};
+const ROLE_LABELS = MURAL_TARGET_ROLE_LABELS;
 
 @Component({
   selector: 'app-mural-location-top-rankings',
@@ -37,6 +28,7 @@ const ROLE_LABELS: Record<MuralTargetRole, string> = {
 export class MuralLocationTopRankingsComponent {
   @Input() rankings: MuralLocationTopRankings | null = null;
   @Input() shareContext: MuralShareContext | null = null;
+  @Input() filterCaption = '';
 
   level: TopRankingsLevel = 'states';
   selectedState = '';

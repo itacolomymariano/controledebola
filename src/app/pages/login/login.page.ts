@@ -3,8 +3,10 @@ import { FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
 import { AuthService } from '../../core/services/auth.service';
+import { APP_RELEASE } from '../../core/constants/app-release';
 import { MIN_PASSWORD_LENGTH } from '../../core/constants/auth.constants';
 import { AppStorageService } from '../../core/services/app-storage.service';
+import { BiometricUnlockService } from '../../core/services/biometric-unlock.service';
 import { PostAuthNavigationService } from '../../core/services/post-auth-navigation.service';
 import { environment } from '../../../environments/environment';
 import { I18nService } from '../../core/services/i18n.service';
@@ -17,11 +19,14 @@ import { I18nService } from '../../core/services/i18n.service';
 })
 export class LoginPage {
   readonly passwordResetEnabled = environment.passwordResetEnabled;
+  readonly appVersion = APP_RELEASE.label;
 
   showPassword = false;
+  showNewPassword = false;
   forgotPasswordMode = false;
+  resetStep: 'email' | 'code' = 'email';
   biometricEnabled = false;
-  canUseBiometric = false;
+  showBiometricUnlock = false;
 
   form = this.fb.group({
     identifier: ['', Validators.required],
@@ -32,6 +37,12 @@ export class LoginPage {
     email: ['', [Validators.required, Validators.email]],
   });
 
+  confirmResetForm = this.fb.group({
+    code: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
+    newPassword: ['', [Validators.required, Validators.minLength(MIN_PASSWORD_LENGTH)]],
+    confirmPassword: ['', Validators.required],
+  });
+
   constructor(
     private readonly fb: FormBuilder,
     private readonly auth: AuthService,
@@ -39,15 +50,16 @@ export class LoginPage {
     private readonly loadingCtrl: LoadingController,
     private readonly alertCtrl: AlertController,
     private readonly storage: AppStorageService,
+    private readonly biometric: BiometricUnlockService,
     private readonly postAuthNav: PostAuthNavigationService,
     private readonly i18n: I18nService
   ) {}
 
   async ionViewWillEnter(): Promise<void> {
     this.biometricEnabled = await this.storage.isBiometricEnabled();
-    this.canUseBiometric = this.biometricEnabled && this.auth.isLoggedIn();
+    this.showBiometricUnlock = await this.biometric.shouldShowUnlock();
 
-    if (!this.canUseBiometric) return;
+    if (!this.auth.isLoggedIn()) return;
 
     const loading = await this.loadingCtrl.create({ message: this.i18n.t('login.entering') });
     await loading.present();
@@ -68,10 +80,21 @@ export class LoginPage {
 
   openForgotPassword(): void {
     this.forgotPasswordMode = true;
+    this.resetStep = 'email';
   }
 
   backToLogin(): void {
     this.forgotPasswordMode = false;
+    this.resetStep = 'email';
+    this.confirmResetForm.reset();
+  }
+
+  backToResetEmail(): void {
+    this.resetStep = 'email';
+  }
+
+  toggleNewPasswordVisibility(): void {
+    this.showNewPassword = !this.showNewPassword;
   }
 
   goRegister(): void {
@@ -79,30 +102,33 @@ export class LoginPage {
   }
 
   async loginWithBiometric(): Promise<void> {
-    if (!this.biometricEnabled) {
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('login.entering') });
+    await loading.present();
+
+    let result: 'ok' | 'needs-enroll' | 'disabled' = 'disabled';
+    try {
+      result = await this.biometric.tryUnlock();
+      if (result === 'ok') {
+        await this.postAuthNav.navigateAfterAuth();
+        return;
+      }
+    } catch {
+      await this.showError(this.i18n.t('login.biometricFailed'));
+      return;
+    } finally {
+      await loading.dismiss();
+    }
+
+    if (result === 'disabled') {
       await this.showError(this.i18n.t('login.biometricEnable'));
       return;
     }
 
-    if (!this.auth.isLoggedIn()) {
-      await this.showError(
-        this.i18n.t('login.biometricOnce')
-      );
-      return;
-    }
-
-    const loading = await this.loadingCtrl.create({ message: this.i18n.t('login.entering') });
-    await loading.present();
-
-    try {
-      const valid = await this.auth.validateSession();
-      if (!valid) {
-        await this.showError(this.i18n.t('login.sessionExpired'));
-        return;
-      }
+    const identifier = this.form.getRawValue().identifier || '';
+    const enrolled = await this.biometric.promptEnroll(identifier);
+    if (enrolled) {
+      this.showBiometricUnlock = true;
       await this.postAuthNav.navigateAfterAuth();
-    } finally {
-      await loading.dismiss();
     }
   }
 
@@ -161,8 +187,8 @@ export class LoginPage {
     try {
       const email = this.resetForm.getRawValue().email!;
       await this.auth.requestPasswordReset(email);
-      this.forgotPasswordMode = false;
-      this.resetForm.reset();
+      this.resetStep = 'code';
+      this.confirmResetForm.reset();
       await loading.dismiss();
 
       const alert = await this.alertCtrl.create({
@@ -181,6 +207,46 @@ export class LoginPage {
     }
   }
 
+  async submitPasswordResetConfirm(): Promise<void> {
+    if (this.confirmResetForm.invalid) {
+      this.confirmResetForm.markAllAsTouched();
+      return;
+    }
+
+    const { code, newPassword, confirmPassword } = this.confirmResetForm.getRawValue();
+    if (newPassword !== confirmPassword) {
+      await this.showError(this.i18n.t('login.resetPasswordMismatch'));
+      return;
+    }
+
+    const email = this.resetForm.getRawValue().email || '';
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('login.resetSaving') });
+    await loading.present();
+
+    try {
+      await this.auth.confirmPasswordReset(email, code!, newPassword!);
+      this.forgotPasswordMode = false;
+      this.resetStep = 'email';
+      this.resetForm.reset();
+      this.confirmResetForm.reset();
+      await loading.dismiss();
+
+      const alert = await this.alertCtrl.create({
+        header: this.i18n.t('login.resetDoneTitle'),
+        message: this.i18n.t('login.resetDoneBody'),
+        buttons: [this.i18n.t('ok')],
+      });
+      await alert.present();
+      return;
+    } catch (error: unknown) {
+      await this.showError(
+        this.i18n.translateError(error) || this.i18n.t('login.resetConfirmFailed')
+      );
+    } finally {
+      await loading.dismiss();
+    }
+  }
+
   private async offerBiometric(): Promise<void> {
     const already = await this.storage.isBiometricEnabled();
     if (already) return;
@@ -193,7 +259,10 @@ export class LoginPage {
         {
           text: 'Ativar',
           handler: () => {
-            void this.storage.setBiometricEnabled(true);
+            const { identifier, password } = this.form.getRawValue();
+            if (identifier && password) {
+              void this.biometric.enable(identifier, password);
+            }
           },
         },
       ],

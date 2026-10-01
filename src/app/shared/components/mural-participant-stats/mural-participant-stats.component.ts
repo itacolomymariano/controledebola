@@ -28,6 +28,7 @@ export class MuralParticipantStatsComponent {
   @Input() stats: MuralParticipantLocationStats | null = null;
   @Input() scope: MuralScope = 'app';
   @Input() shareContext: MuralShareContext | null = null;
+  @Input() filterCaption = '';
 
   level: ParticipantStatsLevel = 'states';
   selectedState = '';
@@ -68,7 +69,7 @@ export class MuralParticipantStatsComponent {
   }
 
   get stateCards(): ParticipantStatsCard[] {
-    if (!this.stats?.byState.length) return [];
+    if (!this.stats?.byState?.length) return [];
     return this.stats.byState.map((row) => ({
       label: row.label,
       count: row.count,
@@ -130,12 +131,12 @@ export class MuralParticipantStatsComponent {
   }
 
   private citiesForState(state: string): MuralLocationCount[] {
-    if (!this.stats?.byCity.length || !state.trim()) return [];
+    if (!this.stats?.byCity?.length || !state.trim()) return [];
     return this.stats.byCity.filter((row) => cityBelongsToState(row.label, state));
   }
 
   private neighborhoodsForCity(cityLabel: string): MuralLocationCount[] {
-    if (!this.stats?.byNeighborhood.length || !cityLabel.trim()) return [];
+    if (!this.stats?.byNeighborhood?.length || !cityLabel.trim()) return [];
     const state = this.selectedState.trim() || undefined;
     return this.stats.byNeighborhood.filter((row) =>
       neighborhoodBelongsToCity(row.label, displayCityName(cityLabel), state)

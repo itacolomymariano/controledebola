@@ -1,5 +1,6 @@
 import {
   AthletePerformanceStats,
+  REFEREE_SUMULA_GOALKEEPER_STAT_FIELDS,
   REFEREE_SUMULA_STAT_FIELDS,
   REFEREE_SUMULA_STAT_LABELS,
   emptyAthletePerformanceStats,
@@ -7,6 +8,7 @@ import {
 
 export {
   REFEREE_SUMULA_STAT_FIELDS,
+  REFEREE_SUMULA_GOALKEEPER_STAT_FIELDS,
   REFEREE_SUMULA_STAT_LABELS,
   emptyRefereeSumulaStatsExtended as emptyRefereeSumulaStats,
 };
@@ -18,6 +20,7 @@ export interface RefereeSumulaStats extends Pick<
   'goals' | 'yellowCards' | 'redCards' | 'penaltiesCommitted' | 'penaltiesSuffered'
 > {
   fouls: number;
+  goalsConceded: number;
   observation: string;
 }
 
@@ -28,12 +31,20 @@ export interface RefereeSumulaAthlete {
   userName: string;
   avatarUrl?: string;
   primaryPosition?: string;
+  role?: string;
+  teamSide?: 'home' | 'away' | '';
+  teamName?: string;
   stats: RefereeSumulaStats;
 }
 
 export interface RefereeSumulaBoard {
   eventId: string;
   eventName: string;
+  eventType?: string;
+  homeTeamName?: string;
+  awayTeamName?: string;
+  homeScore?: number;
+  awayScore?: number;
   locked: boolean;
   canEdit?: boolean;
   athletes: RefereeSumulaAthlete[];
@@ -43,6 +54,7 @@ export function emptyRefereeSumulaStatsExtended(): RefereeSumulaStats {
   const base = emptyAthletePerformanceStats();
   return {
     goals: base.goals,
+    goalsConceded: 0,
     fouls: base.foulsCommitted,
     yellowCards: base.yellowCards,
     redCards: base.redCards,

@@ -1,6 +1,10 @@
 import { Component } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AthletePublicProfile } from '../../core/models/athlete-search.model';
+import {
+  AthleteActivityIndicators,
+  AthletePublicProfile,
+  TeamMatchRecord,
+} from '../../core/models/athlete-search.model';
 import {
   AthleteScoutPerformanceSummary,
   SCOUT_STAT_GROUPS,
@@ -27,6 +31,9 @@ type ProfileSegment = 'info' | 'scout' | 'desempenho';
 export class AthleteProfileViewPage {
   loading = true;
   profile: AthletePublicProfile | null = null;
+  activityIndicators: AthleteActivityIndicators | null = null;
+  teamMatchRecord: TeamMatchRecord | null = null;
+  presidentTeamMatchRecord: TeamMatchRecord | null = null;
   scoutSummary: AthleteScoutPerformanceSummary | null = null;
   performanceDashboard: AthletePerformanceDashboard | null = null;
   scoutLoading = false;
@@ -131,6 +138,9 @@ export class AthleteProfileViewPage {
     this.loading = true;
     this.errorMessage = '';
     this.scoutSummary = null;
+    this.activityIndicators = null;
+    this.teamMatchRecord = null;
+    this.presidentTeamMatchRecord = null;
     try {
       if (!userId) {
         this.profile = null;
@@ -140,6 +150,11 @@ export class AthleteProfileViewPage {
       this.profile = await this.athleteSearchService.getPublicProfile(userId);
       if (!this.profile) {
         this.errorMessage = 'Perfil de atleta nao encontrado.';
+      } else {
+        this.activityIndicators = await this.athleteSearchService.getActivityIndicators(userId, 3);
+        this.teamMatchRecord = await this.athleteSearchService.getUserTeamMatchRecord(userId, 'athlete');
+        this.presidentTeamMatchRecord =
+          await this.athleteSearchService.getPresidentTeamMatchRecord(userId);
       }
     } catch (error: unknown) {
       this.profile = null;

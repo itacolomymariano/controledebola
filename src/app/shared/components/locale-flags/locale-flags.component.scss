@@ -1,0 +1,20 @@
+.locale-flags {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.locale-flag {
+  appearance: none;
+  font-size: 1.35rem;
+  line-height: 1;
+  padding: 2px 6px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.locale-flag.is-current {
+  border-color: var(--ion-color-primary);
+}

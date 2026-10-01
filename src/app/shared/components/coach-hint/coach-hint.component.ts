@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Input, OnInit } from '@angular/core';
-import { AppStorageService } from '../../../core/services/app-storage.service';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { Subscription } from 'rxjs';
+import { WizardTourService } from '../../../core/services/wizard-tour.service';
 
 @Component({
   selector: 'app-coach-hint',
@@ -8,25 +9,32 @@ import { AppStorageService } from '../../../core/services/app-storage.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: false,
 })
-export class CoachHintComponent implements OnInit {
+export class CoachHintComponent implements OnInit, OnDestroy {
   @Input({ required: true }) tipId = '';
   @Input({ required: true }) titleKey = '';
   @Input({ required: true }) bodyKey = '';
 
   visible = false;
 
+  private activeSub?: Subscription;
+
   constructor(
-    private readonly storage: AppStorageService,
+    private readonly tour: WizardTourService,
     private readonly cdr: ChangeDetectorRef
   ) {}
 
-  async ngOnInit(): Promise<void> {
-    this.visible = !(await this.storage.isCoachHintDismissed(this.tipId));
-    this.cdr.markForCheck();
+  ngOnInit(): void {
+    this.activeSub = this.tour.active$.subscribe(() => {
+      this.visible = false;
+      this.cdr.markForCheck();
+    });
   }
 
-  async dismiss(): Promise<void> {
-    await this.storage.dismissCoachHint(this.tipId);
+  ngOnDestroy(): void {
+    this.activeSub?.unsubscribe();
+  }
+
+  dismiss(): void {
     this.visible = false;
     this.cdr.markForCheck();
   }

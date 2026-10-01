@@ -7,6 +7,23 @@ import { MuralParticipantLocationStats } from './mural-participant-stats.model';
 
 export type MuralScope = 'app' | 'pelada' | 'event';
 
+/** Nivel do drill-down de regiao no mural do app. */
+export type MuralLocationLevel = 'state' | 'city' | 'neighborhood';
+
+/** Opcao de regiao com contagem (ex.: Campinas (12)). */
+export interface MuralLocationOption {
+  key: string;
+  label: string;
+  count: number;
+}
+
+/** Filtro de regiao em cascata aplicado as tres abas do mural do app. */
+export interface MuralLocationFilter {
+  state?: string;
+  city?: string;
+  neighborhood?: string;
+}
+
 export interface MuralVote {
   objectId: string;
   scope: MuralScope;
@@ -31,6 +48,8 @@ export interface MuralRankingEntry {
   averageScore: number;
   performanceScore: number;
   combinedScore: number;
+  /** Sort key ponderado (ex.: confronto 3x); nao exibir no card. */
+  rankingScore?: number;
 }
 
 export interface CreateMuralVotePayload {
@@ -78,6 +97,8 @@ export interface EventMuralDashboard {
 
 export interface MuralVoteAggregateEntry {
   totalScore: number;
+  /** Sort key ponderado (confronto 3x); cards usam totalScore. */
+  rankingScore?: number;
   voteCount: number;
   userName: string;
 }
@@ -100,13 +121,168 @@ export interface MuralAppPredictionEntry {
   eventsCount: number;
 }
 
+export interface MuralTeamMatchRecordHighlight {
+  teamId: string;
+  teamName: string;
+  matchesPlayed: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  winRatePercent: number;
+  shieldImageUrl?: string;
+  presidentId?: string;
+  presidentName?: string;
+  presidentAvatarUrl?: string;
+  foundedAt?: string | null;
+  homeVenue?: string;
+}
+
+/** Treinador no Top 10 de confrontos (V/E/D + metadados). */
+export interface MuralCoachRankEntry extends MuralRankingEntry {
+  matchesPlayed?: number;
+  wins?: number;
+  losses?: number;
+  draws?: number;
+  winRatePercent?: number;
+  teamsCoachedCount?: number;
+  age?: number;
+}
+
+export interface MuralTeamMatchLocationBucket {
+  label: string;
+  count: number;
+}
+
+export interface MuralTeamMatchPerformanceTopEntry {
+  userId: string;
+  userName: string;
+  avatarUrl?: string;
+  total: number;
+}
+
+/** Melhor time do app: mais confrontos, desempate pelo aproveitamento. */
+export interface MuralTeamMatchBestTeam {
+  teamId: string;
+  teamName: string;
+  shieldImageUrl?: string;
+  matchesPlayed: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  winRatePercent: number;
+}
+
+/** Sequencia invicta mais longa (da partida mais recente para tras). */
+export interface MuralTeamMatchUnbeatenStreak {
+  teamId: string;
+  teamName: string;
+  shieldImageUrl?: string;
+  unbeatenDays: number;
+  unbeatenLabel: string;
+  matchesInStreak: number;
+  sinceStartTime?: string | null;
+}
+
+export interface MuralTeamMatchTopScorer {
+  userId: string;
+  name: string;
+  avatarUrl?: string;
+  goals: number;
+  goalsPerMatch: number;
+}
+
+export interface MuralTeamMatchTopDefender {
+  userId: string;
+  name: string;
+  avatarUrl?: string;
+  points: number;
+  pointsPerMatch: number;
+}
+
+export interface MuralTeamMatchBestAttack {
+  teamId: string;
+  teamName: string;
+  shieldImageUrl?: string;
+  goalsFor: number;
+  matchesPlayed: number;
+  goalsPerMatch: number;
+  topScorer: MuralTeamMatchTopScorer | null;
+}
+
+export interface MuralTeamMatchBestDefense {
+  teamId: string;
+  teamName: string;
+  shieldImageUrl?: string;
+  goalsAgainst: number;
+  matchesPlayed: number;
+  goalsAgainstPerMatch: number;
+  topDefender: MuralTeamMatchTopDefender | null;
+}
+
+export interface MuralTeamMatchDashboard {
+  totalConfrontos: number;
+  locationStats: {
+    byState: MuralTeamMatchLocationBucket[];
+    byCity: MuralTeamMatchLocationBucket[];
+    byNeighborhood: MuralTeamMatchLocationBucket[];
+  };
+  teamHighlights: {
+    mostMatches: MuralTeamMatchRecordHighlight | null;
+    mostWins: MuralTeamMatchRecordHighlight | null;
+    mostLosses: MuralTeamMatchRecordHighlight | null;
+    mostDraws: MuralTeamMatchRecordHighlight | null;
+    bestWinRate: MuralTeamMatchRecordHighlight | null;
+  };
+  topAthletes: MuralRankingEntry[];
+  topGoalkeepers: MuralRankingEntry[];
+  topReferees: MuralRankingEntry[];
+  topScorers: MuralTeamMatchPerformanceTopEntry[];
+  topAssists: MuralTeamMatchPerformanceTopEntry[];
+  topPasses: MuralTeamMatchPerformanceTopEntry[];
+  topTeams?: MuralAppTeamRankEntry[];
+  topCoaches?: MuralCoachRankEntry[];
+  /** Regiao efetivamente aplicada pela Cloud (ausente em Cloud antigo). */
+  appliedLocation?: MuralLocationFilter;
+  /** Cards de destaque da aba Confrontos — opcionais (Cloud antigo nao envia). */
+  bestTeam?: MuralTeamMatchBestTeam | null;
+  longestUnbeaten?: MuralTeamMatchUnbeatenStreak | null;
+  bestAttack?: MuralTeamMatchBestAttack | null;
+  bestDefense?: MuralTeamMatchBestDefense | null;
+  cloudAvailable: boolean;
+}
+
+export type MuralAppBucketKey = 'merged' | 'pelada' | 'team_match';
+
+export interface MuralAppTeamRankEntry extends MuralTeamMatchRecordHighlight {
+  combinedScore?: number;
+  totalScore?: number;
+}
+
+export interface MuralAppBucketPayload {
+  bucket: MuralAppBucketKey | string;
+  rankings: Record<MuralTargetRole, MuralRankingEntry[]>;
+  voteAggregates: MuralVoteAggregates;
+  topScorers: MuralRankingEntry[];
+  topTeams: MuralAppTeamRankEntry[];
+  topCoaches: MuralCoachRankEntry[];
+  predictionRankings: MuralAppPredictionEntry[];
+}
+
 export interface MuralAppDashboard {
   participants: PeladaParticipant[];
   rankings: Record<MuralTargetRole, MuralRankingEntry[]>;
+  rankingsPelada?: Record<MuralTargetRole, MuralRankingEntry[]>;
+  rankingsTeamMatch?: Record<MuralTargetRole, MuralRankingEntry[]>;
   voteAggregates: MuralVoteAggregates;
+  voteAggregatesPelada?: MuralVoteAggregates;
+  voteAggregatesTeamMatch?: MuralVoteAggregates;
+  buckets?: Partial<Record<MuralAppBucketKey, MuralAppBucketPayload>>;
+  rankingsMeta?: { tieBreak: string; confrontoWeight: number };
   locationStats: MuralParticipantLocationStats;
   locationTopRankings: MuralLocationTopRankings;
   performanceAnalytics: Record<string, unknown> | null;
   predictionRankings: MuralAppPredictionEntry[];
+  /** Regiao efetivamente aplicada pela Cloud (ausente em Cloud antigo). */
+  appliedLocation?: MuralLocationFilter;
   cloudAvailable: boolean;
 }

@@ -1,0 +1,14 @@
+<div class="locale-flags" role="group" [attr.aria-label]="'profile.language' | t">
+  @for (loc of locales; track loc) {
+    <button
+      type="button"
+      class="locale-flag"
+      [class.is-current]="loc === current"
+      (click)="onFlagTap(loc)"
+      [attr.aria-label]="labels[loc]"
+      [attr.aria-pressed]="loc === current"
+    >
+      {{ flags[loc] }}
+    </button>
+  }
+</div>

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { AppStorageService } from './app-storage.service';
+import { duplicateValueMessage } from '../utils/parse-error.util';
 import {
   APP_LOCALES,
   APP_LOCALE_LABELS,
@@ -68,8 +69,15 @@ export class I18nService {
     if (code === 205) return this.t('error.emailNotFound');
     if (code === 125) return this.t('error.invalidEmail');
     if (code === 209) return this.t('error.sessionExpired');
-    if (code === 137) return this.t('error.nicknameTaken');
-    const message = error instanceof Error ? error.message : '';
+    const message =
+      error && typeof error === 'object' ? String((error as { message?: string }).message ?? '') : '';
+    if (code === 137) {
+      if (/\bcpf\b/i.test(message)) return duplicateValueMessage(message);
+      if (!message || /apelido|nickname|duplicate value for a field/i.test(message)) {
+        return this.t('error.nicknameTaken');
+      }
+      return message;
+    }
     return message || this.t('error.generic');
   }
 

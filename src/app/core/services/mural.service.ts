@@ -8,9 +8,21 @@ import {
   CreateMuralVotePayload,
   EventMuralDashboard,
   EventMuralVoteSummary,
+  MuralAppBucketPayload,
   MuralAppDashboard,
+  MuralCoachRankEntry,
+  MuralLocationFilter,
+  MuralLocationLevel,
+  MuralLocationOption,
   MuralRankingEntry,
   MuralScope,
+  MuralTeamMatchBestAttack,
+  MuralTeamMatchBestDefense,
+  MuralTeamMatchBestTeam,
+  MuralTeamMatchDashboard,
+  MuralTeamMatchPerformanceTopEntry,
+  MuralTeamMatchRecordHighlight,
+  MuralTeamMatchUnbeatenStreak,
   MuralVote,
   MuralVoteAggregates,
 } from '../models/mural.model';
@@ -39,9 +51,46 @@ export class MuralService {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   }
 
-  async loadAppDashboard(): Promise<MuralAppDashboard> {
+  /**
+   * Opcoes de regiao para o filtro em cascata do mural do app.
+   * Retorna lista vazia quando a Cloud ainda nao tem `getMuralLocationOptions`.
+   */
+  async loadLocationOptions(
+    level: MuralLocationLevel,
+    filter?: MuralLocationFilter
+  ): Promise<MuralLocationOption[]> {
     try {
-      const result = await Parse.Cloud.run('getMuralAppDashboard', { participantLimit: 500 });
+      const result = await Parse.Cloud.run('getMuralLocationOptions', {
+        level,
+        ...this.locationParams(filter),
+      });
+      const rows = (result as { options?: unknown })?.options;
+      if (!Array.isArray(rows)) return [];
+      return rows
+        .map((item) => {
+          const row = item as Record<string, unknown>;
+          const key = String(row['key'] ?? '').trim();
+          return {
+            key,
+            label: this.fixLocationLabel(String(row['label'] ?? key)) || key,
+            count: Number(row['count']) || 0,
+          };
+        })
+        .filter((option) => !!option.key);
+    } catch (error: unknown) {
+      if (!isInvalidCloudFunctionError(error)) {
+        console.warn('getMuralLocationOptions failed', error);
+      }
+      return [];
+    }
+  }
+
+  async loadAppDashboard(filter?: MuralLocationFilter): Promise<MuralAppDashboard> {
+    try {
+      const result = await Parse.Cloud.run('getMuralAppDashboard', {
+        participantLimit: 500,
+        ...this.locationParams(filter),
+      });
       if (!result || typeof result !== 'object') {
         return this.emptyAppDashboard();
       }
@@ -55,15 +104,45 @@ export class MuralService {
         MuralRankingEntry[]
       >;
       this.applyParticipantMetaToRankings(rankings, participants);
+      const rankingsPelada = (raw['rankingsPelada'] ?? undefined) as
+        | Record<MuralTargetRole, MuralRankingEntry[]>
+        | undefined;
+      const rankingsTeamMatch = (raw['rankingsTeamMatch'] ?? undefined) as
+        | Record<MuralTargetRole, MuralRankingEntry[]>
+        | undefined;
+      if (rankingsPelada) this.applyParticipantMetaToRankings(rankingsPelada, participants);
+      if (rankingsTeamMatch) this.applyParticipantMetaToRankings(rankingsTeamMatch, participants);
+
+      const buckets = this.normalizeAppBuckets(raw['buckets'], participants);
+      const rankingsMetaRaw = raw['rankingsMeta'];
+      const rankingsMeta =
+        rankingsMetaRaw && typeof rankingsMetaRaw === 'object'
+          ? {
+              tieBreak: String((rankingsMetaRaw as Record<string, unknown>)['tieBreak'] || ''),
+              confrontoWeight:
+                Number((rankingsMetaRaw as Record<string, unknown>)['confrontoWeight']) || 3,
+            }
+          : undefined;
 
       return {
         participants,
         rankings,
+        rankingsPelada,
+        rankingsTeamMatch,
         voteAggregates: (raw['voteAggregates'] ?? {}) as MuralVoteAggregates,
+        voteAggregatesPelada: (raw['voteAggregatesPelada'] ?? undefined) as
+          | MuralVoteAggregates
+          | undefined,
+        voteAggregatesTeamMatch: (raw['voteAggregatesTeamMatch'] ?? undefined) as
+          | MuralVoteAggregates
+          | undefined,
+        buckets,
+        rankingsMeta,
         locationStats: this.normalizeAppLocationStats(raw['locationStats']),
         locationTopRankings: this.normalizeAppLocationTopRankings(raw['locationTopRankings']),
         performanceAnalytics: (raw['performanceAnalytics'] as Record<string, unknown>) ?? null,
         predictionRankings: this.normalizeAppPredictionRankings(raw['predictionRankings']),
+        appliedLocation: this.normalizeAppliedLocation(raw['appliedLocation']),
         cloudAvailable: true,
       };
     } catch (error: unknown) {
@@ -72,6 +151,303 @@ export class MuralService {
       }
       return this.loadAppDashboardFallback();
     }
+  }
+
+  async loadTeamMatchDashboard(filter?: MuralLocationFilter): Promise<MuralTeamMatchDashboard> {
+    const empty = this.emptyTeamMatchDashboard();
+    try {
+      const result = await Parse.Cloud.run(
+        'getMuralTeamMatchDashboard',
+        this.locationParams(filter)
+      );
+      if (!result || typeof result !== 'object') {
+        return empty;
+      }
+      const raw = result as Record<string, unknown>;
+      const [topScorers, topAssists, topPasses] = await Promise.all([
+        this.enrichTeamMatchPerformanceTops(raw['topScorers']),
+        this.enrichTeamMatchPerformanceTops(raw['topAssists']),
+        this.enrichTeamMatchPerformanceTops(raw['topPasses']),
+      ]);
+      return {
+        totalConfrontos: Number(raw['totalConfrontos']) || 0,
+        locationStats: this.normalizeTeamMatchLocationStats(raw['locationStats']),
+        teamHighlights: this.normalizeTeamMatchHighlights(raw['teamHighlights']),
+        topAthletes: this.normalizeRankingList(raw['topAthletes']),
+        topGoalkeepers: this.normalizeRankingList(raw['topGoalkeepers']),
+        topReferees: this.normalizeRankingList(raw['topReferees']),
+        topScorers,
+        topAssists,
+        topPasses,
+        topTeams: this.normalizeAppTeamRankList(raw['topTeams']),
+        topCoaches: this.normalizeAppCoachRankList(raw['topCoaches']),
+        appliedLocation: this.normalizeAppliedLocation(raw['appliedLocation']),
+        bestTeam: this.normalizeBestTeam(raw['bestTeam']),
+        longestUnbeaten: this.normalizeUnbeatenStreak(raw['longestUnbeaten']),
+        bestAttack: this.normalizeBestAttack(raw['bestAttack']),
+        bestDefense: this.normalizeBestDefense(raw['bestDefense']),
+        cloudAvailable: true,
+      };
+    } catch (error: unknown) {
+      if (!isInvalidCloudFunctionError(error)) {
+        console.warn('getMuralTeamMatchDashboard failed', error);
+      }
+      return empty;
+    }
+  }
+
+  private emptyTeamMatchDashboard(): MuralTeamMatchDashboard {
+    return {
+      totalConfrontos: 0,
+      locationStats: { byState: [], byCity: [], byNeighborhood: [] },
+      teamHighlights: {
+        mostMatches: null,
+        mostWins: null,
+        mostLosses: null,
+        mostDraws: null,
+        bestWinRate: null,
+      },
+      topAthletes: [],
+      topGoalkeepers: [],
+      topReferees: [],
+      topScorers: [],
+      topAssists: [],
+      topPasses: [],
+      bestTeam: null,
+      longestUnbeaten: null,
+      bestAttack: null,
+      bestDefense: null,
+      cloudAvailable: false,
+    };
+  }
+
+  /** Monta so as chaves preenchidas: Cloud antigo ignora params extras. */
+  private locationParams(filter?: MuralLocationFilter): Record<string, string> {
+    const params: Record<string, string> = {};
+    const state = String(filter?.state || '').trim();
+    const city = String(filter?.city || '').trim();
+    const neighborhood = String(filter?.neighborhood || '').trim();
+    if (state) params['state'] = state;
+    if (city) params['city'] = city;
+    if (neighborhood) params['neighborhood'] = neighborhood;
+    return params;
+  }
+
+  /** Back4App grava o Distrito Federal como "FE" em bases antigas. */
+  private fixLocationLabel(label: string): string {
+    const trimmed = String(label || '').trim();
+    if (trimmed.toUpperCase() === 'FE') return 'DF';
+    return trimmed.replace(/\bFE\b/g, 'DF');
+  }
+
+  private normalizeAppliedLocation(raw: unknown): MuralLocationFilter | undefined {
+    if (!raw || typeof raw !== 'object') return undefined;
+    const row = raw as Record<string, unknown>;
+    const applied: MuralLocationFilter = {};
+    const state = String(row['state'] || '').trim();
+    const city = String(row['city'] || '').trim();
+    const neighborhood = String(row['neighborhood'] || '').trim();
+    if (state) applied.state = state;
+    if (city) applied.city = city;
+    if (neighborhood) applied.neighborhood = neighborhood;
+    return applied;
+  }
+
+  private normalizeBestTeam(raw: unknown): MuralTeamMatchBestTeam | null {
+    if (!raw || typeof raw !== 'object') return null;
+    const row = raw as Record<string, unknown>;
+    if (!row['teamId']) return null;
+    return {
+      teamId: String(row['teamId']),
+      teamName: String(row['teamName'] || 'Time'),
+      shieldImageUrl: row['shieldImageUrl'] ? String(row['shieldImageUrl']) : undefined,
+      matchesPlayed: Number(row['matchesPlayed']) || 0,
+      wins: Number(row['wins']) || 0,
+      draws: Number(row['draws']) || 0,
+      losses: Number(row['losses']) || 0,
+      winRatePercent: Number(row['winRatePercent']) || 0,
+    };
+  }
+
+  private normalizeUnbeatenStreak(raw: unknown): MuralTeamMatchUnbeatenStreak | null {
+    if (!raw || typeof raw !== 'object') return null;
+    const row = raw as Record<string, unknown>;
+    if (!row['teamId']) return null;
+    const unbeatenDays = Number(row['unbeatenDays']) || 0;
+    return {
+      teamId: String(row['teamId']),
+      teamName: String(row['teamName'] || 'Time'),
+      shieldImageUrl: row['shieldImageUrl'] ? String(row['shieldImageUrl']) : undefined,
+      unbeatenDays,
+      unbeatenLabel: String(row['unbeatenLabel'] || '').trim(),
+      matchesInStreak: Number(row['matchesInStreak']) || 0,
+      sinceStartTime: row['sinceStartTime'] ? String(row['sinceStartTime']) : null,
+    };
+  }
+
+  private normalizeBestAttack(raw: unknown): MuralTeamMatchBestAttack | null {
+    if (!raw || typeof raw !== 'object') return null;
+    const row = raw as Record<string, unknown>;
+    if (!row['teamId']) return null;
+    const scorerRaw = row['topScorer'];
+    const scorer =
+      scorerRaw && typeof scorerRaw === 'object'
+        ? (scorerRaw as Record<string, unknown>)
+        : null;
+    return {
+      teamId: String(row['teamId']),
+      teamName: String(row['teamName'] || 'Time'),
+      shieldImageUrl: row['shieldImageUrl'] ? String(row['shieldImageUrl']) : undefined,
+      goalsFor: Number(row['goalsFor']) || 0,
+      matchesPlayed: Number(row['matchesPlayed']) || 0,
+      goalsPerMatch: Number(row['goalsPerMatch']) || 0,
+      topScorer: scorer
+        ? {
+            userId: String(scorer['userId'] || ''),
+            name: String(scorer['name'] || 'Participante'),
+            avatarUrl: scorer['avatarUrl'] ? String(scorer['avatarUrl']) : undefined,
+            goals: Number(scorer['goals']) || 0,
+            goalsPerMatch: Number(scorer['goalsPerMatch']) || 0,
+          }
+        : null,
+    };
+  }
+
+  private normalizeBestDefense(raw: unknown): MuralTeamMatchBestDefense | null {
+    if (!raw || typeof raw !== 'object') return null;
+    const row = raw as Record<string, unknown>;
+    if (!row['teamId']) return null;
+    const defenderRaw = row['topDefender'];
+    const defender =
+      defenderRaw && typeof defenderRaw === 'object'
+        ? (defenderRaw as Record<string, unknown>)
+        : null;
+    return {
+      teamId: String(row['teamId']),
+      teamName: String(row['teamName'] || 'Time'),
+      shieldImageUrl: row['shieldImageUrl'] ? String(row['shieldImageUrl']) : undefined,
+      goalsAgainst: Number(row['goalsAgainst']) || 0,
+      matchesPlayed: Number(row['matchesPlayed']) || 0,
+      goalsAgainstPerMatch: Number(row['goalsAgainstPerMatch']) || 0,
+      topDefender: defender
+        ? {
+            userId: String(defender['userId'] || ''),
+            name: String(defender['name'] || 'Participante'),
+            avatarUrl: defender['avatarUrl'] ? String(defender['avatarUrl']) : undefined,
+            points: Number(defender['points']) || 0,
+            pointsPerMatch: Number(defender['pointsPerMatch']) || 0,
+          }
+        : null,
+    };
+  }
+
+  private normalizeTeamMatchLocationStats(raw: unknown): MuralTeamMatchDashboard['locationStats'] {
+    if (!raw || typeof raw !== 'object') {
+      return { byState: [], byCity: [], byNeighborhood: [] };
+    }
+    const stats = raw as Record<string, unknown>;
+    const mapBuckets = (rows: unknown): MuralTeamMatchDashboard['locationStats']['byState'] => {
+      if (!Array.isArray(rows)) return [];
+      return rows.map((row) => {
+        const entry = row as Record<string, unknown>;
+        let label = String(entry['label'] || entry['key'] || '—');
+        if (label.toUpperCase() === 'FE') label = 'DF';
+        else label = label.replace(/\bFE\b/g, 'DF');
+        return { label, count: Number(entry['count']) || 0 };
+      });
+    };
+    return {
+      byState: mapBuckets(stats['byState']),
+      byCity: mapBuckets(stats['byCity']),
+      byNeighborhood: mapBuckets(stats['byNeighborhood']),
+    };
+  }
+
+  private normalizeTeamMatchHighlights(
+    raw: unknown
+  ): MuralTeamMatchDashboard['teamHighlights'] {
+    const empty = this.emptyTeamMatchDashboard().teamHighlights;
+    if (!raw || typeof raw !== 'object') return empty;
+    const highlights = raw as Record<string, unknown>;
+    const mapTeam = (value: unknown): MuralTeamMatchRecordHighlight | null => {
+      if (!value || typeof value !== 'object') return null;
+      const row = value as Record<string, unknown>;
+      if (!row['teamId']) return null;
+      return {
+        teamId: String(row['teamId']),
+        teamName: String(row['teamName'] || 'Time'),
+        matchesPlayed: Number(row['matchesPlayed']) || 0,
+        wins: Number(row['wins']) || 0,
+        losses: Number(row['losses']) || 0,
+        draws: Number(row['draws']) || 0,
+        winRatePercent: Number(row['winRatePercent']) || 0,
+      };
+    };
+    return {
+      mostMatches: mapTeam(highlights['mostMatches']),
+      mostWins: mapTeam(highlights['mostWins']),
+      mostLosses: mapTeam(highlights['mostLosses']),
+      mostDraws: mapTeam(highlights['mostDraws']),
+      bestWinRate: mapTeam(highlights['bestWinRate']),
+    };
+  }
+
+  private normalizeRankingList(raw: unknown): MuralRankingEntry[] {
+    if (!Array.isArray(raw)) return [];
+    return raw.map((row) => {
+      const entry = row as Record<string, unknown>;
+      return {
+        userId: String(entry['userId'] || ''),
+        userName: String(entry['userName'] || '—'),
+        avatarUrl: entry['avatarUrl'] ? String(entry['avatarUrl']) : undefined,
+        role: (String(entry['role'] || 'athlete') as MuralTargetRole),
+        totalScore: Number(entry['totalScore']) || 0,
+        voteCount: Number(entry['voteCount']) || 0,
+        averageScore: Number(entry['averageScore']) || 0,
+        performanceScore: Number(entry['performanceScore']) || 0,
+        combinedScore: Number(entry['combinedScore']) || 0,
+      };
+    });
+  }
+
+  private async enrichTeamMatchPerformanceTops(
+    raw: unknown
+  ): Promise<MuralTeamMatchPerformanceTopEntry[]> {
+    if (!Array.isArray(raw)) return [];
+    const base = raw.map((row) => {
+      const entry = row as Record<string, unknown>;
+      return {
+        userId: String(entry['userId'] || ''),
+        userName: String(entry['userName'] || ''),
+        avatarUrl: entry['avatarUrl'] ? String(entry['avatarUrl']) : undefined,
+        total: Number(entry['total']) || 0,
+      };
+    });
+    const missingIds = base.filter((e) => e.userId && !e.userName).map((e) => e.userId);
+    if (!missingIds.length) return base;
+
+    const query = new Parse.Query(Parse.User);
+    query.containedIn('objectId', missingIds);
+    query.limit(missingIds.length);
+    const users = await query.find();
+    const nameById = new Map<string, { name: string; avatar?: string }>();
+    for (const user of users) {
+      const apelido = String(user.get('apelido') || '').trim();
+      const fullName = String(user.get('fullName') || user.get('name') || '').trim();
+      nameById.set(user.id!, {
+        name: apelido || fullName || 'Participante',
+        avatar: user.get('avatarUrl') as string | undefined,
+      });
+    }
+    return base.map((entry) => {
+      if (entry.userName) return entry;
+      const meta = nameById.get(entry.userId);
+      return {
+        ...entry,
+        userName: meta?.name || 'Participante',
+        avatarUrl: entry.avatarUrl || meta?.avatar,
+      };
+    });
   }
 
   private async loadAppDashboardFallback(): Promise<MuralAppDashboard> {
@@ -115,11 +491,20 @@ export class MuralService {
       return { total: 0, byState: [], byCity: [], byNeighborhood: [] };
     }
     const stats = raw as MuralAppDashboard['locationStats'];
+    const fixLabel = (label: string): string => {
+      const trimmed = String(label || '').trim();
+      if (trimmed.toUpperCase() === 'FE') return 'DF';
+      return trimmed.replace(/\bFE\b/g, 'DF');
+    };
+    const mapRows = (rows: Array<{ label: string; count: number }> | undefined) =>
+      Array.isArray(rows)
+        ? rows.map((row) => ({ ...row, label: fixLabel(row.label), count: Number(row.count) || 0 }))
+        : [];
     return {
       total: Number(stats.total) || 0,
-      byState: Array.isArray(stats.byState) ? stats.byState : [],
-      byCity: Array.isArray(stats.byCity) ? stats.byCity : [],
-      byNeighborhood: Array.isArray(stats.byNeighborhood) ? stats.byNeighborhood : [],
+      byState: mapRows(stats.byState),
+      byCity: mapRows(stats.byCity),
+      byNeighborhood: mapRows(stats.byNeighborhood),
     };
   }
 
@@ -133,6 +518,105 @@ export class MuralService {
       byCity: Array.isArray(rankings.byCity) ? rankings.byCity : [],
       byNeighborhood: Array.isArray(rankings.byNeighborhood) ? rankings.byNeighborhood : [],
     };
+  }
+
+  private normalizeAppBuckets(
+    raw: unknown,
+    participants: PeladaParticipant[]
+  ): MuralAppDashboard['buckets'] {
+    if (!raw || typeof raw !== 'object') return undefined;
+    const source = raw as Record<string, unknown>;
+    const keys = ['merged', 'pelada', 'team_match'] as const;
+    const buckets: NonNullable<MuralAppDashboard['buckets']> = {};
+    for (const key of keys) {
+      const payload = this.normalizeAppBucketPayload(source[key], participants);
+      if (payload) buckets[key] = payload;
+    }
+    return Object.keys(buckets).length ? buckets : undefined;
+  }
+
+  private normalizeAppBucketPayload(
+    raw: unknown,
+    participants: PeladaParticipant[]
+  ): MuralAppBucketPayload | undefined {
+    if (!raw || typeof raw !== 'object') return undefined;
+    const row = raw as Record<string, unknown>;
+    const rankings = (row['rankings'] ?? this.emptyRankings()) as Record<
+      MuralTargetRole,
+      MuralRankingEntry[]
+    >;
+    this.applyParticipantMetaToRankings(rankings, participants);
+    const topScorers = this.normalizeRankingList(row['topScorers']);
+    this.applyParticipantMetaToRankings({ athlete: topScorers } as Record<
+      MuralTargetRole,
+      MuralRankingEntry[]
+    >, participants);
+    const topCoaches = this.normalizeAppCoachRankList(row['topCoaches']);
+    this.applyParticipantMetaToRankings({ coach: topCoaches } as Record<
+      MuralTargetRole,
+      MuralRankingEntry[]
+    >, participants);
+
+    return {
+      bucket: String(row['bucket'] || ''),
+      rankings,
+      voteAggregates: (row['voteAggregates'] ?? {}) as MuralVoteAggregates,
+      topScorers,
+      topTeams: this.normalizeAppTeamRankList(row['topTeams']),
+      topCoaches,
+      predictionRankings: this.normalizeAppPredictionRankings(row['predictionRankings']),
+    };
+  }
+
+  private normalizeAppTeamRankList(raw: unknown): MuralAppBucketPayload['topTeams'] {
+    if (!Array.isArray(raw)) return [];
+    return raw.map((item) => {
+      const row = item as Record<string, unknown>;
+      return {
+        teamId: String(row['teamId'] || ''),
+        teamName: String(row['teamName'] || 'Time'),
+        matchesPlayed: Number(row['matchesPlayed']) || 0,
+        wins: Number(row['wins']) || 0,
+        losses: Number(row['losses']) || 0,
+        draws: Number(row['draws']) || 0,
+        winRatePercent: Number(row['winRatePercent']) || 0,
+        combinedScore: Number(row['combinedScore'] ?? row['totalScore']) || 0,
+        totalScore: Number(row['totalScore'] ?? row['combinedScore']) || 0,
+        shieldImageUrl: row['shieldImageUrl'] ? String(row['shieldImageUrl']) : undefined,
+        presidentId: row['presidentId'] ? String(row['presidentId']) : undefined,
+        presidentName: row['presidentName'] ? String(row['presidentName']) : undefined,
+        presidentAvatarUrl: row['presidentAvatarUrl']
+          ? String(row['presidentAvatarUrl'])
+          : undefined,
+        foundedAt: row['foundedAt'] != null ? String(row['foundedAt']) : null,
+        homeVenue: row['homeVenue'] ? String(row['homeVenue']) : undefined,
+      };
+    });
+  }
+
+  private normalizeAppCoachRankList(raw: unknown): MuralAppBucketPayload['topCoaches'] {
+    if (!Array.isArray(raw)) return [];
+    return raw.map((row) => {
+      const entry = row as Record<string, unknown>;
+      return {
+        userId: String(entry['userId'] || ''),
+        userName: String(entry['userName'] || '—'),
+        avatarUrl: entry['avatarUrl'] ? String(entry['avatarUrl']) : undefined,
+        role: (String(entry['role'] || 'coach') as MuralTargetRole),
+        totalScore: Number(entry['totalScore']) || 0,
+        voteCount: Number(entry['voteCount']) || 0,
+        averageScore: Number(entry['averageScore']) || 0,
+        performanceScore: Number(entry['performanceScore']) || 0,
+        combinedScore: Number(entry['combinedScore']) || 0,
+        matchesPlayed: Number(entry['matchesPlayed']) || 0,
+        wins: Number(entry['wins']) || 0,
+        losses: Number(entry['losses']) || 0,
+        draws: Number(entry['draws']) || 0,
+        winRatePercent: Number(entry['winRatePercent']) || 0,
+        teamsCoachedCount: Number(entry['teamsCoachedCount']) || 0,
+        age: entry['age'] != null ? Number(entry['age']) : undefined,
+      };
+    });
   }
 
   private normalizeAppPredictionRankings(raw: unknown): MuralAppDashboard['predictionRankings'] {

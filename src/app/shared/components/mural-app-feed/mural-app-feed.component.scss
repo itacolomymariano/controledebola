@@ -1,0 +1,54 @@
+.mural-tab-hint {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.mural-card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rank-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rank-row span {
+  flex: 1;
+}
+
+.match-rank-card {
+  margin-inline: 0;
+  box-shadow: none;
+  border: 1px solid var(--ion-color-light-shade);
+}
+
+.match-rank-head,
+.match-rank-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.match-rank-head h3,
+.match-rank-row h3 {
+  margin: 0;
+  flex: 1;
+  font-size: 1rem;
+}
+
+.mural-sub-highlight {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ion-color-light-shade);
+}
+
+.amateur-shield {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}

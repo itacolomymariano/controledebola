@@ -1,26 +1,21 @@
-﻿<ion-header>
-
+﻿<ion-header class="search-page-header">
   <ion-toolbar>
-
     <ion-title>Buscar</ion-title>
-
   </ion-toolbar>
-
-  <ion-toolbar>
-
-    <ion-segment [(ngModel)]="segment" (ionChange)="onSegmentChange()">
-
-      <ion-segment-button value="eventos">Eventos</ion-segment-button>
-
-      <ion-segment-button value="perfis">Perfis</ion-segment-button>
-
-    </ion-segment>
-
+  <ion-toolbar class="search-kind-toolbar">
+    <div class="search-kind-row">
+      <button type="button" class="search-kind-btn" [class.is-on]="segment === 'eventos'" (click)="selectSegment('eventos')">
+        Eventos
+      </button>
+      <button type="button" class="search-kind-btn" [class.is-on]="segment === 'perfis'" (click)="selectSegment('perfis')">
+        Perfis
+      </button>
+      <button type="button" class="search-kind-btn" [class.is-on]="segment === 'times'" (click)="selectSegment('times')">
+        Times
+      </button>
+    </div>
   </ion-toolbar>
-
 </ion-header>
-
-
 
 <ion-content class="ion-padding">
 
@@ -122,7 +117,15 @@
 
   }
 
-
+  @if (segment === 'times') {
+    <ion-searchbar
+      placeholder="Buscar time amador por nome..."
+      [(ngModel)]="teamQuery"
+      [debounce]="0"
+      (ionInput)="onTeamSearchInput($event)"
+      (ionClear)="onTeamSearchClear()"
+    ></ion-searchbar>
+  }
 
   @if (loading) {
 
@@ -147,6 +150,10 @@
 
   @if (searched && !loading && !errorMessage && segment === 'eventos' && eventRows.length === 0) {
     <p class="ion-text-center ion-padding">Nenhum evento encontrado.</p>
+  }
+
+  @if (searched && !loading && !errorMessage && segment === 'times' && teamRows.length === 0) {
+    <p class="ion-text-center ion-padding">Nenhum time encontrado.</p>
   }
 
   @if (searched && !loading && !errorMessage && segment === 'perfis' && !isLegendSearch && profileResults.length === 0) {
@@ -202,6 +209,9 @@
           <ion-label>
             <h2>{{ row.event.name }}</h2>
             <p>{{ row.typeLabel }} · {{ row.dateLabel }}</p>
+            @if (row.scoreLabel) {
+              <p>{{ row.scoreLabel }}</p>
+            }
             <p>{{ row.locationLabel }}</p>
           </ion-label>
         </ion-item>
@@ -209,7 +219,58 @@
     </ion-list>
   }
 
-
+  @if (!loading && segment === 'times' && teamRows.length > 0) {
+    <ion-list>
+      @for (row of teamRows; track row.team.id) {
+        <ion-item button (click)="openTeamProfile(row.team.id)">
+          <app-user-avatar
+            slot="start"
+            [avatarUrl]="row.team.imageUrl"
+            [alt]="row.team.name"
+            size="md"
+          ></app-user-avatar>
+          <ion-label>
+            <h2>{{ row.team.name }}</h2>
+            @if (row.team.averageAge != null) {
+              <p>Media de idade: {{ row.team.averageAge }} anos</p>
+            }
+          </ion-label>
+          <ion-button
+            fill="clear"
+            slot="end"
+            (click)="$event.stopPropagation(); toggleTeamHistory(row)"
+          >
+            {{ row.expanded ? 'Ocultar' : 'Historico' }}
+          </ion-button>
+        </ion-item>
+        @if (row.expanded) {
+          @if (row.loadingHistory) {
+            <div class="ion-text-center ion-padding">
+              <ion-spinner name="crescent"></ion-spinner>
+            </div>
+          } @else if (!row.history.length) {
+            <ion-item lines="none">
+              <ion-label>
+                <p>Nenhum confronto registrado ainda.</p>
+              </ion-label>
+            </ion-item>
+          } @else {
+            @for (match of row.history; track match.eventId) {
+              <ion-item button (click)="openTeamMatch(match.eventId)">
+                <ion-label>
+                  <h3>
+                    {{ match.homeTeamName }} {{ match.homeScore }} x {{ match.awayScore }}
+                    {{ match.awayTeamName }}
+                  </h3>
+                  <p>{{ match.result }} · {{ match.name }}</p>
+                </ion-label>
+              </ion-item>
+            }
+          }
+        }
+      }
+    </ion-list>
+  }
 
   @if (!loading && segment === 'perfis' && profileResults.length > 0) {
 

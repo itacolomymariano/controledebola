@@ -2,6 +2,22 @@ import { Address } from './address.model';
 
 export type EventType = 'pelada' | 'racha' | 'team_match';
 
+export type TeamSide = 'home' | 'away';
+
+export function isTeamSide(value: unknown): value is TeamSide {
+  return value === 'home' || value === 'away';
+}
+
+export function teamSideLabel(
+  side?: TeamSide | null,
+  homeName?: string,
+  awayName?: string
+): string {
+  if (side === 'home') return homeName?.trim() || 'Mandante';
+  if (side === 'away') return awayName?.trim() || 'Visitante';
+  return '';
+}
+
 export type RegistrationStatus = 'open' | 'closed' | 'not_yet_open';
 
 export interface PeladaEvent {
@@ -29,7 +45,16 @@ export interface PeladaEvent {
   pixKey3: string;
   homeTeamName?: string;
   awayTeamName?: string;
+  homeTeamId?: string;
+  awayTeamId?: string;
+  homeTeamShieldUrl?: string;
+  awayTeamShieldUrl?: string;
   isFinished: boolean;
+  /** Confronto: presidentes liberam atletas nao convocados por time. */
+  homeAcceptsUninvitedAthletes?: boolean;
+  awayAcceptsUninvitedAthletes?: boolean;
+  /** Confronto: quem gerencia a convocacao de atletas (presidente ou treinador). */
+  athleteConvocationBy?: 'president' | 'coach';
   votingOpensAt?: Date;
   votingClosesAt?: Date;
   sumulaOpensAt?: Date;
@@ -53,6 +78,47 @@ export interface PeladaEventListItem extends PeladaEvent {
   remainingAthleteSpots?: number | null;
 }
 
+export interface TeamMatchListItem {
+  objectId: string;
+  name: string;
+  startTime: Date;
+  endTime: Date;
+  homeTeamName: string;
+  awayTeamName: string;
+  homeTeamId?: string;
+  awayTeamId?: string;
+  homeTeamShieldUrl?: string;
+  awayTeamShieldUrl?: string;
+  locationComplement: string;
+  address: Address;
+  hasReturnLeg?: boolean;
+  returnOfEventId?: string;
+  adminId?: string;
+  isFinished?: boolean;
+  nearby?: boolean;
+}
+
+export interface CreateTeamMatchPayload {
+  name?: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  challengeId: string;
+  challengeConditions?: string;
+  startTime: Date;
+  endTime: Date;
+  address: Address;
+  locationComplement?: string;
+  returnLeg?: boolean;
+  returnStartTime?: Date;
+  returnEndTime?: Date;
+  returnAddress?: Address;
+  returnLocationComplement?: string;
+  athleteUserIds?: string[];
+  athleteInvites?: { userId: string; offeredAmount?: number }[];
+  offeredAmount?: number;
+  responseDeadline?: Date;
+}
+
 export interface CreateEventPayload {
   peladaId: string;
   name: string;
@@ -70,6 +136,8 @@ export interface CreateEventPayload {
   pixKey3?: string;
   homeTeamName?: string;
   awayTeamName?: string;
+  homeTeamId?: string;
+  awayTeamId?: string;
   gateTicketControlEnabled?: boolean;
 }
 
@@ -245,12 +313,16 @@ export function isEventEnded(
   return !!event.isFinished || event.endTime < now;
 }
 
-/** Edicao de sumula pelo juiz dentro do periodo configurado e com evento ainda nao encerrado. */
+/**
+ * Edicao de sumula pelo juiz: respeita a faixa sumulaOpensAt/ClosesAt.
+ * Bloqueia so apos isFinished (nao pela endTime do jogo — o admin pode abrir a janela
+ * depois do horario do evento).
+ */
 export function isSumulaEditOpen(
   event: Pick<PeladaEvent, 'sumulaOpensAt' | 'sumulaClosesAt' | 'isFinished' | 'endTime'>,
   now = new Date()
 ): boolean {
-  if (isEventEnded(event, now)) return false;
+  if (event.isFinished) return false;
   const opensAt = event.sumulaOpensAt;
   const closesAt = event.sumulaClosesAt;
   if (!opensAt && !closesAt) return true;

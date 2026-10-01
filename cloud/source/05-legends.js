@@ -61,7 +61,29 @@ function mapLegendTeamRow(row) {
 }
 
 function normalizeLegendSearch(value) {
-  return String(value || '').trim().toLowerCase();
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function legendHaystack(parts) {
+  return normalizeLegendSearch(parts.filter(Boolean).join(' '));
+}
+
+async function findExistingLegendByName(className, name, apelido) {
+  const needles = [normalizeLegendSearch(name), normalizeLegendSearch(apelido)].filter(
+    (value) => value.length >= 2
+  );
+  if (!needles.length) return null;
+  const rows = await new Parse.Query(className).limit(200).find({ useMasterKey: true });
+  return (
+    rows.find((row) => {
+      const names = [normalizeLegendSearch(row.get('name')), normalizeLegendSearch(row.get('apelido'))];
+      return needles.some((needle) => names.includes(needle));
+    }) || null
+  );
 }
 
 Parse.Cloud.define('createAmateurLegendAthlete', async (request) => {
@@ -82,6 +104,15 @@ Parse.Cloud.define('createAmateurLegendAthlete', async (request) => {
   }
   if (!LEGEND_ATHLETE_RELATIONSHIPS.includes(relationship)) {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Relacao com a lenda invalida.');
+  }
+
+  const existingAthlete = await findExistingLegendByName('AmateurLegendAthlete', name, apelido);
+  if (existingAthlete) {
+    const label = existingAthlete.get('apelido') || existingAthlete.get('name');
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      `Ja existe a lenda "${label}". Use o cadastro existente em Lendas.`
+    );
   }
 
   const row = new Parse.Object('AmateurLegendAthlete');
@@ -130,6 +161,15 @@ Parse.Cloud.define('createAmateurLegendTeam', async (request) => {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Relacao com o time lenda invalida.');
   }
 
+  const existingTeam = await findExistingLegendByName('AmateurLegendTeam', name, apelido);
+  if (existingTeam) {
+    const label = existingTeam.get('apelido') || existingTeam.get('name');
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      `Ja existe o time lenda "${label}". Use o cadastro existente em Lendas.`
+    );
+  }
+
   const row = new Parse.Object('AmateurLegendTeam');
   row.set('name', name);
   row.set('apelido', apelido);
@@ -166,8 +206,7 @@ Parse.Cloud.define('listAmateurLegendAthletes', async (request) => {
     .map(mapLegendAthleteRow)
     .filter((row) => {
       if (!search) return true;
-      const haystack = `${row.name} ${row.apelido} ${(row.amateurTeams || []).join(' ')}`.toLowerCase();
-      return haystack.includes(search);
+      return legendHaystack([row.name, row.apelido, ...(row.amateurTeams || [])]).includes(search);
     });
 });
 
@@ -184,8 +223,7 @@ Parse.Cloud.define('listAmateurLegendTeams', async (request) => {
     .map(mapLegendTeamRow)
     .filter((row) => {
       if (!search) return true;
-      const haystack = `${row.name} ${row.apelido} ${row.description || ''}`.toLowerCase();
-      return haystack.includes(search);
+      return legendHaystack([row.name, row.apelido, row.description]).includes(search);
     });
 });
 
@@ -222,14 +260,15 @@ Parse.Cloud.define('suggestAmateurFootballIdols', async (request) => {
   function pushSuggestion(item) {
     const key = `${item.source}:${item.id}`;
     if (seen.has(key)) return;
-    if (search && !`${item.label} ${item.subtitle || ''}`.toLowerCase().includes(search)) return;
+    if (!matchesLegendSearch(`${item.label} ${item.subtitle || ''}`, search)) return;
     seen.add(key);
     suggestions.push(item);
   }
 
+  const fetchLimit = search ? 200 : limit;
   const legendQuery = new Parse.Query('AmateurLegendAthlete');
   legendQuery.descending('createdAt');
-  legendQuery.limit(limit);
+  legendQuery.limit(fetchLimit);
   for (const row of await legendQuery.find({ useMasterKey: true })) {
     pushSuggestion({
       id: row.id,
@@ -243,7 +282,7 @@ Parse.Cloud.define('suggestAmateurFootballIdols', async (request) => {
 
   const athleteQuery = new Parse.Query('AthleteProfile');
   athleteQuery.include('user');
-  athleteQuery.limit(limit);
+  athleteQuery.limit(fetchLimit);
   for (const profile of await athleteQuery.find({ useMasterKey: true })) {
     const profileUser = profile.get('user');
     if (!profileUser) continue;
@@ -305,6 +344,15 @@ Parse.Cloud.define('createProLegendAthlete', async (request) => {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Relacao com a lenda invalida.');
   }
 
+  const existingPro = await findExistingLegendByName('ProLegendAthlete', name, apelido);
+  if (existingPro) {
+    const label = existingPro.get('apelido') || existingPro.get('name');
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      `Ja existe a lenda profissional "${label}". Use o cadastro existente.`
+    );
+  }
+
   const row = new Parse.Object('ProLegendAthlete');
   row.set('name', name);
   row.set('apelido', apelido);
@@ -341,8 +389,7 @@ Parse.Cloud.define('listProLegendAthletes', async (request) => {
     .map(mapProLegendAthleteRow)
     .filter((row) => {
       if (!search) return true;
-      const haystack = `${row.name} ${row.apelido} ${(row.proTeams || []).join(' ')}`.toLowerCase();
-      return haystack.includes(search);
+      return legendHaystack([row.name, row.apelido, ...(row.proTeams || [])]).includes(search);
     });
 });
 
@@ -367,14 +414,15 @@ Parse.Cloud.define('suggestProFootballIdols', async (request) => {
   function pushSuggestion(item) {
     const key = `${item.source}:${item.id}`;
     if (seen.has(key)) return;
-    if (search && !`${item.label} ${item.subtitle || ''}`.toLowerCase().includes(search)) return;
+    if (!matchesLegendSearch(`${item.label} ${item.subtitle || ''}`, search)) return;
     seen.add(key);
     suggestions.push(item);
   }
 
+  const fetchLimit = search ? 200 : limit;
   const legendQuery = new Parse.Query('ProLegendAthlete');
   legendQuery.descending('createdAt');
-  legendQuery.limit(limit);
+  legendQuery.limit(fetchLimit);
   for (const row of await legendQuery.find({ useMasterKey: true })) {
     pushSuggestion({
       id: row.id,
@@ -388,7 +436,7 @@ Parse.Cloud.define('suggestProFootballIdols', async (request) => {
 
   const athleteQuery = new Parse.Query('AthleteProfile');
   athleteQuery.include('user');
-  athleteQuery.limit(limit);
+  athleteQuery.limit(fetchLimit);
   for (const profile of await athleteQuery.find({ useMasterKey: true })) {
     const profileUser = profile.get('user');
     if (!profileUser) continue;
@@ -426,9 +474,7 @@ function amateurTeamImageUrl(row) {
 
 function matchesLegendSearch(haystack, search) {
   if (!search) return true;
-  return String(haystack || '')
-    .toLowerCase()
-    .includes(search);
+  return normalizeLegendSearch(haystack).includes(search);
 }
 
 Parse.Cloud.define('suggestFavoritePeladaTeams', async (request) => {
@@ -592,7 +638,7 @@ Parse.Cloud.define('listAmateurTeamsForLegend', async (request) => {
   for (const row of rows) {
     const name = String(row.get('name') || '').trim();
     if (!name) continue;
-    if (search && !name.toLowerCase().includes(search)) continue;
+    if (search && !normalizeLegendSearch(name).includes(search)) continue;
 
     let presidentAddress = {};
     const president = row.get('president');
@@ -606,10 +652,19 @@ Parse.Cloud.define('listAmateurTeamsForLegend', async (request) => {
     }
 
     const teamImage = row.get('teamImage');
+    let averageAge = null;
+    try {
+      if (typeof amateurTeamAverageAge === 'function') {
+        averageAge = await amateurTeamAverageAge(row.id);
+      }
+    } catch {
+      averageAge = null;
+    }
     results.push({
       id: row.id,
       name,
       imageUrl: teamImage && teamImage.url ? teamImage.url() : undefined,
+      averageAge,
       proximityScore: locationProximityScoreForLegend(address, presidentAddress),
     });
   }

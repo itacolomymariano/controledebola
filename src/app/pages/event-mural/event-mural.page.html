@@ -39,6 +39,7 @@
 
     <ion-card class="ion-margin-bottom media-hub-card">
       <ion-card-header>
+        <app-mural-event-context [context]="shareContext"></app-mural-event-context>
         <div class="mural-card-header-row">
           <div (click)="openMediaHub()">
             <ion-card-title>Imprensa / Midia</ion-card-title>
@@ -47,6 +48,7 @@
           <app-mural-share-button
             [context]="shareContext"
             cardTitle="Imprensa / Midia"
+            ruleKey="mural.rule.eventMedia"
           ></app-mural-share-button>
         </div>
       </ion-card-header>
@@ -139,11 +141,13 @@
     @for (section of primaryRankingSections; track section.role) {
       <ion-card>
         <ion-card-header>
+          <app-mural-event-context [context]="shareContext"></app-mural-event-context>
           <div class="mural-card-header-row">
             <ion-card-title>Top 10 — {{ section.title }}</ion-card-title>
             <app-mural-share-button
               [context]="shareContext"
               [cardTitle]="'Top 10 — ' + section.title"
+              ruleKey="mural.rule.top10"
             ></app-mural-share-button>
           </div>
         </ion-card-header>
@@ -174,11 +178,13 @@
       @for (section of otherRankingSections; track section.role) {
         <ion-card>
           <ion-card-header>
+            <app-mural-event-context [context]="shareContext"></app-mural-event-context>
             <div class="mural-card-header-row">
               <ion-card-title>Top 10 — {{ section.title }}</ion-card-title>
               <app-mural-share-button
                 [context]="shareContext"
                 [cardTitle]="'Top 10 — ' + section.title"
+                ruleKey="mural.rule.top10"
               ></app-mural-share-button>
             </div>
           </ion-card-header>

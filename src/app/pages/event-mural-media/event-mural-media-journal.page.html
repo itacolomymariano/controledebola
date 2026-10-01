@@ -36,77 +36,105 @@
     </ion-segment>
 
     @if (activeSection === 'reportage') {
-      <section class="media-article media-portal ion-margin-top">
-        @if (!dashboard?.journalReportage) {
-          <ion-note>Nenhuma reportagem publicada ainda.</ion-note>
-        } @else {
-          <h1 class="media-headline">{{ dashboard!.journalReportage!.headline }}</h1>
-          <img
-            class="media-article-photo"
-            [src]="dashboard!.journalReportage!.photoUrl"
-            alt="Foto da reportagem"
-          />
-          <div class="media-body">{{ dashboard!.journalReportage!.body }}</div>
-          <div class="media-author">
-            <app-user-avatar
-              [avatarUrl]="dashboard!.journalReportage!.authorAvatarUrl"
-              [alt]="dashboard!.journalReportage!.authorName"
-              size="sm"
-            ></app-user-avatar>
-            <div>
-              <strong>{{ dashboard!.journalReportage!.authorName }}</strong>
-              @if (dashboard!.journalReportage!.authorApelido) {
-                <p>{{ dashboard!.journalReportage!.authorApelido }}</p>
-              }
-              @if (dashboard!.journalReportage!.updatedAt) {
-                <ion-note>{{ formatDate(dashboard!.journalReportage!.updatedAt) }}</ion-note>
-              }
+      @if (!dashboard?.journalReportage) {
+        <ion-note class="ion-margin-top">Nenhuma reportagem publicada ainda.</ion-note>
+      } @else {
+        <ion-card class="ion-margin-top media-share-card">
+          <ion-card-header>
+            <app-mural-event-context [context]="reportageShareContext"></app-mural-event-context>
+            <div class="mural-card-header-row">
+              <ion-card-title>Reportagem</ion-card-title>
+              <app-mural-share-button
+                [context]="reportageShareContext"
+                cardTitle="Reportagem"
+              ></app-mural-share-button>
             </div>
-          </div>
-          <app-event-media-engagement
-            #reportageEngagement
-            [eventId]="eventId"
-            category="journal_reportage"
-          ></app-event-media-engagement>
-        }
-      </section>
+          </ion-card-header>
+          <ion-card-content>
+            <section class="media-article media-portal">
+              <h1 class="media-headline">{{ dashboard!.journalReportage!.headline }}</h1>
+              <img
+                class="media-article-photo"
+                [src]="dashboard!.journalReportage!.photoUrl"
+                alt="Foto da reportagem"
+              />
+              <div class="media-body">{{ dashboard!.journalReportage!.body }}</div>
+              <div class="media-author">
+                <app-user-avatar
+                  [avatarUrl]="dashboard!.journalReportage!.authorAvatarUrl"
+                  [alt]="dashboard!.journalReportage!.authorName"
+                  size="sm"
+                ></app-user-avatar>
+                <div>
+                  <strong>{{ dashboard!.journalReportage!.authorName }}</strong>
+                  @if (dashboard!.journalReportage!.authorApelido) {
+                    <p>{{ dashboard!.journalReportage!.authorApelido }}</p>
+                  }
+                  @if (dashboard!.journalReportage!.updatedAt) {
+                    <ion-note>{{ formatDate(dashboard!.journalReportage!.updatedAt) }}</ion-note>
+                  }
+                </div>
+              </div>
+              <app-event-media-engagement
+                #reportageEngagement
+                [eventId]="eventId"
+                category="journal_reportage"
+              ></app-event-media-engagement>
+            </section>
+          </ion-card-content>
+        </ion-card>
+      }
     }
 
     @if (activeSection === 'interview') {
-      <section class="media-article media-magazine ion-margin-top">
-        @if (!dashboard?.journalInterview) {
-          <ion-note>Nenhuma entrevista publicada ainda.</ion-note>
-        } @else {
-          <h1 class="media-headline">{{ dashboard!.journalInterview!.headline }}</h1>
-          <img
-            class="media-article-photo"
-            [src]="dashboard!.journalInterview!.photoUrl"
-            alt="Foto da entrevista"
-          />
-          <div class="media-body">{{ dashboard!.journalInterview!.body }}</div>
-          <div class="media-author">
-            <app-user-avatar
-              [avatarUrl]="dashboard!.journalInterview!.authorAvatarUrl"
-              [alt]="dashboard!.journalInterview!.authorName"
-              size="sm"
-            ></app-user-avatar>
-            <div>
-              <strong>{{ dashboard!.journalInterview!.authorName }}</strong>
-              @if (dashboard!.journalInterview!.authorApelido) {
-                <p>{{ dashboard!.journalInterview!.authorApelido }}</p>
-              }
-              @if (dashboard!.journalInterview!.updatedAt) {
-                <ion-note>{{ formatDate(dashboard!.journalInterview!.updatedAt) }}</ion-note>
-              }
+      @if (!dashboard?.journalInterview) {
+        <ion-note class="ion-margin-top">Nenhuma entrevista publicada ainda.</ion-note>
+      } @else {
+        <ion-card class="ion-margin-top media-share-card">
+          <ion-card-header>
+            <app-mural-event-context [context]="interviewShareContext"></app-mural-event-context>
+            <div class="mural-card-header-row">
+              <ion-card-title>Entrevista</ion-card-title>
+              <app-mural-share-button
+                [context]="interviewShareContext"
+                cardTitle="Entrevista de jornal"
+              ></app-mural-share-button>
             </div>
-          </div>
-          <app-event-media-engagement
-            #interviewEngagement
-            [eventId]="eventId"
-            category="journal_interview"
-          ></app-event-media-engagement>
-        }
-      </section>
+          </ion-card-header>
+          <ion-card-content>
+            <section class="media-article media-magazine">
+              <h1 class="media-headline">{{ dashboard!.journalInterview!.headline }}</h1>
+              <img
+                class="media-article-photo"
+                [src]="dashboard!.journalInterview!.photoUrl"
+                alt="Foto da entrevista"
+              />
+              <div class="media-body">{{ dashboard!.journalInterview!.body }}</div>
+              <div class="media-author">
+                <app-user-avatar
+                  [avatarUrl]="dashboard!.journalInterview!.authorAvatarUrl"
+                  [alt]="dashboard!.journalInterview!.authorName"
+                  size="sm"
+                ></app-user-avatar>
+                <div>
+                  <strong>{{ dashboard!.journalInterview!.authorName }}</strong>
+                  @if (dashboard!.journalInterview!.authorApelido) {
+                    <p>{{ dashboard!.journalInterview!.authorApelido }}</p>
+                  }
+                  @if (dashboard!.journalInterview!.updatedAt) {
+                    <ion-note>{{ formatDate(dashboard!.journalInterview!.updatedAt) }}</ion-note>
+                  }
+                </div>
+              </div>
+              <app-event-media-engagement
+                #interviewEngagement
+                [eventId]="eventId"
+                category="journal_interview"
+              ></app-event-media-engagement>
+            </section>
+          </ion-card-content>
+        </ion-card>
+      }
     }
   }
 </ion-content>

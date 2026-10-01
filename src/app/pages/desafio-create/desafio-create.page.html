@@ -1,0 +1,184 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="cancel()">Cancelar</ion-button>
+    </ion-buttons>
+    <ion-title>Desafiar time</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-note color="medium" class="ion-margin-bottom">
+    Informe data, hora e local desejados. O sistema verifica se os dois times estao livres antes de
+    enviar o convite.
+  </ion-note>
+
+  @if (!myTeams.length) {
+    <ion-card>
+      <ion-card-content>
+        <p>Cadastre pelo menos um time para enviar desafios.</p>
+        <ion-button expand="block" (click)="goRegisterTeam()">Cadastrar time</ion-button>
+      </ion-card-content>
+    </ion-card>
+  } @else {
+    <ion-list lines="full">
+      <ion-item>
+        <ion-select
+          label="Seu time desafiante"
+          labelPlacement="stacked"
+          [(ngModel)]="challengerTeamId"
+          interface="popover"
+        >
+          @for (team of myTeams; track team.objectId) {
+            <ion-select-option [value]="team.objectId">{{ team.name }}</ion-select-option>
+          }
+        </ion-select>
+      </ion-item>
+    </ion-list>
+
+    @if (!selected) {
+      <ion-searchbar
+        placeholder="Buscar time adversario"
+        [debounce]="0"
+        [value]="query"
+        (ionInput)="onSearch($any($event.target).value)"
+        (ionClear)="results = []"
+      ></ion-searchbar>
+      @if (searching) {
+        <div class="ion-text-center ion-padding">
+          <ion-spinner name="crescent"></ion-spinner>
+        </div>
+      }
+      <ion-list>
+        @for (team of results; track team.id) {
+          <ion-item button (click)="selectTeam(team)">
+            <ion-label>
+              <h2>{{ team.name }}</h2>
+              @if (team.averageAge != null) {
+                <p>Media de idade: {{ team.averageAge }} anos</p>
+              }
+            </ion-label>
+          </ion-item>
+        }
+      </ion-list>
+    } @else {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>{{ selected.name }}</ion-card-title>
+          <ion-card-subtitle>Time desafiado</ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          <div class="selected-team-actions">
+            <ion-button fill="clear" size="small" (click)="clearSelected()">Trocar time</ion-button>
+            <ion-button fill="outline" size="small" (click)="openSelectedTeamProfile()">Ver ficha do time</ion-button>
+          </div>
+          @if (loadingProfile) {
+            <ion-spinner name="crescent"></ion-spinner>
+          } @else if (profile) {
+            <div class="team-stats-heading">
+              <h3>{{ 'team.stats.title' | t }}</h3>
+              <app-help-balloon textKey="team.stats.help"></app-help-balloon>
+            </div>
+            <p>Media de idade: {{ profile['averageAge'] ?? '—' }}</p>
+            <p>Confrontos: {{ profile['matchesPlayed'] ?? 0 }}</p>
+            <p>Vitória(s): {{ profile['wins'] ?? 0 }}</p>
+            <p>Empate(s): {{ profile['draws'] ?? 0 }}</p>
+            <p>Derrota(s): {{ profile['losses'] ?? 0 }}</p>
+            <p>Aproveitamento: {{ $any(profile['winRatePercent']) ?? 0 | number: '1.1-1' }}%</p>
+            @if (profile['topScorer']) {
+              <p>
+                Goleador:
+                {{ $any(profile['topScorer']).name }} ({{ $any(profile['topScorer']).goals }} gols)
+              </p>
+            }
+            @if (profile['topPointsAthlete']) {
+              <p>
+                Maior pontuacao:
+                {{ $any(profile['topPointsAthlete']).name }}
+                ({{ $any(profile['topPointsAthlete']).points }})
+              </p>
+            }
+            <p>Cartoes amarelos: {{ profile['yellowCards'] ?? 0 }}</p>
+            <p>Cartoes vermelhos: {{ profile['redCards'] ?? 0 }}</p>
+            @if ($any(profile['lastResults'])?.length) {
+              <h3>Ultimos confrontos</h3>
+              @for (row of $any(profile['lastResults']); track row.eventId) {
+                <p class="team-result-row">
+                  {{ formatMatchDate(row.startTime) }}
+                  {{ resultName(row.result) }}:
+                  {{ row.homeTeamName }} {{ row.homeScore }} x {{ row.awayScore }} {{ row.awayTeamName }}
+                </p>
+              }
+            }
+            @if ($any(profile['observations'])?.length) {
+              <h3>Observacoes de sumula</h3>
+              @for (obs of $any(profile['observations']); track obs.text) {
+                <p>{{ obs.eventName }}: {{ obs.text }}</p>
+              }
+            }
+          }
+        </ion-card-content>
+      </ion-card>
+
+      <form [formGroup]="scheduleForm">
+        <ion-list lines="full">
+          <ion-item-divider>
+            <ion-label>Data, hora e local desejados</ion-label>
+          </ion-item-divider>
+          <ion-item>
+            <ion-input type="date" label="Data de inicio" labelPlacement="stacked" formControlName="startDate"></ion-input>
+          </ion-item>
+          <ion-item>
+            <ion-input type="time" label="Hora de inicio" labelPlacement="stacked" formControlName="startTime"></ion-input>
+          </ion-item>
+          <ion-item>
+            <ion-input type="date" label="Data de termino" labelPlacement="stacked" formControlName="endDate"></ion-input>
+          </ion-item>
+          <ion-item>
+            <ion-input type="time" label="Hora de termino" labelPlacement="stacked" formControlName="endTime"></ion-input>
+          </ion-item>
+          <ion-item>
+            <ion-input
+              label="Complemento do local"
+              labelPlacement="stacked"
+              formControlName="locationComplement"
+              placeholder="Quadra, campo, etc."
+            ></ion-input>
+          </ion-item>
+        </ion-list>
+        <app-address-form formControlName="address"></app-address-form>
+      </form>
+
+      <ion-list lines="full">
+        <ion-item>
+          <ion-textarea
+            label="Mensagem ao presidente desafiado"
+            labelPlacement="stacked"
+            [(ngModel)]="message"
+            autoGrow="true"
+            maxlength="1000"
+            placeholder="Ex.: Queremos marcar um amistoso no sabado..."
+          ></ion-textarea>
+        </ion-item>
+        <ion-item>
+          <ion-textarea
+            label="Condicoes e beneficios ao desafiado"
+            labelPlacement="stacked"
+            [(ngModel)]="challengeConditions"
+            autoGrow="true"
+            maxlength="2000"
+            placeholder="Ex.: agua, coletes, arbitragem por nossa conta..."
+          ></ion-textarea>
+        </ion-item>
+        <ion-item>
+          <ion-toggle [(ngModel)]="hasReturnLeg">
+            Ida e volta (adversario sera mandante na volta)
+          </ion-toggle>
+        </ion-item>
+      </ion-list>
+
+      <ion-button expand="block" (click)="submit()">Enviar desafio</ion-button>
+    }
+  }
+</ion-content>

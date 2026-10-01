@@ -1,0 +1,15 @@
+.convocation-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.convocation-row-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.convocation-row-text h3,
+.convocation-row-text p {
+  margin: 0;
+}

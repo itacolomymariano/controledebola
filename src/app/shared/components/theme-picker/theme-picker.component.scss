@@ -1,0 +1,90 @@
+:host {
+  display: flex;
+  align-items: center;
+}
+
+.theme-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ion-text-color);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.theme-swatch {
+  position: relative;
+  display: flex;
+  height: 44px;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid var(--ion-color-medium);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.theme-swatch--mini {
+  width: 36px;
+  height: 18px;
+  border-width: 1px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.theme-swatch.is-current {
+  border-color: var(--ion-color-primary);
+  box-shadow: 0 0 0 2px rgba(var(--ion-color-primary-rgb), 0.35);
+}
+
+.theme-swatch-stripe {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.theme-swatch-check {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #fff;
+  font-size: 22px;
+  filter: drop-shadow(0 0 2px #000);
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.theme-surface {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.theme-surface-chip {
+  flex: 1 1 0;
+  padding: 8px 12px;
+  border: 2px solid var(--ion-color-medium);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ion-text-color);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.theme-surface-chip.is-current {
+  border-color: var(--ion-color-primary);
+  box-shadow: 0 0 0 2px rgba(var(--ion-color-primary-rgb), 0.35);
+}

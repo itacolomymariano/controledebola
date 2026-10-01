@@ -260,6 +260,7 @@ export const SCOUT_GENERAL_STAT_LABELS = SCOUT_STAT_LABELS;
 
 export type RefereeSumulaStatField =
   | 'goals'
+  | 'goalsConceded'
   | 'foulsCommitted'
   | 'yellowCards'
   | 'redCards'
@@ -275,8 +276,12 @@ export const REFEREE_SUMULA_STAT_FIELDS: RefereeSumulaStatField[] = [
   'penaltiesSuffered',
 ];
 
+/** Campos extras da sumula visiveis so para goleiro. */
+export const REFEREE_SUMULA_GOALKEEPER_STAT_FIELDS: RefereeSumulaStatField[] = ['goalsConceded'];
+
 export const REFEREE_SUMULA_STAT_LABELS: Record<RefereeSumulaStatField, string> = {
   goals: 'Gol',
+  goalsConceded: 'Gols sofridos',
   foulsCommitted: 'Falta',
   yellowCards: 'Cartao amarelo',
   redCards: 'Cartao vermelho',

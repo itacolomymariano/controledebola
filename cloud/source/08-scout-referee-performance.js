@@ -302,9 +302,18 @@ function buildMergedScoutStatsByParticipantId(performances) {
 function mergeRefereeSumulaStatObjects(base, incoming) {
   return {
     goals: Math.max(Number(base.goals || 0), Number(incoming.goals || 0)),
+    goalsConceded: Math.max(Number(base.goalsConceded || 0), Number(incoming.goalsConceded || 0)),
     fouls: Math.max(Number(base.fouls || 0), Number(incoming.fouls || 0)),
     yellowCards: Math.max(Number(base.yellowCards || 0), Number(incoming.yellowCards || 0)),
     redCards: Math.max(Number(base.redCards || 0), Number(incoming.redCards || 0)),
+    penaltiesCommitted: Math.max(
+      Number(base.penaltiesCommitted || 0),
+      Number(incoming.penaltiesCommitted || 0)
+    ),
+    penaltiesSuffered: Math.max(
+      Number(base.penaltiesSuffered || 0),
+      Number(incoming.penaltiesSuffered || 0)
+    ),
     observation: base.observation || incoming.observation || '',
   };
 }
@@ -314,6 +323,7 @@ function performanceHasRefereeSumulaData(perf) {
   if (perf.get('refereeSumulaSaved')) return true;
   return (
     readRefereeOverlapStat(perf, 'goals') > 0 ||
+    Number(perf.get('refereeGoalsConceded') || 0) > 0 ||
     readRefereeOverlapStat(perf, 'foulsCommitted') > 0 ||
     readRefereeOverlapStat(perf, 'yellowCards') > 0 ||
     readRefereeOverlapStat(perf, 'redCards') > 0 ||
@@ -623,7 +633,7 @@ async function assertConfirmedAthleteInEvent(event, athleteUserId) {
   const participationFee = Number(event.get('participationFee') || 0);
   const registrations = await new Parse.Query('EventRegistration')
     .equalTo('event', event)
-    .equalTo('role', 'athlete')
+    .containedIn('role', ['athlete', 'goalkeeper'])
     .include('user')
     .limit(500)
     .find({ useMasterKey: true });
@@ -1052,30 +1062,32 @@ async function buildEventActualPredictionResults(event) {
   let awayScore = 0;
   if (event.get('type') === 'team_match') {
     const participationFee = Number(event.get('participationFee') || 0);
+    // Confronto: placar = soma dos gols anotados pelo arbitro (refereeGoals) por time.
     const athleteRegs = await new Parse.Query('EventRegistration')
       .equalTo('event', event)
-      .equalTo('role', 'athlete')
-      .ascending('arrivalOrder')
-      .addAscending('apelido')
+      .containedIn('role', ['athlete', 'goalkeeper'])
       .limit(500)
       .find({ useMasterKey: true });
 
-    const confirmedAthletes = [];
+    const homeIds = new Set();
+    const awayIds = new Set();
     for (const registration of athleteRegs) {
       const resolved = await resolveRegistrationParticipantUserId(registration);
       if (!resolved.userId) continue;
       if (!computeRegistrationEffectiveConfirmation(registration, participationFee)) continue;
-      confirmedAthletes.push(resolved.userId);
+      const side = registration.get('teamSide');
+      if (side === 'home') homeIds.add(resolved.userId);
+      else if (side === 'away') awayIds.add(resolved.userId);
     }
 
-    const midpoint = Math.ceil(confirmedAthletes.length / 2);
-    const homeIds = new Set(confirmedAthletes.slice(0, midpoint));
-    for (const [participantId, stats] of statsByUser.entries()) {
-      if (homeIds.has(participantId)) {
-        homeScore += stats.goals;
-      } else {
-        awayScore += stats.goals;
-      }
+    // Placar = apenas gols marcados (refereeGoals). Gols sofridos de goleiro nao entram.
+    for (const perf of performances) {
+      const participantId = getPerformanceParticipantId(perf);
+      if (!participantId) continue;
+      const refereeGoals = Number(mapPerformanceToRefereeSumula(perf).goals || 0);
+      if (!refereeGoals) continue;
+      if (homeIds.has(participantId)) homeScore += refereeGoals;
+      else if (awayIds.has(participantId)) awayScore += refereeGoals;
     }
   }
 
@@ -1287,6 +1299,7 @@ const REFEREE_SUMULA_FIELDS = [
 function emptyRefereeSumulaStats() {
   return {
     goals: 0,
+    goalsConceded: 0,
     fouls: 0,
     yellowCards: 0,
     redCards: 0,
@@ -1302,6 +1315,10 @@ function mapPerformanceToRefereeSumula(perf) {
   }
   return {
     goals: readRefereeOverlapStat(perf, 'goals'),
+    goalsConceded: Math.max(
+      0,
+      Number(perf.get('refereeGoalsConceded') != null ? perf.get('refereeGoalsConceded') : perf.get('goalsConceded') || 0)
+    ),
     fouls: readRefereeOverlapStat(perf, 'foulsCommitted'),
     yellowCards: readRefereeOverlapStat(perf, 'yellowCards'),
     redCards: readRefereeOverlapStat(perf, 'redCards'),
@@ -1314,9 +1331,29 @@ function mapPerformanceToRefereeSumula(perf) {
 async function assertCanViewRefereeSumula(user, eventId) {
   const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
   const participationFee = Number(event.get('participationFee') || 0);
-  const eventEnded = isEventEndedForTools(event);
+  // Sumula: bloqueio de edicao so com isFinished. A faixa sumulaOpensAt/ClosesAt
+  // pode ser aberta pelo admin apos o horario do jogo.
+  const finished = !!event.get('isFinished');
   const withinSumulaWindow = isWithinApontamentoWindow(event, 'sumula');
-  const locked = eventEnded;
+  const locked = finished;
+  const isTeamMatch = event.get('type') === 'team_match';
+
+  const registration = await new Parse.Query('EventRegistration')
+    .equalTo('event', event)
+    .equalTo('user', user)
+    .first({ useMasterKey: true });
+
+  const isReferee =
+    !!registration &&
+    registration.get('role') === 'referee' &&
+    computeRegistrationEffectiveConfirmation(registration, participationFee);
+
+  const canEdit = isReferee && !finished && withinSumulaWindow;
+
+  // Confronto: qualquer usuario logado consulta; so o arbitro edita na janela.
+  if (isTeamMatch) {
+    return { event, locked, canEdit };
+  }
 
   const eventAdmin = event.get('admin');
   if (eventAdmin && eventAdmin.id === user.id) {
@@ -1332,11 +1369,6 @@ async function assertCanViewRefereeSumula(user, eventId) {
     }
   }
 
-  const registration = await new Parse.Query('EventRegistration')
-    .equalTo('event', event)
-    .equalTo('user', user)
-    .first({ useMasterKey: true });
-
   if (!registration || !computeRegistrationEffectiveConfirmation(registration, participationFee)) {
     throw new Parse.Error(
       Parse.Error.OPERATION_FORBIDDEN,
@@ -1344,17 +1376,73 @@ async function assertCanViewRefereeSumula(user, eventId) {
     );
   }
 
-  const isReferee = registration.get('role') === 'referee';
-  if (!eventEnded && !isReferee) {
+  if (!finished && !isReferee) {
     throw new Parse.Error(
       Parse.Error.OPERATION_FORBIDDEN,
       'A sumula fica disponivel para consulta apos o encerramento do evento.'
     );
   }
 
-  const canEdit = isReferee && !eventEnded && withinSumulaWindow;
-
   return { event, locked, canEdit };
+}
+
+/**
+ * Confronto: gols sofridos dos goleiros de um time nao podem ultrapassar
+ * a soma de gols marcados pelo time adversario.
+ */
+async function assertTeamMatchGoalkeeperConcededCap(event, entriesByUserId) {
+  if (event.get('type') !== 'team_match') return;
+
+  const participationFee = Number(event.get('participationFee') || 0);
+  const registrations = await new Parse.Query('EventRegistration')
+    .equalTo('event', event)
+    .containedIn('role', ['athlete', 'goalkeeper'])
+    .limit(500)
+    .find({ useMasterKey: true });
+
+  const sideByUserId = new Map();
+  const roleByUserId = new Map();
+  for (const registration of registrations) {
+    const resolved = await resolveRegistrationParticipantUserId(registration);
+    if (!resolved.userId) continue;
+    if (!computeRegistrationEffectiveConfirmation(registration, participationFee)) continue;
+    const side = registration.get('teamSide');
+    if (side !== 'home' && side !== 'away') continue;
+    sideByUserId.set(resolved.userId, side);
+    roleByUserId.set(resolved.userId, registration.get('role') || 'athlete');
+  }
+
+  let homeGoals = 0;
+  let awayGoals = 0;
+  let homeConceded = 0;
+  let awayConceded = 0;
+
+  for (const [userId, stats] of entriesByUserId.entries()) {
+    const side = sideByUserId.get(userId);
+    if (!side) continue;
+    const goals = Math.max(0, Number(stats.goals || 0));
+    const conceded = Math.max(0, Number(stats.goalsConceded || 0));
+    if (side === 'home') {
+      homeGoals += goals;
+      if (roleByUserId.get(userId) === 'goalkeeper') homeConceded += conceded;
+    } else {
+      awayGoals += goals;
+      if (roleByUserId.get(userId) === 'goalkeeper') awayConceded += conceded;
+    }
+  }
+
+  if (homeConceded > awayGoals) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      `Gols sofridos dos goleiros mandantes (${homeConceded}) nao podem ultrapassar os gols do visitante (${awayGoals}).`
+    );
+  }
+  if (awayConceded > homeGoals) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      `Gols sofridos dos goleiros visitantes (${awayConceded}) nao podem ultrapassar os gols do mandante (${homeGoals}).`
+    );
+  }
 }
 
 async function assertConfirmedRefereeForEvent(user, eventId, allowFinished = false) {
@@ -1380,7 +1468,7 @@ async function assertConfirmedRefereeForEvent(user, eventId, allowFinished = fal
     );
   }
 
-  if (!allowFinished && isEventEndedForTools(event)) {
+  if (!allowFinished && !!event.get('isFinished')) {
     throw new Parse.Error(
       Parse.Error.OPERATION_FORBIDDEN,
       'O evento ja foi encerrado. Sumula indisponivel.'
@@ -1405,10 +1493,13 @@ Parse.Cloud.define('getRefereeSumulaBoard', async (request) => {
 
   const { event, locked, canEdit } = await assertCanViewRefereeSumula(user, eventId);
   const participationFee = Number(event.get('participationFee') || 0);
+  const isTeamMatch = event.get('type') === 'team_match';
+  const homeTeamName = event.get('homeTeamName') || 'Mandante';
+  const awayTeamName = event.get('awayTeamName') || 'Visitante';
 
   const registrations = await new Parse.Query('EventRegistration')
     .equalTo('event', event)
-    .equalTo('role', 'athlete')
+    .containedIn('role', ['athlete', 'goalkeeper'])
     .include('user')
     .include('athlete')
     .ascending('apelido')
@@ -1428,6 +1519,8 @@ Parse.Cloud.define('getRefereeSumulaBoard', async (request) => {
   const perfStatsByParticipantId = buildMergedRefereeStatsByParticipantId(eventPerformances);
 
   const athletes = [];
+  let homeScore = 0;
+  let awayScore = 0;
   for (const registration of registrations) {
     const resolved = await resolveRegistrationParticipantUserId(registration);
     if (!resolved.userId) continue;
@@ -1436,6 +1529,19 @@ Parse.Cloud.define('getRefereeSumulaBoard', async (request) => {
     const row = mapRegistrationForEventListItem(registration, eventId, participationFee);
     const stats =
       perfStatsByParticipantId.get(resolved.userId) || emptyRefereeSumulaStats();
+    const teamSide =
+      registration.get('teamSide') === 'home' || registration.get('teamSide') === 'away'
+        ? registration.get('teamSide')
+        : '';
+    const teamName =
+      teamSide === 'home' ? homeTeamName : teamSide === 'away' ? awayTeamName : '';
+
+    // Placar = apenas gols marcados. Gols sofridos (goleiro) nao somam.
+    if (isTeamMatch) {
+      const goals = Number(stats.goals || 0);
+      if (teamSide === 'home') homeScore += goals;
+      else if (teamSide === 'away') awayScore += goals;
+    }
 
     athletes.push({
       userId: resolved.userId,
@@ -1444,15 +1550,28 @@ Parse.Cloud.define('getRefereeSumulaBoard', async (request) => {
       userName: row.userName,
       avatarUrl: row.avatarUrl || undefined,
       primaryPosition: row.primaryPosition || undefined,
+      role: registration.get('role') || 'athlete',
+      teamSide,
+      teamName,
       stats,
     });
   }
 
-  athletes.sort((a, b) => a.apelido.localeCompare(b.apelido, 'pt-BR'));
+  athletes.sort((a, b) => {
+    const sideRank = (side) => (side === 'home' ? 0 : side === 'away' ? 1 : 2);
+    const diff = sideRank(a.teamSide) - sideRank(b.teamSide);
+    if (diff !== 0) return diff;
+    return String(a.apelido || '').localeCompare(String(b.apelido || ''), 'pt-BR');
+  });
 
   return {
     eventId,
     eventName: event.get('name') || 'Evento',
+    eventType: event.get('type') || 'pelada',
+    homeTeamName: isTeamMatch ? homeTeamName : undefined,
+    awayTeamName: isTeamMatch ? awayTeamName : undefined,
+    homeScore: isTeamMatch ? homeScore : undefined,
+    awayScore: isTeamMatch ? awayScore : undefined,
     locked,
     canEdit,
     athletes,
@@ -1511,6 +1630,12 @@ Parse.Cloud.define('incrementRefereeSumula', async (request) => {
 
 function applyRefereeSumulaStatsToPerformance(perf, stats) {
   perf.set('refereeGoals', Math.max(0, Number(stats.goals || 0)));
+  if (stats.goalsConceded != null) {
+    const conceded = Math.max(0, Number(stats.goalsConceded || 0));
+    perf.set('refereeGoalsConceded', conceded);
+    // Espelha no campo agregado para murais/dashboards de goleiro.
+    perf.set('goalsConceded', conceded);
+  }
   perf.set('refereeFoulsCommitted', Math.max(0, Number(stats.fouls || 0)));
   perf.set('refereeYellowCards', Math.max(0, Number(stats.yellowCards || 0)));
   perf.set('refereeRedCards', Math.max(0, Number(stats.redCards || 0)));
@@ -1538,6 +1663,14 @@ Parse.Cloud.define('saveRefereeSumulaBoard', async (request) => {
 
   const { event } = await assertConfirmedRefereeForEvent(user, eventId);
   const pelada = event.get('pelada');
+
+  const entriesByUserId = new Map();
+  for (const entry of entries) {
+    const athleteUserId = entry && entry.athleteUserId ? String(entry.athleteUserId) : '';
+    if (!athleteUserId) continue;
+    entriesByUserId.set(athleteUserId, entry.stats || {});
+  }
+  await assertTeamMatchGoalkeeperConcededCap(event, entriesByUserId);
 
   for (const entry of entries) {
     const athleteUserId = entry && entry.athleteUserId ? String(entry.athleteUserId) : '';

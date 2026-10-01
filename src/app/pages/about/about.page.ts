@@ -1,7 +1,9 @@
 import { Component } from '@angular/core';
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
+import { SOCIAL_LINKS } from '../../core/config/social-links.config';
 import { APP_RELEASE } from '../../core/constants/app-release';
+import { APP_GUIDE_URL } from '../../core/services/app-guide.service';
 import {
   APP_SITE_URL,
   AppInviteShareService,
@@ -23,6 +25,8 @@ export class AboutPage {
   readonly logoPath = 'assets/icon/logo_controle_de_bola.png';
   readonly siteUrl = APP_SITE_URL;
   readonly siteLabel = 'controledebola.com';
+  readonly guideUrl = APP_GUIDE_URL;
+  readonly socialLinks = SOCIAL_LINKS;
 
   constructor(private readonly appInviteShare: AppInviteShareService) {}
 

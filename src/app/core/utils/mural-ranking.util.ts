@@ -8,6 +8,14 @@ export function muralRankingDisplayScore(entry: MuralRankingEntry): number {
   return entry.combinedScore;
 }
 
+/** Mesma métrica da badge do Top 10 Atletas (nota média quando há votos). */
+export function athleteRankingDisplayNote(entry: MuralRankingEntry): number {
+  if (entry.voteCount > 0) {
+    return Number(entry.averageScore ?? 0) || 0;
+  }
+  return Number(entry.combinedScore ?? 0) || 0;
+}
+
 export function muralRankingBadgeLabel(
   role: MuralTargetRole,
   entry: MuralRankingEntry
@@ -23,17 +31,15 @@ export function muralRankingBadgeLabel(
     'masseur',
     'kitman',
     'gandula',
+    'fan',
+    'gatekeeper',
   ];
-  if (supportRoles.includes(role) && entry.voteCount > 0) {
-    const avg = Number(entry.averageScore ?? entry.totalScore) || 0;
-    return `${avg.toFixed(1)} med`;
-  }
   if (entry.voteCount > 0) {
-    if (role === 'goalkeeper') {
-      return `${entry.totalScore.toFixed(1)} pts`;
+    const avg = Number(entry.averageScore ?? entry.totalScore) || 0;
+    if (supportRoles.includes(role) || role === 'athlete' || role === 'goalkeeper') {
+      return avg.toFixed(1);
     }
-    return `${entry.totalScore.toFixed(1)}`;
   }
   const score = muralRankingDisplayScore(entry);
-  return `${score.toFixed(1)}`;
+  return score.toFixed(1);
 }

@@ -33,8 +33,8 @@
  */
 
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
-/* @import "@ionic/angular/css/palettes/dark.class.css"; */
-@import "@ionic/angular/css/palettes/dark.system.css";
+/* @import "@ionic/angular/css/palettes/dark.system.css"; */
+@import "@ionic/angular/css/palettes/dark.class.css";
 
 /* Labels longos em toggles — quebra de linha em todo o app */
 ion-item.item-toggle-wrap,
@@ -80,6 +80,107 @@ ion-toggle.toggle-label-wrap::part(label) {
   }
 }
 
+.mural-filter-line {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--ion-color-medium);
+}
+
 ion-list-header app-mural-share-button {
   margin-left: auto;
+}
+
+/*
+ * Alertas / action sheets: botoes usam --ion-color-primary.
+ * Em paletas escuras (ex. preto no modo Dark) o texto some no fundo do overlay.
+ * Tokens so nestes overlays — nao alteram a paleta do app.
+ */
+html[data-surface='dark'] ion-alert {
+  --background: #2c2c30;
+  --ion-text-color: #f4f4f5;
+  --ion-color-primary: #8ab4f8;
+  --ion-color-primary-rgb: 138, 180, 248;
+  --ion-color-primary-contrast: #0b1c33;
+  --ion-color-danger: #ff8a80;
+  --ion-color-danger-contrast: #1a1a1a;
+}
+
+html[data-surface='light'] ion-alert {
+  --background: #ffffff;
+  --ion-text-color: #1a1a1a;
+  --ion-color-primary: #0b57d0;
+  --ion-color-primary-rgb: 11, 87, 208;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-danger: #c5221f;
+  --ion-color-danger-contrast: #ffffff;
+}
+
+html[data-surface='dark'] ion-action-sheet {
+  --background: #2c2c30;
+  --button-background: #2c2c30;
+  --button-color: #f4f4f5;
+  --color: #f4f4f5;
+  --ion-color-primary: #8ab4f8;
+  --ion-color-danger: #ff8a80;
+}
+
+html[data-surface='light'] ion-action-sheet {
+  --background: #ffffff;
+  --button-background: #ffffff;
+  --button-color: #1a1a1a;
+  --color: #1a1a1a;
+  --ion-color-primary: #0b57d0;
+  --ion-color-danger: #c5221f;
+}
+
+ion-popover .balloon-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+ion-popover .balloon-close {
+  flex-shrink: 0;
+  --padding-start: 4px;
+  --padding-end: 4px;
+  font-size: 1.1rem;
+}
+
+ion-popover .balloon-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/*
+ * Samsung / Android 15+: a WebView fica sob a faixa de navegacao (3 botoes ou gesto).
+ * Sem este inset, "Salvar perfil", "Participar" e a tab bar ficam atras da barra do sistema.
+ */
+html.native-android {
+  --app-bottom-inset: max(56px, env(safe-area-inset-bottom, 0px));
+}
+
+html.native-android ion-content {
+  --padding-bottom: calc(16px + var(--app-bottom-inset));
+}
+
+html.native-android ion-footer {
+  padding-bottom: var(--app-bottom-inset);
+}
+
+html.native-android ion-tab-bar {
+  padding-bottom: var(--app-bottom-inset);
+}
+
+html.native-android ion-menu ion-content {
+  --padding-bottom: calc(8px + var(--app-bottom-inset));
+}
+
+html.native-android ion-popover ion-content {
+  --padding-bottom: 16px;
 }

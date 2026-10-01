@@ -1,0 +1,112 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/inbox"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Perfil do time</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+  @if (!loading && errorMessage) {
+    <ion-card color="warning">
+      <ion-card-content>{{ errorMessage }}</ion-card-content>
+    </ion-card>
+  }
+  @if (!loading && profile) {
+    <div class="team-identity">
+      @if (profile['shieldImageUrl']) {
+        <img class="team-shield" [src]="$any(profile['shieldImageUrl'])" [alt]="'' + profile['name']" />
+      }
+      <h1>{{ profile['name'] }}</h1>
+    </div>
+    <div class="president-row">
+      <app-user-avatar
+        [avatarUrl]="$any(profile['presidentAvatarUrl'])"
+        [alt]="$any(profile['presidentName'])"
+        size="sm"
+      ></app-user-avatar>
+      <span>{{ profile['presidentName'] || '—' }}</span>
+    </div>
+    @if (profile['description']) {
+      <p>{{ profile['description'] }}</p>
+    }
+    <p>Fundação: {{ formatFoundedAt(profile['foundedAt']) }}</p>
+    <p>Torcedores: {{ profile['fanCount'] ?? 0 }}</p>
+    <p>Invicto há: {{ profile['unbeatenFor'] || '—' }}</p>
+    <p>Última derrota: {{ lastDefeatText }}</p>
+    <p>Local: {{ profile['homeVenue'] || '—' }}</p>
+    <p>Media de idade: {{ profile['averageAge'] ?? '—' }}</p>
+    <p>Elenco: {{ profile['rosterCount'] ?? 0 }} atletas</p>
+    <div class="team-stats-heading">
+      <h2>{{ 'team.stats.title' | t }}</h2>
+      <app-help-balloon textKey="team.stats.help"></app-help-balloon>
+    </div>
+    <p>Confrontos: {{ profile['matchesPlayed'] ?? 0 }}</p>
+    <p>Vitória(s): {{ profile['wins'] ?? 0 }}</p>
+    <p>Empate(s): {{ profile['draws'] ?? 0 }}</p>
+    <p>Derrota(s): {{ profile['losses'] ?? 0 }}</p>
+    <p>Aproveitamento: {{ $any(profile['winRatePercent']) ?? 0 | number: '1.1-1' }}%</p>
+    <p>Cartoes amarelos: {{ profile['yellowCards'] ?? 0 }}</p>
+    <p>Cartoes vermelhos: {{ profile['redCards'] ?? 0 }}</p>
+    @if (profile['topScorer']) {
+      <p>
+        Goleador: {{ $any(profile['topScorer']).name }} ({{ $any(profile['topScorer']).goals }})
+      </p>
+    }
+    @if (profile['topPointsAthlete']) {
+      <p>
+        Maior pontuacao: {{ $any(profile['topPointsAthlete']).name }}
+        ({{ $any(profile['topPointsAthlete']).points }})
+      </p>
+    }
+    @if ($any(profile['lastResults'])?.length) {
+      <h2>Ultimos confrontos</h2>
+      @for (row of $any(profile['lastResults']); track row.eventId) {
+        <p class="team-result-row">
+          {{ formatMatchDate(row.startTime) }}
+          {{ resultName(row.result) }}:
+          {{ row.homeTeamName }} {{ row.homeScore }} x {{ row.awayScore }} {{ row.awayTeamName }}
+        </p>
+      }
+    }
+    <h2>Atletas</h2>
+    @if (!$any(profile['athletes'])?.length) {
+      <p>Nenhum atleta no elenco.</p>
+    }
+    @for (person of $any(profile['athletes']); track person.userId + person.name) {
+      <div class="person-row">
+        <app-user-avatar [avatarUrl]="person.avatarUrl" [alt]="person.name" size="sm"></app-user-avatar>
+        <span>{{ person.name }}</span>
+        <span>{{ gamesLabel(person.matchesPlayed) }}</span>
+        <span>{{ rateLabel(person.winRatePercent) }}</span>
+      </div>
+    }
+
+    <h2>Treinadores</h2>
+    @if (!$any(profile['coaches'])?.length) {
+      <p>Nenhum treinador nos confrontos deste time.</p>
+    }
+    @for (person of $any(profile['coaches']); track person.userId) {
+      <div class="person-row">
+        <app-user-avatar [avatarUrl]="person.avatarUrl" [alt]="person.name" size="sm"></app-user-avatar>
+        <span>{{ person.name }}</span>
+        <span>{{ gamesLabel(person.matchesPlayed) }}</span>
+        <span>{{ rateLabel(person.winRatePercent) }}</span>
+      </div>
+    }
+
+    @if ($any(profile['observations'])?.length) {
+      <h2>Observacoes de sumula</h2>
+      @for (obs of $any(profile['observations']); track obs.text) {
+        <p>{{ obs.eventName }}: {{ obs.text }}</p>
+      }
+    }
+  }
+</ion-content>

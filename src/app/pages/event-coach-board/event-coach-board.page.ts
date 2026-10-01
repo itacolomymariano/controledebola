@@ -97,6 +97,7 @@ export class EventCoachBoardPage {
           }
         });
       }
+      this.applyTeamMatchSides();
     } catch (error: unknown) {
       await this.showError(parseErrorMessage(error) || 'Erro ao carregar painel do treinador.');
       this.readOnly = true;
@@ -123,7 +124,7 @@ export class EventCoachBoardPage {
         },
         teamNotes: (value.teamNotes || []).map((note, index) => ({
           teamIndex: index,
-          teamName: String(note?.teamName || `Time ${index + 1}`),
+          teamName: String(note?.teamName || this.defaultTeamName(index)),
           formation: String(note?.formation || ''),
           focus: String(note?.focus || ''),
         })),
@@ -133,6 +134,7 @@ export class EventCoachBoardPage {
         })),
         rotationNotes: String(value.rotationNotes || ''),
       });
+      this.applyTeamMatchSides();
       await this.showSuccess('Painel do treinador salvo.');
     } catch (error: unknown) {
       await this.showError(parseErrorMessage(error) || 'Nao foi possivel salvar o painel.');
@@ -141,6 +143,37 @@ export class EventCoachBoardPage {
       this.saving = false;
       this.cdr.markForCheck();
     }
+  }
+
+  get isTeamMatch(): boolean {
+    return this.event?.type === 'team_match';
+  }
+
+  canEditTeam(index: number): boolean {
+    if (!this.isTeamMatch) return true;
+    const side = index === 0 ? 'home' : 'away';
+    return (this.board?.coachSides || []).includes(side);
+  }
+
+  teamHeader(index: number): string {
+    return this.isTeamMatch ? this.defaultTeamName(index) : `Time ${index + 1}`;
+  }
+
+  private defaultTeamName(index: number): string {
+    if (!this.isTeamMatch) return `Time ${index + 1}`;
+    return index === 0
+      ? this.board?.homeTeamName || this.event?.homeTeamName || 'Mandante'
+      : this.board?.awayTeamName || this.event?.awayTeamName || 'Visitante';
+  }
+
+  private applyTeamMatchSides(): void {
+    this.teamNotes.controls.forEach((group, index) => {
+      group.enable({ emitEvent: false });
+      if (!this.isTeamMatch) return;
+      group.patchValue({ teamName: this.defaultTeamName(index) }, { emitEvent: false });
+      group.get('teamName')?.disable({ emitEvent: false });
+      if (!this.canEditTeam(index)) group.disable({ emitEvent: false });
+    });
   }
 
   private createTeamNoteGroup(teamIndex: number) {

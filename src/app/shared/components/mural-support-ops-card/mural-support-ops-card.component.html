@@ -1,5 +1,8 @@
 <ion-card>
   <ion-card-header>
+    @if (shareContext?.scope === 'event') {
+      <app-mural-event-context [context]="shareContext"></app-mural-event-context>
+    }
     <div class="mural-card-header-row">
       <div>
         <ion-card-title>Operacao de apoio</ion-card-title>
@@ -8,6 +11,7 @@
       <app-mural-share-button
         [context]="shareContext"
         cardTitle="Operacao de apoio"
+        ruleKey="mural.rule.supportOps"
       ></app-mural-share-button>
     </div>
   </ion-card-header>

@@ -1,208 +1,147 @@
 ﻿<ion-header>
-
   <ion-toolbar>
-
     <ion-title>Mural do Controle de Bola</ion-title>
-
+    <ion-buttons slot="end">
+      @if (muralTab === 'confrontos') {
+        <app-screen-help
+          helpId="mural-confrontos-help"
+          bodyKey="mural.confrontos.help"
+        ></app-screen-help>
+      }
+      <app-screen-help helpId="mural-app-help" bodyKey="mural.app.help"></app-screen-help>
+    </ion-buttons>
   </ion-toolbar>
-
 </ion-header>
 
-
-
 <ion-content class="ion-padding">
-  <app-coach-hint
-    tipId="app-mural"
-    titleKey="coach.hint.voteTitle"
-    bodyKey="coach.hint.voteBody"
-  />
+  @if (showLocationFilter) {
+    <div class="mural-location-filter">
+      <ion-list lines="none" class="mural-location-list">
+        <ion-item>
+          <ion-select
+            label="Estado"
+            labelPlacement="stacked"
+            interface="alert"
+            okText="Escolher"
+            cancelText="Cancelar"
+            placeholder="Todo o Brasil"
+            [value]="selectedState || allLocations"
+            (ionChange)="onStateFilterChange($event)"
+          >
+            <ion-select-option [value]="allLocations">Todo o Brasil</ion-select-option>
+            @for (option of stateOptions; track option.key) {
+              <ion-select-option [value]="option.key">
+                {{ option.label }} ({{ option.count }})
+              </ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
+
+        @if (selectedState) {
+          <ion-item>
+            <ion-select
+              label="Cidade"
+              labelPlacement="stacked"
+              interface="alert"
+              okText="Escolher"
+              cancelText="Cancelar"
+              placeholder="Todas as cidades"
+              [value]="selectedCity || allLocations"
+              (ionChange)="onCityFilterChange($event)"
+            >
+              <ion-select-option [value]="allLocations">Todas as cidades</ion-select-option>
+              @for (option of cityOptions; track option.key) {
+                <ion-select-option [value]="option.key">
+                  {{ cityOptionLabel(option) }} ({{ option.count }})
+                </ion-select-option>
+              }
+            </ion-select>
+          </ion-item>
+        }
+
+        @if (selectedCity) {
+          <ion-item>
+            <ion-select
+              label="Bairro"
+              labelPlacement="stacked"
+              interface="alert"
+              okText="Escolher"
+              cancelText="Cancelar"
+              placeholder="Todos os bairros"
+              [value]="selectedNeighborhood || allLocations"
+              (ionChange)="onNeighborhoodFilterChange($event)"
+            >
+              <ion-select-option [value]="allLocations">Todos os bairros</ion-select-option>
+              @for (option of neighborhoodOptions; track option.key) {
+                <ion-select-option [value]="option.key">
+                  {{ neighborhoodOptionLabel(option) }} ({{ option.count }})
+                </ion-select-option>
+              }
+            </ion-select>
+          </ion-item>
+        }
+      </ion-list>
+
+      @if (hasLocationFilter) {
+        <ion-chip color="primary" class="mural-location-chip" (click)="clearLocationFilter()">
+          <ion-icon name="location-outline"></ion-icon>
+          <ion-label>{{ activeLocationLabel }}</ion-label>
+          <ion-icon name="close-circle"></ion-icon>
+        </ion-chip>
+      } @else {
+        <ion-note class="mural-location-note">Mostrando todo o Brasil.</ion-note>
+      }
+    </div>
+  }
+
+  <ion-segment
+    [value]="muralTab"
+    (ionChange)="onMuralTabChange($event)"
+    class="ion-margin-bottom"
+  >
+    <ion-segment-button value="geral">
+      <ion-label>{{ 'mural.tab.geral' | t }}</ion-label>
+    </ion-segment-button>
+    <ion-segment-button value="peladas">
+      <ion-label>{{ 'mural.tab.peladas' | t }}</ion-label>
+    </ion-segment-button>
+    <ion-segment-button value="confrontos">
+      <ion-label>{{ 'mural.tab.confrontos' | t }}</ion-label>
+    </ion-segment-button>
+  </ion-segment>
 
   <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
-
     <ion-refresher-content></ion-refresher-content>
-
   </ion-refresher>
 
-
-
   @if (loading) {
-
-    <ion-spinner name="crescent"></ion-spinner>
-
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+      <p class="mural-loading-text">Calculando Rankings, aguarde...</p>
+    </div>
   }
-
-
 
   @if (!loading && errorMessage) {
-
     <ion-card color="warning" class="ion-margin-bottom">
-
       <ion-card-content>
-
         <p>{{ errorMessage }}</p>
-
         <ion-button fill="clear" (click)="retry()">Tentar novamente</ion-button>
-
       </ion-card-content>
-
     </ion-card>
-
   }
-
-
 
   @if (!loading) {
-
-    <app-mural-participant-stats
-
-      [stats]="participantStats"
-
-      scope="app"
-
-      [shareContext]="shareContext"
-
-    ></app-mural-participant-stats>
-
-
-
-    <app-mural-highlights-panel
-
-      [highlights]="muralHighlights"
-
-      scope="app"
-
-      [shareContext]="shareContext"
-
-    ></app-mural-highlights-panel>
-
-
-
-    <app-mural-prediction-rankings
-
-      scope="app"
-
-      [entries]="predictionEntries"
-
-      [preloadEntries]="dashboardFromCloud"
-
-      [shareContext]="shareContext"
-
-    ></app-mural-prediction-rankings>
-
-
-
-    <app-mural-fan-highlights scope="app" [shareContext]="shareContext"></app-mural-fan-highlights>
-
-
-
-    <app-mural-media-top-card
-
-      scope="app"
-
-      kind="video"
-
-      [shareContext]="shareContext"
-
-    ></app-mural-media-top-card>
-
-    <app-mural-media-top-card
-
-      scope="app"
-
-      kind="radio"
-
-      [shareContext]="shareContext"
-
-    ></app-mural-media-top-card>
-
-    <app-mural-media-top-card
-
-      scope="app"
-
-      kind="journal"
-
-      [shareContext]="shareContext"
-
-    ></app-mural-media-top-card>
-
-
-
-    <app-mural-location-top-rankings
-
-      [rankings]="locationTopRankings"
-
-      [shareContext]="shareContext"
-
-    ></app-mural-location-top-rankings>
-
-
-
-    <app-mural-performance-analytics
-
-      scope="app"
-
-      [analytics]="performanceAnalytics"
-
-      [preloadAnalytics]="dashboardFromCloud && performanceAnalytics !== null"
-
-      [shareContext]="shareContext"
-
-    ></app-mural-performance-analytics>
-
-
-
-    @for (section of rankingSections; track section.role) {
-
-      <ion-card>
-
-        <ion-card-header>
-
-          <div class="mural-card-header-row">
-
-            <ion-card-title>Top 10 — {{ section.title }}</ion-card-title>
-
-            <app-mural-share-button
-
-              [context]="shareContext"
-
-              [cardTitle]="'Top 10 — ' + section.title"
-
-            ></app-mural-share-button>
-
-          </div>
-
-        </ion-card-header>
-
-        <ion-card-content>
-
-          @if (!section.entries.length) {
-
-            <ion-note>Sem dados ainda.</ion-note>
-
-          }
-
-          @for (entry of section.entries; track entry.userId; let i = $index) {
-
-            <div class="rank-row ion-margin-bottom">
-
-              <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="sm"></app-user-avatar>
-
-              <span>{{ i + 1 }}. {{ entry.userName }}</span>
-
-              <ion-badge>{{ entry.badgeLabel }}</ion-badge>
-
-            </div>
-
-          }
-
-        </ion-card-content>
-
-      </ion-card>
-
-    }
-
+    <app-mural-app-feed
+      [tab]="muralTab"
+      [bucket]="bucketForTab(muralTab)"
+      [highlights]="highlightsForTab(muralTab)"
+      [shareContext]="shareContextForTab(muralTab)"
+      [participantStats]="participantStats"
+      [locationTopRankings]="locationTopRankings"
+      [performanceAnalytics]="performanceAnalytics"
+      [teamMatchDashboard]="teamMatchDashboard"
+      [dashboardFromCloud]="dashboardFromCloud"
+      [filterCaption]="locationFilterCaption"
+    ></app-mural-app-feed>
   }
-
 </ion-content>
-
-

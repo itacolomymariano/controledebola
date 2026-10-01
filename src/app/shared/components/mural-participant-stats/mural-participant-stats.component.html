@@ -1,14 +1,21 @@
 @if (stats) {
   <ion-card>
     <ion-card-header>
+      @if (scope === 'event') {
+        <app-mural-event-context [context]="shareContext"></app-mural-event-context>
+      }
       <div class="mural-card-header-row">
         <div>
           <ion-card-title>Participantes por localizacao</ion-card-title>
+          @if (filterCaption) {
+            <p class="mural-filter-line">{{ filterCaption }}</p>
+          }
           <ion-card-subtitle>Total: {{ stats.total }}</ion-card-subtitle>
         </div>
         <app-mural-share-button
           [context]="shareContext"
           cardTitle="Participantes por localizacao"
+          ruleKey="mural.rule.participantesLocal"
         ></app-mural-share-button>
       </div>
     </ion-card-header>

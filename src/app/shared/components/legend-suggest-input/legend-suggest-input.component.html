@@ -29,6 +29,11 @@
             </ion-card-content>
           </ion-card>
         } @else {
+          @if (search.trim().length >= 2) {
+            <ion-note class="legend-inline-hint">
+              Ja existe cadastro para "{{ search.trim() }}". Use uma opcao abaixo.
+            </ion-note>
+          }
           <ion-list lines="full">
             @for (item of suggestions; track item.id + item.source) {
               <ion-item button (click)="selectSuggestion(item)">
@@ -114,6 +119,11 @@
         } @else if (!filteredSuggestions.length) {
           <ion-note>Nenhuma sugestao encontrada.</ion-note>
         } @else {
+          @if (search.trim().length >= 2) {
+            <ion-note color="primary" class="ion-margin-bottom">
+              Ja existe cadastro para "{{ search.trim() }}". Use uma opcao abaixo.
+            </ion-note>
+          }
           <ion-list>
             @for (item of filteredSuggestions; track item.id + item.source) {
               <ion-item button (click)="selectSuggestion(item)">

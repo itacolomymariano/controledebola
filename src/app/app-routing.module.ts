@@ -24,6 +24,12 @@ const routes: Routes = [
     loadChildren: () => import('./pages/about/about.module').then(m => m.AboutPageModule),
   },
   {
+    path: 'contact',
+    canMatch: [AuthGuard],
+    loadChildren: () =>
+      import('./pages/contact-message/contact-message.module').then((m) => m.ContactMessagePageModule),
+  },
+  {
     path: 'pelada-create',
     canMatch: [AuthGuard],
     loadChildren: () => import('./pages/pelada-form/pelada-form.module').then(m => m.PeladaFormPageModule),
@@ -42,6 +48,29 @@ const routes: Routes = [
     path: 'event-create',
     canMatch: [AuthGuard],
     loadChildren: () => import('./pages/event-create/event-create.module').then(m => m.EventCreatePageModule),
+  },
+  {
+    path: 'confronto-create',
+    canMatch: [AuthGuard],
+    loadChildren: () =>
+      import('./pages/confronto-create/confronto-create.module').then((m) => m.ConfrontoCreatePageModule),
+  },
+  {
+    path: 'desafio-create',
+    canMatch: [AuthGuard],
+    loadChildren: () =>
+      import('./pages/desafio-create/desafio-create.module').then((m) => m.DesafioCreatePageModule),
+  },
+  {
+    path: 'team/form',
+    canMatch: [AuthGuard],
+    loadChildren: () => import('./pages/team-form/team-form.module').then(m => m.TeamFormPageModule),
+  },
+  {
+    path: 'team/:id',
+    canMatch: [AuthGuard],
+    loadChildren: () =>
+      import('./pages/team-profile/team-profile.module').then((m) => m.TeamProfilePageModule),
   },
   {
     path: 'event/:id/gate-scan',
@@ -189,11 +218,6 @@ const routes: Routes = [
     path: 'inbox',
     canMatch: [AuthGuard],
     loadChildren: () => import('./pages/inbox/inbox.module').then(m => m.InboxPageModule),
-  },
-  {
-    path: 'team/form',
-    canMatch: [AuthGuard],
-    loadChildren: () => import('./pages/team-form/team-form.module').then(m => m.TeamFormPageModule),
   },
   {
     path: 'legends',

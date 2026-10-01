@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { PredictionRankingEntry } from '../../../core/models/fan-prediction.model';
 import { MuralShareContext } from '../../../core/models/mural-share.model';
 import { MuralScope } from '../../../core/models/mural.model';
@@ -28,10 +28,13 @@ export class MuralPredictionRankingsComponent implements OnChanges {
 
   constructor(private readonly fanPredictionService: FanPredictionService) {}
 
-  ngOnChanges(): void {
+  ngOnChanges(changes: SimpleChanges): void {
     if (this.preloadEntries) {
       this.loadedEntries = this.entries;
       this.loading = false;
+      return;
+    }
+    if (!changes['scope'] && !changes['scopeId'] && !changes['preloadEntries']) {
       return;
     }
     void this.load();

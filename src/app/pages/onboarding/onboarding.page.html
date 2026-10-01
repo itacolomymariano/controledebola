@@ -5,11 +5,12 @@
         <ion-button (click)="back()">Voltar</ion-button>
       </ion-buttons>
     }
-    @if (step === 'welcome') {
-      <ion-buttons slot="end">
+    <ion-buttons slot="end">
+      <app-help-balloon textKey="screen.help.onboarding"></app-help-balloon>
+      @if (step === 'welcome') {
         <ion-button (click)="skipToRegister()">Pular</ion-button>
-      </ion-buttons>
-    }
+      }
+    </ion-buttons>
     <ion-title>Controle de Bola</ion-title>
   </ion-toolbar>
 </ion-header>

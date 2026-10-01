@@ -5,8 +5,12 @@
       <app-mural-share-button
         [context]="shareContext"
         [cardTitle]="title"
+        [ruleKey]="'mural.rule.media.' + kind"
       ></app-mural-share-button>
     </div>
+    @if (filterCaption) {
+      <p class="mural-filter-line">{{ filterCaption }}</p>
+    }
   </ion-card-header>
   <ion-card-content>
     @if (loading) {

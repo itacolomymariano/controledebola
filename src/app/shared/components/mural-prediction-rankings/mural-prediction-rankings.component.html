@@ -1,5 +1,8 @@
 <ion-card>
   <ion-card-header>
+    @if (scope === 'event') {
+      <app-mural-event-context [context]="shareContext"></app-mural-event-context>
+    }
     <div class="mural-card-header-row">
       <div>
         <ion-card-title>Top 10 — Palpites</ion-card-title>
@@ -14,6 +17,7 @@
       <app-mural-share-button
         [context]="shareContext"
         cardTitle="Top 10 — Palpites"
+        ruleKey="mural.rule.palpites"
       ></app-mural-share-button>
     </div>
   </ion-card-header>

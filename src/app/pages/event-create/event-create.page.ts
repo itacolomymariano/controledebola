@@ -16,6 +16,8 @@ import { EventService } from '../../core/services/event.service';
 
 import { ParseService } from '../../core/services/parse.service';
 
+import { TeamService } from '../../core/services/team.service';
+
 
 
 @Component({
@@ -39,8 +41,6 @@ export class EventCreatePage implements OnInit, OnDestroy {
     { value: 'pelada', label: 'Pelada' },
 
     { value: 'racha', label: 'Racha' },
-
-    { value: 'team_match', label: 'Jogo entre equipes' },
 
   ];
 
@@ -76,6 +76,10 @@ export class EventCreatePage implements OnInit, OnDestroy {
 
     awayTeamName: [''],
 
+    homeTeamId: [''],
+
+    awayTeamId: [''],
+
     gateTicketControlEnabled: [false],
 
   });
@@ -85,6 +89,8 @@ export class EventCreatePage implements OnInit, OnDestroy {
   canSubmit = false;
 
   invalidHint = '';
+
+  amateurTeams: Array<{ id: string; name: string }> = [];
 
 
 
@@ -97,6 +103,8 @@ export class EventCreatePage implements OnInit, OnDestroy {
     private readonly fb: FormBuilder,
 
     private readonly eventService: EventService,
+
+    private readonly teamService: TeamService,
 
     private readonly parseService: ParseService,
 
@@ -126,6 +134,37 @@ export class EventCreatePage implements OnInit, OnDestroy {
 
     this.refreshSubmitState();
 
+  }
+
+  ionViewWillEnter(): void {
+    void this.loadAmateurTeams();
+  }
+
+  async loadAmateurTeams(): Promise<void> {
+    try {
+      this.amateurTeams = await this.teamService.listForPicker();
+    } catch {
+      this.amateurTeams = [];
+    }
+    this.cdr.markForCheck();
+  }
+
+  onHomeTeamPicked(teamId: string): void {
+    const team = this.amateurTeams.find((item) => item.id === teamId);
+    this.form.patchValue({
+      homeTeamId: teamId,
+      homeTeamName: team?.name || this.form.get('homeTeamName')?.value || '',
+    });
+    this.refreshSubmitState();
+  }
+
+  onAwayTeamPicked(teamId: string): void {
+    const team = this.amateurTeams.find((item) => item.id === teamId);
+    this.form.patchValue({
+      awayTeamId: teamId,
+      awayTeamName: team?.name || this.form.get('awayTeamName')?.value || '',
+    });
+    this.refreshSubmitState();
   }
 
 
@@ -236,7 +275,7 @@ export class EventCreatePage implements OnInit, OnDestroy {
 
     try {
 
-      await this.eventService.create({
+      const created = await this.eventService.create({
 
         peladaId: this.peladaId,
 
@@ -264,11 +303,18 @@ export class EventCreatePage implements OnInit, OnDestroy {
 
         awayTeamName: v.type === 'team_match' ? v.awayTeamName?.trim() || undefined : undefined,
 
+        homeTeamId: v.type === 'team_match' ? v.homeTeamId?.trim() || undefined : undefined,
+
+        awayTeamId: v.type === 'team_match' ? v.awayTeamId?.trim() || undefined : undefined,
+
         gateTicketControlEnabled: !!v.gateTicketControlEnabled,
 
       });
 
+      await loading.dismiss();
+      await this.showPushResult(created.push);
       await this.router.navigate(['/pelada', this.peladaId], { replaceUrl: true });
+      return;
 
     } catch (error: unknown) {
 
@@ -328,6 +374,14 @@ export class EventCreatePage implements OnInit, OnDestroy {
 
     }
 
+    if (v.type === 'team_match') {
+      if (!String(v.homeTeamName || '').trim()) missing.push('Nome do time mandante');
+      if (!String(v.awayTeamName || '').trim()) missing.push('Nome do time visitante');
+      if (v.homeTeamId && v.awayTeamId && v.homeTeamId === v.awayTeamId) {
+        missing.push('Times mandante e visitante diferentes');
+      }
+    }
+
 
 
     if (!missing.length) return '';
@@ -345,6 +399,33 @@ export class EventCreatePage implements OnInit, OnDestroy {
   }
 
 
+
+  private async showPushResult(
+    push: { skipped?: string | null; audience?: number; devicesMatched?: number } | null
+  ): Promise<void> {
+    const devices = Number(push?.devicesMatched || 0);
+    const audience = Number(push?.audience || 0);
+    const skipped = push?.skipped;
+    let message = `Aviso de novo evento enviado para ${devices} aparelho(s) (${audience} pessoa(s) na pelada).`;
+    if (!push) {
+      message =
+        'Evento criado, mas o aviso push nao foi confirmado. Publique o Cloud Code e tente de novo.';
+    } else if (skipped === 'empty_audience') {
+      message = 'Evento criado. Ninguem alem do admin esta na lista da pelada para receber o aviso.';
+    } else if (skipped === 'already_sent') {
+      message = 'Evento criado. O aviso de novo evento ja tinha sido enviado.';
+    } else if (devices === 0) {
+      message =
+        'Evento criado, mas nenhum aparelho tem token de notificacao. No outro celular: abra o app logado e ligue Notificacoes no menu.';
+    }
+    const alert = await this.alertCtrl.create({
+      header: 'Evento criado',
+      message,
+      buttons: ['OK'],
+    });
+    await alert.present();
+    await alert.onDidDismiss();
+  }
 
   private async showError(message: string): Promise<void> {
 

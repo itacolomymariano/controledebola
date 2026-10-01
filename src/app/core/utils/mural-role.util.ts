@@ -30,7 +30,9 @@ export function profileRoleToMuralRole(role: ProfileRole): MuralTargetRole | nul
     case 'gandula':
       return 'gandula';
     case 'fan':
-      return null;
+      return 'fan';
+    case 'gatekeeper':
+      return 'gatekeeper';
     default:
       return null;
   }

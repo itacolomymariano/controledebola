@@ -1,4 +1,44 @@
 <span #btnHost class="mural-share-exclude">
+  @if (ruleText; as rule) {
+    <ion-button
+      fill="clear"
+      size="small"
+      class="mural-share-btn"
+      [id]="helpTriggerId"
+      (click)="$event.stopPropagation()"
+      aria-label="Como foi calculado"
+    >
+      <ion-icon slot="icon-only" name="help-circle-outline"></ion-icon>
+    </ion-button>
+    <ion-popover #rulePopover [trigger]="helpTriggerId" side="bottom" alignment="end" (didDismiss)="onRuleDismiss()">
+      <ng-template>
+        <ion-content class="ion-padding mural-rule-popover">
+          <div class="balloon-header">
+            <h3>{{ 'mural.rule.title' | t }}</h3>
+            <ion-button fill="clear" size="small" color="medium" class="balloon-close" (click)="rulePopover.dismiss()" aria-label="Fechar">
+              <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+            </ion-button>
+          </div>
+          <p class="mural-rule-text">{{ rule }}</p>
+          <div class="balloon-actions">
+            <ion-button size="small" fill="outline" color="medium" (click)="toggleSpeech()">
+              @if (speaking) {
+                <ion-icon slot="start" name="stop-circle-outline"></ion-icon>
+                {{ 'mural.rule.stop' | t }}
+              } @else {
+                <ion-icon slot="start" name="volume-high-outline"></ion-icon>
+                {{ 'mural.rule.listen' | t }}
+              }
+            </ion-button>
+            <ion-button size="small" fill="solid" color="medium" (click)="rulePopover.dismiss()">
+              <ion-icon slot="start" name="close-outline"></ion-icon>
+              Fechar
+            </ion-button>
+          </div>
+        </ion-content>
+      </ng-template>
+    </ion-popover>
+  }
   <ion-button
     fill="clear"
     size="small"

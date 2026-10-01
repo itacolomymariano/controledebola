@@ -5,13 +5,20 @@
 } @else if (loadedAnalytics) {
   <ion-card>
     <ion-card-header>
+      @if (scope === 'event') {
+        <app-mural-event-context [context]="shareContext"></app-mural-event-context>
+      }
       <div class="mural-card-header-row">
         <ion-card-title>Desempenho — qualitativos</ion-card-title>
         <app-mural-share-button
           [context]="shareContext"
           cardTitle="Desempenho — qualitativos"
+          ruleKey="mural.rule.desempenho"
         ></app-mural-share-button>
       </div>
+      @if (filterCaption) {
+        <p class="mural-filter-line">{{ filterCaption }}</p>
+      }
     </ion-card-header>
     <ion-card-content>
       <h3>Top 3 finalizacoes no alvo</h3>
@@ -78,13 +85,20 @@
 
   <ion-card>
     <ion-card-header>
+      @if (scope === 'event') {
+        <app-mural-event-context [context]="shareContext"></app-mural-event-context>
+      }
       <div class="mural-card-header-row">
         <ion-card-title>Desempenho — quantitativos</ion-card-title>
         <app-mural-share-button
           [context]="shareContext"
           cardTitle="Desempenho — quantitativos"
+          ruleKey="mural.rule.desempenho"
         ></app-mural-share-button>
       </div>
+      @if (filterCaption) {
+        <p class="mural-filter-line">{{ filterCaption }}</p>
+      }
     </ion-card-header>
     <ion-card-content>
       <h3>Top 3 maiores finalizadores</h3>
@@ -191,13 +205,20 @@
 
   <ion-card>
     <ion-card-header>
+      @if (scope === 'event') {
+        <app-mural-event-context [context]="shareContext"></app-mural-event-context>
+      }
       <div class="mural-card-header-row">
         <ion-card-title>Graficos de desempenho</ion-card-title>
         <app-mural-share-button
           [context]="shareContext"
           cardTitle="Graficos de desempenho"
+          ruleKey="mural.rule.desempenho"
         ></app-mural-share-button>
       </div>
+      @if (filterCaption) {
+        <p class="mural-filter-line">{{ filterCaption }}</p>
+      }
     </ion-card-header>
     <ion-card-content>
       <h3>Finalizacoes no alvo x fora</h3>

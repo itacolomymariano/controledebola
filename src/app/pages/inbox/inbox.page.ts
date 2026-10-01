@@ -1,13 +1,30 @@
-import { Component } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, OnDestroy } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
+import { AppMessage } from '../../core/models/app-message.model';
+import { TeamMatchListItem, teamSideLabel } from '../../core/models/event.model';
 import { hireableRoleLabel, HireableRole } from '../../core/models/event-hiring.model';
 import {
   RefereeInvitation,
   SupplementaryHiringOpportunity,
+  TeamMatchRefereeHiringApprovalItem,
 } from '../../core/models/referee-invitation.model';
+import { AppMessageService } from '../../core/services/app-message.service';
+import { EventService, TeamMatchRescheduleProposal } from '../../core/services/event.service';
+import {
+  MatchChallengeItem,
+  MatchChallengeService,
+} from '../../core/services/match-challenge.service';
 import { RefereeInvitationService } from '../../core/services/referee-invitation.service';
+import {
+  TeamMatchJoinRequestItem,
+  TeamMatchJoinRequestService,
+} from '../../core/services/team-match-join-request.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
+import Parse from 'parse';
+
+const MESSAGES_PAGE_SIZE = 50;
+const SEARCH_DEBOUNCE_MS = 350;
 
 @Component({
   selector: 'app-inbox',
@@ -15,22 +32,178 @@ import { parseErrorMessage } from '../../core/utils/parse-error.util';
   styleUrls: ['./inbox.page.scss'],
   standalone: false,
 })
-export class InboxPage {
+export class InboxPage implements OnDestroy {
   loading = true;
   invitations: RefereeInvitation[] = [];
   paymentConfirmations: RefereeInvitation[] = [];
   supplementaryOpportunities: SupplementaryHiringOpportunity[] = [];
+  teamMatchNotices: TeamMatchListItem[] = [];
+  incomingChallenges: MatchChallengeItem[] = [];
+  outboxChallenges: MatchChallengeItem[] = [];
+  incomingJoinRequests: TeamMatchJoinRequestItem[] = [];
+  outboxJoinRequests: TeamMatchJoinRequestItem[] = [];
+  mailbox: 'in' | 'out' = 'in';
+  pendingReschedules: TeamMatchRescheduleProposal[] = [];
+  incomingRefereeApprovals: TeamMatchRefereeHiringApprovalItem[] = [];
+  outboxRefereeApprovals: TeamMatchRefereeHiringApprovalItem[] = [];
+  contractConfirmations: RefereeInvitation[] = [];
   processingId = '';
+  currentUserId = '';
+
+  messages: AppMessage[] = [];
+  messagesLoading = false;
+  messagesError = '';
+  hasMoreMessages = false;
+  searchTerm = '';
+
+  private searchDebounce: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private readonly invitationService: RefereeInvitationService,
+    private readonly eventService: EventService,
+    private readonly challengeService: MatchChallengeService,
+    private readonly joinRequestService: TeamMatchJoinRequestService,
+    private readonly appMessageService: AppMessageService,
     private readonly router: Router,
+    private readonly route: ActivatedRoute,
     private readonly loadingCtrl: LoadingController,
     private readonly alertCtrl: AlertController
   ) {}
 
   ionViewWillEnter(): void {
+    this.currentUserId = Parse.User.current()?.id || '';
+    const box = this.route.snapshot.queryParamMap.get('box');
+    this.mailbox = box === 'out' ? 'out' : 'in';
     void this.load();
+  }
+
+  ngOnDestroy(): void {
+    if (this.searchDebounce) {
+      clearTimeout(this.searchDebounce);
+      this.searchDebounce = null;
+    }
+  }
+
+  setMailbox(value: 'in' | 'out'): void {
+    this.mailbox = value;
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { box: value === 'out' ? 'out' : null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+    void this.loadMessages();
+  }
+
+  /** Entrada: pendencias que ainda esperam um toque do usuario. */
+  get hasPendingItems(): boolean {
+    if (this.mailbox === 'out') {
+      return (
+        this.outboxChallenges.length > 0 ||
+        this.outboxJoinRequests.length > 0 ||
+        this.outboxRefereeApprovals.length > 0
+      );
+    }
+    return (
+      this.invitations.length > 0 ||
+      this.contractConfirmations.length > 0 ||
+      this.paymentConfirmations.length > 0 ||
+      this.supplementaryOpportunities.length > 0 ||
+      this.teamMatchNotices.length > 0 ||
+      this.incomingChallenges.length > 0 ||
+      this.incomingJoinRequests.length > 0 ||
+      this.pendingReschedules.length > 0 ||
+      this.incomingRefereeApprovals.length > 0
+    );
+  }
+
+  get unreadMessageCount(): number {
+    return this.messages.filter((message) => message.unread).length;
+  }
+
+  onSearchInput(value: string | null | undefined): void {
+    this.searchTerm = (value || '').trim();
+    if (this.searchDebounce) clearTimeout(this.searchDebounce);
+    this.searchDebounce = setTimeout(() => {
+      this.searchDebounce = null;
+      void this.loadMessages();
+    }, SEARCH_DEBOUNCE_MS);
+  }
+
+  private async loadMessages(append = false): Promise<void> {
+    this.messagesLoading = true;
+    this.messagesError = '';
+    const skip = append ? this.messages.length : 0;
+    try {
+      const rows = await this.appMessageService.list(this.mailbox, {
+        search: this.searchTerm,
+        limit: MESSAGES_PAGE_SIZE,
+        skip,
+      });
+      this.messages = append ? [...this.messages, ...rows] : rows;
+      this.hasMoreMessages = rows.length === MESSAGES_PAGE_SIZE;
+    } catch (error: unknown) {
+      if (!append) this.messages = [];
+      this.hasMoreMessages = false;
+      this.messagesError = parseErrorMessage(error);
+    } finally {
+      this.messagesLoading = false;
+    }
+  }
+
+  loadMoreMessages(): void {
+    if (this.messagesLoading || !this.hasMoreMessages) return;
+    void this.loadMessages(true);
+  }
+
+  /** Marca como lida, atualiza o badge e abre a tela de destino. */
+  async openMessage(message: AppMessage): Promise<void> {
+    if (this.mailbox === 'in' && message.unread) {
+      message.unread = false;
+      message.readAt = new Date();
+      try {
+        await this.appMessageService.markRead(message.objectId);
+        this.invitationService.notifyBadgeRefresh();
+      } catch {
+        // Leitura e secundaria: nao bloqueia a navegacao.
+      }
+    }
+    if (!message.actionRoute) return;
+
+    // Ja estamos no inbox: trocar o segmento em vez de navegar (nao refaz ionViewWillEnter).
+    if (message.actionRoute.split('?')[0] === '/inbox') {
+      const targetBox = message.actionRoute.includes('box=out') ? 'out' : 'in';
+      if (targetBox !== this.mailbox) this.setMailbox(targetBox);
+      return;
+    }
+
+    void this.router.navigateByUrl(message.actionRoute);
+  }
+
+  async markAllMessagesRead(): Promise<void> {
+    try {
+      await this.appMessageService.markAllRead();
+      this.invitationService.notifyBadgeRefresh();
+      await this.loadMessages();
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error));
+    }
+  }
+
+  messageCounterpartLabel(message: AppMessage): string {
+    const name = message.counterpartName || '—';
+    return message.box === 'out' ? `Para ${name}` : `De ${name}`;
+  }
+
+  formatMessageDate(date: Date | null): string {
+    if (!date) return '';
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
   }
 
   /** Recarrega convites e atualiza badge da barra superior. */
@@ -38,9 +211,77 @@ export class InboxPage {
     this.loading = true;
     try {
       this.invitations = await this.invitationService.listPendingForCurrentUser();
+      this.incomingRefereeApprovals =
+        await this.invitationService.listTeamMatchRefereeHiringApprovals('in');
+      this.outboxRefereeApprovals =
+        await this.invitationService.listTeamMatchRefereeHiringApprovals('out');
       this.paymentConfirmations = await this.invitationService.listAwaitingRefereePaymentConfirmation();
+      this.contractConfirmations =
+        await this.invitationService.listUnseenContractConfirmationsForCurrentUser();
       this.supplementaryOpportunities =
         await this.invitationService.listAcceptedForSupplementaryHiring();
+      try {
+        this.teamMatchNotices = await this.eventService.listTeamMatchInboxNotices();
+      } catch {
+        this.teamMatchNotices = [];
+      }
+      try {
+        const challenges = await this.challengeService.listMine();
+        this.incomingChallenges = challenges.filter(
+          (row) => row.status === 'pending' && row.challengedUserId === this.currentUserId
+        );
+        this.outboxChallenges = challenges
+          .filter((row) => {
+            if (row.challengerUserId === this.currentUserId) return true;
+            if (
+              row.challengedUserId === this.currentUserId &&
+              row.status !== 'pending'
+            ) {
+              return true;
+            }
+            return false;
+          })
+          .sort((a, b) => {
+            const ta = a.createdAt?.getTime() ?? 0;
+            const tb = b.createdAt?.getTime() ?? 0;
+            return tb - ta;
+          });
+      } catch {
+        this.incomingChallenges = [];
+        this.outboxChallenges = [];
+      }
+      try {
+        this.pendingReschedules = await this.eventService.listPendingTeamMatchReschedules();
+      } catch {
+        this.pendingReschedules = [];
+      }
+      try {
+        const joinRows = await this.joinRequestService.listMine();
+        this.incomingJoinRequests = joinRows.filter(
+          (row) =>
+            row.status === 'pending' && row.presidentUserId === this.currentUserId
+        );
+        this.outboxJoinRequests = joinRows
+          .filter((row) => {
+            if (row.athleteUserId === this.currentUserId) return true;
+            if (
+              row.presidentUserId === this.currentUserId &&
+              row.status !== 'pending'
+            ) {
+              return true;
+            }
+            return false;
+          })
+          .sort((a, b) => {
+            const ta = a.createdAt?.getTime() ?? 0;
+            const tb = b.createdAt?.getTime() ?? 0;
+            return tb - ta;
+          });
+      } catch {
+        this.incomingJoinRequests = [];
+        this.outboxJoinRequests = [];
+      }
+      await this.loadMessages();
     } finally {
       this.loading = false;
       this.invitationService.notifyBadgeRefresh();
@@ -64,8 +305,336 @@ export class InboxPage {
     return hireableRoleLabel(invitation.role as HireableRole);
   }
 
+  invitationTitle(invitation: RefereeInvitation): string {
+    const role = this.invitationRoleLabel(invitation);
+    if (invitation.eventType === 'team_match') {
+      if (invitation.teamMatchLeg === 'volta') {
+        return `Convite de ${role} — Volta do confronto`;
+      }
+      if (invitation.teamMatchLeg === 'ida') {
+        return `Convite de ${role} — Ida do confronto`;
+      }
+      return `Convite de ${role} — Confronto`;
+    }
+    return `Convite de ${role}`;
+  }
+
+  invitationTeamLabel(invitation: RefereeInvitation): string {
+    return teamSideLabel(invitation.teamSide);
+  }
+
   openEvent(invitation: RefereeInvitation): void {
     void this.router.navigate(['/event', invitation.eventId]);
+  }
+
+  async openContractConfirmation(invitation: RefereeInvitation): Promise<void> {
+    await this.invitationService.markContractConfirmationSeen(invitation.objectId);
+    void this.router.navigate(['/event', invitation.eventId]);
+  }
+
+  openTeamMatchNotice(notice: TeamMatchListItem): void {
+    void this.router.navigate(['/event', notice.objectId]);
+  }
+
+  openEventById(eventId: string): void {
+    void this.router.navigate(['/event', eventId]);
+  }
+
+  viewChallengeTeam(teamId: string): void {
+    void this.router.navigate(['/team', teamId]);
+  }
+
+  viewJoinAthleteProfile(request: TeamMatchJoinRequestItem): void {
+    if (!request.athleteUserId) return;
+    void this.router.navigate(['/athlete', request.athleteUserId]);
+  }
+
+  joinOutboxTitle(request: TeamMatchJoinRequestItem): string {
+    if (request.athleteUserId === this.currentUserId) {
+      return `Participacao — ${request.teamName || 'Time'}`;
+    }
+    return `Resposta — ${request.athleteApelido || request.athleteFullName || 'Atleta'}`;
+  }
+
+  joinOutboxStatus(request: TeamMatchJoinRequestItem): string {
+    switch (request.status) {
+      case 'pending':
+        return 'Aguardando presidente';
+      case 'accepted':
+        return 'Aceita';
+      case 'declined':
+        return 'Recusada';
+      case 'cancelled':
+        return 'Cancelada';
+      default:
+        return request.status;
+    }
+  }
+
+  joinOutboxIsAthlete(request: TeamMatchJoinRequestItem): boolean {
+    return request.athleteUserId === this.currentUserId;
+  }
+
+  refereeApprovalSideLabel(side: TeamMatchRefereeHiringApprovalItem['refereeHiringRequestedByTeamSide']): string {
+    if (side === 'home') return 'mandante';
+    if (side === 'away') return 'visitante';
+    return '—';
+  }
+
+  refereeApprovalOutboxStatus(item: TeamMatchRefereeHiringApprovalItem): string {
+    if (item.refereeHiringApprovalStatus === 'pending') {
+      return 'Aguardando aprovacao do presidente adversario';
+    }
+    if (item.refereeHiringApprovalStatus === 'rejected') {
+      return 'Proposta recusada';
+    }
+    return item.eventName;
+  }
+
+  async approveRefereeHiring(item: TeamMatchRefereeHiringApprovalItem): Promise<void> {
+    this.processingId = item.invitationId;
+    try {
+      await this.invitationService.respondTeamMatchRefereeHiringApproval(
+        item.invitationId,
+        'approved'
+      );
+      await this.load();
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error));
+    } finally {
+      this.processingId = '';
+    }
+  }
+
+  async rejectRefereeHiring(item: TeamMatchRefereeHiringApprovalItem): Promise<void> {
+    this.processingId = item.invitationId;
+    try {
+      await this.invitationService.respondTeamMatchRefereeHiringApproval(
+        item.invitationId,
+        'rejected'
+      );
+      await this.load();
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error));
+    } finally {
+      this.processingId = '';
+    }
+  }
+
+  async acceptJoinRequest(request: TeamMatchJoinRequestItem): Promise<void> {
+    this.processingId = request.objectId;
+    try {
+      await this.joinRequestService.respond(request.objectId, 'accepted');
+      this.setMailbox('out');
+      await this.load();
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error));
+    } finally {
+      this.processingId = '';
+    }
+  }
+
+  async declineJoinRequest(request: TeamMatchJoinRequestItem): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: 'Recusar participacao',
+      message: 'Informe o motivo (opcional).',
+      inputs: [{ name: 'reason', type: 'textarea', placeholder: 'Motivo' }],
+      buttons: [
+        { text: 'Cancelar', role: 'cancel' },
+        {
+          text: 'Recusar',
+          handler: (data) => {
+            void this.confirmDeclineJoin(request.objectId, String(data?.reason || ''));
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  private async confirmDeclineJoin(requestId: string, reason: string): Promise<void> {
+    this.processingId = requestId;
+    try {
+      await this.joinRequestService.respond(requestId, 'declined', reason.trim());
+      this.setMailbox('out');
+      await this.load();
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error));
+    } finally {
+      this.processingId = '';
+    }
+  }
+
+  scheduleChallenge(challenge: MatchChallengeItem): void {
+    void this.router.navigate(['/confronto-create'], {
+      queryParams: { challengeId: challenge.objectId },
+    });
+  }
+
+  challengeOutboxTitle(challenge: MatchChallengeItem): string {
+    const isSender = challenge.challengerUserId === this.currentUserId;
+    if (isSender) {
+      return `Desafio para ${challenge.challengedTeamName}`;
+    }
+    return `Resposta ao desafio de ${challenge.challengerTeamName}`;
+  }
+
+  challengeOutboxStatus(challenge: MatchChallengeItem): string {
+    switch (challenge.status) {
+      case 'pending':
+        return 'Aguardando resposta';
+      case 'accepted':
+        return 'Aceito';
+      case 'declined':
+        return 'Recusado';
+      case 'scheduled':
+        return 'Confronto marcado';
+      default:
+        return challenge.status;
+    }
+  }
+
+  challengeOutboxIsSender(challenge: MatchChallengeItem): boolean {
+    return challenge.challengerUserId === this.currentUserId;
+  }
+
+  challengeLocationLabel(challenge: MatchChallengeItem): string {
+    const address = challenge.proposedAddress;
+    if (!address) return challenge.proposedLocationComplement || '';
+    return [
+      challenge.proposedLocationComplement,
+      address.neighborhood,
+      address.city,
+      address.state,
+    ]
+      .filter(Boolean)
+      .join(' - ');
+  }
+
+  async acceptChallenge(challenge: MatchChallengeItem): Promise<void> {
+    if (challenge.hasReturnLeg) {
+      const alert = await this.alertCtrl.create({
+        header: 'Aceitar desafio (ida e volta)',
+        message:
+          'Informe as condicoes para receber o adversario no jogo da volta, em que o seu time sera o mandante.',
+        inputs: [
+          {
+            name: 'returnConditions',
+            type: 'textarea',
+            placeholder: 'Ex.: campo, agua, coletes...',
+          },
+        ],
+        buttons: [
+          { text: 'Cancelar', role: 'cancel' },
+          {
+            text: 'Aceitar',
+            handler: (data) => {
+              void this.confirmAcceptChallenge(
+                challenge.objectId,
+                String(data?.returnConditions || '')
+              );
+            },
+          },
+        ],
+      });
+      await alert.present();
+      return;
+    }
+    await this.confirmAcceptChallenge(challenge.objectId);
+  }
+
+  private async confirmAcceptChallenge(
+    challengeId: string,
+    returnChallengeConditions = ''
+  ): Promise<void> {
+    this.processingId = challengeId;
+    try {
+      await this.challengeService.respond(
+        challengeId,
+        'accepted',
+        '',
+        returnChallengeConditions
+      );
+      this.setMailbox('out');
+      await this.load();
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error));
+    } finally {
+      this.processingId = '';
+    }
+  }
+
+  async acceptReschedule(proposal: TeamMatchRescheduleProposal): Promise<void> {
+    this.processingId = proposal.eventId;
+    try {
+      await this.eventService.respondTeamMatchReschedule(proposal.eventId, 'accepted');
+      await this.load();
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error));
+    } finally {
+      this.processingId = '';
+    }
+  }
+
+  async declineReschedule(proposal: TeamMatchRescheduleProposal): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: 'Recusar remarcacao',
+      message: 'Informe o motivo (opcional).',
+      inputs: [{ name: 'reason', type: 'textarea', placeholder: 'Motivo' }],
+      buttons: [
+        { text: 'Cancelar', role: 'cancel' },
+        {
+          text: 'Recusar',
+          handler: (data) => {
+            void this.confirmDeclineReschedule(proposal.eventId, String(data?.reason || ''));
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  private async confirmDeclineReschedule(eventId: string, reason: string): Promise<void> {
+    this.processingId = eventId;
+    try {
+      await this.eventService.respondTeamMatchReschedule(eventId, 'declined', reason.trim());
+      await this.load();
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error));
+    } finally {
+      this.processingId = '';
+    }
+  }
+
+  async declineChallenge(challenge: MatchChallengeItem): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: 'Recusar desafio',
+      message: 'Informe o motivo da rejeicao.',
+      inputs: [{ name: 'reason', type: 'textarea', placeholder: 'Motivo' }],
+      buttons: [
+        { text: 'Cancelar', role: 'cancel' },
+        {
+          text: 'Recusar',
+          handler: (data) => {
+            void this.confirmDecline(challenge.objectId, String(data?.reason || ''));
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  private async confirmDecline(challengeId: string, reason: string): Promise<void> {
+    this.processingId = challengeId;
+    try {
+      await this.challengeService.respond(challengeId, 'declined', reason.trim());
+      this.setMailbox('out');
+      await this.load();
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error));
+    } finally {
+      this.processingId = '';
+    }
   }
 
   goBack(): void {
@@ -95,13 +664,49 @@ export class InboxPage {
   }
 
   async accept(invitation: RefereeInvitation): Promise<void> {
+    const conflicts = await this.invitationService.getAcceptConflicts(invitation.objectId);
+    const hard = conflicts.filter((row) => row.hardBlock);
+    if (hard.length) {
+      await this.showError(
+        `Conflito com compromisso ja confirmado em "${hard[0].eventName}". ` +
+          'Cancele o outro compromisso antes de aceitar este convite.'
+      );
+      return;
+    }
+
+    const declineable = conflicts.filter((row) => row.canDecline && row.invitationId);
+    let declineIds: string[] = [];
+    if (declineable.length) {
+      const names = declineable.map((row) => row.eventName).join(', ');
+      const confirmed = await new Promise<boolean>((resolve) => {
+        void this.alertCtrl
+          .create({
+            header: 'Outros convites no mesmo horario',
+            message:
+              `Voce tem outro(s) convite(s) pendente(s) em conflito (${names}). ` +
+              `Ao aceitar este, os demais serao recusados automaticamente. Continuar?`,
+            buttons: [
+              { text: 'Cancelar', role: 'cancel', handler: () => resolve(false) },
+              { text: 'Aceitar este', handler: () => resolve(true) },
+            ],
+          })
+          .then((alert) => alert.present());
+      });
+      if (!confirmed) return;
+      declineIds = declineable
+        .map((row) => row.invitationId)
+        .filter((id): id is string => !!id);
+    }
+
     this.processingId = invitation.objectId;
     const loading = await this.loadingCtrl.create({ message: 'Aceitando convite...' });
     await loading.present();
 
     let accepted: RefereeInvitation;
     try {
-      accepted = await this.invitationService.accept(invitation.objectId);
+      accepted = await this.invitationService.accept(invitation.objectId, {
+        declineConflictInvitationIds: declineIds,
+      });
       await this.load();
     } catch (error: unknown) {
       this.processingId = '';
@@ -148,7 +753,9 @@ export class InboxPage {
       header: 'Convite aceito',
       message: needsSupplementary
         ? 'Voce foi inscrito no evento. Deseja contratar auxiliares agora ou ir para o evento?'
-        : 'Voce foi inscrito no evento. O pagamento sera liberado apos o administrador confirmar sua presenca.',
+        : accepted.offeredAmount > 0
+          ? 'Voce foi inscrito no evento. O pagamento sera liberado apos o administrador confirmar sua presenca.'
+          : 'Voce foi inscrito no evento.',
       buttons,
     });
     await alert.present();

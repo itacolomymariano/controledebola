@@ -26,6 +26,7 @@ export class EventDetailAdminSettingsPanelComponent implements OnChanges, OnDest
 
   @Output() back = new EventEmitter<void>();
   @Output() save = new EventEmitter<void>();
+  @Output() notifyParticipants = new EventEmitter<void>();
 
   private formSub?: Subscription;
 

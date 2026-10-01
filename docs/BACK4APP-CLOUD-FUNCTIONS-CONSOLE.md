@@ -112,9 +112,11 @@ Rodar **uma vez** por ambiente (ou de novo se classes forem apagadas), via REST 
 | Função | Módulo | Classes |
 |--------|--------|---------|
 | `configureMuralClassPermissions` | `07-mural.js` | mural, perfis, eventos (CLP amplo) |
+| `configureMuralHighlightTenurePermissions` | `07b-mural-highlight-tenure.js` | `MuralHighlightTenure` (leitura autenticada; escrita só Cloud) |
 | `configureMaterialClassPermissions` | `13-material.js` | inventário / sessão material |
 | `configureSupportRolesClassPermissions` | `14-support-roles.js` | torcida, treinador, massagista, PF |
 | `configureEventMediaClassPermissions` | `12-event-media.js` | imprensa (publicação, votos, views, reações, comentários) |
+| `configureMailSettingsClassPermissions` | `01d-mail-helpers.js` | `MailSettings` (SMTP; sem leitura pelo app) |
 
 Detalhes de mídia: [EVENT-MEDIA.md](EVENT-MEDIA.md).
 

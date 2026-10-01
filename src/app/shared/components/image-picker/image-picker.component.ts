@@ -1,6 +1,8 @@
 import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { ActionSheetController } from '@ionic/angular';
+import { I18nService } from '../../../core/services/i18n.service';
 
 @Component({
   selector: 'app-image-picker',
@@ -17,6 +19,11 @@ export class ImagePickerComponent {
   @Output() imageSelected = new EventEmitter<File>();
 
   @ViewChild('fileInput') fileInput?: ElementRef<HTMLInputElement>;
+
+  constructor(
+    private readonly actionSheetCtrl: ActionSheetController,
+    private readonly i18n: I18nService
+  ) {}
 
   async openPicker(): Promise<void> {
     if (this.disabled) return;
@@ -38,12 +45,40 @@ export class ImagePickerComponent {
   }
 
   private async openNativePicker(): Promise<void> {
+    const sheet = await this.actionSheetCtrl.create({
+      header: this.i18n.t('imagePicker.header'),
+      buttons: [
+        {
+          text: this.i18n.t('imagePicker.camera'),
+          icon: 'camera-outline',
+          handler: () => {
+            void this.capturePhoto(CameraSource.Camera);
+          },
+        },
+        {
+          text: this.i18n.t('imagePicker.gallery'),
+          icon: 'images-outline',
+          handler: () => {
+            void this.capturePhoto(CameraSource.Photos);
+          },
+        },
+        {
+          text: this.i18n.t('confirm.cancel'),
+          icon: 'close-outline',
+          role: 'cancel',
+        },
+      ],
+    });
+    await sheet.present();
+  }
+
+  private async capturePhoto(source: CameraSource): Promise<void> {
     try {
       const photo = await Camera.getPhoto({
         quality: 80,
         allowEditing: false,
         resultType: CameraResultType.DataUrl,
-        source: CameraSource.Prompt,
+        source,
         width: 1024,
         height: 1024,
         correctOrientation: true,

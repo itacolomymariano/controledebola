@@ -81,6 +81,20 @@ export function buildEventDetailOverviewViewModel(
     },
   ];
 
+  if (event.type === 'team_match' && (event.homeTeamName || event.awayTeamName)) {
+    rows.push({
+      icon: 'football-outline',
+      title: 'Confronto',
+      value: '',
+      teamMatch: {
+        homeTeamName: event.homeTeamName || 'Mandante',
+        awayTeamName: event.awayTeamName || 'Visitante',
+        homeTeamShieldUrl: event.homeTeamShieldUrl,
+        awayTeamShieldUrl: event.awayTeamShieldUrl,
+      },
+    });
+  }
+
   if (options.supportsArrivalOrder && event.useArrivalOrderForTeams) {
     rows.push({
       icon: 'walk-outline',

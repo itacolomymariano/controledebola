@@ -44,6 +44,8 @@ export interface PeladaListItem extends Pelada {
   nearby?: boolean;
   /** Quantidade de eventos ja realizados (com separacao de times salva). */
   heldEventCount?: number;
+  /** Media de atletas/goleiros confirmados por evento realizado. */
+  avgParticipantsPerEvent?: number;
   eventCount?: number;
   isCurrentUserAdmin?: boolean;
 }

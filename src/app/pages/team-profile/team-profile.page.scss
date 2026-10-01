@@ -1,0 +1,39 @@
+.team-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  h1 {
+    margin: 0;
+  }
+}
+
+.team-shield {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+.president-row,
+.person-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.team-stats-heading {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.team-result-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

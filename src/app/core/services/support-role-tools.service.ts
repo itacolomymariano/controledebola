@@ -63,7 +63,19 @@ export class SupportRoleToolsService {
 
   async getCoachEventBoard(eventId: string): Promise<CoachEventBoard | null> {
     const result = await Parse.Cloud.run('getCoachEventBoard', { eventId });
-    return (result as CoachEventBoard) || null;
+    return result ? this.mapCoachBoard(result as CoachEventBoard) : null;
+  }
+
+  private mapCoachBoard(raw: CoachEventBoard): CoachEventBoard {
+    if (!raw.isTeamMatch) return raw;
+    return {
+      ...raw,
+      coachSides: Array.isArray(raw.coachSides)
+        ? raw.coachSides.filter((side) => side === 'home' || side === 'away')
+        : [],
+      homeTeamName: String(raw.homeTeamName || 'Mandante'),
+      awayTeamName: String(raw.awayTeamName || 'Visitante'),
+    };
   }
 
   async saveCoachEventBoard(payload: {
@@ -74,7 +86,7 @@ export class SupportRoleToolsService {
     rotationNotes: string;
   }): Promise<CoachEventBoard> {
     const result = await Parse.Cloud.run('saveCoachEventBoard', payload);
-    return result as CoachEventBoard;
+    return this.mapCoachBoard(result as CoachEventBoard);
   }
 
   async listMasseurTreatments(eventId: string): Promise<MasseurTreatment[]> {

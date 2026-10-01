@@ -89,6 +89,34 @@ export class ParseFileService {
     }
   }
 
+  async uploadAttachment(file: File, fileName: string): Promise<Parse.File> {
+    if (!file || file.size <= 0) {
+      throw new Error('Selecione um arquivo.');
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      throw new Error('O anexo deve ter no maximo 5 MB.');
+    }
+
+    const allowed =
+      file.type.startsWith('image/') ||
+      file.type === 'application/pdf' ||
+      file.type.startsWith('text/') ||
+      !file.type;
+    if (!allowed) {
+      throw new Error('Use imagem, PDF ou texto (ate 5 MB).');
+    }
+
+    const extension = (file.name.split('.').pop() || 'bin').replace(/[^\w]+/g, '').slice(0, 8);
+    const parseFile = new Parse.File(`${fileName}.${extension}`, file);
+
+    try {
+      await parseFile.save();
+      return parseFile;
+    } catch (error: unknown) {
+      throw new Error(parseErrorMessage(error));
+    }
+  }
+
   getFileUrl(file: Parse.File | { url?: string } | string | null | undefined): string | null {
     if (!file) return null;
     if (typeof file === 'string') return file;

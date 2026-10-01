@@ -7,7 +7,7 @@ import {
   AthleteProfile,
   partsToHeightCm,
 } from '../../core/models/athlete-profile.model';
-import { PeladaEvent } from '../../core/models/event.model';
+import { PeladaEvent, TeamSide } from '../../core/models/event.model';
 import {
   MembershipType,
   ScheduleConflict,
@@ -57,6 +57,7 @@ export class EventRegisterPage {
   form = this.fb.group({
     apelido: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(30)]],
     role: ['' as ProfileRole | '', Validators.required],
+    teamSide: ['' as TeamSide | ''],
     committed: [false, Validators.requiredTrue],
     primaryPosition: [''],
     secondaryPosition: [''],
@@ -115,6 +116,22 @@ export class EventRegisterPage {
     return !this.checkingEligibility && !this.scheduleConflict && !this.registrationsClosedMessage;
   }
 
+  get isTeamMatch(): boolean {
+    return this.event?.type === 'team_match';
+  }
+
+  get homeTeamLabel(): string {
+    return this.event?.homeTeamName?.trim() || 'Mandante';
+  }
+
+  get awayTeamLabel(): string {
+    return this.event?.awayTeamName?.trim() || 'Visitante';
+  }
+
+  get requiresTeamSide(): boolean {
+    return this.isTeamMatch && this.selectedRole === 'athlete';
+  }
+
   get pixKeys(): string[] {
     if (!this.event) return [];
     return [this.event.pixKey1, this.event.pixKey2, this.event.pixKey3].filter((key) => !!key?.trim());
@@ -160,8 +177,12 @@ export class EventRegisterPage {
   }
 
   private filterAvailableRoles(roles: ProfileRole[]): ProfileRole[] {
-    if (!this.athleteRegistrationFull) return roles;
-    return roles.filter((role) => role !== 'athlete');
+    let filtered = roles;
+    if (this.isTeamMatch) {
+      filtered = filtered.filter((role) => role !== 'athlete');
+    }
+    if (!this.athleteRegistrationFull) return filtered;
+    return filtered.filter((role) => role !== 'athlete');
   }
 
   private async loadRegisteredProfiles(): Promise<void> {
@@ -220,6 +241,12 @@ export class EventRegisterPage {
       if (!athleteValid) return;
     }
 
+    if (this.requiresTeamSide && !this.form.get('teamSide')?.value) {
+      this.form.markAllAsTouched();
+      await this.showError('Escolha o time mandante ou visitante.');
+      return;
+    }
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       const message = this.buildRegistrationMissingMessage();
@@ -256,6 +283,7 @@ export class EventRegisterPage {
         committed: !!values.committed,
         membershipType: this.membershipType,
         athleteProfileId,
+        teamSide: this.requiresTeamSide ? (values.teamSide as TeamSide) : undefined,
       });
 
       if (registration.profilePresentationStatus === 'pending') {

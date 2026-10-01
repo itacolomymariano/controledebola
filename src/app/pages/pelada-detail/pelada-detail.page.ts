@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, NgZone, OnDestroy } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
@@ -25,6 +25,7 @@ import { PeladaCotinha, PeladaCotinhaPayment } from '../../core/models/pelada-co
 import { formatPeladaLocation, Pelada, PeladaStatsConflictSource } from '../../core/models/pelada.model';
 import { PeladaCashEntry } from '../../core/models/pelada-cash.model';
 import { PeladaMembershipFee } from '../../core/models/pelada-monthly-fee.model';
+import { parseErrorMessage } from '../../core/utils/parse-error.util';
 import { EventService } from '../../core/services/event.service';
 import { MuralHighlightsService } from '../../core/services/mural-highlights.service';
 import { MuralParticipantStatsService } from '../../core/services/mural-participant-stats.service';
@@ -85,11 +86,11 @@ export class PeladaDetailPage implements OnDestroy {
   } | null = null;
   cashEntries: PeladaCashEntry[] = [];
   monthlyFees: PeladaMembershipFee[] = [];
-  muralRankings: Record<MuralTargetRole, MuralRankingEntry[]> = {} as Record<
-    MuralTargetRole,
-    MuralRankingEntry[]
-  >;
+  muralRankings: Partial<Record<MuralTargetRole, MuralRankingEntry[]>> = {};
   muralHighlights: MuralHighlights | null = null;
+  muralLoading = false;
+  muralError = '';
+  muralShareContext: MuralShareContext | null = null;
   participantStats: MuralParticipantLocationStats | null = null;
   muralRoles = Object.keys(MURAL_TARGET_ROLE_LABELS) as MuralTargetRole[];
   participants: PeladaParticipant[] = [];
@@ -165,7 +166,8 @@ export class PeladaDetailPage implements OnDestroy {
     private readonly fb: FormBuilder,
     private readonly loadingCtrl: LoadingController,
     private readonly alertCtrl: AlertController,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly zone: NgZone
   ) {
     this.registrationsChangedSub = this.registrationService.onRegistrationsChanged.subscribe(() => {
       if (this.isAdmin && this.segment === 'configuracoes' && this.peladaId) {
@@ -207,6 +209,22 @@ export class PeladaDetailPage implements OnDestroy {
     return this.pelada ? this.peladaService.formatSport(this.pelada.sport) : '';
   }
 
+  get visibleTabs(): { id: Segment; label: string }[] {
+    const tabs: { id: Segment; label: string }[] = [
+      { id: 'eventos', label: 'Eventos' },
+      { id: 'socios', label: 'Socios' },
+      { id: 'cotinhas', label: 'Cotinhas' },
+    ];
+    if (this.showCaixaTab) {
+      tabs.push({ id: 'caixa', label: 'Caixa' });
+    }
+    tabs.push({ id: 'mensalidades', label: 'Mensalidades' }, { id: 'mural', label: 'Mural' });
+    if (this.isAdmin) {
+      tabs.push({ id: 'configuracoes', label: 'Configuracoes' });
+    }
+    return tabs;
+  }
+
   get showCaixaTab(): boolean {
     if (!this.pelada) return true;
     if (this.isAdmin) return true;
@@ -216,14 +234,6 @@ export class PeladaDetailPage implements OnDestroy {
 
   roleLabel(role: MuralTargetRole): string {
     return MURAL_TARGET_ROLE_LABELS[role];
-  }
-
-  get muralShareContext(): MuralShareContext | null {
-    if (!this.pelada) return null;
-    return {
-      scope: 'pelada',
-      ...this.muralShareService.contextFromPelada(this.pelada),
-    };
   }
 
   rankingBadgeLabel(role: MuralTargetRole, entry: MuralRankingEntry): string {
@@ -246,8 +256,31 @@ export class PeladaDetailPage implements OnDestroy {
     return PELADA_MEMBERSHIP_ROLE_LABELS[role];
   }
 
-  async onSegmentChange(event: CustomEvent): Promise<void> {
-    this.segment = event.detail.value as Segment;
+  onTabPointer(event: Event, value: Segment): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.selectSegment(value);
+  }
+
+  selectSegment(value: Segment): void {
+    this.zone.run(() => {
+      if (this.segment === value) {
+        if (value === 'mural') {
+          void this.loadSegmentData();
+        }
+        return;
+      }
+      void this.applySegment(value);
+    });
+  }
+
+  private async applySegment(value: Segment): Promise<void> {
+    this.segment = value;
+    if (value === 'mural') {
+      this.muralLoading = true;
+      this.muralError = '';
+    }
+    this.cdr.markForCheck();
     await this.loadSegmentData();
   }
 
@@ -270,6 +303,7 @@ export class PeladaDetailPage implements OnDestroy {
         requireProfilePresentationOnFirstEvent: !!values.requireProfilePresentationOnFirstEvent,
         allowTeamSplitAfterEventEnd: !!values.allowTeamSplitAfterEventEnd,
       });
+      this.refreshMuralShareContext();
       await this.showMessage('Configuracoes salvas.');
       await this.loadProfilePresentationRequests();
     } catch (error: unknown) {
@@ -776,6 +810,17 @@ export class PeladaDetailPage implements OnDestroy {
     });
   }
 
+  private refreshMuralShareContext(): void {
+    if (!this.pelada) {
+      this.muralShareContext = null;
+      return;
+    }
+    this.muralShareContext = {
+      scope: 'pelada',
+      ...this.muralShareService.contextFromPelada(this.pelada),
+    };
+  }
+
   private async loadPelada(): Promise<void> {
     this.loading = true;
     try {
@@ -784,6 +829,7 @@ export class PeladaDetailPage implements OnDestroy {
         this.errorMessage = 'Pelada nao encontrada.';
         return;
       }
+      this.refreshMuralShareContext();
       this.isAdmin = this.peladaService.isCurrentUserAdmin(this.pelada);
       this.patchSettingsForm();
       await this.loadMembership();
@@ -802,34 +848,46 @@ export class PeladaDetailPage implements OnDestroy {
   }
 
   private async loadSegmentData(): Promise<void> {
-    switch (this.segment) {
-      case 'eventos':
-        await this.loadEvents();
-        await this.loadProfilePresentationRequests();
-        break;
-      case 'socios':
-        await this.loadSocioData();
-        break;
-      case 'cotinhas':
-        await this.loadCotinhas();
-        await this.loadParticipants();
-        break;
-      case 'caixa':
-        if (this.isMember) await this.loadCashFlow();
-        break;
-      case 'mensalidades':
-        await this.loadMonthlyFees();
-        break;
-      case 'mural':
-        await this.loadParticipants();
-        await this.loadMural();
-        break;
-      case 'configuracoes':
-        this.patchSettingsForm();
-        await this.loadProfilePresentationRequests();
-        break;
+    try {
+      switch (this.segment) {
+        case 'eventos':
+          await this.loadEvents();
+          await this.loadProfilePresentationRequests();
+          break;
+        case 'socios':
+          await this.loadSocioData();
+          break;
+        case 'cotinhas':
+          await this.loadCotinhas();
+          await this.loadParticipants();
+          break;
+        case 'caixa':
+          if (this.isMember) await this.loadCashFlow();
+          break;
+        case 'mensalidades':
+          await this.loadMonthlyFees();
+          break;
+        case 'mural':
+          this.muralLoading = true;
+          this.muralError = '';
+          this.cdr.markForCheck();
+          try {
+            await this.loadParticipants();
+            await this.loadMural();
+          } finally {
+            this.muralLoading = false;
+          }
+          break;
+        case 'configuracoes':
+          this.patchSettingsForm();
+          await this.loadProfilePresentationRequests();
+          break;
+      }
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error));
+    } finally {
+      this.cdr.markForCheck();
     }
-    this.cdr.markForCheck();
   }
 
   private async loadEvents(): Promise<void> {
@@ -977,18 +1035,26 @@ export class PeladaDetailPage implements OnDestroy {
   }
 
   private async loadMural(): Promise<void> {
-    const participantIds = this.participants.map((participant) => participant.userId);
-    this.muralRankings = await this.muralService.getRankings('pelada', this.peladaId);
-    this.muralHighlights = await this.muralHighlightsService.getHighlights(
-      'pelada',
-      this.peladaId,
-      participantIds
-    );
-    this.participantStats = await this.muralParticipantStatsService.getLocationStats(
-      'pelada',
-      this.peladaId,
-      participantIds
-    );
+    try {
+      const participantIds = this.participants.map((participant) => participant.userId);
+      this.muralRankings = await this.muralService.getRankings('pelada', this.peladaId);
+      this.muralHighlights = await this.muralHighlightsService.getHighlights(
+        'pelada',
+        this.peladaId,
+        participantIds
+      );
+      this.participantStats = await this.muralParticipantStatsService.getLocationStats(
+        'pelada',
+        this.peladaId,
+        participantIds
+      );
+    } catch (error: unknown) {
+      this.muralRankings = {};
+      this.muralHighlights = null;
+      this.participantStats = null;
+      this.muralError = parseErrorMessage(error);
+      await this.showError(this.muralError);
+    }
   }
 
   private async loadProfilePresentationRequests(): Promise<void> {

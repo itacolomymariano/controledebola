@@ -31,6 +31,19 @@ export function isCloudFunctionUnavailableError(error: unknown): boolean {
   );
 }
 
+const CPF_TAKEN_MESSAGE =
+  'Este CPF já está cadastrado no Controle de Bola App. Entre com a conta existente ou use "Esqueci minha senha".';
+const NICKNAME_TAKEN_MESSAGE = 'Apelido já utilizado neste evento. Escolha outro.';
+
+/** Parse 137 (DUPLICATE_VALUE) e usado por varias regras; so a mensagem do servidor diz qual. */
+export function duplicateValueMessage(message: string): string {
+  if (/\bcpf\b/i.test(message)) return CPF_TAKEN_MESSAGE;
+  if (!message || /apelido|nickname|duplicate value for a field/i.test(message)) {
+    return NICKNAME_TAKEN_MESSAGE;
+  }
+  return message;
+}
+
 export function parseErrorMessage(error: unknown): string {
   const message = extractErrorMessage(error);
 
@@ -67,7 +80,7 @@ export function parseErrorMessage(error: unknown): string {
       }
       return message || 'Dados inválidos. Verifique os campos.';
     case 137:
-      return 'Apelido já utilizado neste evento. Escolha outro.';
+      return duplicateValueMessage(message);
     case 209:
       return 'Sessão expirada. Faça login novamente.';
     default:

@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, ChangeDetectorRef } from '@angular/core';
+import { Component, HostBinding, Input, OnChanges, ChangeDetectorRef } from '@angular/core';
 import Parse from 'parse';
 import { BrazilianTeamOption } from '../../../core/data/brazilian-teams.data';
 import { resolveTeamShieldFromCommons } from '../../../core/utils/team-shield-commons.util';
@@ -19,6 +19,11 @@ export class TeamShieldComponent implements OnChanges {
   @Input() teamName = '';
   @Input() team?: Pick<BrazilianTeamOption, 'name' | 'slug'>;
   @Input() size: 'sm' | 'md' = 'md';
+
+  @HostBinding('attr.data-team-name')
+  get dataTeamNameAttr(): string {
+    return (this.team?.name || this.teamName || '').trim();
+  }
 
   candidateIndex = 0;
   candidates: string[] = [];

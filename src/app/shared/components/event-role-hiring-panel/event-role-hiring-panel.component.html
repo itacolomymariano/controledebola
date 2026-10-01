@@ -112,6 +112,103 @@
       </ion-item>
     }
 
+    <ion-card
+      id="{{ inviteFormAnchorId }}"
+      class="hiring-invite-form"
+      (click)="onInviteFormInteraction(); $event.stopPropagation()"
+      (mousedown)="$event.stopPropagation()"
+      (touchstart)="$event.stopPropagation()"
+      (focusin)="onInviteFormInteraction()"
+    >
+      <ion-card-header>
+        <ion-card-title>Dados do convite</ion-card-title>
+        <ion-card-subtitle>Informe valor e prazo limite para resposta</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        @if (requiresTeamSide) {
+          <ion-item>
+            <ion-select
+              [label]="isTeamMatchRefereeHiring ? 'Time proponente' : 'Time do atleta'"
+              labelPlacement="stacked"
+              [(ngModel)]="inviteTeamSide"
+              [ngModelOptions]="{ standalone: true }"
+              [disabled]="teamSideSelectLocked"
+              (ionFocus)="onInviteFormInteraction()"
+            >
+              @for (side of (isTeamMatchAthleteHiring ? allowedTeamSides : ['home', 'away']); track side) {
+                <ion-select-option [value]="side">
+                  {{ side === 'home' ? (event.homeTeamName || 'Mandante') : (event.awayTeamName || 'Visitante') }}
+                </ion-select-option>
+              }
+            </ion-select>
+          </ion-item>
+        }
+        @if (isTeamMatchRefereeHiring) {
+          <ion-item>
+            <ion-select
+              label="Quem paga a arbitragem"
+              labelPlacement="stacked"
+              [(ngModel)]="refereePaymentMode"
+              [ngModelOptions]="{ standalone: true }"
+              (ionFocus)="onInviteFormInteraction()"
+            >
+              <ion-select-option value="free">Arbitragem gratuita</ion-select-option>
+              <ion-select-option value="split_50">50% para cada presidente</ion-select-option>
+              <ion-select-option value="home_pays">100% para presidente mandante</ion-select-option>
+            </ion-select>
+          </ion-item>
+        }
+        <ion-item>
+          <ion-input
+            type="text"
+            inputmode="decimal"
+            label="Valor da contratacao (R$)"
+            labelPlacement="stacked"
+            [value]="offeredAmountDisplay"
+            (ionInput)="onOfferedAmountInput($event)"
+            (ionFocus)="onInviteFormInteraction()"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            type="date"
+            label="Resposta ate (data)"
+            labelPlacement="stacked"
+            [(ngModel)]="responseDeadlineDate"
+            [ngModelOptions]="{ standalone: true }"
+            [min]="minResponseDeadlineDate"
+            (ionFocus)="onInviteFormInteraction()"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            type="time"
+            label="Resposta ate (hora)"
+            labelPlacement="stacked"
+            [(ngModel)]="responseDeadlineTime"
+            [ngModelOptions]="{ standalone: true }"
+            (ionFocus)="onInviteFormInteraction()"
+          ></ion-input>
+        </ion-item>
+        @if (responseDeadlineInvalid) {
+          <ion-note color="danger" class="ion-padding-start">
+            O prazo para resposta deve ser uma data e hora futuras.
+          </ion-note>
+        }
+        <ion-button
+          expand="block"
+          class="ion-margin-top"
+          [disabled]="sendingInvite || !inviteUserId || (requiresTeamSide && !inviteTeamSide)"
+          (click)="sendInvite()"
+        >
+          {{ sendingInvite ? 'Enviando convite...' : 'Enviar convite' }}
+        </ion-button>
+        @if (!inviteUserId) {
+          <ion-note color="medium">Selecione um candidato na lista acima para enviar o convite.</ion-note>
+        }
+      </ion-card-content>
+    </ion-card>
+
     <section [id]="invitationsAnchorId" class="hiring-invitations-section">
       @if (!invitations.length) {
         <ion-note class="ion-padding-top">Nenhum convite enviado ainda.</ion-note>
@@ -128,6 +225,9 @@
               <ion-label class="ion-text-wrap">
                 <h3>{{ invitation.invitedUserApelido || invitation.invitedUserName }}</h3>
                 <p>Valor: {{ formatCurrency(invitation.offeredAmount) }}</p>
+                @if (invitationTeamSideLabel(invitation)) {
+                  <p>Time: {{ invitationTeamSideLabel(invitation) }}</p>
+                }
                 @if (invitation.attendanceMode) {
                   <p>
                     Assistencia:
@@ -223,69 +323,5 @@
         </ion-list>
       }
     </section>
-
-    <ion-card
-      id="{{ inviteFormAnchorId }}"
-      class="hiring-invite-form"
-      (click)="onInviteFormInteraction(); $event.stopPropagation()"
-      (mousedown)="$event.stopPropagation()"
-      (touchstart)="$event.stopPropagation()"
-      (focusin)="onInviteFormInteraction()"
-    >
-      <ion-card-header>
-        <ion-card-title>Dados do convite</ion-card-title>
-        <ion-card-subtitle>Informe valor e prazo limite para resposta</ion-card-subtitle>
-      </ion-card-header>
-      <ion-card-content>
-        <ion-item>
-          <ion-input
-            type="text"
-            inputmode="decimal"
-            label="Valor da contratacao (R$)"
-            labelPlacement="stacked"
-            [value]="offeredAmountDisplay"
-            (ionInput)="onOfferedAmountInput($event)"
-            (ionFocus)="onInviteFormInteraction()"
-          ></ion-input>
-        </ion-item>
-        <ion-item>
-          <ion-input
-            type="date"
-            label="Resposta ate (data)"
-            labelPlacement="stacked"
-            [(ngModel)]="responseDeadlineDate"
-            [ngModelOptions]="{ standalone: true }"
-            [min]="minResponseDeadlineDate"
-            (ionFocus)="onInviteFormInteraction()"
-          ></ion-input>
-        </ion-item>
-        <ion-item>
-          <ion-input
-            type="time"
-            label="Resposta ate (hora)"
-            labelPlacement="stacked"
-            [(ngModel)]="responseDeadlineTime"
-            [ngModelOptions]="{ standalone: true }"
-            (ionFocus)="onInviteFormInteraction()"
-          ></ion-input>
-        </ion-item>
-        @if (responseDeadlineInvalid) {
-          <ion-note color="danger" class="ion-padding-start">
-            O prazo para resposta deve ser uma data e hora futuras.
-          </ion-note>
-        }
-        <ion-button
-          expand="block"
-          class="ion-margin-top"
-          [disabled]="sendingInvite || !inviteUserId"
-          (click)="sendInvite()"
-        >
-          {{ sendingInvite ? 'Enviando convite...' : 'Enviar convite' }}
-        </ion-button>
-        @if (!inviteUserId) {
-          <ion-note color="medium">Selecione um candidato na lista acima para enviar o convite.</ion-note>
-        }
-      </ion-card-content>
-    </ion-card>
   </div>
 </ion-accordion>

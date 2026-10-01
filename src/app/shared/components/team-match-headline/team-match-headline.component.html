@@ -1,0 +1,21 @@
+<div class="team-match-headline" [class.team-match-headline-centered]="centered">
+  <span class="team-match-headline-name">{{ homeTeamName || 'Mandante' }}</span>
+  @if (homeTeamShieldUrl) {
+    <img class="team-match-headline-shield" [src]="homeTeamShieldUrl" [alt]="homeTeamName" />
+  } @else {
+    <app-team-shield [teamName]="homeTeamName || 'Mandante'" size="sm"></app-team-shield>
+  }
+  @if (showScores) {
+    <span class="team-match-headline-score">{{ homeScore }}</span>
+  }
+  <span class="team-match-headline-vs">x</span>
+  @if (showScores) {
+    <span class="team-match-headline-score">{{ awayScore }}</span>
+  }
+  @if (awayTeamShieldUrl) {
+    <img class="team-match-headline-shield" [src]="awayTeamShieldUrl" [alt]="awayTeamName" />
+  } @else {
+    <app-team-shield [teamName]="awayTeamName || 'Visitante'" size="sm"></app-team-shield>
+  }
+  <span class="team-match-headline-name">{{ awayTeamName || 'Visitante' }}</span>
+</div>

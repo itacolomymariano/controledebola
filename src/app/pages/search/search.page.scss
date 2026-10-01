@@ -1,0 +1,35 @@
+.search-kind-toolbar {
+  --min-height: 52px;
+  --padding-start: 8px;
+  --padding-end: 8px;
+}
+
+.search-kind-row {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+}
+
+.search-kind-btn {
+  flex: 1 1 0;
+  min-height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--ion-color-primary, #3880ff);
+  background: transparent;
+  color: var(--ion-color-primary, #3880ff);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.search-kind-btn.is-on {
+  background: var(--ion-color-primary, #3880ff);
+  color: var(--ion-color-primary-contrast, #fff);
+}
+
+ion-segment-button {
+  --color: var(--ion-text-color);
+  --color-checked: var(--ion-color-primary);
+  --indicator-color: var(--ion-color-primary);
+  font-weight: 600;
+  text-transform: none;
+}

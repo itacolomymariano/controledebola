@@ -1,0 +1,164 @@
+@if (loading) {
+  <div class="ion-text-center ion-padding">
+    <ion-spinner name="crescent"></ion-spinner>
+  </div>
+} @else if (dashboard) {
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>{{ 'mural.confrontos.totalTitle' | t }}</ion-card-title>
+      <ion-card-subtitle>{{ dashboard.totalConfrontos }}</ion-card-subtitle>
+    </ion-card-header>
+  </ion-card>
+
+  @if (highlightEntries().length) {
+    <h2 class="section-title">{{ 'mural.confrontos.teamsTitle' | t }}</h2>
+    <div class="highlight-grid">
+      @for (row of highlightEntries(); track row.key) {
+        <ion-card button (click)="openTeam(row.team.teamId)">
+          <ion-card-header>
+            <ion-card-subtitle>{{ teamHighlightLabel(row.key) }}</ion-card-subtitle>
+            <ion-card-title>{{ row.team.teamName }}</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <ion-note>{{ recordLine(row.team) }}</ion-note>
+          </ion-card-content>
+        </ion-card>
+      }
+    </div>
+  }
+
+  @if (dashboard.locationStats.byState.length) {
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>{{ 'mural.confrontos.locationTitle' | t }}</ion-card-title>
+        <ion-card-subtitle>{{ 'mural.confrontos.locationHint' | t }}</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <h3>{{ 'mural.confrontos.byState' | t }}</h3>
+        @for (row of dashboard.locationStats.byState.slice(0, 10); track row.label) {
+          <div class="rank-row">
+            <span>{{ row.label }}</span>
+            <ion-badge>{{ row.count }}</ion-badge>
+          </div>
+        }
+        @if (dashboard.locationStats.byCity.length) {
+          <h3 class="ion-margin-top">{{ 'mural.confrontos.byCity' | t }}</h3>
+          @for (row of dashboard.locationStats.byCity.slice(0, 10); track row.label) {
+            <div class="rank-row">
+              <span>{{ row.label }}</span>
+              <ion-badge>{{ row.count }}</ion-badge>
+            </div>
+          }
+        }
+        @if (dashboard.locationStats.byNeighborhood.length) {
+          <h3 class="ion-margin-top">{{ 'mural.confrontos.byNeighborhood' | t }}</h3>
+          @for (row of dashboard.locationStats.byNeighborhood.slice(0, 10); track row.label) {
+            <div class="rank-row">
+              <span>{{ row.label }}</span>
+              <ion-badge>{{ row.count }}</ion-badge>
+            </div>
+          }
+        }
+      </ion-card-content>
+    </ion-card>
+  }
+
+  <ng-container
+    *ngTemplateOutlet="
+      rankingCard;
+      context: {
+        titleKey: 'mural.confrontos.topAthletes',
+        entries: dashboard.topAthletes
+      }
+    "
+  ></ng-container>
+  <ng-container
+    *ngTemplateOutlet="
+      rankingCard;
+      context: {
+        titleKey: 'mural.confrontos.topGoalkeepers',
+        entries: dashboard.topGoalkeepers
+      }
+    "
+  ></ng-container>
+  <ng-container
+    *ngTemplateOutlet="
+      rankingCard;
+      context: {
+        titleKey: 'mural.confrontos.topReferees',
+        entries: dashboard.topReferees
+      }
+    "
+  ></ng-container>
+
+  <ng-container
+    *ngTemplateOutlet="
+      performanceCard;
+      context: { titleKey: 'mural.confrontos.topScorers', entries: dashboard.topScorers }
+    "
+  ></ng-container>
+  <ng-container
+    *ngTemplateOutlet="
+      performanceCard;
+      context: { titleKey: 'mural.confrontos.topAssists', entries: dashboard.topAssists }
+    "
+  ></ng-container>
+  <ng-container
+    *ngTemplateOutlet="
+      performanceCard;
+      context: { titleKey: 'mural.confrontos.topPasses', entries: dashboard.topPasses }
+    "
+  ></ng-container>
+
+  @if (!dashboard.cloudAvailable) {
+    <ion-note color="warning">
+      {{ 'mural.confrontos.cloudHint' | t }}
+    </ion-note>
+  }
+} @else {
+  <ion-note color="medium">{{ 'mural.confrontos.empty' | t }}</ion-note>
+}
+
+<ng-template #rankingCard let-titleKey="titleKey" let-entries="entries">
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>{{ titleKey | t }}</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      @if (!entries?.length) {
+        <ion-note color="medium">{{ 'mural.confrontos.noData' | t }}</ion-note>
+      }
+      @for (entry of entries; track entry.userId; let i = $index) {
+        <div class="rank-row ion-margin-bottom">
+          <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="sm"></app-user-avatar>
+          <span>{{ i + 1 }}. {{ entry.userName }}</span>
+          <ion-badge>{{ rankingBadge(entry) }}</ion-badge>
+        </div>
+      }
+    </ion-card-content>
+  </ion-card>
+</ng-template>
+
+<ng-template #performanceCard let-titleKey="titleKey" let-entries="entries">
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>{{ titleKey | t }}</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      @if (!entries?.length) {
+        <ion-note color="medium">{{ 'mural.confrontos.noData' | t }}</ion-note>
+      }
+      @for (entry of entries; track entry.userId; let i = $index) {
+        <div class="rank-row ion-margin-bottom">
+          <app-user-avatar
+            [avatarUrl]="entry.avatarUrl"
+            [alt]="performanceName(entry)"
+            size="sm"
+          ></app-user-avatar>
+          <span>{{ i + 1 }}. {{ performanceName(entry) }}</span>
+          <ion-badge>{{ entry.total }}</ion-badge>
+        </div>
+      }
+    </ion-card-content>
+  </ion-card>
+</ng-template>

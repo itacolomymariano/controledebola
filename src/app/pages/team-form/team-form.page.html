@@ -4,65 +4,231 @@
     <ion-buttons slot="start">
       <ion-button (click)="cancel()">Voltar</ion-button>
     </ion-buttons>
-    <ion-title>Cadastro do time</ion-title>
+    <ion-title>
+      @if (mode === 'list') {
+        Meus times
+      } @else if (team) {
+        Editar time
+      } @else {
+        Cadastro do time
+      }
+    </ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
-  @if (team) {
-    <ion-note>Seu time ja esta cadastrado (somente leitura).</ion-note>
-  }
-
-  <form [formGroup]="form" (ngSubmit)="submit()">
-    <ion-list lines="full">
-      <ion-item>
-        <ion-input
-          label="Nome do time"
-          labelPlacement="stacked"
-          formControlName="name"
-        ></ion-input>
-      </ion-item>
-
-      <ion-item-divider>
-        <ion-label>Imagem do time</ion-label>
-      </ion-item-divider>
-      <div class="ion-padding">
-        <app-image-picker
-          label="Selecionar imagem do time"
-          [previewUrl]="teamImagePreview"
-          [disabled]="!!team"
-          (imageSelected)="onTeamImageSelected($event)"
-        ></app-image-picker>
-      </div>
-
-      <ion-item-divider>
-        <ion-label>Imagem do presidente</ion-label>
-      </ion-item-divider>
-      <div class="ion-padding">
-        <app-image-picker
-          label="Selecionar imagem do presidente"
-          [previewUrl]="presidentImagePreview"
-          [disabled]="!!team"
-          (imageSelected)="onPresidentImageSelected($event)"
-        ></app-image-picker>
-      </div>
-
-      <ion-item-divider>
-        <ion-label>Uniforme do time</ion-label>
-      </ion-item-divider>
-      <div class="ion-padding">
-        <app-uniform-picker formControlName="uniformId"></app-uniform-picker>
-        @if (selectedUniform) {
-          <div class="selected-uniform">
-            <app-jersey-preview [colors]="selectedUniform.colors"></app-jersey-preview>
-            <p>Uniforme selecionado: {{ selectedUniform.teamName }}</p>
-          </div>
-        }
-      </div>
+  @if (mode === 'list') {
+    <ion-note color="medium" class="ion-margin-bottom">
+      Voce pode cadastrar ate 5 times. Toque em um time para editar elenco e dados.
+    </ion-note>
+    <ion-list>
+      @for (row of myTeams; track row.objectId) {
+        <ion-item button (click)="openEdit(row.objectId)">
+          <app-user-avatar
+            slot="start"
+            [avatarUrl]="row.teamImageUrl || row.shieldImageUrl"
+            [alt]="row.name"
+            size="md"
+          ></app-user-avatar>
+          <ion-label>
+            <h2>{{ row.name }}</h2>
+            @if (row.homeVenue) {
+              <p>{{ row.homeVenue }}</p>
+            }
+          </ion-label>
+        </ion-item>
+      }
     </ion-list>
-
-    @if (!team) {
-      <ion-button expand="block" type="submit" class="ion-margin-top">Salvar time</ion-button>
+    <ion-button
+      expand="block"
+      class="ion-margin-top"
+      [disabled]="!canCreateMore"
+      (click)="startCreate()"
+    >
+      Novo time
+    </ion-button>
+    @if (!canCreateMore) {
+      <ion-note color="medium" class="ion-padding-horizontal">
+        Limite de 5 times atingido.
+      </ion-note>
     }
-  </form>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <ion-list lines="full">
+        <ion-item>
+          <ion-input
+            label="Nome do time"
+            labelPlacement="stacked"
+            formControlName="name"
+          ></ion-input>
+        </ion-item>
+        <div class="ion-padding-horizontal ion-padding-top">
+          <app-birth-date-picker
+            label="Data de fundacao"
+            formControlName="foundedAt"
+          ></app-birth-date-picker>
+        </div>
+        <div class="ion-padding-horizontal ion-padding-top">
+          @if (form.get('homeVenue')?.value) {
+            <ion-note color="medium" class="current-venue">
+              Local atual: {{ form.get('homeVenue')?.value }}
+            </ion-note>
+          }
+          <app-address-form
+            title="Local principal onde joga"
+            [required]="false"
+            formControlName="homeVenueAddress"
+          ></app-address-form>
+        </div>
+        <ion-item>
+          <ion-textarea
+            label="Descricao breve"
+            labelPlacement="stacked"
+            formControlName="description"
+            autoGrow="true"
+            maxlength="2000"
+          ></ion-textarea>
+        </ion-item>
+
+        <ion-item-divider>
+          <ion-label>Imagem do time</ion-label>
+        </ion-item-divider>
+        <div class="ion-padding">
+          <app-image-picker
+            label="Selecionar imagem do time"
+            [previewUrl]="teamImagePreview"
+            (imageSelected)="onTeamImageSelected($event)"
+          ></app-image-picker>
+        </div>
+
+        <ion-item-divider>
+          <ion-label>Escudo do time (opcional)</ion-label>
+        </ion-item-divider>
+        <div class="ion-padding">
+          <app-image-picker
+            label="Selecionar escudo"
+            [previewUrl]="shieldImagePreview"
+            (imageSelected)="onShieldImageSelected($event)"
+          ></app-image-picker>
+        </div>
+
+        <ion-item-divider>
+          <ion-label>Imagem do presidente</ion-label>
+        </ion-item-divider>
+        <div class="ion-padding">
+          <app-image-picker
+            label="Selecionar imagem do presidente"
+            [previewUrl]="presidentImagePreview"
+            (imageSelected)="onPresidentImageSelected($event)"
+          ></app-image-picker>
+        </div>
+
+        <ion-item-divider>
+          <ion-label>Foto da sede (opcional)</ion-label>
+        </ion-item-divider>
+        <div class="ion-padding">
+          <app-image-picker
+            label="Selecionar foto da sede"
+            [previewUrl]="headquartersImagePreview"
+            (imageSelected)="onHeadquartersImageSelected($event)"
+          ></app-image-picker>
+        </div>
+
+        <ion-item-divider>
+          <ion-label>Uniforme do time</ion-label>
+        </ion-item-divider>
+        <div class="ion-padding">
+          @if (uniformPickerOpen) {
+            <app-uniform-picker formControlName="uniformId"></app-uniform-picker>
+          } @else {
+            @if (selectedUniform) {
+              <div class="selected-uniform">
+                <app-jersey-preview [colors]="selectedUniform.colors"></app-jersey-preview>
+                <p>Uniforme selecionado: {{ selectedUniform.teamName }}</p>
+              </div>
+            }
+            <ion-button type="button" fill="outline" expand="block" (click)="uniformPickerOpen = true">
+              {{ selectedUniform ? 'Trocar uniforme' : 'Selecionar uniforme' }}
+            </ion-button>
+          }
+        </div>
+      </ion-list>
+
+      <ion-button expand="block" type="submit" class="ion-margin-top">
+        {{ team ? 'Salvar alteracoes' : 'Salvar time' }}
+      </ion-button>
+    </form>
+
+    @if (team) {
+      <ion-list lines="full" class="ion-margin-top">
+        <ion-item-divider>
+          <ion-label>Elenco do time</ion-label>
+        </ion-item-divider>
+        <ion-item>
+          <ion-searchbar
+            placeholder="Buscar atleta por nome ou apelido"
+            [debounce]="0"
+            [value]="athleteQuery"
+            (ionInput)="onAthleteSearch($any($event.target).value)"
+            (ionClear)="athleteResults = []"
+          ></ion-searchbar>
+        </ion-item>
+      </ion-list>
+      <ion-note color="medium" class="ion-padding-horizontal">
+        Busque usuarios com perfil de atleta. Salve o time primeiro para montar o elenco.
+      </ion-note>
+      @if (athleteSearching) {
+        <div class="ion-text-center ion-padding">
+          <ion-spinner name="crescent"></ion-spinner>
+        </div>
+      }
+      @if (athleteResults.length) {
+        <ion-list>
+          @for (athlete of athleteResults; track athlete.userId) {
+            <ion-item button (click)="addAthlete(athlete)">
+              <app-user-avatar
+                slot="start"
+                [avatarUrl]="athlete.avatarUrl"
+                [alt]="athlete.apelido || athlete.userName"
+                size="md"
+              ></app-user-avatar>
+              <ion-label>
+                <h2>{{ athlete.apelido || athlete.userName }}</h2>
+                <p>{{ athlete.fullName || athlete.userName }}</p>
+              </ion-label>
+              <ion-button fill="clear" slot="end">Adicionar</ion-button>
+            </ion-item>
+          }
+        </ion-list>
+      }
+      @if (roster.length) {
+        <ion-list>
+          @for (member of roster; track member.objectId) {
+            <ion-item>
+              <app-user-avatar
+                slot="start"
+                [avatarUrl]="member.avatarUrl"
+                [alt]="member.apelido"
+                size="md"
+              ></app-user-avatar>
+              <ion-label>
+                <h2>{{ member.apelido }}</h2>
+                <p>
+                  {{ member.position || 'Posicao —' }}
+                  @if (member.age != null) {
+                    · {{ member.age }} anos
+                  }
+                </p>
+              </ion-label>
+              <ion-button fill="clear" color="danger" slot="end" (click)="removeMember(member)">
+                Remover
+              </ion-button>
+            </ion-item>
+          }
+        </ion-list>
+      } @else {
+        <ion-note color="medium" class="ion-padding">Nenhum atleta no elenco ainda.</ion-note>
+      }
+    }
+  }
 </ion-content>

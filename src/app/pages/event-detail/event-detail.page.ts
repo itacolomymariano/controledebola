@@ -9,6 +9,7 @@ import { AlertController, IonContent, LoadingController } from '@ionic/angular';
 
 import {
   PeladaEvent,
+  TeamSide,
   hasPixKey,
   supportsArrivalOrder,
   getEffectiveVotingWindow,
@@ -33,6 +34,9 @@ import { MuralTargetRole } from '../../core/models/event-performance.model';
 import { EventPerformanceService } from '../../core/services/event-performance.service';
 
 import { EventService } from '../../core/services/event.service';
+import { TeamService } from '../../core/services/team.service';
+import { TeamMatchJoinRequestService } from '../../core/services/team-match-join-request.service';
+import { UserParticipationProfileService } from '../../core/services/user-participation-profile.service';
 
 import { RegistrationService } from '../../core/services/registration.service';
 import { HIREABLE_ROLES, HireableRole } from '../../core/models/event-hiring.model';
@@ -45,6 +49,7 @@ import { normalizeSearchText } from '../../core/utils/search-text.util';
 import {
   compareArrivalParticipants,
 } from '../../core/utils/arrival-order.util';
+import { sortTeamMatchParticipants } from '../../core/utils/team-match-participants.util';
 import { PeladaMembershipService } from '../../core/services/pelada-membership.service';
 import { PeladaService } from '../../core/services/pelada.service';
 import { TeamSplitService } from '../../core/services/team-split.service';
@@ -129,6 +134,13 @@ export class EventDetailPage implements OnDestroy {
   showAdminPanel = false;
 
   showHiringPanel = false;
+  showConvocationPanel = false;
+  convocationAccess: {
+    athleteConvocationBy: 'president' | 'coach';
+    manageSides: Array<'home' | 'away'>;
+    canManage: boolean;
+    canSetMode: boolean;
+  } | null = null;
 
   showGatePanel = false;
 
@@ -148,6 +160,68 @@ export class EventDetailPage implements OnDestroy {
   loadingMyGateTicket = false;
   sendingParticipantNotification = false;
 
+  canManageTeamMatchSchedule = false;
+  myTeamMatchTeamIds: string[] = [];
+  canToggleHomeUninvited = false;
+  canToggleAwayUninvited = false;
+  /** Presidente de mandante ou visitante no confronto — pode propor arbitragem. */
+  canManageTeamMatchHiring = false;
+  teamMatchUninvitedBusy = false;
+  teamMatchJoinBusy = false;
+  myPendingJoinRequest = false;
+  /** Presidente de um dos times do confronto ou atleta ja convocado — sem CTA de solicitar. */
+  hideTeamMatchJoinCta = false;
+
+  teamMatchScheduleBusy = false;
+
+  pendingReschedule: {
+    eventId: string;
+    eventName: string;
+    homeTeamName: string;
+    awayTeamName: string;
+    currentStartTime: Date | null;
+    proposedStartTime: Date | null;
+    proposedEndTime: Date | null;
+    reason: string;
+    requestedByUserId: string;
+    requestedAt: Date | null;
+    status: string;
+  } | null = null;
+
+  isPendingRescheduleRequester = false;
+
+  canRespondPendingReschedule = false;
+
+  matchdaySummary: {
+    homeTeamName: string;
+    awayTeamName: string;
+    homeTeamShieldUrl?: string;
+    awayTeamShieldUrl?: string;
+    homeScore: number;
+    awayScore: number;
+    scorers: Array<{
+      userId: string;
+      name: string;
+      goals: number;
+      position?: string;
+      age?: number | null;
+      avatarUrl?: string;
+      teamSide?: string | null;
+      teamName?: string;
+    }>;
+    referee: {
+      userId: string;
+      name: string;
+      age?: number | null;
+      avatarUrl?: string;
+      score?: number | null;
+    } | null;
+    challengeConditions?: string;
+    homeAcceptsUninvitedAthletes?: boolean;
+    awayAcceptsUninvitedAthletes?: boolean;
+    athleteConvocationBy?: 'president' | 'coach';
+  } | null = null;
+
   activeHiringAccordionRole = '';
 
   hiringInvitationCounts: Partial<Record<HireableRole, number>> = {};
@@ -161,18 +235,39 @@ export class EventDetailPage implements OnDestroy {
   private static readonly HIRING_PANEL_STATE_KEY = 'eventDetailHiringPanelState';
 
   updatingPaymentId = '';
+  updatingTeamSideId = '';
   resolvingProfileId = '';
   reviewProfile: ParticipationReviewProfile | null = null;
   reviewProfileOpen = false;
   loadingReviewProfile = false;
 
   readonly hireableRoles = HIREABLE_ROLES;
+
+  get hireableRolesForPanel(): HireableRole[] {
+    if (this.event?.type === 'team_match' && this.canManageTeamMatchHiring && !this.isAdmin) {
+      return ['athlete', 'referee'];
+    }
+    return this.hireableRoles;
+  }
+
+  /** Lados que o presidente logado pode usar ao convocar atleta no confronto. */
+  get hiringAllowedTeamSides(): Array<'home' | 'away'> {
+    if (this.event?.type !== 'team_match') return ['home', 'away'];
+    if (this.isAdmin) return ['home', 'away'];
+    const sides: Array<'home' | 'away'> = [];
+    if (this.canToggleHomeUninvited) sides.push('home');
+    if (this.canToggleAwayUninvited) sides.push('away');
+    return sides.length ? sides : ['home', 'away'];
+  }
   readonly anonymousParticipantRoles = EVENT_REGISTRATION_ROLES;
 
   addingAnonymous = false;
-  /** Admin: faltam goleiros perto do fim das inscricoes. */
+  /** Admin: faltam goleiros perto do fim das inscricoes (pelada/racha). */
   goalkeeperShortageWarning = '';
+  /** Confronto: goleiro(s) convocado(s) ainda sem confirmacao efetiva (presidente/treinador). */
+  teamMatchGoalkeeperWarning = '';
   private goalkeeperAlertShownForEventId = '';
+  private teamMatchGkAlertShownForEventId = '';
 
   @ViewChild(IonContent) private content?: IonContent;
 
@@ -270,6 +365,9 @@ export class EventDetailPage implements OnDestroy {
     private readonly profilePresentationRequestService: ProfilePresentationRequestService,
     private readonly materialInventoryService: MaterialInventoryService,
     private readonly pushNotificationService: PushNotificationService,
+    private readonly teamService: TeamService,
+    private readonly teamMatchJoinRequestService: TeamMatchJoinRequestService,
+    private readonly userParticipationProfileService: UserParticipationProfileService,
     private readonly loadingCtrl: LoadingController,
     private readonly alertCtrl: AlertController,
     private readonly cdr: ChangeDetectorRef
@@ -297,7 +395,11 @@ export class EventDetailPage implements OnDestroy {
         byUser.set(userId, participant);
       }
     }
-    return Array.from(byUser.values());
+    const list = Array.from(byUser.values());
+    if (this.event?.type === 'team_match') {
+      return sortTeamMatchParticipants(list);
+    }
+    return list;
   }
 
   get voteableParticipants(): EventRegistrationListItem[] {
@@ -378,14 +480,21 @@ export class EventDetailPage implements OnDestroy {
         id: 'notify-participants',
         label: 'Notificar participantes',
         icon: 'notifications-outline',
-        visible: this.canNotifyConfirmedParticipants,
+        visible: this.isAdmin,
       },
       {
         id: 'hiring',
         label: 'Negociacao/Contratacoes',
         icon: 'briefcase-outline',
-        visible: true,
+        visible: this.isAdmin || this.canManageTeamMatchHiring,
         active: this.showHiringPanel,
+      },
+      {
+        id: 'convocation',
+        label: 'Convocacao',
+        icon: 'people-circle-outline',
+        visible: this.canShowConvocationPanel,
+        active: this.showConvocationPanel,
       },
       {
         id: 'material',
@@ -443,6 +552,20 @@ export class EventDetailPage implements OnDestroy {
         icon: 'people-outline',
         visible: this.canShowUserParticipantsButton,
         active: this.showParticipantsPanel,
+      },
+      {
+        id: 'convocation',
+        label: 'Convocacao',
+        icon: 'people-circle-outline',
+        visible: this.canShowConvocationPanel,
+        active: this.showConvocationPanel,
+      },
+      {
+        id: 'hiring',
+        label: 'Negociacao/Contratacoes',
+        icon: 'briefcase-outline',
+        visible: this.canManageTeamMatchHiring && !this.isAdmin,
+        active: this.showHiringPanel,
       },
       {
         id: 'scout',
@@ -710,6 +833,10 @@ export class EventDetailPage implements OnDestroy {
     return !this.isAdmin && (!!this.registration || this.confirmedParticipants.length > 0);
   }
 
+  get canShowConvocationPanel(): boolean {
+    return !!this.convocationAccess?.canManage && this.event?.type === 'team_match';
+  }
+
   get userParticipantsButtonLabel(): string {
     const count = Math.max(this.confirmedParticipants.length, this.registration ? 1 : 0);
     return `Participantes (${count})`;
@@ -820,6 +947,8 @@ export class EventDetailPage implements OnDestroy {
 
   get canViewRefereeSumula(): boolean {
     if (!this.event) return false;
+    // Confronto: consulta para qualquer usuario logado; edicao so o arbitro (Cloud).
+    if (this.event.type === 'team_match') return true;
     if (this.isAdmin) return true;
     if (!this.registration?.isEffectivelyConfirmed) return false;
     if (this.isEventFinished) return true;
@@ -828,7 +957,7 @@ export class EventDetailPage implements OnDestroy {
 
   get sumulaActionLabel(): string {
     if (!this.event) return 'Sumula do evento';
-    if (this.isEventFinished) return 'Consultar sumula do evento';
+    if (this.event.isFinished) return 'Consultar sumula do evento';
     if (
       this.registration?.role === 'referee' &&
       this.registration.isEffectivelyConfirmed &&
@@ -899,13 +1028,15 @@ export class EventDetailPage implements OnDestroy {
   }
 
   goBack(): void {
-
-    if (this.event?.peladaId) {
-      void this.router.navigate(['/pelada', this.event.peladaId]);
-    } else {
-      void this.router.navigateByUrl('/tabs/peladas');
+    if (this.event?.type === 'team_match') {
+      void this.router.navigateByUrl('/tabs/events', { replaceUrl: true });
+      return;
     }
-
+    if (this.event?.peladaId) {
+      void this.router.navigate(['/pelada', this.event.peladaId], { replaceUrl: true });
+    } else {
+      void this.router.navigateByUrl('/tabs/peladas', { replaceUrl: true });
+    }
   }
 
   openMural(): void {
@@ -978,7 +1109,7 @@ export class EventDetailPage implements OnDestroy {
   }
 
   openPelada(): void {
-    if (!this.event?.peladaId) return;
+    if (!this.event?.peladaId || this.event.type === 'team_match') return;
     void this.router.navigate(['/pelada', this.event.peladaId]);
   }
 
@@ -1016,15 +1147,162 @@ export class EventDetailPage implements OnDestroy {
 
 
 
-  participate(): void {
-
-    if (!this.event || this.event.isReadOnly || !this.registrationsOpen) return;
-
-    void this.router.navigate(['/event', this.event.objectId, 'register']);
-
+  get showTeamMatchParticipateCta(): boolean {
+    if (!this.event || this.event.type !== 'team_match') return false;
+    if (this.loading || this.registration || this.event.isReadOnly || this.event.isFinished) {
+      return false;
+    }
+    if (!this.registrationsOpen) return false;
+    if (this.hideTeamMatchJoinCta) return false;
+    return !!(this.event.homeAcceptsUninvitedAthletes || this.event.awayAcceptsUninvitedAthletes);
   }
 
+  get showStandardParticipateCta(): boolean {
+    if (!this.event || this.loading || this.registration || this.event.isReadOnly) return false;
+    if (!this.registrationsOpen || this.event.isFinished) return false;
+    if (this.event.type === 'team_match') return false;
+    return true;
+  }
 
+  participate(): void {
+    if (!this.event || this.event.isReadOnly || !this.registrationsOpen) return;
+    if (this.event.type === 'team_match') {
+      void this.promptRequestTeamMatchParticipation();
+      return;
+    }
+    void this.router.navigate(['/event', this.event.objectId, 'register']);
+  }
+
+  async promptRequestTeamMatchParticipation(): Promise<void> {
+    if (!this.event || this.teamMatchJoinBusy) return;
+
+    const profiles = await this.userParticipationProfileService.listRegisteredEventProfiles();
+    const hasAthlete = profiles.some((profile) => profile.role === 'athlete');
+    const hasOther = profiles.some((profile) => profile.role !== 'athlete' && profile.role !== 'referee');
+    if (!hasAthlete) {
+      await this.router.navigate(['/event', this.event.objectId, 'register']);
+      return;
+    }
+    if (hasOther) {
+      const choice = await this.alertCtrl.create({
+        header: 'Solicitar participacao',
+        message: 'So o atleta escolhe o time. Os outros perfis se inscrevem sem escolher time.',
+        buttons: [
+          { text: 'Cancelar', role: 'cancel' },
+          {
+            text: 'Outro perfil',
+            handler: () => {
+              void this.router.navigate(['/event', this.event!.objectId, 'register']);
+            },
+          },
+          {
+            text: 'Como atleta',
+            handler: () => {
+              void this.promptAthleteTeamSide();
+            },
+          },
+        ],
+      });
+      await choice.present();
+      return;
+    }
+
+    await this.promptAthleteTeamSide();
+  }
+
+  private async promptAthleteTeamSide(): Promise<void> {
+    if (!this.event || this.teamMatchJoinBusy) return;
+    const options: { side: TeamSide; name: string }[] = [];
+    if (this.event.homeAcceptsUninvitedAthletes) {
+      options.push({
+        side: 'home',
+        name: this.event.homeTeamName || 'Mandante',
+      });
+    }
+    if (this.event.awayAcceptsUninvitedAthletes) {
+      options.push({
+        side: 'away',
+        name: this.event.awayTeamName || 'Visitante',
+      });
+    }
+    if (!options.length) {
+      await this.showError('Nenhum time esta aceitando atletas nao convocados neste confronto.');
+      return;
+    }
+
+    if (options.length === 1) {
+      await this.requestTeamMatchParticipation(options[0].side);
+      return;
+    }
+
+    const alert = await this.alertCtrl.create({
+      header: 'Solicitar participacao',
+      message: 'Escolha o time para o qual deseja solicitar.',
+      inputs: options.map((opt, index) => ({
+        type: 'radio' as const,
+        label: opt.name,
+        value: opt.side,
+        checked: index === 0,
+      })),
+      buttons: [
+        { text: 'Cancelar', role: 'cancel' },
+        {
+          text: 'Solicitar',
+          handler: (side: TeamSide) => {
+            void this.requestTeamMatchParticipation(side);
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  private async requestTeamMatchParticipation(teamSide: TeamSide): Promise<void> {
+    if (!this.event) return;
+    this.teamMatchJoinBusy = true;
+    const loading = await this.loadingCtrl.create({ message: 'Enviando solicitacao...' });
+    await loading.present();
+    try {
+      await this.teamMatchJoinRequestService.request(this.event.objectId, teamSide);
+      this.myPendingJoinRequest = true;
+      await this.showSuccess(
+        'Solicitacao enviada ao presidente do time. Acompanhe na caixa de saida.'
+      );
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error) || 'Nao foi possivel solicitar.');
+    } finally {
+      this.teamMatchJoinBusy = false;
+      await loading.dismiss();
+      this.cdr.markForCheck();
+    }
+  }
+
+  async toggleTeamAcceptsUninvited(teamSide: 'home' | 'away', accepts: boolean): Promise<void> {
+    if (!this.event || this.teamMatchUninvitedBusy) return;
+    const current =
+      teamSide === 'away'
+        ? !!this.event.awayAcceptsUninvitedAthletes
+        : !!this.event.homeAcceptsUninvitedAthletes;
+    if (current === accepts) return;
+    this.teamMatchUninvitedBusy = true;
+    try {
+      const result = await this.eventService.setTeamMatchAcceptsUninvitedAthletes(
+        this.event.objectId,
+        teamSide,
+        accepts
+      );
+      this.event = {
+        ...this.event,
+        homeAcceptsUninvitedAthletes: result.homeAcceptsUninvitedAthletes,
+        awayAcceptsUninvitedAthletes: result.awayAcceptsUninvitedAthletes,
+      };
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error) || 'Nao foi possivel salvar a opcao.');
+    } finally {
+      this.teamMatchUninvitedBusy = false;
+      this.cdr.markForCheck();
+    }
+  }
 
   openGateScan(): void {
     if (!this.event) return;
@@ -1088,6 +1366,7 @@ export class EventDetailPage implements OnDestroy {
       this.showParticipantsPanel ||
       this.showAdminPanel ||
       this.showHiringPanel ||
+      this.showConvocationPanel ||
       this.showGatePanel ||
       this.showVotingPanel ||
       this.showMaterialPanel
@@ -1097,6 +1376,7 @@ export class EventDetailPage implements OnDestroy {
   private get hasUserInlinePanelOpen(): boolean {
     return (
       this.showParticipantsPanel ||
+      this.showConvocationPanel ||
       this.showGatePanel ||
       this.showVotingPanel ||
       this.showMaterialPanel
@@ -1179,6 +1459,46 @@ export class EventDetailPage implements OnDestroy {
     void this.scrollToAnchor('hiring-panel-anchor');
   }
 
+  toggleConvocationPanel(): void {
+    if (this.showConvocationPanel) {
+      this.closeConvocationPanel();
+      return;
+    }
+    if (!this.canShowConvocationPanel) return;
+    if (this.isAdmin) {
+      this.closeAdminInlinePanelsExcept('convocation');
+    } else {
+      this.closeUserInlinePanelsExcept('convocation');
+    }
+    this.showConvocationPanel = true;
+    this.refreshUiState();
+    this.cdr.markForCheck();
+    void this.scrollToAnchor('convocation-panel-anchor');
+  }
+
+  closeConvocationPanel(): void {
+    this.showConvocationPanel = false;
+    this.refreshUiState();
+    this.cdr.markForCheck();
+    setTimeout(() => this.scrollToActionButtons(), 100);
+  }
+
+  onConvocationModeChanged(mode: 'president' | 'coach'): void {
+    if (this.event) {
+      this.event = { ...this.event, athleteConvocationBy: mode };
+    }
+    if (this.convocationAccess) {
+      this.convocationAccess = { ...this.convocationAccess, athleteConvocationBy: mode };
+    }
+    void this.loadConvocationAccess();
+    this.refreshUiState();
+    this.cdr.markForCheck();
+  }
+
+  onConvocationRosterChanged(): void {
+    void this.refreshParticipantsList();
+  }
+
   pinHiringAccordion(role: HireableRole): void {
     if (!HIREABLE_ROLES.includes(role)) return;
 
@@ -1254,11 +1574,12 @@ export class EventDetailPage implements OnDestroy {
   }
 
   private closeAdminInlinePanelsExcept(
-    except: 'participants' | 'settings' | 'hiring' | 'gate' | 'voting' | 'material'
+    except: 'participants' | 'settings' | 'hiring' | 'convocation' | 'gate' | 'voting' | 'material'
   ): void {
     if (except !== 'participants') this.showParticipantsPanel = false;
     if (except !== 'settings') this.showAdminPanel = false;
     if (except !== 'hiring') this.showHiringPanel = false;
+    if (except !== 'convocation') this.showConvocationPanel = false;
     if (except !== 'gate') {
       this.showGatePanel = false;
       this.showMyGateTicketView = false;
@@ -1268,9 +1589,10 @@ export class EventDetailPage implements OnDestroy {
   }
 
   private closeUserInlinePanelsExcept(
-    except: 'participants' | 'gate' | 'voting' | 'material'
+    except: 'participants' | 'convocation' | 'gate' | 'voting' | 'material'
   ): void {
     if (except !== 'participants') this.showParticipantsPanel = false;
+    if (except !== 'convocation') this.showConvocationPanel = false;
     if (except !== 'gate') {
       this.showGatePanel = false;
       this.showMyGateTicketView = false;
@@ -1372,6 +1694,9 @@ export class EventDetailPage implements OnDestroy {
       case 'hiring':
         this.toggleHiringPanel();
         break;
+      case 'convocation':
+        this.toggleConvocationPanel();
+        break;
       case 'material':
         this.toggleMaterialPanel();
         break;
@@ -1400,6 +1725,12 @@ export class EventDetailPage implements OnDestroy {
     switch (actionId) {
       case 'participants':
         this.toggleParticipantsPanel();
+        break;
+      case 'convocation':
+        this.toggleConvocationPanel();
+        break;
+      case 'hiring':
+        this.toggleHiringPanel();
         break;
       case 'scout':
         this.openScoutApontamento();
@@ -1518,7 +1849,13 @@ export class EventDetailPage implements OnDestroy {
   }
 
   async promptNotifyConfirmedParticipants(): Promise<void> {
-    if (!this.event || !this.canNotifyConfirmedParticipants || this.sendingParticipantNotification) {
+    if (!this.event || !this.isAdmin || this.sendingParticipantNotification) {
+      return;
+    }
+    if (this.confirmedParticipants.length === 0) {
+      await this.showInfo(
+        'Ainda nao ha inscritos confirmados neste evento. A mensagem so chega para quem esta confirmado de verdade (pagamento, isencao, convite aceito ou taxa zero). Convide ou confirme participantes e tente de novo.'
+      );
       return;
     }
 
@@ -1591,6 +1928,343 @@ export class EventDetailPage implements OnDestroy {
       await loading.dismiss();
       this.cdr.markForCheck();
     }
+  }
+
+  async promptCancelTeamMatch(): Promise<void> {
+    if (!this.event || !this.canManageTeamMatchSchedule || this.teamMatchScheduleBusy) return;
+    const alert = await this.alertCtrl.create({
+      header: 'Cancelar confronto',
+      message:
+        'O elenco dos dois times e quem ja confirmou participacao recebera push com o motivo informado.',
+      inputs: [
+        {
+          name: 'reason',
+          type: 'textarea',
+          placeholder: 'Motivo do cancelamento (minimo 8 caracteres)',
+        },
+      ],
+      buttons: [
+        { text: 'Voltar', role: 'cancel' },
+        {
+          text: 'Cancelar confronto',
+          role: 'destructive',
+          handler: (data) => {
+            void this.confirmCancelTeamMatch(String(data?.reason || ''));
+            return false;
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  async promptRescheduleTeamMatch(): Promise<void> {
+    if (!this.event || !this.canManageTeamMatchSchedule || this.teamMatchScheduleBusy) return;
+    if (this.pendingReschedule) {
+      await this.showError('Ja existe uma proposta de remarcacao pendente.');
+      return;
+    }
+    const alert = await this.alertCtrl.create({
+      header: 'Remarcar confronto',
+      message:
+        'Informe nova data/hora e o motivo. O presidente adversario precisa aceitar na caixa de entrada (exceto se nao houver outro presidente).',
+      inputs: [
+        {
+          name: 'startDate',
+          type: 'date',
+          value: this.toDateInput(this.event.startTime),
+        },
+        {
+          name: 'startTime',
+          type: 'time',
+          value: this.toTimeInput(this.event.startTime),
+        },
+        {
+          name: 'endDate',
+          type: 'date',
+          value: this.toDateInput(this.event.endTime),
+        },
+        {
+          name: 'endTime',
+          type: 'time',
+          value: this.toTimeInput(this.event.endTime),
+        },
+        {
+          name: 'reason',
+          type: 'textarea',
+          placeholder: 'Motivo da remarcacao (minimo 8 caracteres)',
+        },
+      ],
+      buttons: [
+        { text: 'Voltar', role: 'cancel' },
+        {
+          text: 'Enviar proposta',
+          handler: (data) => {
+            void this.confirmRescheduleTeamMatch(data);
+            return false;
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  private async confirmCancelTeamMatch(reason: string): Promise<void> {
+    if (!this.event) return;
+    const trimmed = reason.trim();
+    if (trimmed.length < 8) {
+      await this.showError('Informe o motivo com pelo menos 8 caracteres.');
+      return;
+    }
+    this.teamMatchScheduleBusy = true;
+    const loading = await this.loadingCtrl.create({ message: 'Cancelando...' });
+    await loading.present();
+    try {
+      await this.eventService.cancelTeamMatch(this.event.objectId, trimmed);
+      const refreshed = await this.eventService.getById(this.event.objectId);
+      if (refreshed) {
+        this.event = await this.enrichEventPeladaSettings(refreshed);
+        this.patchAdminForm(this.event);
+      }
+      this.refreshUiState();
+      await this.refreshTeamMatchScheduleAccess();
+      await this.showSuccess('Confronto cancelado. Participantes serao avisados.');
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error) || 'Nao foi possivel cancelar.');
+    } finally {
+      this.teamMatchScheduleBusy = false;
+      await loading.dismiss();
+      this.cdr.markForCheck();
+    }
+  }
+
+  private async confirmRescheduleTeamMatch(data: Record<string, string>): Promise<void> {
+    if (!this.event) return;
+    const reason = String(data['reason'] || '').trim();
+    if (reason.length < 8) {
+      await this.showError('Informe o motivo com pelo menos 8 caracteres.');
+      return;
+    }
+    const startTime = this.combineDateTime(data['startDate'], data['startTime']);
+    const endTime = this.combineDateTime(data['endDate'], data['endTime']);
+    if (endTime <= startTime) {
+      await this.showError('O termino deve ser apos o inicio.');
+      return;
+    }
+    this.teamMatchScheduleBusy = true;
+    const loading = await this.loadingCtrl.create({ message: 'Enviando proposta...' });
+    await loading.present();
+    try {
+      const result = await this.eventService.rescheduleTeamMatch(this.event.objectId, {
+        startTime,
+        endTime,
+        reason,
+      });
+      const refreshed = await this.eventService.getById(this.event.objectId);
+      if (refreshed) {
+        this.event = await this.enrichEventPeladaSettings(refreshed);
+        this.patchAdminForm(this.event);
+      }
+      this.refreshUiState();
+      await this.refreshTeamMatchScheduleAccess();
+      await this.showSuccess(
+        result.pending
+          ? 'Proposta enviada. O presidente adversario precisa aceitar na caixa de entrada.'
+          : 'Confronto remarcado. Participantes serao avisados.'
+      );
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error) || 'Nao foi possivel remarcar.');
+    } finally {
+      this.teamMatchScheduleBusy = false;
+      await loading.dismiss();
+      this.cdr.markForCheck();
+    }
+  }
+
+  async acceptPendingReschedule(): Promise<void> {
+    if (!this.event || !this.canRespondPendingReschedule || this.teamMatchScheduleBusy) return;
+    this.teamMatchScheduleBusy = true;
+    const loading = await this.loadingCtrl.create({ message: 'Aceitando remarcacao...' });
+    await loading.present();
+    try {
+      await this.eventService.respondTeamMatchReschedule(this.event.objectId, 'accepted');
+      const refreshed = await this.eventService.getById(this.event.objectId);
+      if (refreshed) {
+        this.event = await this.enrichEventPeladaSettings(refreshed);
+        this.patchAdminForm(this.event);
+      }
+      this.refreshUiState();
+      await this.refreshTeamMatchScheduleAccess();
+      await this.showSuccess('Remarcacao aceita. Participantes serao avisados.');
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error) || 'Nao foi possivel aceitar.');
+    } finally {
+      this.teamMatchScheduleBusy = false;
+      await loading.dismiss();
+      this.cdr.markForCheck();
+    }
+  }
+
+  async declinePendingReschedule(): Promise<void> {
+    if (!this.event || !this.canRespondPendingReschedule || this.teamMatchScheduleBusy) return;
+    const alert = await this.alertCtrl.create({
+      header: 'Recusar remarcacao',
+      inputs: [{ name: 'reason', type: 'textarea', placeholder: 'Motivo (opcional)' }],
+      buttons: [
+        { text: 'Voltar', role: 'cancel' },
+        {
+          text: 'Recusar',
+          role: 'destructive',
+          handler: (data) => {
+            void this.confirmDeclinePendingReschedule(String(data?.reason || ''));
+            return false;
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  private async confirmDeclinePendingReschedule(reason: string): Promise<void> {
+    if (!this.event) return;
+    this.teamMatchScheduleBusy = true;
+    const loading = await this.loadingCtrl.create({ message: 'Recusando...' });
+    await loading.present();
+    try {
+      await this.eventService.respondTeamMatchReschedule(
+        this.event.objectId,
+        'declined',
+        reason.trim()
+      );
+      await this.refreshTeamMatchScheduleAccess();
+      await this.showSuccess('Remarcacao recusada.');
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error) || 'Nao foi possivel recusar.');
+    } finally {
+      this.teamMatchScheduleBusy = false;
+      await loading.dismiss();
+      this.cdr.markForCheck();
+    }
+  }
+
+  private async refreshTeamMatchScheduleAccess(): Promise<void> {
+    if (!this.event || this.event.type !== 'team_match') {
+      this.canManageTeamMatchSchedule = false;
+      this.myTeamMatchTeamIds = [];
+      this.canToggleHomeUninvited = false;
+      this.canToggleAwayUninvited = false;
+      this.canManageTeamMatchHiring = false;
+      this.myPendingJoinRequest = false;
+      this.hideTeamMatchJoinCta = false;
+      this.pendingReschedule = null;
+      this.isPendingRescheduleRequester = false;
+      this.canRespondPendingReschedule = false;
+      return;
+    }
+    const myTeams = await this.teamService.listMine();
+    this.myTeamMatchTeamIds = myTeams.map((team) => team.objectId);
+    this.canManageTeamMatchSchedule = this.eventService.canManageTeamMatchSchedule(
+      this.event,
+      this.myTeamMatchTeamIds
+    );
+    this.canToggleHomeUninvited = !!(
+      this.event.homeTeamId && this.myTeamMatchTeamIds.includes(this.event.homeTeamId)
+    );
+    this.canToggleAwayUninvited = !!(
+      this.event.awayTeamId && this.myTeamMatchTeamIds.includes(this.event.awayTeamId)
+    );
+    const isTeamPresident = this.canToggleHomeUninvited || this.canToggleAwayUninvited;
+    this.canManageTeamMatchHiring = isTeamPresident;
+    let isConvokedAthlete = false;
+    try {
+      const joinRows = await this.teamMatchJoinRequestService.listMine();
+      const uid = Parse.User.current()?.id || '';
+      this.myPendingJoinRequest = joinRows.some(
+        (row) =>
+          row.status === 'pending' &&
+          row.eventId === this.event?.objectId &&
+          row.athleteUserId === uid
+      );
+    } catch {
+      this.myPendingJoinRequest = false;
+    }
+    try {
+      const invites = await this.invitationService.listForEvent(this.event.objectId, 'athlete');
+      const uid = Parse.User.current()?.id || '';
+      isConvokedAthlete = invites.some(
+        (inv) =>
+          inv.invitedUserId === uid &&
+          (inv.status === 'pending' || inv.status === 'accepted')
+      );
+    } catch {
+      isConvokedAthlete = false;
+    }
+    this.hideTeamMatchJoinCta = isTeamPresident || isConvokedAthlete;
+    try {
+      this.pendingReschedule = await this.eventService.getTeamMatchPendingReschedule(
+        this.event.objectId
+      );
+    } catch {
+      this.pendingReschedule = null;
+    }
+    const currentUserId = Parse.User.current()?.id || '';
+    this.isPendingRescheduleRequester =
+      !!this.pendingReschedule &&
+      !!currentUserId &&
+      this.pendingReschedule.requestedByUserId === currentUserId;
+    this.canRespondPendingReschedule =
+      !!this.pendingReschedule &&
+      this.canManageTeamMatchSchedule &&
+      !this.isPendingRescheduleRequester;
+    this.cdr.markForCheck();
+  }
+
+  private async loadMatchdaySummary(): Promise<void> {
+    if (!this.event || this.event.type !== 'team_match') {
+      this.matchdaySummary = null;
+      return;
+    }
+    try {
+      this.matchdaySummary = await this.eventService.getTeamMatchMatchdaySummary(
+        this.event.objectId
+      );
+      if (this.matchdaySummary?.athleteConvocationBy && this.event) {
+        this.event = {
+          ...this.event,
+          athleteConvocationBy: this.matchdaySummary.athleteConvocationBy,
+        };
+      }
+    } catch {
+      this.matchdaySummary = null;
+    }
+    this.cdr.markForCheck();
+  }
+
+  private async loadConvocationAccess(): Promise<void> {
+    if (!this.event || this.event.type !== 'team_match') {
+      this.convocationAccess = null;
+      this.showConvocationPanel = false;
+      return;
+    }
+    try {
+      this.convocationAccess = await this.eventService.getTeamMatchConvocationAccess(
+        this.event.objectId
+      );
+      if (this.event) {
+        this.event = {
+          ...this.event,
+          athleteConvocationBy: this.convocationAccess.athleteConvocationBy,
+        };
+      }
+      if (!this.convocationAccess.canManage) {
+        this.showConvocationPanel = false;
+      }
+    } catch {
+      this.convocationAccess = null;
+      this.showConvocationPanel = false;
+    }
+    this.refreshUiState();
+    this.cdr.markForCheck();
   }
 
   private shouldAutoOpenMyGateTicket(): boolean {
@@ -1818,7 +2492,7 @@ export class EventDetailPage implements OnDestroy {
       );
       await this.loadActiveSocioUserIds();
       this.confirmedParticipants = this.participants.filter((item) => item.isEffectivelyConfirmed);
-      this.sortParticipantsForArrivalDisplay();
+      this.applyParticipantDisplayOrder();
       this.cdr.markForCheck();
     } catch (error: unknown) {
       await this.showError(parseErrorMessage(error));
@@ -2093,7 +2767,7 @@ export class EventDetailPage implements OnDestroy {
       );
       this.participants = [...this.participants, created];
       this.confirmedParticipants = this.participants.filter((item) => item.isEffectivelyConfirmed);
-      this.sortParticipantsForArrivalDisplay();
+      this.applyParticipantDisplayOrder();
       await this.refreshGoalkeeperShortageWarning();
       this.cdr.markForCheck();
     } catch (error: unknown) {
@@ -2103,15 +2777,43 @@ export class EventDetailPage implements OnDestroy {
     }
   }
 
+  async onParticipantTeamSideChange(
+    participant: EventRegistrationListItem,
+    teamSide: TeamSide
+  ): Promise<void> {
+    this.updatingTeamSideId = participant.objectId;
+    this.cdr.markForCheck();
+    try {
+      const updated = await this.registrationService.setTeamSide(participant.objectId, teamSide);
+      this.applyParticipantUpdate(updated);
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error));
+    } finally {
+      this.updatingTeamSideId = '';
+      this.cdr.markForCheck();
+    }
+  }
+
   private applyParticipantUpdate(updated: EventRegistrationListItem): void {
     this.participants = this.participants.map((item) =>
       item.objectId === updated.objectId ? updated : item
     );
     this.confirmedParticipants = this.participants.filter((item) => item.isEffectivelyConfirmed);
+    this.applyParticipantDisplayOrder();
+    this.refreshFilteredParticipants();
     if (this.registration?.objectId === updated.objectId) {
       this.registration = updated;
     }
     void this.refreshGoalkeeperShortageWarning();
+  }
+
+  private applyParticipantDisplayOrder(): void {
+    if (this.event?.type === 'team_match') {
+      this.participants = sortTeamMatchParticipants(this.participants);
+      this.confirmedParticipants = sortTeamMatchParticipants(this.confirmedParticipants);
+      return;
+    }
+    this.sortParticipantsForArrivalDisplay();
   }
 
   private sortParticipantsForArrivalDisplay(): void {
@@ -2664,6 +3366,7 @@ export class EventDetailPage implements OnDestroy {
     this.showParticipantsPanel = false;
     this.showAdminPanel = false;
     this.showHiringPanel = false;
+    this.showConvocationPanel = false;
     this.showGatePanel = false;
     this.showMyGateTicketView = false;
     this.showVotingPanel = false;
@@ -2697,10 +3400,13 @@ export class EventDetailPage implements OnDestroy {
       if (this.isAdmin) {
         this.participants = await this.registrationService.listForEvent(eventId);
         this.confirmedParticipants = this.participants.filter((item) => item.isEffectivelyConfirmed);
-        this.sortParticipantsForArrivalDisplay();
+        this.applyParticipantDisplayOrder();
       } else {
         this.participants = [];
         this.confirmedParticipants = await this.registrationService.listPublicForEvent(eventId);
+        if (this.event.type === 'team_match') {
+          this.confirmedParticipants = sortTeamMatchParticipants(this.confirmedParticipants);
+        }
       }
       this.refreshFilteredParticipants();
       this.refreshUiState();
@@ -2752,6 +3458,9 @@ export class EventDetailPage implements OnDestroy {
       this.loading = false;
       this.refreshUiState();
       this.cdr.markForCheck();
+      void this.loadMatchdaySummary();
+      void this.loadConvocationAccess();
+      void this.refreshTeamMatchScheduleAccess();
 
       await this.loadSecondaryEventData(eventId);
 
@@ -2808,13 +3517,17 @@ export class EventDetailPage implements OnDestroy {
     if (this.isAdmin) {
       this.participants = await this.registrationService.listForEvent(eventId);
       this.confirmedParticipants = this.participants.filter((item) => item.isEffectivelyConfirmed);
-      this.sortParticipantsForArrivalDisplay();
+      this.applyParticipantDisplayOrder();
       await this.refreshGoalkeeperShortageWarning();
     } else {
       this.participants = [];
       this.confirmedParticipants = await this.registrationService.listPublicForEvent(eventId);
+      if (this.event.type === 'team_match') {
+        this.confirmedParticipants = sortTeamMatchParticipants(this.confirmedParticipants);
+      }
       this.goalkeeperShortageWarning = '';
     }
+    await this.refreshTeamMatchGoalkeeperWarning();
 
     this.refreshUiState();
     this.cdr.markForCheck();
@@ -2831,7 +3544,7 @@ export class EventDetailPage implements OnDestroy {
   }
 
   private async refreshGoalkeeperShortageWarning(): Promise<void> {
-    if (!this.event || !this.isAdmin) {
+    if (!this.event || !this.isAdmin || this.event.type === 'team_match') {
       this.goalkeeperShortageWarning = '';
       return;
     }
@@ -2890,6 +3603,40 @@ export class EventDetailPage implements OnDestroy {
     }
   }
 
+  private async refreshTeamMatchGoalkeeperWarning(): Promise<void> {
+    if (!this.event || this.event.type !== 'team_match') {
+      this.teamMatchGoalkeeperWarning = '';
+      return;
+    }
+
+    try {
+      const alerts = await this.eventService.getTeamMatchGoalkeeperAlerts(this.event.objectId);
+      if (!alerts.length) {
+        this.teamMatchGoalkeeperWarning = '';
+        return;
+      }
+
+      this.teamMatchGoalkeeperWarning = alerts
+        .map((alert) => {
+          const names = alert.names.length ? ` (${alert.names.join(', ')})` : '';
+          return `${alert.teamName}: ${alert.unconfirmedCount} goleiro(s) convocado(s) ainda sem confirmacao efetiva${names}.`;
+        })
+        .join(' ');
+
+      if (this.teamMatchGkAlertShownForEventId !== this.event.objectId) {
+        this.teamMatchGkAlertShownForEventId = this.event.objectId;
+        const alert = await this.alertCtrl.create({
+          header: 'Goleiro sem confirmacao',
+          message: this.teamMatchGoalkeeperWarning,
+          buttons: [{ text: 'OK', role: 'cancel' }],
+        });
+        await alert.present();
+      }
+    } catch {
+      this.teamMatchGoalkeeperWarning = '';
+    }
+  }
+
   private async ensureParticipantsArrivalOrders(): Promise<void> {
     if (
       !this.event ||
@@ -2906,7 +3653,7 @@ export class EventDetailPage implements OnDestroy {
       this.participantsArrivalOrdersEnsured = true;
       this.participants = await this.registrationService.listForEvent(this.event.objectId);
       this.confirmedParticipants = this.participants.filter((item) => item.isEffectivelyConfirmed);
-      this.sortParticipantsForArrivalDisplay();
+      this.applyParticipantDisplayOrder();
       this.refreshUiState();
       this.cdr.markForCheck();
     } catch (error: unknown) {

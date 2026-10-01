@@ -140,4 +140,4 @@ Ideal: regras finas via Cloud Code depois.
 
 ## Migracao de eventos legados
 
-O app cria automaticamente uma pelada "Pelada Legada" para o admin com eventos sem `pelada` e vincula os eventos na primeira listagem de peladas.
+O app cria automaticamente uma pelada "Pelada Legada" para o admin com eventos **de pelada/racha** sem `pelada` e vincula esses eventos na primeira listagem de peladas. **Confrontos (`team_match`) nao entram nessa migracao** — ficam sem pelada e aparecem so na aba Confrontos (`repairTeamMatchOwnership` desanexa pointers residuais).

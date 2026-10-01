@@ -15,7 +15,16 @@
       <ion-icon [name]="row.icon" slot="start"></ion-icon>
       <ion-label class="ion-text-wrap">
         <p>{{ row.title }}</p>
-        <h3>{{ row.value }}</h3>
+        @if (row.teamMatch) {
+          <app-team-match-headline
+            [homeTeamName]="row.teamMatch.homeTeamName"
+            [awayTeamName]="row.teamMatch.awayTeamName"
+            [homeTeamShieldUrl]="row.teamMatch.homeTeamShieldUrl"
+            [awayTeamShieldUrl]="row.teamMatch.awayTeamShieldUrl"
+          ></app-team-match-headline>
+        } @else {
+          <h3>{{ row.value }}</h3>
+        }
         @if (row.detail) {
           <p>{{ row.detail }}</p>
         }

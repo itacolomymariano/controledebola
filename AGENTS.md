@@ -43,8 +43,10 @@ npx cap sync android         # sync para Android
 npm run build; npx cap sync android
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
-npm run install:android      # build + sync + APK release assinado (dispositivo)
-npm run build:android:aab    # AAB para Google Play Console (teste interno / producao)
+npm run install:android        # build + sync + APK release assinado (dispositivo)
+npm run install:android:debug  # APK debug — chrome://inspect/#devices (release nao inspeciona)
+# Inspect: docs/ANDROID-CHROME-INSPECT.md — nao digitar o package; app aberto + DEBUGGABLE
+npm run build:android:aab      # AAB para Google Play Console (teste interno / producao)
 ```
 
 **Google Play (AAB):** saídas em `android/app/build/outputs/bundle/release/app-release.aab`. Pacote: `com.minhapelada.app` (nao alterar apos o 1º upload). A Play exige AAB (nao APK) para apps novos. Keystore local (`android/keystore.properties` + `android/*.keystore`, no `.gitignore`) e a **upload key** — faca backup seguro; com Play App Signing a Google guarda a chave de assinatura do app.
@@ -116,6 +118,7 @@ splash → (onboarding?) → login/register → (profile-setup?) → tabs/pelada
 |---------|---------------|----------|
 | Pelada | `pelada-detail`, `pelada-form` | `pelada.service`, `pelada-membership.service` |
 | Evento | `event-detail`, `event-register`, `event-create` | `event.service`, `registration.service` |
+| Confronto | aba `/tabs/events`, `desafio-create`, `confronto-create`, inbox, `team-profile` | `match-challenge.service`, `event.service` (`listTeamMatchesForFeed` publico + proximidade; `createTeamMatch` exige desafio aceito) |
 | Contratacao | `event-detail` (hiring panel), `inbox` | `referee-invitation.service` |
 | Push | (Cloud + bandeja) | `push-notification.service` — inventário em `docs/PUSH-NOTIFICATIONS.md` |
 | Mural | `mural`, `event-mural` | `mural.service`, `mural-highlights.service` |
@@ -124,7 +127,9 @@ splash → (onboarding?) → login/register → (profile-setup?) → tabs/pelada
 | Portaria | `event-gate-scan`, `event-gate-entries` | `event-gate-ticket.service` |
 | Apoio (treinador/PF/massagista/torcida) | `event-coach-board`, `event-physical-trainer`, `event-masseur-treatments`, `event-fan-checkin` | `support-role-tools.service` |
 | Convite / App Links | Menu, Perfil, Sobre (`Convidar Amigos`) | `app-invite-share.service`, `deep-link.service` |
-| Conta | `register`, `account-edit`, Perfil (`Excluir conta`) | `auth.service` — e-mail e endereco obrigatorios (eventos proximos e rankings por localidade); celular e nascimento opcionais. Exclusao permanente via Cloud `deleteMyAccount` |
+| Conta | `login` (reset), `register`, `account-edit`, Perfil (`Excluir conta`) | `auth.service` — reset por codigo. SMTP em `MailSettings` (nao env vars). Exclusao via `deleteMyAccount`. Biometria: `biometric-unlock.service` (credenciais no aparelho; logout nao apaga) |
+| Contato | `contact/feedback`, `contact/support` | `contact-message.service` → Cloud `sendContactMessage` |
+| Mensagens | `inbox` (icone de e-mail do cabecalho) | `app-message.service` → Cloud `18-app-mailbox.js`. Registro permanente por mensagem (`AppMessage`): Entrada/Saida, busca e nao lidas. Fora da caixa: socio de pelada, apresentacao de perfil e `sendContactMessage` |
 
 **Deep links / convite:** "Convidar Amigos" compartilha o link de **teste interno** da Play
 (`https://play.google.com/apps/internaltest/...`) enquanto nao houver listagem publica.
@@ -159,21 +164,26 @@ Inscreva no construtor, recarregue em `ionViewWillEnter`, `unsubscribe` em `ngOn
 | `01-phone-helpers.js` | Telefone BR |
 | `01b-comment-discipline.js` | Filtro de palavroes em comentarios |
 | `01c-integrity-helpers.js` | Anti auto-voto / quorum / midia TOP |
-| `02-core.js` | Conta, login, exclusao de conta (`deleteMyAccount`) |
+| `01d-mail-helpers.js` | SMTP Zoho (`nodemailer`) via classe `MailSettings` |
+| `02-core.js` | Conta, login, reset de senha (`requestPasswordResetEmail`, `confirmPasswordReset`), exclusao (`deleteMyAccount`) |
+| `02b-contact-messages.js` | Criticas/sugestoes e relato de problema (`sendContactMessage`) |
 | `03-push-notifications.js` | Push |
 | `04-auth-signup.js` | Cadastro anti-bot |
 | `05-legends.js` | Lendas |
 | `06-gate-tickets.js` | Ingressos QR |
 | `07-mural.js` | Rankings, votos, CLP |
 | `08-scout-referee-performance.js` | Scout, sumula, palpites |
-| `09-events-registrations.js` | Inscricoes, chegada, convites |
+| `09-events-registrations.js` | Inscricoes, chegada, convites, `createTeamMatch` / `listMyTeamMatches` |
 | `10-pelada.js` | Socios, apresentacao perfil |
 | `11-profiles-search.js` | Busca perfis |
 | `12-event-media.js` | Radio, jornal, video (melhores momentos), engajamento |
 | `13-material.js` | Inventario pelada/ropeiro, sessao de material no evento |
-| `14-support-roles.js` | Treinador, preparador fisico, massagista, check-in torcedor |
+| `15-amateur-teams.js` | Elenco `AmateurTeamMembership`, perfil publico, `listMyAmateurTeams`, historico |
+| `16-match-challenge.js` | Desafio/aceite (`MatchChallenge`), placar, remarcacao, `TeamMatchJoinRequest` (solicitar participacao), contratacao arbitro confronto (aprovacao adversario) |
+| `17-team-match-stats.js` | V/E/D e aproveitamento (usuario/time/presidente); `getMuralTeamMatchDashboard` |
+| `18-app-mailbox.js` | Caixa de mensagens (`AppMessage`): `createAppMessage(s)` ao lado dos pushes, `listAppMessages`, leitura e contagem de nao lidas |
 
-Apos deploy: rodar `configureMuralClassPermissions`, `configureMaterialClassPermissions`, `configureSupportRolesClassPermissions` e `configureEventMediaClassPermissions` no Back4App (CLP de `MuralVote` e classes de midia: escrita so via Cloud).
+Apos deploy: rodar `configureMuralClassPermissions`, `configureMaterialClassPermissions`, `configureSupportRolesClassPermissions`, `configureEventMediaClassPermissions` e `configureAppMailboxClassPermissions` no Back4App (CLP de `MuralVote`, classes de midia e `AppMessage`: escrita so via Cloud).
 
 **Como rodar (API Console):** [docs/BACK4APP-CLOUD-FUNCTIONS-CONSOLE.md](docs/BACK4APP-CLOUD-FUNCTIONS-CONSOLE.md) — usar **REST POST** `/functions/NOME` com Master Key (o console nao tem opcao "Cloud Function"; Javascript sem Master Key falha nas `configure*`).
 
@@ -213,3 +223,4 @@ Apos deploy: rodar `configureMuralClassPermissions`, `configureMaterialClassPerm
 - [docs/FLUXO-TESTES-CICLO-DE-VIDA.md](docs/FLUXO-TESTES-CICLO-DE-VIDA.md) — roteiro sequencial de testes (cadastros e ciclo de vida)
 - [docs/SMOKE-TEST-PRE-INSTALL.md](docs/SMOKE-TEST-PRE-INSTALL.md) — smoke curto pre-instalacao
 - [docs/PLANO-TESTES-PERFIS.md](docs/PLANO-TESTES-PERFIS.md) — matriz por perfil
+- [docs/PLANO-CONFRONTOS-TIMES.md](docs/PLANO-CONFRONTOS-TIMES.md) — times amadores e confronto (`team_match`; nao forkar Event)

@@ -1,0 +1,38 @@
+.wizard-tour {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  z-index: 300;
+  padding: 0 8px 8px;
+  pointer-events: none;
+}
+
+.wizard-tour-card {
+  pointer-events: auto;
+  margin: 0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+.wizard-tour-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wizard-tour-close {
+  margin: -8px -8px 0 0;
+}
+
+.wizard-tour-card p {
+  margin: 0 0 10px;
+  line-height: 1.45;
+}
+
+.wizard-tour-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}

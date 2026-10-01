@@ -1,5 +1,10 @@
+.current-venue {
+  display: block;
+  margin-bottom: 8px;
+}
+
 .selected-uniform {
-  margin-top: 16px;
+  margin: 0 0 12px;
   display: flex;
   align-items: center;
   gap: 12px;

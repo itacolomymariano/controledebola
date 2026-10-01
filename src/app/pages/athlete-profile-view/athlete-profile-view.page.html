@@ -6,6 +6,9 @@
       </ion-button>
     </ion-buttons>
     <ion-title>Perfil do atleta</ion-title>
+    <ion-buttons slot="end">
+      <app-help-balloon textKey="screen.help.athlete-profile-view"></app-help-balloon>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -112,6 +115,115 @@
             <p>{{ profile.goals }}</p>
           </ion-label>
         </ion-item>
+
+        @if (teamMatchRecord && teamMatchRecord.matchesPlayed > 0) {
+          <ion-list-header>
+            <ion-label>Confrontos (atleta)</ion-label>
+          </ion-list-header>
+          <ion-item>
+            <ion-label>
+              <h3>Participacoes</h3>
+              <p>{{ teamMatchRecord.matchesPlayed }}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h3>Vitorias / Empates / Derrotas</h3>
+              <p>
+                {{ teamMatchRecord.wins }} / {{ teamMatchRecord.draws }} /
+                {{ teamMatchRecord.losses }}
+              </p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h3>Aproveitamento</h3>
+              <p>{{ teamMatchRecord.winRatePercent | number: '1.1-1' }}%</p>
+            </ion-label>
+          </ion-item>
+        }
+
+        @if (presidentTeamMatchRecord && presidentTeamMatchRecord.matchesPlayed > 0) {
+          <ion-list-header>
+            <ion-label>Confrontos (presidente de time)</ion-label>
+          </ion-list-header>
+          <ion-item>
+            <ion-label>
+              <h3>Participacoes dos times</h3>
+              <p>{{ presidentTeamMatchRecord.matchesPlayed }}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h3>Vitorias / Empates / Derrotas</h3>
+              <p>
+                {{ presidentTeamMatchRecord.wins }} / {{ presidentTeamMatchRecord.draws }} /
+                {{ presidentTeamMatchRecord.losses }}
+              </p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h3>Aproveitamento</h3>
+              <p>{{ presidentTeamMatchRecord.winRatePercent | number: '1.1-1' }}%</p>
+            </ion-label>
+          </ion-item>
+        }
+
+        @if (activityIndicators) {
+          <ion-list-header>
+            <ion-label>Ultimos {{ activityIndicators.months }} meses</ion-label>
+          </ion-list-header>
+          <ion-item>
+            <ion-label>
+              <h3>Participacoes em jogos (confrontos)</h3>
+              <p>{{ activityIndicators.gamesPlayed }}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h3>Participacoes em peladas</h3>
+              <p>{{ activityIndicators.peladasPlayed }}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h3>Faltas em jogos</h3>
+              <p>{{ activityIndicators.gamesAbsent }}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h3>Faltas em peladas</h3>
+              <p>{{ activityIndicators.peladasAbsent }}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h3>Convites de confrontos recebidos</h3>
+              <p>{{ activityIndicators.teamMatchInvitesReceived }}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h3>Convites de confrontos rejeitados</h3>
+              <p>{{ activityIndicators.teamMatchInvitesDeclined }}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h3>Convites de peladas recebidos</h3>
+              <p>{{ activityIndicators.peladaInvitesReceived }}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h3>Convites de peladas rejeitados</h3>
+              <p>{{ activityIndicators.peladaInvitesDeclined }}</p>
+            </ion-label>
+          </ion-item>
+        }
+
         <ion-item>
           <ion-label>
             <h3>Cartões amarelos</h3>

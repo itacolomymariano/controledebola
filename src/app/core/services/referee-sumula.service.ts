@@ -103,6 +103,11 @@ export class RefereeSumulaService {
     return {
       eventId: String(data.eventId || ''),
       eventName: String(data.eventName || 'Evento'),
+      eventType: data.eventType ? String(data.eventType) : undefined,
+      homeTeamName: data.homeTeamName ? String(data.homeTeamName) : undefined,
+      awayTeamName: data.awayTeamName ? String(data.awayTeamName) : undefined,
+      homeScore: data.homeScore != null ? Number(data.homeScore) || 0 : undefined,
+      awayScore: data.awayScore != null ? Number(data.awayScore) || 0 : undefined,
       locked: !!data.locked,
       canEdit: data.canEdit !== undefined ? !!data.canEdit : !data.locked,
       athletes,
@@ -110,6 +115,7 @@ export class RefereeSumulaService {
   }
 
   private normalizeAthlete(athlete: RefereeSumulaAthlete): RefereeSumulaAthlete {
+    const side = athlete.teamSide === 'home' || athlete.teamSide === 'away' ? athlete.teamSide : '';
     return {
       userId: String(athlete.userId || ''),
       registrationId: String(athlete.registrationId || ''),
@@ -117,6 +123,9 @@ export class RefereeSumulaService {
       userName: String(athlete.userName || athlete.apelido || 'Atleta'),
       avatarUrl: athlete.avatarUrl ? String(athlete.avatarUrl) : undefined,
       primaryPosition: athlete.primaryPosition ? String(athlete.primaryPosition) : undefined,
+      role: athlete.role ? String(athlete.role) : undefined,
+      teamSide: side,
+      teamName: athlete.teamName ? String(athlete.teamName) : undefined,
       stats: this.normalizeStats(athlete.stats),
     };
   }
@@ -125,6 +134,7 @@ export class RefereeSumulaService {
     const stats = (raw ?? {}) as RefereeSumulaStats;
     return {
       goals: Number(stats.goals) || 0,
+      goalsConceded: Number(stats.goalsConceded) || 0,
       fouls: Number(stats.fouls) || 0,
       yellowCards: Number(stats.yellowCards) || 0,
       redCards: Number(stats.redCards) || 0,

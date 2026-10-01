@@ -116,32 +116,10 @@
     <ion-item-divider>
       <ion-label>{{ 'profile.language' | t }} / {{ 'profile.palette' | t }}</ion-label>
     </ion-item-divider>
-    <ion-item>
-      <ion-select
-        [label]="'profile.language' | t"
-        labelPlacement="stacked"
-        interface="action-sheet"
-        [value]="currentLocale"
-        (ionChange)="onLocaleChange($event)"
-      >
-        @for (loc of locales; track loc) {
-          <ion-select-option [value]="loc">{{ localeLabels[loc] }}</ion-select-option>
-        }
-      </ion-select>
-    </ion-item>
-    <ion-item>
-      <ion-select
-        [label]="'profile.palette' | t"
-        labelPlacement="stacked"
-        interface="action-sheet"
-        [value]="currentPalette"
-        (ionChange)="onPaletteChange($event)"
-      >
-        @for (id of paletteIds; track id) {
-          <ion-select-option [value]="id">{{ paletteLabelKeys[id] | t }}</ion-select-option>
-        }
-      </ion-select>
-    </ion-item>
+    <div class="profile-prefs-row">
+      <app-locale-flags></app-locale-flags>
+      <app-theme-picker></app-theme-picker>
+    </div>
     <ion-item button (click)="openGuide()">
       <ion-icon name="book-outline" slot="start"></ion-icon>
       <ion-label>
@@ -157,9 +135,16 @@
     <ion-item button (click)="openTeamForm()">
       <ion-icon name="people-outline" slot="start"></ion-icon>
       <ion-label>
-        <h2>Cadastro do time</h2>
-        <p>{{ hasTeam ? 'Cadastrado' : 'Cadastrar agora' }}</p>
+        <h2>Meus times</h2>
+        <p>
+          @if (hasTeam) {
+            {{ teamCount }} time{{ teamCount === 1 ? '' : 's' }} · Gerenciar
+          } @else {
+            Cadastrar agora
+          }
+        </p>
       </ion-label>
+      <app-help-balloon slot="end" textKey="profile.myTeams.help"></app-help-balloon>
     </ion-item>
     <ion-item>
       <ion-label>Login por biometria</ion-label>

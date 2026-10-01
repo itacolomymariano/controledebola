@@ -4,6 +4,9 @@
       <ion-back-button [defaultHref]="ownerType === 'pelada' && peladaId ? '/pelada/' + peladaId : '/tabs/profile'"></ion-back-button>
     </ion-buttons>
     <ion-title>{{ pageTitle }}</ion-title>
+    <ion-buttons slot="end">
+      <app-help-balloon textKey="screen.help.material-inventory"></app-help-balloon>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 

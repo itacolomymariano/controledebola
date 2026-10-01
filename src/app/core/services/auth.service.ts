@@ -5,6 +5,7 @@ import { MIN_PASSWORD_LENGTH } from '../constants/auth.constants';
 import { Address, emptyAddress, isAddressComplete, isAddressEmpty } from '../models/address.model';
 import { ProfileRole } from '../models/profile-role.model';
 import {
+  isCloudFunctionUnavailableError,
   isInvalidCloudFunctionError,
   isInvalidSessionError,
   isNetworkError,
@@ -16,11 +17,13 @@ import { RegistrationService } from './registration.service';
 import { RoleProfileService } from './role-profile.service';
 import { AthleteProfileService } from './athlete-profile.service';
 import { PushNotificationService } from './push-notification.service';
+import { AppStorageService } from './app-storage.service';
 
 export interface RegisterPayload {
   name: string;
   apelido: string;
   email?: string;
+  cpf: string;
   phone?: string;
   password: string;
   address: Address;
@@ -65,7 +68,8 @@ export class AuthService {
     private readonly registrationService: RegistrationService,
     private readonly roleProfileService: RoleProfileService,
     private readonly athleteProfileService: AthleteProfileService,
-    private readonly pushNotificationService: PushNotificationService
+    private readonly pushNotificationService: PushNotificationService,
+    private readonly storage: AppStorageService
   ) {
     this.parseService.init();
   }
@@ -126,6 +130,11 @@ export class AuthService {
   getApelido(): string {
     const user = this.getCurrentUser();
     return (user?.get('apelido') as string) || '';
+  }
+
+  getFullName(): string {
+    const user = this.getCurrentUser();
+    return ((user?.get('name') as string) || '').trim();
   }
 
   async fetchCurrentUser(): Promise<Parse.User | null> {
@@ -298,11 +307,17 @@ export class AuthService {
       throw new Error('Celular invalido. Informe DDD + numero (minimo 10 digitos).');
     }
 
+    const cpfDigits = String(payload.cpf || '').replace(/\D/g, '');
+    if (cpfDigits.length !== 11) {
+      throw new Error('Informe um CPF valido.');
+    }
+
     try {
       await Parse.Cloud.run('registerUser', {
         name,
         apelido,
         email: payload.email?.trim() || undefined,
+        cpf: cpfDigits,
         phone: payload.phone?.trim() || undefined,
         password: payload.password,
         address: payload.address,
@@ -346,6 +361,9 @@ export class AuthService {
     if (email) {
       user.set('email', email);
     }
+    if (payload.cpf) {
+      user.set('cpf', String(payload.cpf).replace(/\D/g, ''));
+    }
     if (normalizedPhone) {
       user.set('phone', normalizedPhone);
     }
@@ -381,6 +399,12 @@ export class AuthService {
   }
 
   async login(identifier: string, password: string): Promise<Parse.User> {
+    const user = await this.loginWithPassword(identifier, password);
+    await this.persistBiometricIfEnabled(identifier, password);
+    return user;
+  }
+
+  private async loginWithPassword(identifier: string, password: string): Promise<Parse.User> {
     const trimmed = identifier.trim();
     if (!trimmed) {
       throw new Error('Informe e-mail ou celular.');
@@ -420,6 +444,11 @@ export class AuthService {
     }
 
     throw new Error('E-mail/celular ou senha incorretos.');
+  }
+
+  private async persistBiometricIfEnabled(identifier: string, password: string): Promise<void> {
+    if (!(await this.storage.isBiometricEnabled())) return;
+    await this.storage.saveBiometricCredentials(identifier, password);
   }
 
   private buildLoginUsernameCandidates(identifier: string): string[] {
@@ -538,6 +567,7 @@ export class AuthService {
     }
 
     await this.clearLocalSession();
+    await this.storage.setBiometricEnabled(false);
     this.profileChanged$.next();
   }
 
@@ -561,6 +591,16 @@ export class AuthService {
       });
     } catch (error: unknown) {
       throw new Error(parseErrorMessage(error));
+    }
+
+    const creds = await this.storage.getBiometricCredentials();
+    const identifier =
+      creds?.identifier ||
+      (user.getEmail() as string) ||
+      user.getUsername() ||
+      '';
+    if (identifier) {
+      await this.persistBiometricIfEnabled(identifier, next);
     }
   }
 
@@ -645,10 +685,41 @@ export class AuthService {
     }
 
     try {
-      await Parse.User.requestPasswordReset(normalized);
+      await Parse.Cloud.run('requestPasswordResetEmail', { email: normalized });
+    } catch (error: unknown) {
+      if (isCloudFunctionUnavailableError(error)) {
+        throw new Error(
+          'Publique o Cloud Code no Back4App (requestPasswordResetEmail) e cadastre SMTP_HOST, SMTP_USER e SMTP_PASS.'
+        );
+      }
+      throw new Error(parseErrorMessage(error));
+    }
+  }
+
+  async confirmPasswordReset(email: string, code: string, newPassword: string): Promise<void> {
+    const normalized = email.trim().toLowerCase();
+    const digits = String(code || '').replace(/\D/g, '');
+    if (!normalized || !this.isEmail(normalized)) {
+      throw new Error('Informe um e-mail valido.');
+    }
+    if (!/^\d{6}$/.test(digits)) {
+      throw new Error('Informe o codigo de 6 digitos enviado por e-mail.');
+    }
+    if (!newPassword || newPassword.length < MIN_PASSWORD_LENGTH) {
+      throw new Error(`A nova senha deve ter no minimo ${MIN_PASSWORD_LENGTH} caracteres.`);
+    }
+
+    try {
+      await Parse.Cloud.run('confirmPasswordReset', {
+        email: normalized,
+        code: digits,
+        newPassword,
+      });
     } catch (error: unknown) {
       throw new Error(parseErrorMessage(error));
     }
+
+    await this.storage.updateBiometricPasswordIfMatch(normalized, newPassword);
   }
 
   async logout(): Promise<void> {

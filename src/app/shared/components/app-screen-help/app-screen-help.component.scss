@@ -1,0 +1,30 @@
+.help-toolbar-btn {
+  --padding-start: 10px;
+  --padding-end: 10px;
+  font-weight: 600;
+  text-transform: none;
+}
+
+.help-popover-body {
+  max-width: 320px;
+}
+
+.balloon-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.help-popover-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.help-popover-body p {
+  margin: 0;
+  line-height: 1.45;
+  white-space: pre-line;
+}

@@ -1,0 +1,32 @@
+.team-match-headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  line-height: 1.3;
+}
+
+.team-match-headline-centered {
+  justify-content: center;
+}
+
+.team-match-headline-name {
+  font-weight: 600;
+}
+
+.team-match-headline-vs {
+  font-weight: 600;
+  opacity: 0.85;
+  margin: 0 0.1rem;
+}
+
+.team-match-headline-score {
+  font-weight: 700;
+  font-size: 1.15em;
+}
+
+.team-match-headline-shield {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+}

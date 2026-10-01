@@ -17,23 +17,35 @@
   </ion-card-header>
   <ion-card-content>
     @if (registration) {
-      <ion-card [color]="cardColor(registration)" class="ion-margin-bottom">
-        <ion-card-header>
-          <ion-card-title>
-            {{ cardTitle(registration) }}
-          </ion-card-title>
-          <ion-card-subtitle>
-            {{ registration.apelido }} · {{ registrationService.formatRole(registration.role) }}
-            · {{ registration.membershipType === 'socio' ? 'Socio' : 'Convidado' }}
-          </ion-card-subtitle>
-        </ion-card-header>
-        <ion-card-content>
-          <p>{{ effectiveConfirmationLabel(registration) }}</p>
-          @if (showParticipationPaymentRequest(registration)) {
-            <p>Realize o pagamento de {{ formatParticipationFee(event.participationFee) }} via PIX.</p>
-          }
-        </ion-card-content>
-      </ion-card>
+      @if (isContractHired(registration)) {
+        <ion-note class="ion-margin-bottom contract-inbox-note" color="medium">
+          Contratacao confirmada. Veja os detalhes em Mensagens (icone de e-mail no topo).
+        </ion-note>
+        <ion-button expand="block" fill="outline" class="ion-margin-bottom" (click)="openInbox()">
+          Abrir caixa de entrada
+        </ion-button>
+      } @else {
+        <ion-card [color]="cardColor(registration)" class="ion-margin-bottom">
+          <ion-card-header>
+            <ion-card-title>
+              {{ cardTitle(registration) }}
+            </ion-card-title>
+            <ion-card-subtitle>
+              {{ registration.apelido }} · {{ registrationService.formatRole(registration.role) }}
+              · {{ registration.membershipType === 'socio' ? 'Socio' : 'Convidado' }}
+              @if (isTeamMatch && registration.teamSide) {
+                · {{ participantTeamSideLabel(registration) }}
+              }
+            </ion-card-subtitle>
+          </ion-card-header>
+          <ion-card-content>
+            <p>{{ effectiveConfirmationLabel(registration) }}</p>
+            @if (showParticipationPaymentRequest(registration)) {
+              <p>Realize o pagamento de {{ formatParticipationFee(event.participationFee) }} via PIX.</p>
+            }
+          </ion-card-content>
+        </ion-card>
+      }
 
       @if (!event.isReadOnly) {
         <ion-button
@@ -63,7 +75,10 @@
           <ion-note color="medium">Nenhum participante encontrado para "{{ participantSearch }}".</ion-note>
         }
         <ion-list lines="none" class="participant-admin-list">
-          @for (participant of filteredParticipants; track participant.objectId) {
+          @for (participant of filteredParticipants; track participant.objectId; let i = $index) {
+            @if (showTeamGroupHeader(i, filteredParticipants)) {
+              <h3 class="team-group-title">{{ teamGroupTitle(participant) }}</h3>
+            }
             <ion-card class="participant-admin-card">
               <ion-card-content>
                 <div class="participant-admin-header">
@@ -99,6 +114,15 @@
                         <ion-text [color]="participant.gateTicketActive ? 'success' : 'warning'">
                           Ingresso: {{ participant.gateTicketActive ? 'Enviado' : 'Nao enviado' }}
                         </ion-text>
+                      }
+                      @if (participant.age != null) {
+                        · {{ participant.age }} anos
+                      }
+                      @if (participant.appAverageScore != null) {
+                        · Media CB: {{ participant.appAverageScore | number: '1.1-1' }}
+                      }
+                      @if (isTeamMatch && participant.role === 'athlete') {
+                        · Time: {{ participant.teamName || participantTeamSideLabel(participant) || 'Nao definido' }}
                       }
                       @if (participant.role === 'athlete' && supportsArrivalOrder && event.useArrivalOrderForTeams) {
                         @if (participant.arrivalOrder != null) {
@@ -141,6 +165,21 @@
                     </div>
                   }
                 </div>
+
+                @if (isAdminMode && isTeamMatch && participant.role === 'athlete' && !event.isReadOnly) {
+                  <ion-item class="ion-margin-top" lines="none">
+                    <ion-select
+                      label="Time"
+                      labelPlacement="stacked"
+                      [value]="participant.teamSide || ''"
+                      [disabled]="updatingTeamSideId === participant.objectId"
+                      (ionChange)="onTeamSideSelect(participant, $any($event.detail.value))"
+                    >
+                      <ion-select-option value="home">{{ event.homeTeamName || 'Mandante' }}</ion-select-option>
+                      <ion-select-option value="away">{{ event.awayTeamName || 'Visitante' }}</ion-select-option>
+                    </ion-select>
+                  </ion-item>
+                }
 
                 @if (hasPendingProfilePresentation(participant)) {
                   <div class="participant-admin-profile-review ion-margin-top">
@@ -197,9 +236,17 @@
                       </ion-toggle>
                     </ion-item>
                   </ion-list>
-                } @else if (showPaymentAdminControls && isContractHired(participant)) {
+                } @else if (
+                  showPaymentAdminControls &&
+                  isContractHired(participant) &&
+                  (participant.contractOfferedAmount ?? 0) > 0
+                ) {
                   <ion-note color="medium">
                     Contratado — sem taxa de participacao. Pague o profissional apos confirmar a presenca.
+                  </ion-note>
+                } @else if (showPaymentAdminControls && isContractHired(participant)) {
+                  <ion-note color="medium">
+                    Convocado — sem taxa de participacao.
                   </ion-note>
                 }
 
@@ -251,7 +298,10 @@
         <ion-note color="medium">Nenhum participante encontrado para "{{ participantSearch }}".</ion-note>
       }
       <ion-list lines="full">
-        @for (participant of filteredConfirmedParticipants; track participant.objectId) {
+        @for (participant of filteredConfirmedParticipants; track participant.objectId; let i = $index) {
+          @if (showTeamGroupHeader(i, filteredConfirmedParticipants)) {
+            <ion-list-header>{{ teamGroupTitle(participant) }}</ion-list-header>
+          }
           <ion-item>
             <app-user-avatar
               slot="start"
@@ -264,6 +314,15 @@
               <p>{{ registrationService.formatRole(participant.role) }}</p>
               @if (participant.primaryPosition) {
                 <p>Posicao: {{ participant.primaryPosition }}</p>
+              }
+              @if (participant.age != null) {
+                <p>Idade: {{ participant.age }} anos</p>
+              }
+              @if (participant.appAverageScore != null) {
+                <p>Media CB (Controle de Bola): {{ participant.appAverageScore | number: '1.1-1' }}</p>
+              }
+              @if (isTeamMatch && participant.role === 'athlete') {
+                <p>Time: {{ participant.teamName || participantTeamSideLabel(participant) || 'Nao definido' }}</p>
               }
             </ion-label>
           </ion-item>

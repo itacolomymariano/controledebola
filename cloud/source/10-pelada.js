@@ -285,12 +285,15 @@ Parse.Cloud.define('listPeladasForFeed', async (request) => {
   }
 
   const heldEventCountByPelada = {};
+  const heldParticipantSumByPelada = {};
   if (results.length) {
     const eventQuery = new Parse.Query('Event');
     eventQuery.containedIn('pelada', results);
-    eventQuery.select(['pelada', 'teamSplit']);
+    eventQuery.select(['pelada', 'teamSplit', 'participationFee']);
     eventQuery.limit(10000);
     const events = await eventQuery.find({ useMasterKey: true });
+    const heldEvents = [];
+    const feeByEventId = new Map();
     for (const event of events) {
       const peladaPtr = event.get('pelada');
       const peladaId = peladaPtr && peladaPtr.id ? peladaPtr.id : '';
@@ -306,11 +309,47 @@ Parse.Cloud.define('listPeladasForFeed', async (request) => {
         }
       }
       heldEventCountByPelada[peladaId] = (heldEventCountByPelada[peladaId] || 0) + 1;
+      feeByEventId.set(event.id, Number(event.get('participationFee') || 0));
+      heldEvents.push(event);
+    }
+
+    if (heldEvents.length) {
+      const regQuery = new Parse.Query('EventRegistration');
+      regQuery.containedIn('event', heldEvents);
+      regQuery.containedIn('role', ['athlete', 'goalkeeper']);
+      regQuery.limit(10000);
+      const regs = await regQuery.find({ useMasterKey: true });
+      const countByEvent = new Map();
+      for (const reg of regs) {
+        const eventPtr = reg.get('event');
+        const eventId = eventPtr && eventPtr.id ? eventPtr.id : '';
+        if (!eventId) continue;
+        const fee = feeByEventId.get(eventId) || 0;
+        const confirmed =
+          typeof computeRegistrationEffectiveConfirmation === 'function'
+            ? computeRegistrationEffectiveConfirmation(reg, fee)
+            : !!reg.get('paymentConfirmed') ||
+              !!reg.get('invitedByContract') ||
+              fee <= 0;
+        if (!confirmed) continue;
+        countByEvent.set(eventId, (countByEvent.get(eventId) || 0) + 1);
+      }
+      for (const event of heldEvents) {
+        const peladaPtr = event.get('pelada');
+        const peladaId = peladaPtr && peladaPtr.id ? peladaPtr.id : '';
+        if (!peladaId) continue;
+        const n = countByEvent.get(event.id) || 0;
+        heldParticipantSumByPelada[peladaId] =
+          (heldParticipantSumByPelada[peladaId] || 0) + n;
+      }
     }
   }
 
   for (const row of rows) {
-    row.heldEventCount = heldEventCountByPelada[row.objectId] || 0;
+    const held = heldEventCountByPelada[row.objectId] || 0;
+    row.heldEventCount = held;
+    const sum = heldParticipantSumByPelada[row.objectId] || 0;
+    row.avgParticipantsPerEvent = held > 0 ? Math.round((sum / held) * 10) / 10 : 0;
   }
 
   return rows;
@@ -683,6 +722,18 @@ Parse.Cloud.beforeSave('EventRegistration', async (request) => {
       .get(eventPtr.id, { useMasterKey: true });
   } catch {
     return;
+  }
+
+  if (
+    event.get('type') === 'team_match' &&
+    registration.get('role') === 'athlete' &&
+    !registration.get('invitedByContract') &&
+    !request.master
+  ) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Em confrontos, atletas entram por convocacao ou solicitacao ao presidente.'
+    );
   }
 
   const pelada = await getPeladaFromEvent(event);

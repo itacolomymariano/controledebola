@@ -61,6 +61,92 @@ function trimText(value, maxLength) {
   return String(value || '').trim().slice(0, maxLength);
 }
 
+function safeDisplayName(value, fallback) {
+  if (value == null) return fallback;
+  const text = String(value).trim();
+  return text || fallback;
+}
+
+function resolveMediaAuthorAvatarUrl(user, registration) {
+  const registrationAvatar =
+    registration && registration.get ? registration.get('avatarUrl') : '';
+  if (registrationAvatar && String(registrationAvatar).trim()) {
+    return String(registrationAvatar).trim();
+  }
+  if (!user || !user.get) return undefined;
+  const direct = safeDisplayName(user.get('avatarUrl'), '');
+  if (direct) return direct;
+  const avatar = user.get('avatar');
+  if (avatar && typeof avatar.url === 'function') {
+    return avatar.url();
+  }
+  if (avatar && avatar._url) return avatar._url;
+  if (typeof resolveStoredAvatarUrl === 'function') {
+    return resolveStoredAvatarUrl(user, registration) || undefined;
+  }
+  return undefined;
+}
+
+function assertPublicHttpUrl(url, label) {
+  const value = String(url || '').trim();
+  if (!/^https?:\/\//i.test(value)) {
+    throw new Parse.Error(
+      Parse.Error.INVALID_QUERY,
+      `${label} deve ser uma URL publica (http ou https). Envie a foto novamente.`
+    );
+  }
+  return value;
+}
+
+async function notifyEventMediaPublishedToParticipants(event, publisherUserId, options) {
+  if (typeof sendPushToUsers !== 'function' || typeof computeRegistrationEffectiveConfirmation !== 'function') {
+    return;
+  }
+  const participationFee = Number(event.get('participationFee') || 0);
+  const registrations = await new Parse.Query('EventRegistration')
+    .equalTo('event', event)
+    .limit(1000)
+    .find({ useMasterKey: true });
+
+  const userIds = [];
+  for (const registration of registrations) {
+    if (!computeRegistrationEffectiveConfirmation(registration, participationFee)) {
+      continue;
+    }
+    let resolvedUserId = '';
+    if (typeof resolveRegistrationParticipantUserId === 'function') {
+      const resolved = await resolveRegistrationParticipantUserId(registration);
+      resolvedUserId = resolved && resolved.userId ? String(resolved.userId) : '';
+    } else {
+      const regUser = registration.get('user');
+      resolvedUserId = regUser && regUser.id ? String(regUser.id) : '';
+    }
+    if (resolvedUserId && resolvedUserId !== String(publisherUserId || '')) {
+      userIds.push(resolvedUserId);
+    }
+  }
+
+  const uniqueUserIds = [...new Set(userIds)];
+  if (!uniqueUserIds.length) {
+    return;
+  }
+
+  const eventName = safeDisplayName(event.get('name'), 'Evento');
+  await sendPushToUsers(
+    uniqueUserIds,
+    {
+      title: options.title || 'Nova reportagem no evento',
+      alert: options.alert || `Confira a reportagem de ${eventName}.`,
+      data: {
+        type: options.pushType || 'event_journal_reportage',
+        eventId: event.id,
+        category: options.category || 'journal_reportage',
+      },
+    },
+    { throwOnError: false }
+  );
+}
+
 async function loadEventForMedia(eventId) {
   const id = String(eventId || '').trim();
   if (!id) {
@@ -127,15 +213,18 @@ async function getOrCreateEventMediaPublication(event) {
 function mapAuthorSnapshot(user, registration) {
   return {
     authorId: user.id,
-    authorName: (
-      registration.get('apelido') ||
-      user.get('apelido') ||
-      user.get('name') ||
-      user.getUsername() ||
+    authorName: safeDisplayName(
+      (registration && registration.get && registration.get('apelido')) ||
+        user.get('apelido') ||
+        user.get('name') ||
+        user.getUsername(),
       'Autor'
-    ).trim(),
-    authorApelido: (registration.get('apelido') || user.get('apelido') || '').trim(),
-    authorAvatarUrl: resolveStoredAvatarUrl(user, registration) || undefined,
+    ),
+    authorApelido: safeDisplayName(
+      (registration && registration.get && registration.get('apelido')) || user.get('apelido'),
+      ''
+    ),
+    authorAvatarUrl: resolveMediaAuthorAvatarUrl(user, registration),
   };
 }
 
@@ -714,6 +803,7 @@ Parse.Cloud.define('publishEventJournalReportage', async (request) => {
   if (!photoUrl) {
     throw new Parse.Error(Parse.Error.INVALID_QUERY, 'Foto da reportagem obrigatoria.');
   }
+  const storedPhotoUrl = assertPublicHttpUrl(photoUrl, 'Foto da reportagem');
 
   const { event, registration } = await assertConfirmedRoleRegistration(user, eventId, 'journalist');
   const publication = await getOrCreateEventMediaPublication(event);
@@ -723,18 +813,31 @@ Parse.Cloud.define('publishEventJournalReportage', async (request) => {
 
   publication.set('journalReportageHeadline', headline);
   publication.set('journalReportageBody', body);
-  publication.set('journalReportagePhotoUrl', photoUrl);
+  publication.set('journalReportagePhotoUrl', storedPhotoUrl);
   publication.set('journalReportageAuthorId', author.authorId);
   publication.set('journalReportageAuthorName', author.authorName);
   publication.set('journalReportageAuthorApelido', author.authorApelido);
   publication.set('journalReportageAuthorAvatarUrl', author.authorAvatarUrl || '');
   publication.set('journalReportageUpdatedAt', now);
   if (hadContent) {
-    await clearCategoryEngagement(event, 'journal_reportage');
+    try {
+      await clearCategoryEngagement(event, 'journal_reportage');
+    } catch (clearError) {
+      console.warn('clearCategoryEngagement journal_reportage failed', clearError);
+    }
   }
   publication.set('journalReportageViewCount', 0);
 
   await publication.save(null, { useMasterKey: true });
+
+  const eventLabel = safeDisplayName(event.get('name'), 'evento');
+  await notifyEventMediaPublishedToParticipants(event, user.id, {
+    title: 'Nova reportagem no mural',
+    alert: `${author.authorName} publicou uma reportagem em ${eventLabel}.`,
+    pushType: 'event_journal_reportage',
+    category: 'journal_reportage',
+  });
+
   return { ok: true, updatedAt: now.toISOString() };
 });
 

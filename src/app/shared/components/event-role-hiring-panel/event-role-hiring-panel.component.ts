@@ -1,7 +1,7 @@
 import { ChangeDetectorRef, Component, EventEmitter, Input, OnChanges, Output } from '@angular/core';
 import { Router } from '@angular/router';
 import { AlertController, LoadingController, ToastController } from '@ionic/angular';
-import { PeladaEvent } from '../../../core/models/event.model';
+import { PeladaEvent, TeamSide, teamSideLabel } from '../../../core/models/event.model';
 import {
   AttendanceMode,
   EventInviteCandidate,
@@ -39,6 +39,8 @@ export class EventRoleHiringPanelComponent implements OnChanges {
   @Input({ required: true }) role!: HireableRole;
   @Input({ required: true }) event!: PeladaEvent;
   @Input() seedInvitationCount = 0;
+  /** Em confronto, lados que o usuario pode usar ao convocar atleta. */
+  @Input() allowedTeamSides: Array<'home' | 'away'> = ['home', 'away'];
 
   @Output() invitationsChanged = new EventEmitter<void>();
   @Output() panelInteraction = new EventEmitter<HireableRole>();
@@ -55,6 +57,8 @@ export class EventRoleHiringPanelComponent implements OnChanges {
   responseDeadlineDate = '';
   responseDeadlineTime = '';
   attendanceMode: AttendanceMode = 'in_person';
+  inviteTeamSide: TeamSide | '' = '';
+  refereePaymentMode: 'free' | 'split_50' | 'home_pays' = 'free';
   sendingInvite = false;
   updatingInvitationId = '';
   arrivalDraft: Record<string, { date: string; time: string }> = {};
@@ -115,6 +119,29 @@ export class EventRoleHiringPanelComponent implements OnChanges {
     return this.role === 'athlete';
   }
 
+  get requiresTeamSide(): boolean {
+    return (
+      this.event.type === 'team_match' &&
+      (this.isAthleteRole || this.role === 'referee' || this.role === 'coach')
+    );
+  }
+
+  get isTeamMatchRefereeHiring(): boolean {
+    return this.event.type === 'team_match' && this.role === 'referee';
+  }
+
+  get isTeamMatchAthleteHiring(): boolean {
+    return this.event.type === 'team_match' && this.role === 'athlete';
+  }
+
+  get teamSideSelectLocked(): boolean {
+    return this.isTeamMatchAthleteHiring && this.allowedTeamSides.length === 1;
+  }
+
+  invitationTeamSideLabel(invitation: RefereeInvitation): string {
+    return teamSideLabel(invitation.teamSide, this.event.homeTeamName, this.event.awayTeamName);
+  }
+
   get showAttendanceMode(): boolean {
     return this.isFanRole || this.role === 'cameraman' || this.role === 'narrator';
   }
@@ -125,10 +152,12 @@ export class EventRoleHiringPanelComponent implements OnChanges {
 
   ngOnChanges(): void {
     this.applyDefaultResponseDeadline();
+    this.applyDefaultTeamSide();
   }
 
   onExpand(): void {
     this.applyDefaultResponseDeadline();
+    this.applyDefaultTeamSide();
     void this.ensureExpandedLoad();
   }
 
@@ -178,6 +207,7 @@ export class EventRoleHiringPanelComponent implements OnChanges {
     this.onCandidateChange(candidate.userId);
     this.panelInteraction.emit(this.role);
     this.cdr.markForCheck();
+    this.scrollToInviteForm();
   }
 
   onInviteFormInteraction(): void {
@@ -316,6 +346,17 @@ export class EventRoleHiringPanelComponent implements OnChanges {
       this.scrollToInviteForm();
       return;
     }
+    if (this.requiresTeamSide && this.inviteTeamSide !== 'home' && this.inviteTeamSide !== 'away') {
+      await this.showError(
+        this.isTeamMatchRefereeHiring
+          ? 'Escolha o time que esta propondo a contratacao do arbitro.'
+          : this.role === 'coach'
+            ? 'Escolha o time (mandante ou visitante) que o treinador vai comandar.'
+            : 'Escolha o time mandante ou visitante para convocar o atleta.'
+      );
+      this.scrollToInviteForm();
+      return;
+    }
 
     const candidate = this.findCandidate(this.inviteUserId);
     this.sendingInvite = true;
@@ -331,27 +372,61 @@ export class EventRoleHiringPanelComponent implements OnChanges {
       const loading = await this.loadingCtrl.create({ message: 'Enviando convite...' });
       await loading.present();
       try {
-        await this.invitationService.create({
-          eventId: this.event.objectId,
-          invitedUserId: this.inviteUserId,
-          role: this.role,
-          attendanceMode: this.supportsAttendanceMode ? this.attendanceMode : undefined,
-          offeredAmount: amount,
-          responseDeadline: deadline,
-          invitedUserApelido: candidate?.apelido,
-          invitedUserFullName: candidate?.userName,
-          invitedUserAvatarUrl: candidate?.avatarUrl,
-        });
+        if (this.isTeamMatchRefereeHiring) {
+          await this.invitationService.createTeamMatchRefereeHiring({
+            eventId: this.event.objectId,
+            invitedUserId: this.inviteUserId,
+            role: 'referee',
+            offeredAmount: amount,
+            responseDeadline: deadline,
+            invitedUserApelido: candidate?.apelido,
+            invitedUserFullName: candidate?.userName,
+            invitedUserAvatarUrl: candidate?.avatarUrl,
+            requestedByTeamSide: this.inviteTeamSide as 'home' | 'away',
+            refereePaymentMode: this.refereePaymentMode,
+          });
+        } else if (this.isTeamMatchAthleteHiring) {
+          await this.invitationService.createTeamMatchAthleteInvitation({
+            eventId: this.event.objectId,
+            invitedUserId: this.inviteUserId,
+            teamSide: this.inviteTeamSide as 'home' | 'away',
+            offeredAmount: amount,
+            responseDeadline: deadline,
+            invitedUserApelido: candidate?.apelido,
+            invitedUserFullName: candidate?.userName,
+            invitedUserAvatarUrl: candidate?.avatarUrl,
+          });
+        } else {
+          await this.invitationService.create({
+            eventId: this.event.objectId,
+            invitedUserId: this.inviteUserId,
+            role: this.role,
+            attendanceMode: this.supportsAttendanceMode ? this.attendanceMode : undefined,
+            offeredAmount: amount,
+            responseDeadline: deadline,
+            invitedUserApelido: candidate?.apelido,
+            invitedUserFullName: candidate?.userName,
+            invitedUserAvatarUrl: candidate?.avatarUrl,
+            teamSide: this.requiresTeamSide ? this.inviteTeamSide || undefined : undefined,
+          });
+        }
         this.inviteUserId = '';
         this.offeredAmount = null;
+        this.inviteTeamSide = '';
+        this.refereePaymentMode = 'free';
         this.search = '';
         this.displayedCandidates = [];
         this.applyDefaultResponseDeadline();
+        this.applyDefaultTeamSide();
         await this.reloadInvitations();
         this.invitationsChanged.emit();
         this.panelInteraction.emit(this.role);
         const toast = await this.toastCtrl.create({
-          message: 'Convite enviado. Aguardando resposta.',
+          message: this.isTeamMatchRefereeHiring
+            ? 'Proposta enviada. Aguardando aprovacao do presidente adversario.'
+            : this.isTeamMatchAthleteHiring
+              ? 'Convocacao enviada. Aguardando resposta.'
+              : 'Convite enviado. Aguardando resposta.',
           duration: 2500,
           color: 'success',
         });
@@ -738,6 +813,20 @@ export class EventRoleHiringPanelComponent implements OnChanges {
     this.responseDeadlineTime = toTimeInputValue(deadline);
   }
 
+  private applyDefaultTeamSide(): void {
+    if (!this.isTeamMatchAthleteHiring) return;
+    if (this.allowedTeamSides.length === 1) {
+      this.inviteTeamSide = this.allowedTeamSides[0];
+      return;
+    }
+    if (
+      this.inviteTeamSide &&
+      !this.allowedTeamSides.includes(this.inviteTeamSide as 'home' | 'away')
+    ) {
+      this.inviteTeamSide = '';
+    }
+  }
+
   private scrollToInvitations(): void {
     this.cdr.markForCheck();
     setTimeout(() => {
@@ -753,9 +842,9 @@ export class EventRoleHiringPanelComponent implements OnChanges {
     setTimeout(() => {
       document.getElementById(this.inviteFormAnchorId)?.scrollIntoView({
         behavior: 'smooth',
-        block: 'nearest',
+        block: 'start',
       });
-    }, 80);
+    }, 120);
   }
 
   private combineDateTime(date: string, time: string): Date | null {

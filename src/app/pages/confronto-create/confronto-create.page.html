@@ -1,0 +1,219 @@
+<ion-header>
+  <app-user-bar></app-user-bar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="cancel()">Cancelar</ion-button>
+    </ion-buttons>
+    <ion-title>Novo confronto</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (challengeBlockedMessage) {
+    <ion-card color="warning">
+      <ion-card-content>
+        <p>{{ challengeBlockedMessage }}</p>
+        <ion-button expand="block" (click)="routerNavigateDesafio()">Ir para Desafiar</ion-button>
+      </ion-card-content>
+    </ion-card>
+  } @else {
+    <form [formGroup]="form" novalidate (ngSubmit)="submit()">
+      <ion-list lines="full">
+        <ion-item-divider>
+          <ion-label>Times do desafio aceito</ion-label>
+        </ion-item-divider>
+        @if (homePick) {
+          <ion-item>
+            <ion-label>
+              <h2>{{ homePick.name }}</h2>
+              <p>Mandante</p>
+            </ion-label>
+          </ion-item>
+        }
+        @if (awayPick) {
+          <ion-item>
+            <ion-label>
+              <h2>{{ awayPick.name }}</h2>
+              <p>Visitante</p>
+            </ion-label>
+          </ion-item>
+        }
+        <ion-item>
+          <ion-input
+            label="Nome do confronto"
+            labelPlacement="stacked"
+            formControlName="name"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-textarea
+            label="Condicoes e beneficios ao desafiado"
+            labelPlacement="stacked"
+            formControlName="challengeConditions"
+            autoGrow="true"
+            maxlength="2000"
+            placeholder="Ex.: agua, coletes, arbitragem por nossa conta..."
+          ></ion-textarea>
+        </ion-item>
+      </ion-list>
+
+      <ion-list lines="full">
+        <ion-item-divider>
+          <ion-label>Jogo de ida</ion-label>
+        </ion-item-divider>
+        <ion-item>
+          <ion-input type="date" label="Data de inicio" labelPlacement="stacked" formControlName="startDate"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input type="time" label="Hora de inicio" labelPlacement="stacked" formControlName="startTime"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input type="date" label="Data de termino" labelPlacement="stacked" formControlName="endDate"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input type="time" label="Hora de termino" labelPlacement="stacked" formControlName="endTime"></ion-input>
+        </ion-item>
+      </ion-list>
+
+      <app-address-form formControlName="address" title="Local da ida"></app-address-form>
+      <ion-list lines="full">
+        <ion-item>
+          <ion-input
+            label="Complemento"
+            labelPlacement="stacked"
+            formControlName="locationComplement"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-toggle formControlName="returnLeg">Ida e volta</ion-toggle>
+        </ion-item>
+      </ion-list>
+
+      @if (form.get('returnLeg')?.value) {
+        <ion-list lines="full">
+          <ion-item-divider>
+            <ion-label>Jogo da volta</ion-label>
+          </ion-item-divider>
+          <ion-item>
+            <ion-input type="date" label="Data de inicio" labelPlacement="stacked" formControlName="returnStartDate"></ion-input>
+          </ion-item>
+          <ion-item>
+            <ion-input type="time" label="Hora de inicio" labelPlacement="stacked" formControlName="returnStartTime"></ion-input>
+          </ion-item>
+          <ion-item>
+            <ion-input type="date" label="Data de termino" labelPlacement="stacked" formControlName="returnEndDate"></ion-input>
+          </ion-item>
+          <ion-item>
+            <ion-input type="time" label="Hora de termino" labelPlacement="stacked" formControlName="returnEndTime"></ion-input>
+          </ion-item>
+        </ion-list>
+        <app-address-form formControlName="returnAddress" title="Local da volta (opcional)"></app-address-form>
+        <ion-list lines="full">
+          <ion-item>
+            <ion-input
+              label="Complemento da volta"
+              labelPlacement="stacked"
+              formControlName="returnLocationComplement"
+            ></ion-input>
+          </ion-item>
+        </ion-list>
+      }
+
+      <ion-list lines="full">
+        <ion-item-divider>
+          <ion-label>Convocar atletas do mandante</ion-label>
+        </ion-item-divider>
+        <ion-item>
+          <ion-searchbar
+            placeholder="Buscar atleta"
+            [debounce]="0"
+            [value]="athleteQuery"
+            (ionInput)="onAthleteSearch($any($event.target).value)"
+            (ionClear)="athleteResults = []"
+          ></ion-searchbar>
+        </ion-item>
+      </ion-list>
+      @if (athleteSearching) {
+        <div class="ion-text-center ion-padding">
+          <ion-spinner name="crescent"></ion-spinner>
+        </div>
+      }
+      @if (athleteResults.length) {
+        <ion-list>
+          @for (athlete of athleteResults; track athlete.userId) {
+            <ion-item>
+              <app-user-avatar
+                slot="start"
+                [avatarUrl]="athlete.avatarUrl"
+                [alt]="athlete.apelido || athlete.userName"
+                size="md"
+              ></app-user-avatar>
+              <ion-label>
+                <h2>{{ athlete.apelido || athlete.userName }}</h2>
+                @if (athlete.matchRate != null) {
+                  <p>Valor partida amadora: {{ athlete.matchRate | currency: 'BRL' }}</p>
+                }
+              </ion-label>
+              <ion-button
+                slot="end"
+                fill="clear"
+                size="small"
+                (click)="viewAthleteProfile(athlete.userId, $event)"
+              >
+                Perfil
+              </ion-button>
+              <ion-button slot="end" size="small" (click)="addAthlete(athlete)">
+                Convocar
+              </ion-button>
+            </ion-item>
+          }
+        </ion-list>
+      }
+      @if (selectedAthletes.length) {
+        <ion-list lines="full">
+          <ion-list-header>
+            <ion-label>Convocados (ida e volta, se marcada)</ion-label>
+          </ion-list-header>
+          @for (athlete of selectedAthletes; track athlete.userId) {
+            <ion-item>
+              <ion-label>
+                <h2>{{ athlete.apelido || athlete.userName }}</h2>
+                <p>
+                  <ion-button
+                    fill="clear"
+                    size="small"
+                    (click)="viewAthleteProfile(athlete.userId, $event)"
+                  >
+                    Ver perfil
+                  </ion-button>
+                </p>
+              </ion-label>
+              <ion-input
+                slot="end"
+                type="number"
+                label="Valor (opc.)"
+                labelPlacement="stacked"
+                [value]="athlete.offeredAmount ?? ''"
+                (ionInput)="setAthleteOffer(athlete.userId, $any($event.target).value)"
+                placeholder="0"
+                style="max-width: 110px"
+              ></ion-input>
+              <ion-button
+                slot="end"
+                fill="clear"
+                color="danger"
+                (click)="removeAthlete(athlete.userId)"
+              >
+                <ion-icon name="close-circle"></ion-icon>
+              </ion-button>
+            </ion-item>
+          }
+        </ion-list>
+      }
+
+      <ion-button expand="block" type="submit" [disabled]="submitting" class="ion-margin-vertical">
+        Confirmar confronto
+      </ion-button>
+    </form>
+  }
+</ion-content>

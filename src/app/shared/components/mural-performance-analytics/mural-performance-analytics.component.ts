@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import {
   ATHLETE_FOOT_LABELS,
   formatFootPreference,
@@ -23,18 +23,24 @@ export class MuralPerformanceAnalyticsComponent implements OnChanges {
   @Input() analytics: MuralPerformanceAnalytics | Record<string, unknown> | null = null;
   @Input() preloadAnalytics = false;
   @Input() shareContext: MuralShareContext | null = null;
+  @Input() filterCaption = '';
 
   loading = false;
   loadedAnalytics: MuralPerformanceAnalytics | null = null;
 
   constructor(private readonly performanceService: AthletePerformanceService) {}
 
-  ngOnChanges(): void {
+  ngOnChanges(changes: SimpleChanges): void {
     if (this.preloadAnalytics) {
-      this.loadedAnalytics = this.analytics
+      const normalized = this.analytics
         ? this.performanceService.normalizeMuralAnalytics(this.analytics)
         : null;
+      this.loadedAnalytics =
+        normalized?.qualitative && normalized?.charts ? normalized : null;
       this.loading = false;
+      return;
+    }
+    if (!changes['scope'] && !changes['scopeId'] && !changes['preloadAnalytics']) {
       return;
     }
     void this.load();
@@ -56,20 +62,24 @@ export class MuralPerformanceAnalyticsComponent implements OnChanges {
 
   chartMax(): number {
     if (!this.loadedAnalytics) return 1;
-    const c = this.loadedAnalytics.charts;
+    const c = this.loadedAnalytics?.charts;
+    if (!c) return 1;
     return Math.max(c.shotsOnTarget, c.shotsOffTarget, c.goals, c.totalShots, 1);
   }
 
   foulChartMax(): number {
     if (!this.loadedAnalytics) return 1;
-    const c = this.loadedAnalytics.charts;
+    const c = this.loadedAnalytics?.charts;
+    if (!c) return 1;
     return Math.max(c.foulsCommitted, c.athleteCount, 1);
   }
 
   private async load(): Promise<void> {
     this.loading = true;
     try {
-      this.loadedAnalytics = await this.performanceService.loadMuralAnalytics(this.scope, this.scopeId);
+      const analytics = await this.performanceService.loadMuralAnalytics(this.scope, this.scopeId);
+      this.loadedAnalytics =
+        analytics?.qualitative && analytics?.charts ? analytics : null;
     } catch {
       this.loadedAnalytics = null;
     } finally {

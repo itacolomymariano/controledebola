@@ -304,9 +304,13 @@ export class PeladaService {
     if (!user?.id) return;
     if (this.legacyMigrationCheckedForUserId === user.id) return;
 
+    // Confrontos (team_match) nao pertencem a pelada — desanexar se alguma migracao antiga vinculou.
+    await this.detachTeamMatchesFromPeladaForCurrentUser(user);
+
     const eventQuery = new Parse.Query(EVENT_CLASS);
     eventQuery.equalTo('admin', user);
     eventQuery.doesNotExist('pelada');
+    eventQuery.notEqualTo('type', 'team_match');
     eventQuery.limit(1);
     const hasLegacy = await eventQuery.first();
     if (!hasLegacy) {
@@ -317,9 +321,13 @@ export class PeladaService {
     const allLegacyQuery = new Parse.Query(EVENT_CLASS);
     allLegacyQuery.equalTo('admin', user);
     allLegacyQuery.doesNotExist('pelada');
+    allLegacyQuery.notEqualTo('type', 'team_match');
     allLegacyQuery.limit(200);
     const legacyEvents = await allLegacyQuery.find();
-    if (legacyEvents.length === 0) return;
+    if (legacyEvents.length === 0) {
+      this.legacyMigrationCheckedForUserId = user.id;
+      return;
+    }
 
     const existingQuery = new Parse.Query(CLASS);
     existingQuery.equalTo('admin', user);
@@ -354,11 +362,32 @@ export class PeladaService {
     }
 
     for (const event of legacyEvents) {
+      if (event.get('type') === 'team_match') continue;
       event.set('pelada', peladaObj);
       await event.save();
     }
 
     this.legacyMigrationCheckedForUserId = user.id;
+  }
+
+  /** Remove pointer pelada de confrontos (nao devem aparecer em Peladas). */
+  private async detachTeamMatchesFromPeladaForCurrentUser(user: Parse.User): Promise<void> {
+    try {
+      const query = new Parse.Query(EVENT_CLASS);
+      query.equalTo('type', 'team_match');
+      query.exists('pelada');
+      query.limit(100);
+      const rows = await query.find();
+      for (const event of rows) {
+        const admin = event.get('admin') as Parse.User | undefined;
+        // So altera se o usuario tem escrita (admin) — demais sao corrigidos via Cloud repair.
+        if (admin?.id !== user.id) continue;
+        event.unset('pelada');
+        await event.save();
+      }
+    } catch {
+      /* nao bloqueia feed */
+    }
   }
 
   private sortPeladaFeed(
@@ -418,6 +447,10 @@ export class PeladaService {
       allowTeamSplitAfterEventEnd: !!row['allowTeamSplitAfterEventEnd'],
       heldEventCount:
         heldEventCount != null && Number.isFinite(heldEventCount) ? heldEventCount : undefined,
+      avgParticipantsPerEvent:
+        row['avgParticipantsPerEvent'] != null && row['avgParticipantsPerEvent'] !== ''
+          ? Number(row['avgParticipantsPerEvent'])
+          : undefined,
       isCurrentUserAdmin: !!row['isCurrentUserAdmin'],
     };
   }

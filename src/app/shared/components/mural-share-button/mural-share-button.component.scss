@@ -1,3 +1,9 @@
+.mural-share-exclude {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
 .mural-share-btn {
   margin: 0;
   min-width: 36px;
@@ -7,4 +13,27 @@
 .mural-share-btn ion-spinner {
   width: 18px;
   height: 18px;
+}
+
+.mural-rule-popover {
+  .balloon-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .mural-rule-text {
+    margin: 0 0 12px;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    white-space: pre-line;
+  }
 }

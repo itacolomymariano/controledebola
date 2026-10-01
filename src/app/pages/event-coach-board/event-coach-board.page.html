@@ -46,8 +46,11 @@
       <div formArrayName="teamNotes">
         @for (group of teamNotes.controls; track $index; let i = $index) {
           <ion-list-header>
-            <ion-label>Time {{ i + 1 }}</ion-label>
+            <ion-label>{{ teamHeader(i) }}</ion-label>
           </ion-list-header>
+          @if (!canEditTeam(i)) {
+            <ion-note class="ion-padding-horizontal">Somente o treinador do outro time edita.</ion-note>
+          }
           <ion-list [formGroupName]="i">
             <ion-item>
               <ion-input label="Nome do time" labelPlacement="stacked" formControlName="teamName"></ion-input>

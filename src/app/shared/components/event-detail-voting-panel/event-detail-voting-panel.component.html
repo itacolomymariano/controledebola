@@ -34,7 +34,15 @@
             ></app-user-avatar>
             <ion-label class="ion-text-wrap">
               <h3>{{ participant.apelido }}</h3>
-              <p>{{ registrationService.formatRole(participant.role) }}</p>
+              <p>
+                {{ registrationService.formatRole(participant.role) }}
+                @if (participant.primaryPosition) {
+                  · {{ participant.primaryPosition }}
+                }
+                @if (showTeamForParticipant(participant)) {
+                  · {{ participantTeamLabel(participant) }}
+                }
+              </p>
             </ion-label>
             <ion-select
               slot="end"
@@ -70,7 +78,15 @@
               ></app-user-avatar>
               <ion-label class="ion-text-wrap">
                 <h3>{{ participant.apelido }}</h3>
-                <p>{{ registrationService.formatRole(participant.role) }}</p>
+                <p>
+                  {{ registrationService.formatRole(participant.role) }}
+                  @if (participant.primaryPosition) {
+                    · {{ participant.primaryPosition }}
+                  }
+                  @if (showTeamForParticipant(participant)) {
+                    · {{ participantTeamLabel(participant) }}
+                  }
+                </p>
               </ion-label>
               <ion-badge slot="end" color="primary">{{ voteScores[participant.objectId] }}</ion-badge>
             </ion-item>

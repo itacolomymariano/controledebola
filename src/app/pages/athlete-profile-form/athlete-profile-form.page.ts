@@ -9,7 +9,7 @@ import { AlertController, LoadingController } from '@ionic/angular';
 import { AthleteMaritalStatus, AthleteFootPreference, heightCmToParts, partsToHeightCm } from '../../core/models/athlete-profile.model';
 
 import { AthleteProfileService } from '../../core/services/athlete-profile.service';
-
+import { WizardTourService } from '../../core/services/wizard-tour.service';
 import { buildMissingFieldsMessage } from '../../core/utils/form-validation.util';
 
 
@@ -63,6 +63,8 @@ export class AthleteProfileFormPage {
     private readonly fb: FormBuilder,
 
     private readonly athleteProfileService: AthleteProfileService,
+
+    private readonly wizardTour: WizardTourService,
 
     private readonly router: Router,
 
@@ -197,6 +199,8 @@ export class AthleteProfileFormPage {
         await this.athleteProfileService.create(payload);
 
       }
+
+      this.wizardTour.completePendingStep();
 
       await this.router.navigateByUrl('/tabs/profile', { replaceUrl: true });
 

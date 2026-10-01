@@ -8,6 +8,8 @@ import { ActivatedRoute } from '@angular/router';
 import { AlertController } from '@ionic/angular';
 import { EventMediaDashboard } from '../../core/models/event-media.model';
 import { EventMediaService } from '../../core/services/event-media.service';
+import { MuralShareContext } from '../../core/models/mural-share.model';
+import { MuralShareService } from '../../core/services/mural-share.service';
 import { resolveRouteParam } from '../../core/utils/route-param.util';
 import { EventMediaEngagementComponent } from '../../shared/components/event-media-engagement/event-media-engagement.component';
 
@@ -26,6 +28,8 @@ export class EventMuralMediaJournalPage {
   activeSection: JournalSection = 'reportage';
   dashboard: EventMediaDashboard | null = null;
   loadError = '';
+  reportageShareContext: MuralShareContext | null = null;
+  interviewShareContext: MuralShareContext | null = null;
 
   @ViewChild('reportageEngagement') reportageEngagement?: EventMediaEngagementComponent;
   @ViewChild('interviewEngagement') interviewEngagement?: EventMediaEngagementComponent;
@@ -33,6 +37,7 @@ export class EventMuralMediaJournalPage {
   constructor(
     private readonly route: ActivatedRoute,
     private readonly eventMediaService: EventMediaService,
+    private readonly muralShareService: MuralShareService,
     private readonly alertCtrl: AlertController,
     private readonly cdr: ChangeDetectorRef
   ) {}
@@ -105,15 +110,48 @@ export class EventMuralMediaJournalPage {
         return;
       }
       this.dashboard = await this.eventMediaService.loadDashboard(this.eventId);
+      await this.refreshShareContexts();
     } catch (error: unknown) {
       this.loadError = this.eventMediaService.errorMessage(
         error,
         'Nao foi possivel carregar o jornal do evento.'
       );
       this.dashboard = null;
+      this.reportageShareContext = null;
+      this.interviewShareContext = null;
     } finally {
       this.loading = false;
       this.cdr.markForCheck();
     }
+  }
+
+  private async refreshShareContexts(): Promise<void> {
+    if (!this.eventId) {
+      this.reportageShareContext = null;
+      this.interviewShareContext = null;
+      return;
+    }
+    const base = await this.muralShareService.buildContextForEventId(this.eventId);
+    if (!base) {
+      this.reportageShareContext = null;
+      this.interviewShareContext = null;
+      return;
+    }
+    const reportage = this.dashboard?.journalReportage;
+    const interview = this.dashboard?.journalInterview;
+    this.reportageShareContext = reportage
+      ? {
+          ...base,
+          cardTitle: 'Reportagem',
+          journalistName: reportage.authorApelido || reportage.authorName,
+        }
+      : null;
+    this.interviewShareContext = interview
+      ? {
+          ...base,
+          cardTitle: 'Entrevista de jornal',
+          journalistName: interview.authorApelido || interview.authorName,
+        }
+      : null;
   }
 }

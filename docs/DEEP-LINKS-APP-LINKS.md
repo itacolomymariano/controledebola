@@ -27,8 +27,8 @@ Pacote / Bundle ID: `com.minhapelada.app`
 
 Publicar e preencher:
 
-1. `public/.well-known/assetlinks.json` — fingerprints SHA-256
-2. `public/.well-known/apple-app-site-association` — `APPLE_TEAM_ID`
+1. `public/.well-known/assetlinks.json` — SHA-256 da upload key ja preenchido; falta o da App signing key da Play
+2. `public/.well-known/apple-app-site-association` — publicado com appID `3MZPTGQ9GB.com.minhapelada.app`
 3. `public/_headers` — Content-Type JSON
 4. Pagina `src/pages/app.astro` — landing + intent Android
 
@@ -44,13 +44,20 @@ Cole o valor em `assetlinks.json` no lugar de `REPLACE_WITH_UPLOAD_KEY_SHA256`.
 
 Quando o app estiver na **Google Play** com Play App Signing, adicione tambem o SHA-256 da **App signing key** (Play Console → App integrity).
 
-### Preencher Team ID (iOS)
+### iOS — Universal Links (estado em 2026-09-27)
 
-1. Apple Developer → Membership → Team ID
-2. Substitua `APPLE_TEAM_ID` em `apple-app-site-association`
-3. No Xcode / Capacitor iOS: Associated Domains → `applinks:controledebola.com` e `applinks:www.controledebola.com`
+| Item | Status |
+|------|--------|
+| Team ID `3MZPTGQ9GB` no AASA do site | Publicado |
+| Entitlements `applinks:controledebola.com` e `applinks:www.controledebola.com` | Ja em `ios-config/App.entitlements` |
+| Copia para `ios/App/App/App.entitlements` no CI | Automatica via `scripts/apply-ios-review-config.js` (workflow `.github/workflows/ios-capacitor-build.yml`) |
+| Capability **Associated Domains** no App ID `com.minhapelada.app` | **Pendente (usuario, portal Apple)** |
 
-Template de entitlement: `ios-config/App.entitlements` (aplicar quando a pasta `ios/` for gerada).
+Passos restantes (fora do repo):
+
+1. developer.apple.com → Certificates, Identifiers & Profiles → Identifiers → `com.minhapelada.app` → marcar **Associated Domains** → Save.
+2. Profiles → regenerar o provisioning profile de distribuicao (App Store) desse App ID e atualizar o secret `IOS_DISTRIBUTION_*` correspondente no GitHub.
+3. Rodar o workflow iOS e enviar novo build; sem a capability o build falha na assinatura ou os links nao abrem o app.
 
 ## Verificacao
 
@@ -91,6 +98,6 @@ Compartilhar `https://controledebola.com/app` e confirmar o card (titulo/imagem 
 ## Limitacoes
 
 - Sem Play Store publicada, quem nao tem o APK cai em `/download` (“Em breve”).
-- Universal Links iOS so funcionam apos conta Apple + build com Associated Domains.
+- Universal Links iOS so funcionam apos habilitar Associated Domains no App ID, regenerar o profile e publicar novo build.
 - A verificacao Android pode levar minutos apos publicar `assetlinks.json`; reinstalacao do app ajuda.
 - O WhatsApp ainda pode mostrar a URL como texto editavel; o **card clicavel** e o comportamento tipo YouTube.

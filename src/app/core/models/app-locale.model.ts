@@ -7,4 +7,10 @@ export const APP_LOCALE_LABELS: Record<AppLocale, string> = {
   'en-GB': 'English (United Kingdom)',
 };
 
+export const APP_LOCALE_FLAGS: Record<AppLocale, string> = {
+  'pt-BR': '🇧🇷',
+  'es-ES': '🇪🇸',
+  'en-GB': '🇬🇧',
+};
+
 export const DEFAULT_APP_LOCALE: AppLocale = 'pt-BR';

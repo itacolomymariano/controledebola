@@ -6,7 +6,9 @@ import {
   eventsOverlap,
   getRegistrationStatus,
   getRegistrationStatusLabel,
+  isTeamSide,
   PeladaEvent,
+  TeamSide,
 } from '../models/event.model';
 import {
   EventRegistration,
@@ -86,7 +88,8 @@ export class RegistrationService {
     query.equalTo('user', Parse.User.createWithoutData(userId));
     query.include('event');
     const result = await query.first();
-    return result ? this.toRegistration(result) : null;
+    if (!result) return null;
+    return this.withResolvedContractOfferedAmount(this.toRegistration(result), userId);
   }
 
   async listParticipantsForPelada(peladaId: string): Promise<PeladaParticipant[]> {
@@ -419,6 +422,15 @@ export class RegistrationService {
       primaryPosition: row['primaryPosition'] ? String(row['primaryPosition']) : undefined,
       isAnonymous: !!row['isAnonymous'],
       gateTicketActive: !!row['gateTicketActive'],
+      teamSide: isTeamSide(row['teamSide']) ? row['teamSide'] : undefined,
+      age: row['age'] != null && row['age'] !== '' ? Number(row['age']) : null,
+      appAverageScore:
+        row['appAverageScore'] != null && row['appAverageScore'] !== ''
+          ? Number(row['appAverageScore'])
+          : null,
+      teamName: row['teamName'] ? String(row['teamName']) : undefined,
+      contractOfferedAmount:
+        row['contractOfferedAmount'] != null ? Number(row['contractOfferedAmount']) : undefined,
     };
   }
 
@@ -1051,6 +1063,12 @@ export class RegistrationService {
         throw new Error('Perfil de atleta obrigatorio para esta inscricao.');
       }
       registration.set('athlete', AthletePointer.createWithoutData(payload.athleteProfileId));
+      const eventType = targetEvent.get('type') as string;
+      if (eventType === 'team_match') {
+        throw new Error(
+          'Em confrontos, atletas entram por convocacao ou solicitacao ao presidente do time.'
+        );
+      }
     }
 
     this.applyRegistrationParticipantFields(registration, user, targetEvent, apelido);
@@ -1072,7 +1090,7 @@ export class RegistrationService {
     eventId: string,
     apelido: string,
     role: ProfileRole,
-    options?: { invited?: boolean }
+    options?: { invited?: boolean; teamSide?: TeamSide; offeredAmount?: number }
   ): Promise<EventRegistration> {
     const user = Parse.User.current();
     if (!user) throw new Error('Faca login para aceitar o convite.');
@@ -1116,8 +1134,13 @@ export class RegistrationService {
     if (options?.invited) {
       registration.set('invitedByContract', true);
     }
+    const offeredAmount = Math.max(0, Number(options?.offeredAmount ?? 0));
+    registration.set('contractOfferedAmount', offeredAmount);
     if (role === 'athlete') {
       await this.attachAthleteProfile(registration, user);
+    }
+    if (isTeamSide(options?.teamSide)) {
+      registration.set('teamSide', options.teamSide);
     }
     const avatarUrl = getUserAvatarUrl(user, this.parseFileService);
     if (avatarUrl) {
@@ -1198,9 +1221,17 @@ export class RegistrationService {
       return 'Solicitacao recusada pelo administrador da pelada';
     }
     if (registration.invitedByContract || registration.invitedAsReferee) {
-      return registration.isEffectivelyConfirmed
-        ? 'Confirmado (contratacao aceita). O pagamento pelo trabalho sera liberado apos o administrador confirmar sua presenca.'
-        : 'Aguardando confirmacao da contratacao';
+      if (!registration.isEffectivelyConfirmed) {
+        return 'Aguardando confirmacao da contratacao';
+      }
+      const offered = Number(registration.contractOfferedAmount ?? 0);
+      if (offered > 0) {
+        return (
+          'Confirmado (contratacao aceita). O pagamento pelo trabalho sera liberado ' +
+          'apos o administrador confirmar sua presenca.'
+        );
+      }
+      return 'Confirmado (convocacao aceita).';
     }
     if (participationFee <= 0) return 'Confirmado';
     if (registration.paymentExempt) return 'Confirmado (isento de pagamento)';
@@ -1263,9 +1294,47 @@ export class RegistrationService {
       isEffectivelyConfirmed,
       invitedByContract: !!obj.get('invitedByContract'),
       invitedAsReferee: !!obj.get('invitedAsReferee'),
+      contractOfferedAmount: obj.has('contractOfferedAmount')
+        ? Math.max(0, Number(obj.get('contractOfferedAmount') ?? 0))
+        : undefined,
       profilePresentationStatus,
       arrivalOrder,
       arrivedAt,
+      teamSide: isTeamSide(obj.get('teamSide')) ? obj.get('teamSide') : undefined,
+    };
+  }
+
+  async setTeamSide(registrationId: string, teamSide: TeamSide): Promise<EventRegistrationListItem> {
+    const row = await Parse.Cloud.run('setEventRegistrationTeamSide', {
+      registrationId,
+      teamSide,
+    });
+    this.notifyRegistrationsChanged();
+    return {
+      objectId: String(row['objectId'] || registrationId),
+      eventId: String(row['eventId'] || ''),
+      userId: String(row['userId'] || ''),
+      userName: String(row['userName'] || ''),
+      apelido: String(row['apelido'] || ''),
+      role: row['role'] as EventRegistrationListItem['role'],
+      committed: !!row['committed'],
+      membershipType: (row['membershipType'] as EventRegistrationListItem['membershipType']) || 'convidado',
+      attendance: (row['attendance'] as EventRegistrationListItem['attendance']) || 'pending',
+      paymentConfirmed: !!row['paymentConfirmed'],
+      paymentExempt: !!row['paymentExempt'],
+      isEffectivelyConfirmed: !!row['isEffectivelyConfirmed'],
+      invitedByContract: !!row['invitedByContract'],
+      invitedAsReferee: !!row['invitedAsReferee'],
+      profilePresentationStatus: row['profilePresentationStatus'] as
+        | EventRegistrationListItem['profilePresentationStatus']
+        | undefined,
+      arrivalOrder: row['arrivalOrder'] != null ? Number(row['arrivalOrder']) : undefined,
+      arrivedAt: row['arrivedAt'] ? new Date(String(row['arrivedAt'])) : undefined,
+      avatarUrl: row['avatarUrl'] ? String(row['avatarUrl']) : undefined,
+      primaryPosition: row['primaryPosition'] ? String(row['primaryPosition']) : undefined,
+      isAnonymous: !!row['isAnonymous'],
+      gateTicketActive: !!row['gateTicketActive'],
+      teamSide: isTeamSide(row['teamSide']) ? row['teamSide'] : undefined,
     };
   }
 
@@ -1362,12 +1431,49 @@ export class RegistrationService {
     };
   }
 
+  private async withResolvedContractOfferedAmount(
+    registration: EventRegistration,
+    userId: string
+  ): Promise<EventRegistration> {
+    if (!registration.invitedByContract && !registration.invitedAsReferee) {
+      return registration;
+    }
+    if (registration.contractOfferedAmount != null) {
+      return registration;
+    }
+    try {
+      const query = new Parse.Query('RefereeInvitation');
+      query.equalTo('event', EventPointer.createWithoutData(registration.eventId));
+      query.equalTo('invitedUser', Parse.User.createWithoutData(userId));
+      query.containedIn('status', ['accepted', 'pending']);
+      query.descending('createdAt');
+      const invitation = await query.first();
+      const amount = Math.max(0, Number(invitation?.get('offeredAmount') ?? 0));
+      return { ...registration, contractOfferedAmount: amount };
+    } catch {
+      return { ...registration, contractOfferedAmount: 0 };
+    }
+  }
+
   private toRegistrationListItem(obj: Parse.Object): EventRegistrationListItem {
     const user = obj.get('user') as Parse.User | undefined;
     const athlete = obj.get('athlete') as Parse.Object | undefined;
     const registrationAvatarUrl = (obj.get('avatarUrl') as string | undefined)?.trim();
     const avatarUrl =
       registrationAvatarUrl || getUserAvatarUrl(user, this.parseFileService) || undefined;
+    const birthDate = user?.get('birthDate') as Date | string | undefined;
+    let age: number | null = null;
+    if (birthDate) {
+      const date = birthDate instanceof Date ? birthDate : new Date(birthDate);
+      if (!Number.isNaN(date.getTime())) {
+        const today = new Date();
+        age = today.getFullYear() - date.getFullYear();
+        const monthDiff = today.getMonth() - date.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+          age -= 1;
+        }
+      }
+    }
 
     return {
       ...this.toRegistration(obj),
@@ -1383,6 +1489,7 @@ export class RegistrationService {
       avatarUrl: avatarUrl ?? undefined,
       primaryPosition: athlete?.get('primaryPosition') as string | undefined,
       isAnonymous: !!(obj.get('isAnonymous') as boolean | undefined),
+      age,
     };
   }
 
@@ -1433,6 +1540,12 @@ export class RegistrationService {
       avatarUrl: row.avatarUrl ? String(row.avatarUrl) : undefined,
       primaryPosition: row.primaryPosition ? String(row.primaryPosition) : undefined,
       isAnonymous: !!row.isAnonymous,
+      teamSide: isTeamSide(row.teamSide) ? row.teamSide : undefined,
+      age: row.age != null ? Number(row.age) : null,
+      appAverageScore: row.appAverageScore != null ? Number(row.appAverageScore) : null,
+      teamName: row.teamName ? String(row.teamName) : undefined,
+      contractOfferedAmount:
+        row.contractOfferedAmount != null ? Number(row.contractOfferedAmount) : undefined,
     };
   }
 

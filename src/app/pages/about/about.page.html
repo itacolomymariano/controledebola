@@ -4,6 +4,9 @@
       <ion-back-button defaultHref="/tabs/peladas"></ion-back-button>
     </ion-buttons>
     <ion-title>Sobre</ion-title>
+    <ion-buttons slot="end">
+      <app-help-balloon textKey="screen.help.about"></app-help-balloon>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -43,6 +46,9 @@
   <div class="about-section">
     <h2>Site</h2>
     <a [href]="siteUrl" target="_blank" rel="noopener noreferrer" class="about-link">{{ siteLabel }}</a>
+    <p class="about-guide">
+      <a [href]="guideUrl" target="_blank" rel="noopener noreferrer" class="about-link">Manual de uso</a>
+    </p>
   </div>
 
   <div class="about-section">
@@ -57,7 +63,30 @@
   </div>
 
   <div class="about-section">
+    <h2>Fale conosco</h2>
+    <ion-button expand="block" fill="outline" routerLink="/contact/feedback">
+      Criticas, sugestoes ou elogios
+    </ion-button>
+    <ion-button expand="block" fill="outline" class="ion-margin-top" routerLink="/contact/support">
+      Relatar um problema
+    </ion-button>
+  </div>
+
+  <div class="about-section">
     <h2>Redes sociais</h2>
-    <ion-note color="medium">Em breve</ion-note>
+    @for (link of socialLinks; track link.id) {
+      <ion-button
+        expand="block"
+        fill="outline"
+        class="ion-margin-bottom"
+        [href]="link.url"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <ion-icon [name]="link.icon" slot="start"></ion-icon>
+        {{ link.label }}
+      </ion-button>
+    }
+    <ion-note color="medium">Outras redes em breve</ion-note>
   </div>
 </ion-content>

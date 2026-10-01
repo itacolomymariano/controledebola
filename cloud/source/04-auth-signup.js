@@ -124,6 +124,12 @@ Parse.Cloud.define('registerUser', async (request) => {
     );
   }
 
+  const cpfInput = String(params.cpf || '').trim();
+  const normalizedCpf = normalizeCpfDigits(cpfInput);
+  if (!isValidCpf(normalizedCpf)) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe um CPF valido.');
+  }
+
   const normalizedPhone = phoneInput ? normalizePhoneForStorage(phoneInput) : '';
   const username = resolveUsernameFromContact(emailInput, normalizedPhone);
   if (!username) {
@@ -134,6 +140,7 @@ Parse.Cloud.define('registerUser', async (request) => {
     username,
     email: emailInput || undefined,
     phone: normalizedPhone || undefined,
+    cpf: normalizedCpf,
   });
 
   const user = new Parse.User();
@@ -142,6 +149,7 @@ Parse.Cloud.define('registerUser', async (request) => {
   user.set('name', name);
   user.set('apelido', apelido);
   user.set('address', address);
+  user.set('cpf', normalizedCpf);
 
   if (emailInput) {
     user.set('email', emailInput);
@@ -165,9 +173,39 @@ Parse.Cloud.define('registerUser', async (request) => {
 });
 
 Parse.Cloud.beforeSave(Parse.User, async (request) => {
+  if (!request.master) {
+    const locked = [
+      'passwordResetOtpHash',
+      'passwordResetExpiresAt',
+      'passwordResetRequestedAt',
+      'passwordResetFailCount',
+      'passwordResetHourStartedAt',
+      'passwordResetHourCount',
+      'contactMessageRequestedAt',
+      'contactMessageHourStartedAt',
+      'contactMessageHourCount',
+      'cpf',
+    ];
+    for (const key of locked) {
+      if (key === 'cpf' && request.object.isNew()) {
+        continue;
+      }
+      if (request.object.dirty(key)) {
+        request.object.revert(key);
+      }
+    }
+  }
+
   if (!request.object.isNew()) {
     return;
   }
+
+  const cpf = normalizeCpfDigits(request.object.get('cpf'));
+  if (!isValidCpf(cpf)) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe um CPF valido.');
+  }
+  request.object.set('cpf', cpf);
+  await assertContactAvailable({ cpf });
 
   await validateNewUserSignupAntiBot(request.object, request.ip);
 });

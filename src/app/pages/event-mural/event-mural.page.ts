@@ -169,13 +169,7 @@ export class EventMuralPage {
       this.shareContext = null;
       return;
     }
-    const event = await this.eventService.getById(this.eventId);
-    if (!event) {
-      this.shareContext = { scope: 'event' };
-      return;
-    }
-    const pelada = event.peladaId ? await this.peladaService.getById(event.peladaId) : null;
-    this.shareContext = this.muralShareService.contextFromEvent(event, pelada);
+    this.shareContext = await this.muralShareService.buildContextForEventId(this.eventId);
   }
 
   private async ensureParticipants(): Promise<void> {

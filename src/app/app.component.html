@@ -31,9 +31,13 @@
           <ion-icon name="share-social-outline" slot="start"></ion-icon>
           <ion-label>{{ 'menu.invite' | t }}</ion-label>
         </ion-item>
-        <ion-item button detail="false" (click)="navigateFromMenu('/tabs/peladas')">
+        <ion-item button detail="false" (click)="startWizardFromMenu()">
           <ion-icon name="help-circle-outline" slot="start"></ion-icon>
-          <ion-label>{{ 'menu.help' | t }}</ion-label>
+          <ion-label>{{ 'menu.wizard' | t }}</ion-label>
+        </ion-item>
+        <ion-item button detail="false" (click)="registerBiometricFromMenu()">
+          <ion-icon name="finger-print-outline" slot="start"></ion-icon>
+          <ion-label>{{ 'menu.biometric' | t }}</ion-label>
         </ion-item>
         <ion-item button detail="false" (click)="openGuideFromMenu()">
           <ion-icon name="book-outline" slot="start"></ion-icon>
@@ -42,6 +46,14 @@
         <ion-item button detail="false" (click)="navigateFromMenu('/about')">
           <ion-icon name="information-circle-outline" slot="start"></ion-icon>
           <ion-label>{{ 'menu.about' | t }}</ion-label>
+        </ion-item>
+        <ion-item button detail="false" (click)="navigateFromMenu('/contact/feedback')">
+          <ion-icon name="chatbubble-ellipses-outline" slot="start"></ion-icon>
+          <ion-label>{{ 'menu.feedback' | t }}</ion-label>
+        </ion-item>
+        <ion-item button detail="false" (click)="navigateFromMenu('/contact/support')">
+          <ion-icon name="bug-outline" slot="start"></ion-icon>
+          <ion-label>{{ 'menu.support' | t }}</ion-label>
         </ion-item>
         <ion-item class="app-menu-push-item" lines="none">
           <ion-icon name="notifications-outline" slot="start"></ion-icon>
@@ -53,9 +65,14 @@
             (ionChange)="onPushNotificationsToggle($event)"
           ></ion-toggle>
         </ion-item>
+        <ion-item button detail="false" color="danger" (click)="logoutFromMenu()">
+          <ion-icon name="log-out-outline" slot="start"></ion-icon>
+          <ion-label>{{ 'menu.logout' | t }}</ion-label>
+        </ion-item>
       </ion-list>
     </ion-content>
   </ion-menu>
 
   <ion-router-outlet id="main-content"></ion-router-outlet>
+  <app-wizard-tour></app-wizard-tour>
 </ion-app>

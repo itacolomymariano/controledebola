@@ -22,6 +22,8 @@ Publicar `cloud/main.js` no Back4App quando houver alteração em `cloud/source/
 | 5 | Caixa de entrada (convidado) | Convite visível; aceitar/recusar; voltar após aceitar |
 | 6 | Separação de times | Toque no atleta → barra de times; média de votos; ordem de chegada |
 | 7 | Portaria / PIX | Botões copiar PIX; ingresso QR se aplicável |
+| 8 | Tab Mural | Abas Geral / Peladas / Confrontos; pódio (craque, goleiro, goleador); acordeões Profissionais e Explorar; share com titulo da aba |
+| 9 | Voto mural evento | Torcedor e porteiro aparecem na votacao e entram no Top 10 da aba correspondente |
 
 ## Quando rodar
 

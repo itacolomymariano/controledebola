@@ -23,3 +23,54 @@
   font-size: 1rem;
   font-weight: 600;
 }
+
+.inbox-searchbar {
+  padding-inline: 0;
+  padding-top: 0;
+}
+
+.messages-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+
+  .section-title {
+    flex: 1;
+  }
+}
+
+.messages-list {
+  background: transparent;
+}
+
+.message-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Nao lida: negrito + ponto de destaque. */
+.message-unread {
+  .message-title,
+  .message-body {
+    font-weight: 700;
+  }
+}
+
+.message-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ion-color-primary);
+}
+
+.message-body {
+  white-space: normal;
+}
+
+.message-meta {
+  font-size: 0.8rem;
+  color: var(--ion-color-medium);
+}

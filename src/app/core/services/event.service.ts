@@ -10,7 +10,9 @@ import {
 import {
   computeReadOnlyAt,
   CreateEventPayload,
+  CreateTeamMatchPayload,
   EVENT_TYPE_LABELS,
+  TeamMatchListItem,
   EventLocationConflict,
   EventSearchFilters,
   EventType,
@@ -24,10 +26,40 @@ import {
   UpdateEventAdminPayload,
 } from '../models/event.model';
 import { getUserAvatarUrl } from '../utils/user-avatar.util';
+import { locationProximityScore } from '../utils/location-proximity.util';
 import { ParseFileService } from './parse-file.service';
 import { ParseService } from './parse.service';
 
 const EVENT_CLASS = 'Event';
+const TEAM_CLASS = 'AmateurTeam';
+
+export interface TeamMatchRescheduleProposal {
+  eventId: string;
+  eventName: string;
+  homeTeamName: string;
+  awayTeamName: string;
+  currentStartTime: Date | null;
+  proposedStartTime: Date | null;
+  proposedEndTime: Date | null;
+  reason: string;
+  requestedByUserId: string;
+  requestedAt: Date | null;
+  status: string;
+}
+
+function includeEventRelations(query: Parse.Query): void {
+  query.include('admin');
+  query.include('pelada');
+  query.include('homeTeam');
+  query.include('awayTeam');
+}
+
+function teamShieldUrlFromParse(team: Parse.Object | undefined): string | undefined {
+  if (!team) return undefined;
+  const shield = team.get('shieldImage') as Parse.File | undefined;
+  if (!shield?.url) return undefined;
+  return shield.url();
+}
 
 interface SortContext {
   userCity?: string;
@@ -38,6 +70,7 @@ interface SortContext {
 @Injectable({ providedIn: 'root' })
 export class EventService {
   private readonly eventsChanged$ = new Subject<void>();
+  private teamMatchRepairCheckedForUserId: string | null = null;
 
   readonly onEventsChanged = this.eventsChanged$.asObservable();
 
@@ -52,31 +85,15 @@ export class EventService {
     this.eventsChanged$.next();
   }
 
+  /** Todos os eventos da pelada (abertos, fechados e encerrados). A home usa listForFeed. */
   async listForPelada(
     peladaId: string,
     sortContext?: Partial<SortContext>
   ): Promise<PeladaEvent[]> {
-    const upcoming = await this.fetchEvents({ upcomingOnly: true, peladaId });
-    const participatedIds = sortContext?.participatedEventIds ?? new Set<string>();
-    const upcomingIds = new Set(upcoming.map((event) => event.objectId));
-
-    let pastParticipated: PeladaEvent[] = [];
-    if (participatedIds.size > 0) {
-      const pastQuery = new Parse.Query(EVENT_CLASS);
-      pastQuery.containedIn('objectId', Array.from(participatedIds));
-      pastQuery.equalTo('pelada', Parse.Object.extend('Pelada').createWithoutData(peladaId));
-      pastQuery.lessThan('endTime', new Date());
-      pastQuery.include('admin');
-      pastQuery.include('pelada');
-      pastQuery.descending('endTime');
-      pastQuery.limit(50);
-      const results = await pastQuery.find();
-      pastParticipated = results
-        .map((obj) => this.toPeladaEvent(obj))
-        .filter((event) => !upcomingIds.has(event.objectId));
-    }
-
-    return this.sortEvents([...upcoming, ...pastParticipated], sortContext);
+    const all = await this.fetchEvents({ upcomingOnly: false, peladaId });
+    // Confrontos nao devem listar dentro de pelada (mesmo se pointer residual existir).
+    const withoutTeamMatches = all.filter((event) => event.type !== 'team_match');
+    return this.sortEvents(withoutTeamMatches, sortContext);
   }
 
   async listForFeed(sortContext?: Partial<SortContext>): Promise<PeladaEvent[]> {
@@ -89,7 +106,7 @@ export class EventService {
       const pastQuery = new Parse.Query(EVENT_CLASS);
       pastQuery.containedIn('objectId', Array.from(participatedIds));
       pastQuery.lessThan('endTime', new Date());
-      pastQuery.include('admin');
+      includeEventRelations(pastQuery);
       pastQuery.descending('endTime');
       pastQuery.limit(50);
       const results = await pastQuery.find();
@@ -102,30 +119,138 @@ export class EventService {
   }
 
   async search(filters: EventSearchFilters): Promise<PeladaEvent[]> {
+    const queryText = filters.query?.trim() || '';
+    const cityFilter = filters.city?.trim() || '';
+    const userAddress = (Parse.User.current()?.get('address') as Address) || undefined;
+
+    // Confrontos: busca mais ampla (nome + times) via feed + proximidade.
+    if (filters.type === 'team_match') {
+      return this.searchTeamMatchesFromFeed(queryText, cityFilter, userAddress);
+    }
+
     const query = new Parse.Query(EVENT_CLASS);
-    query.include('admin');
+    includeEventRelations(query);
 
     if (filters.type) {
       query.equalTo('type', filters.type);
     }
 
-    if (filters.city?.trim()) {
-      query.matches('address.city', filters.city.trim(), 'i');
+    if (cityFilter) {
+      query.matches('address.city', cityFilter, 'i');
     }
 
-    if (filters.query?.trim()) {
-      query.matches('name', filters.query.trim(), 'i');
+    if (queryText) {
+      query.matches('name', queryText, 'i');
     }
 
     query.ascending('startTime');
     query.limit(50);
     const results = await query.find();
-    return results.map((obj) => this.toPeladaEvent(obj));
+    let events = results.map((obj) => this.toPeladaEvent(obj));
+
+    // Sem filtro de tipo: inclui confrontos cujo nome de time bate com a busca.
+    if (!filters.type && queryText) {
+      try {
+        const teamMatches = await this.searchTeamMatchesFromFeed(queryText, cityFilter, userAddress);
+        const seen = new Set(events.map((event) => event.objectId));
+        for (const match of teamMatches) {
+          if (!seen.has(match.objectId)) {
+            events.push(match);
+            seen.add(match.objectId);
+          }
+        }
+      } catch {
+        /* ignora merge */
+      }
+    }
+
+    return this.sortEventsByProximity(events, userAddress).slice(0, 50);
+  }
+
+  private async searchTeamMatchesFromFeed(
+    queryText: string,
+    cityFilter: string,
+    userAddress?: Address
+  ): Promise<PeladaEvent[]> {
+    const rows = await Parse.Cloud.run('listTeamMatchesForFeed');
+    if (!Array.isArray(rows)) return [];
+    let items = rows.map((row) => this.teamMatchRowToPeladaEvent(row as Record<string, unknown>));
+    if (queryText) {
+      const q = queryText.toLowerCase();
+      items = items.filter((event) => {
+        const hay = [
+          event.name,
+          event.homeTeamName,
+          event.awayTeamName,
+          event.address?.city,
+          event.address?.neighborhood,
+          event.locationComplement,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return hay.includes(q);
+      });
+    }
+    if (cityFilter) {
+      const city = cityFilter.toLowerCase();
+      items = items.filter((event) => event.address?.city?.toLowerCase().trim() === city);
+    }
+    return this.sortEventsByProximity(items, userAddress).slice(0, 50);
+  }
+
+  async listMyTeamMatches(): Promise<TeamMatchListItem[]> {
+    const rows = await Parse.Cloud.run('listMyTeamMatches');
+    return Array.isArray(rows) ? rows.map((row) => this.toTeamMatchListItem(row)) : [];
+  }
+
+  /** Feed publico de confrontos (todos os usuarios), ordenado por proximidade. */
+  async listTeamMatchesForFeed(): Promise<TeamMatchListItem[]> {
+    const userId = Parse.User.current()?.id || '';
+    if (userId && this.teamMatchRepairCheckedForUserId !== userId) {
+      try {
+        await Parse.Cloud.run('repairTeamMatchOwnership');
+      } catch {
+        /* reparo best-effort */
+      }
+      this.teamMatchRepairCheckedForUserId = userId;
+    }
+    const rows = await Parse.Cloud.run('listTeamMatchesForFeed');
+    const items = Array.isArray(rows) ? rows.map((row) => this.toTeamMatchListItem(row)) : [];
+    const userAddress = (Parse.User.current()?.get('address') as Address) || undefined;
+    const userCity = userAddress?.city?.toLowerCase().trim();
+    const now = Date.now();
+
+    return [...items]
+      .map((match) => ({
+        ...match,
+        nearby: !!userCity && match.address.city?.toLowerCase().trim() === userCity,
+      }))
+      .sort((a, b) => {
+        const aPast = a.endTime.getTime() < now;
+        const bPast = b.endTime.getTime() < now;
+        if (aPast !== bPast) return aPast ? 1 : -1;
+
+        const scoreDiff =
+          locationProximityScore(userAddress, b.address) -
+          locationProximityScore(userAddress, a.address);
+        if (scoreDiff !== 0) return scoreDiff;
+
+        if (aPast && bPast) {
+          return b.endTime.getTime() - a.endTime.getTime();
+        }
+        return a.startTime.getTime() - b.startTime.getTime();
+      });
+  }
+
+  async listTeamMatchInboxNotices(): Promise<TeamMatchListItem[]> {
+    const rows = await Parse.Cloud.run('listTeamMatchInboxNotices');
+    return Array.isArray(rows) ? rows.map((row) => this.toTeamMatchListItem(row)) : [];
   }
 
   async getById(eventId: string): Promise<PeladaEvent | null> {
     const query = new Parse.Query(EVENT_CLASS);
-    query.include('admin');
+    includeEventRelations(query);
     query.include('pelada');
     const result = await query.get(eventId);
     if (!result) return null;
@@ -179,7 +304,10 @@ export class EventService {
     );
   }
 
-  async create(payload: CreateEventPayload): Promise<PeladaEvent> {
+  async create(payload: CreateEventPayload): Promise<{
+    event: PeladaEvent;
+    push: { skipped?: string | null; audience?: number; devicesMatched?: number } | null;
+  }> {
     const user = Parse.User.current();
     if (!user) {
       throw new Error('Faca login para criar um evento.');
@@ -243,17 +371,356 @@ export class EventService {
     }
 
     if (payload.type === 'team_match') {
-      const homeTeamName = payload.homeTeamName?.trim();
-      const awayTeamName = payload.awayTeamName?.trim();
-      if (homeTeamName) event.set('homeTeamName', homeTeamName);
-      if (awayTeamName) event.set('awayTeamName', awayTeamName);
+      this.applyTeamMatchFields(event, payload);
     }
 
     const saved = await event.save();
-    await saved.fetchWithInclude('admin');
+    await saved.fetchWithInclude(['admin', 'homeTeam', 'awayTeam']);
     const created = this.toPeladaEvent(saved);
+    let push: { skipped?: string | null; audience?: number; devicesMatched?: number } | null = null;
+    try {
+      push = await Parse.Cloud.run('notifyNewPeladaEventCreated', { eventId: created.objectId });
+    } catch (error: unknown) {
+      console.warn('notifyNewPeladaEventCreated failed', error);
+    }
     this.notifyEventsChanged();
-    return created;
+    return { event: created, push };
+  }
+
+  async createTeamMatch(payload: CreateTeamMatchPayload): Promise<{
+    eventId: string;
+    returnEventId?: string;
+    invitedAthletes: number;
+    push: { audience?: number; devicesMatched?: number } | null;
+  }> {
+    const result = (await Parse.Cloud.run('createTeamMatch', {
+      name: payload.name,
+      homeTeamId: payload.homeTeamId,
+      awayTeamId: payload.awayTeamId,
+      challengeId: payload.challengeId,
+      challengeConditions: payload.challengeConditions?.trim() || '',
+      startTime: payload.startTime.toISOString(),
+      endTime: payload.endTime.toISOString(),
+      address: normalizeAddress(payload.address),
+      locationComplement: payload.locationComplement?.trim() || '',
+      returnLeg: !!payload.returnLeg,
+      returnStartTime: payload.returnStartTime?.toISOString(),
+      returnEndTime: payload.returnEndTime?.toISOString(),
+      returnAddress: payload.returnAddress ? normalizeAddress(payload.returnAddress) : undefined,
+      returnLocationComplement: payload.returnLocationComplement?.trim() || '',
+      athleteUserIds: payload.athleteUserIds || [],
+      athleteInvites: payload.athleteInvites || [],
+      offeredAmount: payload.offeredAmount ?? 0,
+      responseDeadline: payload.responseDeadline?.toISOString(),
+    })) as {
+      event?: { objectId?: string };
+      returnEvent?: { objectId?: string } | null;
+      invitedAthletes?: number;
+      push?: { audience?: number; devicesMatched?: number };
+    };
+    this.notifyEventsChanged();
+    return {
+      eventId: String(result?.event?.objectId || ''),
+      returnEventId: result?.returnEvent?.objectId ? String(result.returnEvent.objectId) : undefined,
+      invitedAthletes: Number(result?.invitedAthletes || 0),
+      push: result?.push || null,
+    };
+  }
+
+  canManageTeamMatchSchedule(event: PeladaEvent, myTeamIds: string[] = []): boolean {
+    if (event.type !== 'team_match' || event.isFinished) return false;
+    if (new Date() >= event.startTime) return false;
+    if (this.isCurrentUserAdmin(event)) return true;
+    const ids = myTeamIds.map((id) => id.trim()).filter(Boolean);
+    if (!ids.length) return false;
+    return (
+      (!!event.homeTeamId && ids.includes(event.homeTeamId)) ||
+      (!!event.awayTeamId && ids.includes(event.awayTeamId))
+    );
+  }
+
+  async cancelTeamMatch(eventId: string, reason: string): Promise<void> {
+    await Parse.Cloud.run('cancelTeamMatch', { eventId, reason: reason.trim() });
+    this.notifyEventsChanged();
+  }
+
+  async rescheduleTeamMatch(
+    eventId: string,
+    payload: { startTime: Date; endTime: Date; reason: string }
+  ): Promise<{ pending: boolean }> {
+    const result = (await Parse.Cloud.run('rescheduleTeamMatch', {
+      eventId,
+      startTime: payload.startTime.toISOString(),
+      endTime: payload.endTime.toISOString(),
+      reason: payload.reason.trim(),
+    })) as { pending?: boolean };
+    this.notifyEventsChanged();
+    return { pending: !!result?.pending };
+  }
+
+  async respondTeamMatchReschedule(
+    eventId: string,
+    decision: 'accepted' | 'declined',
+    declineReason = ''
+  ): Promise<void> {
+    await Parse.Cloud.run('respondTeamMatchReschedule', {
+      eventId,
+      decision,
+      declineReason: declineReason.trim(),
+    });
+    this.notifyEventsChanged();
+  }
+
+  async listPendingTeamMatchReschedules(): Promise<TeamMatchRescheduleProposal[]> {
+    const rows = await Parse.Cloud.run('listPendingTeamMatchReschedules');
+    return Array.isArray(rows) ? rows.map((row) => this.toRescheduleProposal(row)) : [];
+  }
+
+  async getTeamMatchPendingReschedule(
+    eventId: string
+  ): Promise<TeamMatchRescheduleProposal | null> {
+    const row = await Parse.Cloud.run('getTeamMatchPendingReschedule', { eventId });
+    return row ? this.toRescheduleProposal(row) : null;
+  }
+
+  private toRescheduleProposal(row: Record<string, unknown>): TeamMatchRescheduleProposal {
+    return {
+      eventId: String(row['eventId'] || ''),
+      eventName: String(row['eventName'] || ''),
+      homeTeamName: String(row['homeTeamName'] || ''),
+      awayTeamName: String(row['awayTeamName'] || ''),
+      currentStartTime: row['currentStartTime']
+        ? new Date(String(row['currentStartTime']))
+        : null,
+      proposedStartTime: row['proposedStartTime']
+        ? new Date(String(row['proposedStartTime']))
+        : null,
+      proposedEndTime: row['proposedEndTime']
+        ? new Date(String(row['proposedEndTime']))
+        : null,
+      reason: String(row['reason'] || ''),
+      requestedByUserId: String(row['requestedByUserId'] || ''),
+      requestedAt: row['requestedAt'] ? new Date(String(row['requestedAt'])) : null,
+      status: String(row['status'] || 'pending'),
+    };
+  }
+
+  async setTeamMatchAcceptsUninvitedAthletes(
+    eventId: string,
+    teamSide: 'home' | 'away',
+    accepts: boolean
+  ): Promise<{
+    homeAcceptsUninvitedAthletes: boolean;
+    awayAcceptsUninvitedAthletes: boolean;
+  }> {
+    const result = (await Parse.Cloud.run('setTeamMatchAcceptsUninvitedAthletes', {
+      eventId,
+      teamSide,
+      accepts,
+    })) as {
+      homeAcceptsUninvitedAthletes?: boolean;
+      awayAcceptsUninvitedAthletes?: boolean;
+    };
+    this.notifyEventsChanged();
+    return {
+      homeAcceptsUninvitedAthletes: !!result.homeAcceptsUninvitedAthletes,
+      awayAcceptsUninvitedAthletes: !!result.awayAcceptsUninvitedAthletes,
+    };
+  }
+
+  async getTeamMatchMatchdaySummary(eventId: string): Promise<{
+    homeTeamName: string;
+    awayTeamName: string;
+    homeScore: number;
+    awayScore: number;
+    scorers: Array<{
+      userId: string;
+      name: string;
+      goals: number;
+      position?: string;
+      age?: number | null;
+      avatarUrl?: string;
+      teamSide?: string | null;
+      teamName?: string;
+    }>;
+    homeTeamShieldUrl?: string;
+    awayTeamShieldUrl?: string;
+    referee: {
+      userId: string;
+      name: string;
+      age?: number | null;
+      avatarUrl?: string;
+      score?: number | null;
+    } | null;
+    challengeConditions?: string;
+    homeAcceptsUninvitedAthletes?: boolean;
+    awayAcceptsUninvitedAthletes?: boolean;
+    athleteConvocationBy?: 'president' | 'coach';
+  }> {
+    return (await Parse.Cloud.run('getTeamMatchMatchdaySummary', { eventId })) as {
+      homeTeamName: string;
+      awayTeamName: string;
+      homeScore: number;
+      awayScore: number;
+      scorers: Array<{
+        userId: string;
+        name: string;
+        goals: number;
+        position?: string;
+        age?: number | null;
+        avatarUrl?: string;
+        teamSide?: string | null;
+      }>;
+      referee: {
+        userId: string;
+        name: string;
+        age?: number | null;
+        avatarUrl?: string;
+        score?: number | null;
+      } | null;
+      challengeConditions?: string;
+      homeAcceptsUninvitedAthletes?: boolean;
+      awayAcceptsUninvitedAthletes?: boolean;
+      athleteConvocationBy?: 'president' | 'coach';
+    };
+  }
+
+  async getTeamMatchConvocationAccess(eventId: string): Promise<{
+    athleteConvocationBy: 'president' | 'coach';
+    manageSides: Array<'home' | 'away'>;
+    canManage: boolean;
+    canSetMode: boolean;
+  }> {
+    const result = (await Parse.Cloud.run('getTeamMatchConvocationAccess', { eventId })) as {
+      athleteConvocationBy?: string;
+      manageSides?: string[];
+      canManage?: boolean;
+      canSetMode?: boolean;
+    };
+    const manageSides = (result.manageSides || []).filter(
+      (side): side is 'home' | 'away' => side === 'home' || side === 'away'
+    );
+    return {
+      athleteConvocationBy: result.athleteConvocationBy === 'coach' ? 'coach' : 'president',
+      manageSides,
+      canManage: !!result.canManage,
+      canSetMode: !!result.canSetMode,
+    };
+  }
+
+  async getTeamMatchGoalkeeperAlerts(eventId: string): Promise<
+    Array<{ teamSide: 'home' | 'away'; teamName: string; unconfirmedCount: number; names: string[] }>
+  > {
+    const result = (await Parse.Cloud.run('getTeamMatchGoalkeeperAlerts', { eventId })) as {
+      alerts?: Array<{
+        teamSide?: string;
+        teamName?: string;
+        unconfirmedCount?: number;
+        names?: string[];
+      }>;
+    };
+    return (result.alerts || [])
+      .filter((row) => row.teamSide === 'home' || row.teamSide === 'away')
+      .map((row) => ({
+        teamSide: row.teamSide as 'home' | 'away',
+        teamName: String(row.teamName || (row.teamSide === 'away' ? 'Visitante' : 'Mandante')),
+        unconfirmedCount: Number(row.unconfirmedCount || 0),
+        names: Array.isArray(row.names) ? row.names.map(String) : [],
+      }))
+      .filter((row) => row.unconfirmedCount > 0);
+  }
+
+  async setTeamMatchAthleteConvocationBy(
+    eventId: string,
+    athleteConvocationBy: 'president' | 'coach'
+  ): Promise<'president' | 'coach'> {
+    const result = (await Parse.Cloud.run('setTeamMatchAthleteConvocationBy', {
+      eventId,
+      athleteConvocationBy,
+    })) as { athleteConvocationBy?: string };
+    this.notifyEventsChanged();
+    return result.athleteConvocationBy === 'coach' ? 'coach' : 'president';
+  }
+
+  private toTeamMatchListItem(row: Record<string, unknown>): TeamMatchListItem {
+    const address = (row['address'] as Address) || {
+      street: '',
+      neighborhood: '',
+      city: '',
+      state: '',
+      zipCode: '',
+    };
+    return {
+      objectId: String(row['objectId'] || ''),
+      name: String(row['name'] || ''),
+      startTime: row['startTime'] ? new Date(String(row['startTime'])) : new Date(),
+      endTime: row['endTime'] ? new Date(String(row['endTime'])) : new Date(),
+      homeTeamName: String(row['homeTeamName'] || 'Mandante'),
+      awayTeamName: String(row['awayTeamName'] || 'Visitante'),
+      homeTeamId: row['homeTeamId'] ? String(row['homeTeamId']) : undefined,
+      awayTeamId: row['awayTeamId'] ? String(row['awayTeamId']) : undefined,
+      homeTeamShieldUrl: row['homeTeamShieldUrl']
+        ? String(row['homeTeamShieldUrl'])
+        : undefined,
+      awayTeamShieldUrl: row['awayTeamShieldUrl']
+        ? String(row['awayTeamShieldUrl'])
+        : undefined,
+      locationComplement: String(row['locationComplement'] || ''),
+      address,
+      hasReturnLeg: !!row['hasReturnLeg'],
+      returnOfEventId: row['returnOfEventId'] ? String(row['returnOfEventId']) : undefined,
+      adminId: row['adminId'] ? String(row['adminId']) : undefined,
+      isFinished: !!row['isFinished'],
+    };
+  }
+
+  private teamMatchRowToPeladaEvent(row: Record<string, unknown>): PeladaEvent {
+    const item = this.toTeamMatchListItem(row);
+    const now = new Date();
+    return {
+      objectId: item.objectId,
+      name: item.name,
+      type: 'team_match',
+      startTime: item.startTime,
+      endTime: item.endTime,
+      address: item.address,
+      locationComplement: item.locationComplement,
+      adminId: item.adminId || '',
+      adminName: 'Administrador',
+      readOnlyAt: item.endTime,
+      isReadOnly: item.endTime.getTime() < now.getTime(),
+      registrationOpensAt: now,
+      registrationClosesAt: item.startTime,
+      useArrivalOrderForTeams: false,
+      participationFee: 0,
+      pixKey1: '',
+      pixKey2: '',
+      pixKey3: '',
+      homeTeamName: item.homeTeamName,
+      awayTeamName: item.awayTeamName,
+      homeTeamId: item.homeTeamId,
+      awayTeamId: item.awayTeamId,
+      isFinished: !!item.isFinished,
+    };
+  }
+
+  private sortEventsByProximity(events: PeladaEvent[], userAddress?: Address): PeladaEvent[] {
+    const now = Date.now();
+    return [...events].sort((a, b) => {
+      const aPast = a.endTime.getTime() < now;
+      const bPast = b.endTime.getTime() < now;
+      if (aPast !== bPast) return aPast ? 1 : -1;
+
+      const scoreDiff =
+        locationProximityScore(userAddress, b.address) -
+        locationProximityScore(userAddress, a.address);
+      if (scoreDiff !== 0) return scoreDiff;
+
+      if (aPast && bPast) {
+        return b.endTime.getTime() - a.endTime.getTime();
+      }
+      return a.startTime.getTime() - b.startTime.getTime();
+    });
   }
 
   async updateAdminSettings(eventId: string, payload: UpdateEventAdminPayload): Promise<PeladaEvent> {
@@ -263,7 +730,7 @@ export class EventService {
     }
 
     const query = new Parse.Query(EVENT_CLASS);
-    query.include('admin');
+    includeEventRelations(query);
     const eventObj = await query.get(eventId);
     const admin = eventObj.get('admin') as Parse.User | undefined;
 
@@ -377,7 +844,7 @@ export class EventService {
 
   private async fetchEvents(options: { upcomingOnly: boolean; peladaId?: string }): Promise<PeladaEvent[]> {
     const query = new Parse.Query(EVENT_CLASS);
-    query.include('admin');
+    includeEventRelations(query);
     query.include('pelada');
     if (options.peladaId) {
       query.equalTo('pelada', Parse.Object.extend('Pelada').createWithoutData(options.peladaId));
@@ -548,9 +1015,23 @@ export class EventService {
       pixKey1: (obj.get('pixKey1') as string) ?? '',
       pixKey2: (obj.get('pixKey2') as string) ?? '',
       pixKey3: (obj.get('pixKey3') as string) ?? '',
-      homeTeamName: (obj.get('homeTeamName') as string) || undefined,
-      awayTeamName: (obj.get('awayTeamName') as string) || undefined,
+      homeTeamName:
+        (obj.get('homeTeamName') as string) ||
+        ((obj.get('homeTeam') as Parse.Object | undefined)?.get('name') as string) ||
+        undefined,
+      awayTeamName:
+        (obj.get('awayTeamName') as string) ||
+        ((obj.get('awayTeam') as Parse.Object | undefined)?.get('name') as string) ||
+        undefined,
+      homeTeamId: (obj.get('homeTeam') as Parse.Object | undefined)?.id,
+      awayTeamId: (obj.get('awayTeam') as Parse.Object | undefined)?.id,
+      homeTeamShieldUrl: teamShieldUrlFromParse(obj.get('homeTeam') as Parse.Object | undefined),
+      awayTeamShieldUrl: teamShieldUrlFromParse(obj.get('awayTeam') as Parse.Object | undefined),
       isFinished: !!obj.get('isFinished'),
+      homeAcceptsUninvitedAthletes: !!obj.get('homeAcceptsUninvitedAthletes'),
+      awayAcceptsUninvitedAthletes: !!obj.get('awayAcceptsUninvitedAthletes'),
+      athleteConvocationBy:
+        obj.get('athleteConvocationBy') === 'coach' ? 'coach' : 'president',
       votingOpensAt: obj.get('votingOpensAt') as Date | undefined,
       votingClosesAt: obj.get('votingClosesAt') as Date | undefined,
       sumulaOpensAt: obj.get('sumulaOpensAt') as Date | undefined,
@@ -561,6 +1042,30 @@ export class EventService {
       maxAthletesPerEvent: Number(obj.get('maxAthletesPerEvent') ?? 0) || undefined,
       allowTeamSplitAfterEventEnd: pelada ? !!pelada.get('allowTeamSplitAfterEventEnd') : undefined,
     };
+  }
+
+  private applyTeamMatchFields(
+    event: Parse.Object,
+    payload: Pick<CreateEventPayload, 'homeTeamName' | 'awayTeamName' | 'homeTeamId' | 'awayTeamId'>
+  ): void {
+    const homeTeamId = payload.homeTeamId?.trim();
+    const awayTeamId = payload.awayTeamId?.trim();
+    if (homeTeamId && awayTeamId && homeTeamId === awayTeamId) {
+      throw new Error('Mandante e visitante precisam ser times diferentes.');
+    }
+
+    const homeTeamName = payload.homeTeamName?.trim();
+    const awayTeamName = payload.awayTeamName?.trim();
+    if (homeTeamName) event.set('homeTeamName', homeTeamName);
+    if (awayTeamName) event.set('awayTeamName', awayTeamName);
+
+    const TeamPointer = Parse.Object.extend(TEAM_CLASS);
+    if (homeTeamId) {
+      event.set('homeTeam', TeamPointer.createWithoutData(homeTeamId));
+    }
+    if (awayTeamId) {
+      event.set('awayTeam', TeamPointer.createWithoutData(awayTeamId));
+    }
   }
 
   private applyOptionalDateRange(

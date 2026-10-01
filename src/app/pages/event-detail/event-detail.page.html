@@ -18,8 +18,11 @@
   }
 
   @if (!loading && event && eventOverview) {
+    <ion-note class="scroll-hint ion-margin-bottom" color="medium">
+      Role a tela para ver todas as opcoes do evento.
+    </ion-note>
     <app-event-detail-overview [viewModel]="eventOverview">
-      @if (event.peladaName) {
+      @if (event.peladaName && event.type !== 'team_match') {
         <ion-button peladaLink fill="clear" size="small" (click)="openPelada()">
           Pelada: {{ event.peladaName }}
         </ion-button>
@@ -41,6 +44,197 @@
       }
     </app-event-detail-overview>
 
+    @if (event?.type === 'team_match' && matchdaySummary) {
+      <ion-card class="ion-margin-top">
+        <ion-card-header>
+          <ion-card-title>Placar do confronto</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <app-team-match-headline
+            [homeTeamName]="matchdaySummary.homeTeamName"
+            [awayTeamName]="matchdaySummary.awayTeamName"
+            [homeTeamShieldUrl]="matchdaySummary.homeTeamShieldUrl || event.homeTeamShieldUrl"
+            [awayTeamShieldUrl]="matchdaySummary.awayTeamShieldUrl || event.awayTeamShieldUrl"
+            [homeScore]="matchdaySummary.homeScore"
+            [awayScore]="matchdaySummary.awayScore"
+            [centered]="true"
+          ></app-team-match-headline>
+          @if (matchdaySummary.challengeConditions) {
+            <p><strong>Condicoes (somente presidentes):</strong> {{ matchdaySummary.challengeConditions }}</p>
+          }
+          @if (matchdaySummary.scorers.length) {
+            <h3>Gols</h3>
+            @for (scorer of matchdaySummary.scorers; track scorer.userId) {
+              <ion-item lines="none">
+                <app-user-avatar
+                  slot="start"
+                  [avatarUrl]="scorer.avatarUrl"
+                  [alt]="scorer.name"
+                  size="md"
+                ></app-user-avatar>
+                <ion-label>
+                  <h2>{{ scorer.name }} · {{ scorer.goals }} gol(s)</h2>
+                  <p>
+                    @if (scorer.teamName) {
+                      {{ scorer.teamName }}
+                      ·
+                    }
+                    {{ scorer.position || 'Posicao —' }}
+                    @if (scorer.age != null) {
+                      · {{ scorer.age }} anos
+                    }
+                  </p>
+                </ion-label>
+              </ion-item>
+            }
+          }
+          @if (matchdaySummary.referee) {
+            <h3>Arbitro</h3>
+            <ion-item lines="none">
+              <app-user-avatar
+                slot="start"
+                [avatarUrl]="matchdaySummary.referee.avatarUrl"
+                [alt]="matchdaySummary.referee.name"
+                size="md"
+              ></app-user-avatar>
+              <ion-label>
+                <h2>{{ matchdaySummary.referee.name }}</h2>
+                <p>
+                  @if (matchdaySummary.referee.score != null) {
+                    Nota {{ matchdaySummary.referee.score }}
+                  } @else {
+                    Sem nota no mural
+                  }
+                  @if (matchdaySummary.referee.age != null) {
+                    · {{ matchdaySummary.referee.age }} anos
+                  }
+                </p>
+              </ion-label>
+            </ion-item>
+          }
+        </ion-card-content>
+      </ion-card>
+    }
+
+    @if (pendingReschedule && event && !event.isFinished) {
+      <ion-card class="ion-margin-top" color="warning">
+        <ion-card-header>
+          <ion-card-title>Remarcacao pendente</ion-card-title>
+          <ion-card-subtitle>
+            <app-team-match-headline
+              [homeTeamName]="pendingReschedule.homeTeamName"
+              [awayTeamName]="pendingReschedule.awayTeamName"
+              [homeTeamShieldUrl]="event.homeTeamShieldUrl"
+              [awayTeamShieldUrl]="event.awayTeamShieldUrl"
+            ></app-team-match-headline>
+          </ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          @if (pendingReschedule.proposedStartTime) {
+            <p>
+              Nova data proposta:
+              {{ formatDate(pendingReschedule.proposedStartTime) }}
+            </p>
+          }
+          @if (pendingReschedule.reason) {
+            <p>Motivo: {{ pendingReschedule.reason }}</p>
+          }
+          @if (isPendingRescheduleRequester) {
+            <ion-note color="medium">Aguardando aceite do presidente adversario.</ion-note>
+          }
+          @if (canRespondPendingReschedule) {
+            <ion-button
+              expand="block"
+              [disabled]="teamMatchScheduleBusy"
+              (click)="acceptPendingReschedule()"
+            >
+              Aceitar remarcacao
+            </ion-button>
+            <ion-button
+              expand="block"
+              fill="outline"
+              color="danger"
+              class="ion-margin-top"
+              [disabled]="teamMatchScheduleBusy"
+              (click)="declinePendingReschedule()"
+            >
+              Recusar
+            </ion-button>
+          }
+        </ion-card-content>
+      </ion-card>
+    }
+
+    @if ((canManageTeamMatchSchedule || canToggleHomeUninvited || canToggleAwayUninvited) && event && !event.isFinished) {
+      <ion-card class="ion-margin-top">
+        <ion-card-header>
+          <ion-card-title>Agenda do confronto</ion-card-title>
+          <ion-card-subtitle>
+            Remarcar exige aceite do outro presidente; cancelar avisa o elenco com motivo
+          </ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          @if (canToggleHomeUninvited) {
+            <ion-item lines="none">
+              <ion-toggle
+                [checked]="!!event.homeAcceptsUninvitedAthletes"
+                [disabled]="teamMatchUninvitedBusy"
+                (ionChange)="toggleTeamAcceptsUninvited('home', $any($event.detail).checked)"
+              >
+                Aceita atletas nao convocados? ({{ event.homeTeamName || 'Mandante' }})
+              </ion-toggle>
+            </ion-item>
+          }
+          @if (canToggleAwayUninvited) {
+            <ion-item lines="none">
+              <ion-toggle
+                [checked]="!!event.awayAcceptsUninvitedAthletes"
+                [disabled]="teamMatchUninvitedBusy"
+                (ionChange)="toggleTeamAcceptsUninvited('away', $any($event.detail).checked)"
+              >
+                Aceita atletas nao convocados? ({{ event.awayTeamName || 'Visitante' }})
+              </ion-toggle>
+            </ion-item>
+          }
+          @if (canManageTeamMatchSchedule) {
+            <ion-button
+              expand="block"
+              fill="outline"
+              color="warning"
+              class="ion-margin-top"
+              [disabled]="teamMatchScheduleBusy || !!pendingReschedule"
+              (click)="promptRescheduleTeamMatch()"
+            >
+              Remarcar confronto
+            </ion-button>
+            <ion-button
+              expand="block"
+              fill="outline"
+              color="danger"
+              class="ion-margin-top"
+              [disabled]="teamMatchScheduleBusy"
+              (click)="promptCancelTeamMatch()"
+            >
+              Cancelar confronto
+            </ion-button>
+          }
+        </ion-card-content>
+      </ion-card>
+    }
+
+    @if (isAdmin && event) {
+      <ion-button
+        expand="block"
+        fill="outline"
+        class="ion-margin-top"
+        [disabled]="sendingParticipantNotification"
+        (click)="promptNotifyConfirmedParticipants()"
+      >
+        <ion-icon slot="start" name="notifications-outline"></ion-icon>
+        Notificar participantes
+      </ion-button>
+    }
+
     @if (isAdmin && goalkeeperShortageWarning) {
       <ion-card color="warning" class="ion-margin-top">
         <ion-card-header>
@@ -54,6 +248,20 @@
           <ion-button fill="outline" size="small" (click)="promptAddAnonymousParticipant()">
             Participante anonimo
           </ion-button>
+        </ion-card-content>
+      </ion-card>
+    }
+
+    @if (teamMatchGoalkeeperWarning) {
+      <ion-card color="warning" class="ion-margin-top">
+        <ion-card-header>
+          <ion-card-title>Goleiro sem confirmacao</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <p>{{ teamMatchGoalkeeperWarning }}</p>
+          <p>
+            Confirme o pagamento/inscricao do goleiro convocado ou ajuste a convocacao do time.
+          </p>
         </ion-card-content>
       </ion-card>
     }
@@ -107,43 +315,22 @@
           [lockParticipationFee]="lockParticipationFee"
           (back)="closeAdminSettingsPanel()"
           (save)="saveAdminSettings()"
+          (notifyParticipants)="promptNotifyConfirmedParticipants()"
         ></app-event-detail-admin-settings-panel>
       }
 
-      @if (showHiringPanel) {
-          <ion-card id="hiring-panel-anchor" class="ion-margin-top">
-            <ion-card-header>
-              <div class="event-panel-header">
-                <div>
-                  <ion-card-title>Negociacao/Contratacoes</ion-card-title>
-                  <ion-card-subtitle>
-                    Convide atletas, arbitros, profissionais e torcedores para o evento
-                  </ion-card-subtitle>
-                </div>
-                <ion-button fill="clear" size="small" class="event-panel-back" (click)="closeHiringPanel()">
-                  <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
-                  Voltar
-                </ion-button>
-              </div>
-            </ion-card-header>
-            <ion-card-content>
-              <ion-accordion-group
-                [value]="activeHiringAccordionRole"
-                (ionChange)="onHiringAccordionChange($event)"
-              >
-                @for (role of hireableRoles; track role) {
-                  <app-event-role-hiring-panel
-                    [role]="role"
-                    [event]="event"
-                    [seedInvitationCount]="hiringInvitationCounts[role] ?? 0"
-                    (invitationsChanged)="onHiringInvitationCountsChanged()"
-                    (panelInteraction)="pinHiringAccordion($event)"
-                  ></app-event-role-hiring-panel>
-                }
-              </ion-accordion-group>
-            </ion-card-content>
-          </ion-card>
-        }
+    }
+
+    @if (showConvocationPanel && event && convocationAccess) {
+      <app-event-detail-convocation-panel
+        [event]="event"
+        [manageSides]="convocationAccess.manageSides"
+        [canSetMode]="convocationAccess.canSetMode"
+        [athleteConvocationBy]="convocationAccess.athleteConvocationBy"
+        (back)="closeConvocationPanel()"
+        (modeChanged)="onConvocationModeChanged($event)"
+        (rosterChanged)="onConvocationRosterChanged()"
+      ></app-event-detail-convocation-panel>
     }
 
     @if (!isAdmin) {
@@ -188,6 +375,42 @@
       }
     }
 
+    @if ((isAdmin || canManageTeamMatchHiring) && showHiringPanel && event) {
+      <ion-card id="hiring-panel-anchor" class="ion-margin-top">
+        <ion-card-header>
+          <div class="event-panel-header">
+            <div>
+              <ion-card-title>Negociacao/Contratacoes</ion-card-title>
+              <ion-card-subtitle>
+                Convide atletas, arbitros, profissionais e torcedores para o evento
+              </ion-card-subtitle>
+            </div>
+            <ion-button fill="clear" size="small" class="event-panel-back" (click)="closeHiringPanel()">
+              <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
+              Voltar
+            </ion-button>
+          </div>
+        </ion-card-header>
+        <ion-card-content>
+          <ion-accordion-group
+            [value]="activeHiringAccordionRole"
+            (ionChange)="onHiringAccordionChange($event)"
+          >
+            @for (role of hireableRolesForPanel; track role) {
+              <app-event-role-hiring-panel
+                [role]="role"
+                [event]="event"
+                [seedInvitationCount]="hiringInvitationCounts[role] ?? 0"
+                [allowedTeamSides]="hiringAllowedTeamSides"
+                (invitationsChanged)="onHiringInvitationCountsChanged()"
+                (panelInteraction)="pinHiringAccordion($event)"
+              ></app-event-role-hiring-panel>
+            }
+          </ion-accordion-group>
+        </ion-card-content>
+      </ion-card>
+    }
+
     @if (showParticipantsPanel && (isAdmin || canShowUserParticipantsButton)) {
       <app-event-detail-participants-panel
         [mode]="isAdmin ? 'admin' : 'user'"
@@ -205,6 +428,7 @@
         [issuingTicketId]="issuingTicketId"
         [cancellingTicketId]="cancellingTicketId"
         [resolvingProfileId]="resolvingProfileId"
+        [updatingTeamSideId]="updatingTeamSideId"
         [activeSocioUserIds]="activeSocioUserIds"
         (back)="closeParticipantsPanel()"
         (participantSearchChange)="onParticipantSearchChange($event)"
@@ -217,6 +441,7 @@
         (viewProfilePresentation)="onViewProfilePresentation($event)"
         (approveProfilePresentation)="onApproveProfilePresentation($event)"
         (rejectProfilePresentation)="onRejectProfilePresentation($event)"
+        (teamSideChange)="onParticipantTeamSideChange($event.participant, $event.teamSide)"
       ></app-event-detail-participants-panel>
     }
 
@@ -230,6 +455,9 @@
         [voteScores]="voteScores"
         [voteScoreOptions]="voteScoreOptions"
         [savingVotes]="savingVotes"
+        [isTeamMatch]="event.type === 'team_match'"
+        [homeTeamName]="event.homeTeamName"
+        [awayTeamName]="event.awayTeamName"
         (back)="closeVotingPanel()"
         (submitVotes)="submitEventVotes()"
       ></app-event-detail-voting-panel>
@@ -336,7 +564,7 @@
   </ng-template>
 </ion-modal>
 
-@if (!loading && event && !registration && !event.isReadOnly && registrationsOpen && !event.isFinished) {
+@if (showStandardParticipateCta) {
   <ion-footer class="participate-footer">
     <ion-toolbar>
       <ion-button
@@ -345,6 +573,21 @@
         (click)="participate()"
       >
         Participar
+      </ion-button>
+    </ion-toolbar>
+  </ion-footer>
+}
+
+@if (showTeamMatchParticipateCta) {
+  <ion-footer class="participate-footer">
+    <ion-toolbar>
+      <ion-button
+        expand="block"
+        class="participate-footer-button"
+        [disabled]="teamMatchJoinBusy || myPendingJoinRequest"
+        (click)="participate()"
+      >
+        {{ myPendingJoinRequest ? 'Solicitacao pendente' : 'Solicitar participacao' }}
       </ion-button>
     </ion-toolbar>
   </ion-footer>

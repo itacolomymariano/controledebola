@@ -205,20 +205,49 @@ function formatEventPushDate(startTime) {
   }).format(date);
 }
 
+async function collectNewPeladaEventAudience(peladaId, excludeEventId) {
+  if (typeof collectPeladaParticipantUserIds === 'function') {
+    return collectPeladaParticipantUserIds(peladaId);
+  }
+  return collectPeladaPreviousEventParticipantUserIds(peladaId, excludeEventId);
+}
+
 async function notifyNewPeladaEvent(event) {
+  const empty = {
+    ok: false,
+    skipped: 'missing_event',
+    targetedUsers: 0,
+    devicesMatched: 0,
+    audience: 0,
+  };
+  if (!event || !event.id) return empty;
+
+  if (event.get('pushNewEventSentAt')) {
+    return {
+      ok: true,
+      skipped: 'already_sent',
+      targetedUsers: 0,
+      devicesMatched: 0,
+      audience: 0,
+    };
+  }
+
   const peladaPtr = event.get('pelada');
-  if (!peladaPtr || !peladaPtr.id) return;
+  if (!peladaPtr || !peladaPtr.id) {
+    return { ...empty, skipped: 'missing_pelada' };
+  }
 
   const peladaId = peladaPtr.id;
   const eventId = event.id;
-  const participantIds = await collectPeladaPreviousEventParticipantUserIds(peladaId, eventId);
-  if (!participantIds.size) return;
-
+  const participantIds = await collectNewPeladaEventAudience(peladaId, eventId);
   const admin = event.get('admin');
   if (admin && admin.id) {
     participantIds.delete(String(admin.id));
   }
-  if (!participantIds.size) return;
+  if (!participantIds.size) {
+    console.info('notifyNewPeladaEvent empty audience', { eventId, peladaId });
+    return { ok: true, skipped: 'empty_audience', targetedUsers: 0, devicesMatched: 0, audience: 0 };
+  }
 
   let peladaName = 'pelada';
   try {
@@ -234,7 +263,7 @@ async function notifyNewPeladaEvent(event) {
     ? `Novo evento "${eventName}" em ${peladaName} em ${dateLabel}.`
     : `Novo evento "${eventName}" em ${peladaName}.`;
 
-  await sendPushToUsers(
+  const pushResult = await sendPushToUsers(
     participantIds,
     {
       title: 'Novo evento na pelada',
@@ -247,6 +276,61 @@ async function notifyNewPeladaEvent(event) {
     },
     { throwOnError: false }
   );
+
+  event.set('pushNewEventSentAt', new Date());
+  try {
+    await event.save(null, { useMasterKey: true });
+  } catch (error) {
+    console.error('notifyNewPeladaEvent flag save failed', error);
+  }
+
+  console.info('notifyNewPeladaEvent sent', {
+    eventId,
+    peladaId,
+    audience: participantIds.size,
+    targetedUsers: pushResult.targetedUsers,
+    devicesMatched: pushResult.devicesMatched,
+  });
+
+  return {
+    ok: true,
+    skipped: null,
+    audience: participantIds.size,
+    targetedUsers: pushResult.targetedUsers || 0,
+    devicesMatched: pushResult.devicesMatched || 0,
+    pushBatchesSent: pushResult.pushBatchesSent || 0,
+  };
+}
+
+async function notifyTeamMatchStakeholders(event, userIds, excludeUserId) {
+  const targets = new Set();
+  for (const id of userIds || []) {
+    const value = String(id || '').trim();
+    if (value && value !== excludeUserId) targets.add(value);
+  }
+  if (!targets.size) {
+    return { audience: 0, devicesMatched: 0 };
+  }
+  const home = event.get('homeTeamName') || 'Mandante';
+  const away = event.get('awayTeamName') || 'Visitante';
+  const eventName = event.get('name') || `${home} x ${away}`;
+  const dateLabel = formatEventPushDate(event.get('startTime'));
+  const alert = dateLabel
+    ? `Confronto ${eventName} marcado para ${dateLabel}.`
+    : `Confronto ${eventName} marcado.`;
+  const pushResult = await sendPushToUsers(
+    targets,
+    {
+      title: 'Novo confronto',
+      alert,
+      data: { type: 'team_match_created', eventId: event.id },
+    },
+    { throwOnError: false }
+  );
+  return {
+    audience: targets.size,
+    devicesMatched: pushResult.devicesMatched || 0,
+  };
 }
 
 async function notifyProfilePresentationDecision(registration, event, peladaId, decision) {
@@ -285,9 +369,14 @@ async function notifyProfilePresentationDecision(registration, event, peladaId, 
 }
 
 Parse.Cloud.afterSave('Event', async (request) => {
-  if (!request.object.isNew()) return;
+  const event = request.object;
+  if (!event || event.get('pushNewEventSentAt')) return;
+  const createdAt = event.createdAt instanceof Date ? event.createdAt : new Date(event.createdAt || 0);
+  if (Number.isNaN(createdAt.getTime())) return;
+  // Back4App pode mandar original.id mesmo no create — dispara se o evento e recente.
+  if (Date.now() - createdAt.getTime() > 5 * 60 * 1000) return;
   try {
-    await notifyNewPeladaEvent(request.object);
+    await notifyNewPeladaEvent(event);
   } catch (error) {
     console.error('notifyNewPeladaEvent failed', error);
   }
@@ -391,8 +480,18 @@ async function notifyEventScheduleOrCancelChange(event, original) {
   // Ignora saves auxiliares (ex.: limpar pushReminder2hSentAt) sem mudanca de agenda.
   if (!finishChanged && !startChanged) return;
 
-  const confirmedIds = await collectConfirmedParticipantUserIdsForEvent(event);
-  if (!confirmedIds.length) {
+  let audienceIds = [];
+  if (event.get('type') === 'team_match' && typeof collectTeamMatchNotifyUserIds === 'function') {
+    try {
+      audienceIds = await collectTeamMatchNotifyUserIds(event);
+    } catch (error) {
+      console.error('collectTeamMatchNotifyUserIds (schedule change) failed', error);
+    }
+  }
+  if (!audienceIds.length) {
+    audienceIds = await collectConfirmedParticipantUserIdsForEvent(event);
+  }
+  if (!audienceIds.length) {
     if (startChanged && event.get('pushReminder2hSentAt')) {
       event.unset('pushReminder2hSentAt');
       await event.save(null, { useMasterKey: true });
@@ -404,14 +503,19 @@ async function notifyEventScheduleOrCancelChange(event, original) {
   const eventId = event.id;
   const peladaPtr = event.get('pelada');
   const peladaId = peladaPtr && peladaPtr.id ? peladaPtr.id : '';
+  const reasonRaw = String(event.get('lastScheduleChangeReason') || '').trim();
+  const reasonSuffix = reasonRaw ? ` Motivo: ${reasonRaw.slice(0, 220)}` : '';
+  const isTeamMatch = event.get('type') === 'team_match';
+  const cancelTitle = isTeamMatch ? 'Confronto cancelado' : 'Evento cancelado';
+  const rescheduleTitle = isTeamMatch ? 'Confronto remarcado' : 'Evento remarcado';
 
   // Cancelamento antecipado: marcado como encerrado antes do horario de inicio.
   if (finishChanged && newStartMs && newStartMs > now) {
     await sendPushToUsers(
-      confirmedIds,
+      audienceIds,
       {
-        title: 'Evento cancelado',
-        alert: `O evento "${eventName}" foi cancelado.`,
+        title: cancelTitle,
+        alert: `O evento "${eventName}" foi cancelado.${reasonSuffix}`,
         data: {
           type: 'event_cancelled',
           eventId,
@@ -420,19 +524,27 @@ async function notifyEventScheduleOrCancelChange(event, original) {
       },
       { throwOnError: false }
     );
+    if (reasonRaw) {
+      event.unset('lastScheduleChangeReason');
+      try {
+        await event.save(null, { useMasterKey: true });
+      } catch (error) {
+        console.error('clear lastScheduleChangeReason failed', error);
+      }
+    }
     return;
   }
 
   if (startChanged) {
     const dateLabel = formatEventPushDate(newStart);
     const alert = dateLabel
-      ? `O evento "${eventName}" foi remarcado para ${dateLabel}.`
-      : `O evento "${eventName}" teve o horario alterado.`;
+      ? `O evento "${eventName}" foi remarcado para ${dateLabel}.${reasonSuffix}`
+      : `O evento "${eventName}" teve o horario alterado.${reasonSuffix}`;
 
     await sendPushToUsers(
-      confirmedIds,
+      audienceIds,
       {
-        title: 'Evento remarcado',
+        title: rescheduleTitle,
         alert,
         data: {
           type: 'event_rescheduled',
@@ -443,6 +555,15 @@ async function notifyEventScheduleOrCancelChange(event, original) {
       { throwOnError: false }
     );
 
+    if (reasonRaw) {
+      event.unset('lastScheduleChangeReason');
+      try {
+        await event.save(null, { useMasterKey: true });
+      } catch (error) {
+        console.error('clear lastScheduleChangeReason failed', error);
+      }
+    }
+
     // Permite novo lembrete 2h apos remarcacao.
     if (event.get('pushReminder2hSentAt')) {
       event.unset('pushReminder2hSentAt');
@@ -452,7 +573,7 @@ async function notifyEventScheduleOrCancelChange(event, original) {
 }
 
 Parse.Cloud.afterSave('Event', async (request) => {
-  if (request.object.isNew()) return;
+  if (!(request.original && request.original.id)) return;
   try {
     await notifyEventScheduleOrCancelChange(request.object, request.original);
   } catch (error) {
@@ -493,17 +614,24 @@ Parse.Cloud.afterSave('RefereeInvitation', async (request) => {
     const roleLabel = hiringRoleLabel(invitation.get('role'));
 
     let eventName = 'evento';
+    let eventStartTime = null;
     if (eventId) {
       try {
         const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
         eventName = event.get('name') || eventName;
+        eventStartTime = event.get('startTime') || null;
       } catch {
         // mantem padrao
       }
     }
+    const eventDateLabel = eventStartTime ? formatEventPushDate(eventStartTime) : '';
 
     // Novo convite pendente → profissional.
     if (!original) {
+      const hiringApproval = invitation.get('refereeHiringApprovalStatus');
+      if (hiringApproval === 'pending') {
+        return;
+      }
       if (status === 'pending' && invitedUser && invitedUser.id) {
         await sendPushToUser(invitedUser.id, {
           title: 'Novo convite de contratacao',
@@ -515,6 +643,23 @@ Parse.Cloud.afterSave('RefereeInvitation', async (request) => {
             invitationId: invitation.id,
           },
         });
+        if (typeof createAppMessage === 'function') {
+          const offeredAmount = Number(invitation.get('offeredAmount') || 0);
+          await createAppMessage({
+            recipientId: invitedUser.id,
+            senderId: invitedBy && invitedBy.id ? invitedBy.id : '',
+            kind: 'hiring_invite',
+            title: `Convite de ${roleLabel}`,
+            body:
+              `Voce foi convidado como ${roleLabel} para "${eventName}"` +
+              (eventDateLabel ? ` (${eventDateLabel}).` : '.') +
+              (offeredAmount > 0 ? ` Valor oferecido: R$ ${offeredAmount.toFixed(2)}.` : '') +
+              ' Aceite ou recuse na Entrada.',
+            relatedClass: 'RefereeInvitation',
+            relatedId: invitation.id,
+            actionRoute: '/inbox',
+          });
+        }
       }
       return;
     }
@@ -541,6 +686,28 @@ Parse.Cloud.afterSave('RefereeInvitation', async (request) => {
         decision: status,
       },
     });
+
+    // Recusa do presidente adversario em confronto ja gera mensagem propria
+    // em respondTeamMatchRefereeHiringApproval — nao duplicar aqui.
+    const rejectedByOpponent =
+      String(invitation.get('refereeHiringApprovalStatus') || '') === 'rejected';
+    if (typeof createAppMessage === 'function' && !rejectedByOpponent) {
+      await createAppMessage({
+        recipientId: invitedBy.id,
+        senderId: invitedUser && invitedUser.id ? invitedUser.id : '',
+        kind: 'hiring_response',
+        title:
+          status === 'accepted'
+            ? `Contratacao confirmada: ${inviteeName}`
+            : `Convite recusado por ${inviteeName}`,
+        body:
+          `${inviteeName} ${decisionLabel} o convite de ${roleLabel} em "${eventName}"` +
+          (eventDateLabel ? ` (${eventDateLabel}).` : '.'),
+        relatedClass: 'RefereeInvitation',
+        relatedId: invitation.id,
+        actionRoute: eventId ? `/event/${eventId}` : '/inbox',
+      });
+    }
   } catch (error) {
     console.error('RefereeInvitation push failed', error);
   }
@@ -1089,6 +1256,75 @@ Parse.Cloud.define('diagnoseEventPushTargets', async (request) => {
     confirmedUsers: confirmedUserIds.length,
     devicesMatched: installations.length,
     focus,
+  };
+});
+
+/** Disparo explicito apos criar evento (nao depende so do afterSave). */
+Parse.Cloud.define('notifyNewPeladaEventCreated', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+
+  const eventId = String(request.params.eventId || '').trim();
+  if (!eventId) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'eventId obrigatorio.');
+  }
+
+  const event = await new Parse.Query('Event').include('pelada').get(eventId, { useMasterKey: true });
+  await assertCanNotifyEventParticipants(user, event);
+  const result = await notifyNewPeladaEvent(event);
+  return { ok: true, eventId, ...result };
+});
+
+/** Diagnostico: o e-mail entra no publico de "novo evento" e tem Installation? */
+Parse.Cloud.define('diagnoseNewPeladaEventPush', async (request) => {
+  if (!request.user && !request.master) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login ou chame com Master Key.');
+  }
+
+  const eventId = String(request.params.eventId || '').trim();
+  const peladaIdParam = String(request.params.peladaId || '').trim();
+  const email = String(request.params.email || '').trim().toLowerCase();
+  if (!email) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'email obrigatorio.');
+  }
+  if (!eventId && !peladaIdParam) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'Informe eventId ou peladaId.');
+  }
+
+  let event = null;
+  let peladaId = peladaIdParam;
+  if (eventId) {
+    event = await new Parse.Query('Event').include('pelada').get(eventId, { useMasterKey: true });
+    const peladaPtr = event.get('pelada');
+    peladaId = (peladaPtr && peladaPtr.id) || peladaId;
+  }
+
+  const audience = peladaId ? await collectNewPeladaEventAudience(peladaId, eventId) : new Set();
+  const adminId = event && event.get('admin') && event.get('admin').id
+    ? String(event.get('admin').id)
+    : '';
+  if (adminId) audience.delete(adminId);
+
+  const focus = await buildPushFocusReport(email, [...audience]);
+  const foundUser = focus.found
+    ? await findUserByEmailOrPhone(email, '')
+    : null;
+  const pushEnabled = foundUser ? foundUser.get('pushNotificationsEnabled') !== false : null;
+
+  return {
+    ok: true,
+    eventId: eventId || null,
+    peladaId: peladaId || null,
+    audience: audience.size,
+    alreadySent: !!(event && event.get('pushNewEventSentAt')),
+    focus: {
+      ...focus,
+      inAudience: !!(focus.userId && audience.has(String(focus.userId))),
+      isEventAdmin: !!(focus.userId && adminId && focus.userId === adminId),
+      pushEnabled,
+    },
   };
 });
 

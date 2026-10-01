@@ -12,7 +12,9 @@ export type MuralTargetRole =
   | 'physical_trainer'
   | 'masseur'
   | 'kitman'
-  | 'gandula';
+  | 'gandula'
+  | 'fan'
+  | 'gatekeeper';
 
 export const MURAL_TARGET_ROLES: MuralTargetRole[] = [
   'athlete',
@@ -27,6 +29,8 @@ export const MURAL_TARGET_ROLES: MuralTargetRole[] = [
   'masseur',
   'kitman',
   'gandula',
+  'fan',
+  'gatekeeper',
 ];
 
 export const MURAL_TARGET_ROLE_LABELS: Record<MuralTargetRole, string> = {
@@ -42,6 +46,8 @@ export const MURAL_TARGET_ROLE_LABELS: Record<MuralTargetRole, string> = {
   masseur: 'Massagista',
   kitman: 'Ropeiro',
   gandula: 'Gandula',
+  fan: 'Torcedor',
+  gatekeeper: 'Porteiro',
 };
 
 export interface EventPerformance {

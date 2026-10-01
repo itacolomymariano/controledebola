@@ -118,6 +118,10 @@ export class FanPredictionService {
         ? String(entry['secondaryPosition'])
         : undefined,
       thirdPosition: entry['thirdPosition'] ? String(entry['thirdPosition']) : undefined,
+      teamSide:
+        entry['teamSide'] === 'home' || entry['teamSide'] === 'away'
+          ? entry['teamSide']
+          : undefined,
     };
   }
 
@@ -156,6 +160,10 @@ export class FanPredictionService {
         primaryPosition: athleteProfile?.get('primaryPosition') as string | undefined,
         secondaryPosition: athleteProfile?.get('secondaryPosition') as string | undefined,
         thirdPosition: athleteProfile?.get('thirdPosition') as string | undefined,
+        teamSide:
+          row.get('teamSide') === 'home' || row.get('teamSide') === 'away'
+            ? row.get('teamSide')
+            : undefined,
       });
     }
 
@@ -166,6 +174,11 @@ export class FanPredictionService {
     home: EventAthleteOption[];
     away: EventAthleteOption[];
   } {
+    const home = athletes.filter((athlete) => athlete.teamSide === 'home');
+    const away = athletes.filter((athlete) => athlete.teamSide === 'away');
+    if (home.length || away.length) {
+      return { home, away };
+    }
     const mid = Math.ceil(athletes.length / 2);
     return {
       home: athletes.slice(0, mid),
