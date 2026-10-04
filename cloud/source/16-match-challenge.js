@@ -1,5 +1,21 @@
 /** Desafio entre times (MatchChallenge) + resumo do dia do confronto */
 
+function isoOrNull(value) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function matchChallengeReturnEnd(returnStart, proposedStart, proposedEnd) {
+  const startMs = proposedStart ? new Date(proposedStart).getTime() : NaN;
+  const endMs = proposedEnd ? new Date(proposedEnd).getTime() : NaN;
+  const durationMs =
+    Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs
+      ? endMs - startMs
+      : 2 * 60 * 60 * 1000;
+  return new Date(returnStart.getTime() + durationMs);
+}
+
 function mapMatchChallengeRow(row) {
   const challengerTeam = row.get('challengerTeam');
   const challengedTeam = row.get('challengedTeam');
@@ -12,6 +28,10 @@ function mapMatchChallengeRow(row) {
     challengeConditions: row.get('challengeConditions') || '',
     returnChallengeConditions: row.get('returnChallengeConditions') || '',
     hasReturnLeg: !!row.get('hasReturnLeg'),
+    returnStartTime: isoOrNull(row.get('returnStartTime')),
+    returnEndTime: isoOrNull(row.get('returnEndTime')),
+    returnLocationComplement: row.get('returnLocationComplement') || '',
+    returnAddress: row.get('returnAddress') || null,
     eventId: row.get('eventId') || '',
     returnEventId: row.get('returnEventId') || '',
     declineReason: row.get('declineReason') || '',
@@ -196,9 +216,14 @@ Parse.Cloud.define('respondMatchChallenge', async (request) => {
   const challengeId = String(request.params.challengeId || '').trim();
   const decision = String(request.params.decision || '').trim();
   const declineReason = String(request.params.declineReason || '').trim().slice(0, 500);
-  const returnChallengeConditions = String(request.params.returnChallengeConditions || '')
+  const returnLocationComplement = String(request.params.returnLocationComplement || '')
     .trim()
-    .slice(0, 2000);
+    .slice(0, 300);
+  const returnStartRaw = request.params.returnStartTime
+    ? new Date(request.params.returnStartTime)
+    : null;
+  const returnStart =
+    returnStartRaw && !Number.isNaN(returnStartRaw.getTime()) ? returnStartRaw : null;
   if (!challengeId || (decision !== 'accepted' && decision !== 'declined')) {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o desafio e a decisao.');
   }
@@ -234,11 +259,19 @@ Parse.Cloud.define('respondMatchChallenge', async (request) => {
         'Este desafio nao tem data/hora propostas. Peca um novo convite.'
       );
     }
-    if (challenge.get('hasReturnLeg') && returnChallengeConditions.length < 3) {
-      throw new Parse.Error(
-        Parse.Error.VALIDATION_ERROR,
-        'Informe as condicoes para receber o adversario no jogo da volta (voce sera o mandante).'
-      );
+    if (challenge.get('hasReturnLeg')) {
+      if (!returnStart) {
+        throw new Parse.Error(
+          Parse.Error.VALIDATION_ERROR,
+          'Informe data e hora da volta.'
+        );
+      }
+      if (returnLocationComplement.length < 3) {
+        throw new Parse.Error(
+          Parse.Error.VALIDATION_ERROR,
+          'Informe o local da volta (voce sera o mandante).'
+        );
+      }
     }
     const challengerTeam = challenge.get('challengerTeam');
     const challengedTeam = challenge.get('challengedTeam');
@@ -258,13 +291,40 @@ Parse.Cloud.define('respondMatchChallenge', async (request) => {
       await assertTeamsFreeForProposedMatch(homeTeam, awayTeam, proposedStart, proposedEnd, {
         excludeChallengeId: challenge.id,
       });
+      if (challenge.get('hasReturnLeg') && returnStart) {
+        const returnEndPreview = matchChallengeReturnEnd(returnStart, proposedStart, proposedEnd);
+        await assertTeamsFreeForProposedMatch(homeTeam, awayTeam, returnStart, returnEndPreview, {
+          excludeChallengeId: challenge.id,
+        });
+      }
     }
   }
 
   challenge.set('status', decision);
   if (decision === 'declined') challenge.set('declineReason', declineReason);
-  if (decision === 'accepted' && challenge.get('hasReturnLeg') && returnChallengeConditions) {
-    challenge.set('returnChallengeConditions', returnChallengeConditions);
+  if (decision === 'accepted' && challenge.get('hasReturnLeg') && returnStart) {
+    const returnEnd = matchChallengeReturnEnd(
+      returnStart,
+      challenge.get('proposedStartTime'),
+      challenge.get('proposedEndTime')
+    );
+    const proposedAddress = challenge.get('proposedAddress');
+    const returnAddress =
+      proposedAddress && typeof proposedAddress === 'object' && !Array.isArray(proposedAddress)
+        ? { ...proposedAddress, locationComplement: returnLocationComplement }
+        : null;
+    const dateLabel =
+      typeof formatEventPushDate === 'function' ? formatEventPushDate(returnStart) : '';
+    const summary = (
+      dateLabel
+        ? `Volta: ${dateLabel} — ${returnLocationComplement}`
+        : `Volta: ${returnLocationComplement}`
+    ).slice(0, 2000);
+    challenge.set('returnStartTime', returnStart);
+    challenge.set('returnEndTime', returnEnd);
+    challenge.set('returnLocationComplement', returnLocationComplement);
+    if (returnAddress) challenge.set('returnAddress', returnAddress);
+    challenge.set('returnChallengeConditions', summary);
   }
   await challenge.save(null, { useMasterKey: true });
 
@@ -1777,16 +1837,17 @@ Parse.Cloud.define('removeTeamMatchAthleteConvocation', async (request) => {
       ? event.get('awayTeamName') || 'Visitante'
       : event.get('homeTeamName') || 'Mandante';
 
+  const removalBody =
+    removerName +
+    ' removeu voce da convocacao de ' +
+    teamName +
+    ' no confronto ' +
+    (event.get('name') || '') +
+    '.';
   try {
     await sendPushToUser(athleteUserId, {
       title: 'Convocacao removida',
-      alert:
-        removerName +
-        ' removeu voce da convocacao de ' +
-        teamName +
-        ' no confronto ' +
-        (event.get('name') || '') +
-        '.',
+      alert: removalBody,
       data: {
         type: 'team_match_convocation_removed',
         eventId: event.id,
@@ -1796,6 +1857,19 @@ Parse.Cloud.define('removeTeamMatchAthleteConvocation', async (request) => {
     });
   } catch (error) {
     console.error('removeTeamMatchAthleteConvocation push failed', error);
+  }
+
+  if (typeof createAppMessage === 'function') {
+    await createAppMessage({
+      recipientId: athleteUserId,
+      senderId: user.id,
+      kind: 'team_match_convocation_removed',
+      title: 'Convocacao removida',
+      body: removalBody,
+      relatedClass: 'Event',
+      relatedId: event.id,
+      actionRoute: `/event/${event.id}`,
+    });
   }
 
   return { ok: true, eventId: event.id, athleteUserId, teamSide };

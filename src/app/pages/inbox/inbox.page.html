@@ -137,6 +137,17 @@
           @if (challenge.hasReturnLeg) {
             <p><strong>Formato:</strong> Ida e volta</p>
           }
+          @if (challenge.returnStartTime) {
+            <p>
+              Volta: {{ formatDate(challenge.returnStartTime) }}
+              @if (challenge.returnEndTime) {
+                – {{ formatDate(challenge.returnEndTime) }}
+              }
+            </p>
+          }
+          @if (challengeReturnLocationLabel(challenge)) {
+            <p>Local da volta: {{ challengeReturnLocationLabel(challenge) }}</p>
+          }
           @if (challenge.status === 'declined' && challenge.declineReason) {
             <p>Motivo: {{ challenge.declineReason }}</p>
           }
@@ -573,6 +584,7 @@
           button
           detail="false"
           [class.message-unread]="message.unread && mailbox === 'in'"
+          [class.message-read]="!(message.unread && mailbox === 'in')"
           (click)="openMessage(message)"
         >
           <app-user-avatar
@@ -589,11 +601,7 @@
               {{ message.title }}
             </h3>
             <p class="message-body">{{ message.body }}</p>
-            <p class="message-meta">
-              {{ messageCounterpartLabel(message) }} ·
-              {{ mailbox === 'out' ? 'Enviada em' : 'Recebida em' }}
-              {{ formatMessageDate(message.sentAt) }}
-            </p>
+            <p class="message-meta">{{ messageCounterpartLine(message) }}</p>
           </ion-label>
         </ion-item>
       }
@@ -615,4 +623,82 @@
   <ion-button expand="block" class="ion-margin-top" fill="outline" (click)="goBack()">
     Voltar
   </ion-button>
+
+  <ion-modal [isOpen]="!!openedMessage" (didDismiss)="closeOpenedMessage()">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>Mensagem</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeOpenedMessage()">Fechar</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        @if (openedMessage) {
+          <h2>{{ openedMessage.title }}</h2>
+          <p class="message-meta">{{ messageCounterpartLine(openedMessage) }}</p>
+          <p class="message-detail-body">{{ openedMessage.body }}</p>
+          @if (messageEventRoute(openedMessage)) {
+            <ion-button expand="block" class="ion-margin-top" (click)="openMessageEvent()">
+              Ver evento
+            </ion-button>
+          }
+        }
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <ion-modal [isOpen]="!!returnLegChallenge" (didDismiss)="closeReturnLegModal()">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>Volta do desafio</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeReturnLegModal()">Cancelar</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        <p>
+          A ida permanece com a data e o local propostos pelo desafiante. Informe data, hora e
+          local da volta, em que o seu time sera o mandante.
+        </p>
+        <ion-list lines="full">
+          <ion-item>
+            <ion-input
+              type="date"
+              label="Data da volta"
+              labelPlacement="stacked"
+              [(ngModel)]="returnLegDate"
+            ></ion-input>
+          </ion-item>
+          <ion-item>
+            <ion-input
+              type="time"
+              label="Hora da volta"
+              labelPlacement="stacked"
+              [(ngModel)]="returnLegTime"
+            ></ion-input>
+          </ion-item>
+          <ion-item>
+            <ion-input
+              label="Local da volta"
+              labelPlacement="stacked"
+              [(ngModel)]="returnLegLocation"
+              placeholder="Quadra, campo, endereco..."
+            ></ion-input>
+          </ion-item>
+        </ion-list>
+        <ion-button
+          expand="block"
+          class="ion-margin-top"
+          [disabled]="!!processingId"
+          (click)="confirmReturnLegAccept()"
+        >
+          Confirmar aceite
+        </ion-button>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
 </ion-content>

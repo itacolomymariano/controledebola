@@ -1,0 +1,88 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()">
+        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>{{ user?.displayName || ('peladas.userTitle' | t) }}</ion-title>
+    <ion-buttons slot="end">
+      <app-screen-help helpId="peladas-user-help" bodyKey="peladas.userHelp"></app-screen-help>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  @if (loading) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  @if (!loading && errorMessage) {
+    <ion-card color="warning" class="ion-margin">
+      <ion-card-content>
+        <p>{{ errorMessage }}</p>
+        <ion-button fill="clear" (click)="retry()">{{ 'peladas.retry' | t }}</ion-button>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  @if (!loading && user) {
+    <div class="user-header ion-padding">
+      <app-user-avatar
+        [avatarUrl]="user.avatarUrl"
+        [alt]="user.displayName || user.apelido"
+        size="lg"
+      ></app-user-avatar>
+      <div>
+        <h1>{{ user.displayName || ('peladas.userTitle' | t) }}</h1>
+        @if (user.fullName && user.fullName !== user.displayName) {
+          <p>{{ user.fullName }}</p>
+        }
+      </div>
+    </div>
+
+    <ion-list lines="full">
+      <ion-item>
+        <ion-label class="ion-text-wrap">
+          <h3>{{ 'peladas.fullName' | t }}</h3>
+          <p>{{ user.fullName || '—' }}</p>
+        </ion-label>
+      </ion-item>
+      <ion-item>
+        <ion-label class="ion-text-wrap">
+          <h3>{{ 'peladas.nickname' | t }}</h3>
+          <p>{{ user.apelido || '—' }}</p>
+        </ion-label>
+      </ion-item>
+      <ion-item>
+        <ion-label class="ion-text-wrap">
+          <h3>Local</h3>
+          <p>{{ place || ('peladas.localMissing' | t) }}</p>
+        </ion-label>
+      </ion-item>
+    </ion-list>
+
+    <ion-list-header>
+      <ion-label>{{ 'peladas.profiles' | t }}</ion-label>
+    </ion-list-header>
+
+    @if (user.roles.length === 0) {
+      <ion-note class="ion-padding">{{ 'peladas.noProfiles' | t }}</ion-note>
+    } @else {
+      <ion-list>
+        @for (role of user.roles; track role) {
+          <ion-item button (click)="openProfile(role)">
+            <ion-icon name="person-outline" slot="start"></ion-icon>
+            <ion-label>{{ roleLabels[role] }}</ion-label>
+          </ion-item>
+        }
+      </ion-list>
+    }
+  }
+</ion-content>

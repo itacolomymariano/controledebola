@@ -106,6 +106,74 @@ export function createEmptyTeams(teamCount: number): TeamSplitAthlete[][] {
   return Array.from({ length: teamCount }, () => []);
 }
 
+/** Media aritmetica da Media CB do time. Time vazio devolve null. */
+export function teamMediaCbAverage(team: TeamSplitAthlete[]): number | null {
+  if (!team.length) return null;
+  const sum = team.reduce(
+    (total, athlete) => total + (Number(athlete.accumulatedPoints) || 0),
+    0
+  );
+  return sum / team.length;
+}
+
+function compareMediaCbDesc(a: TeamSplitAthlete, b: TeamSplitAthlete): number {
+  const diff = (Number(b.accumulatedPoints) || 0) - (Number(a.accumulatedPoints) || 0);
+  if (diff !== 0) return diff;
+  return (a.apelido || '').localeCompare(b.apelido || '', 'pt-BR');
+}
+
+/** Round-robin: 0, 1, ..., n-1, 0, ... pulando time cheio. */
+function placeRoundRobin(
+  teams: TeamSplitAthlete[][],
+  queue: TeamSplitAthlete[],
+  athletesPerTeam: number
+): void {
+  const teamCount = teams.length;
+  let teamIndex = 0;
+  for (const athlete of queue) {
+    let placed = false;
+    for (let attempt = 0; attempt < teamCount; attempt += 1) {
+      const index = (teamIndex + attempt) % teamCount;
+      if (teams[index].length < athletesPerTeam) {
+        teams[index].push(athlete);
+        teamIndex = (index + 1) % teamCount;
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) break;
+  }
+}
+
+/** Cobra: 0..n-1 e depois n-1..0, repetindo, pulando time cheio. */
+function snakeTeamIndex(teamCount: number, step: number): number {
+  const cycle = teamCount * 2;
+  const pos = step % cycle;
+  if (pos < teamCount) return pos;
+  return cycle - 1 - pos;
+}
+
+function placeSnake(
+  teams: TeamSplitAthlete[][],
+  queue: TeamSplitAthlete[],
+  athletesPerTeam: number
+): void {
+  const teamCount = teams.length;
+  let step = 0;
+  for (const athlete of queue) {
+    let placed = false;
+    for (let guard = 0; guard < teamCount * 2 && !placed; guard += 1) {
+      const index = snakeTeamIndex(teamCount, step);
+      step += 1;
+      if (teams[index].length < athletesPerTeam) {
+        teams[index].push(athlete);
+        placed = true;
+      }
+    }
+    if (!placed) break;
+  }
+}
+
 export function randomTeamSplit(
   athletes: TeamSplitAthlete[],
   teamCount: number,
@@ -114,6 +182,14 @@ export function randomTeamSplit(
 ): TeamSplitAthlete[][] {
   const teams = createEmptyTeams(teamCount);
   if (!teamCount || !athletesPerTeam || !athletes.length) return teams;
+
+  if (strategy === 'default') {
+    const socios = shuffle(athletes.filter((athlete) => athlete.isSocio));
+    const others = athletes.filter((athlete) => !athlete.isSocio).sort(compareMediaCbDesc);
+    placeRoundRobin(teams, socios, athletesPerTeam);
+    placeSnake(teams, others, athletesPerTeam);
+    return teams;
+  }
 
   let queue: TeamSplitAthlete[];
   switch (strategy) {
@@ -131,21 +207,7 @@ export function randomTeamSplit(
       break;
   }
 
-  let teamIndex = 0;
-  for (const athlete of queue) {
-    let placed = false;
-    for (let attempt = 0; attempt < teamCount; attempt += 1) {
-      const index = (teamIndex + attempt) % teamCount;
-      if (teams[index].length < athletesPerTeam) {
-        teams[index].push(athlete);
-        teamIndex = (index + 1) % teamCount;
-        placed = true;
-        break;
-      }
-    }
-    if (!placed) break;
-  }
-
+  placeRoundRobin(teams, queue, athletesPerTeam);
   return teams;
 }
 

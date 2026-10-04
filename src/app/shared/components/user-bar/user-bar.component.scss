@@ -6,20 +6,6 @@
   --min-height: 48px;
 }
 
-.user-bar-prefs {
-  --min-height: 36px;
-  --padding-top: 0;
-  --padding-bottom: 0;
-}
-
-.user-bar-prefs-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding-inline: 8px 4px;
-}
-
 .user-bar-start {
   display: flex;
   align-items: center;

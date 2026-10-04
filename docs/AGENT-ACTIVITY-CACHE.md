@@ -2,7 +2,42 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-10-01 (Frase do filtro nos cards do mural)
+**Ultima atualizacao:** 2026-10-04 (placar dos cards de confrontos no mural)
+
+---
+
+### 2026-10-04 — Mural Confrontos: vitorias e gols zerados
+
+- `buildTeamMatchSpotlightCards` somava o placar a partir de `EventPerformance` / `EventRegistration` buscados com `createWithoutData` no `containedIn`. Essa consulta volta vazia; cada confronto entrava 0x0, entao Vitorias, Gols marcados e Gols sofridos ficavam 0
+- Agora a busca usa os eventos ja carregados e casa o atleta por `participantUserId` e pelo ponteiro `user`
+- **Deploy:** publicar `cloud/main.js` de novo no Back4App
+
+---
+
+---
+
+### 2026-10-04 — Idioma e tema no menu; ajuda da Home
+
+- A segunda linha do `user-bar` (bandeiras + paleta) saiu. O menu tem **Idioma** (alerta com as tres bandeiras) e **Cores e tema** (abre a cortina ja existente, `ThemePickerComponent.showTrigger = false` no app)
+- A frase `peladas.hubLead` saiu. A Home usa `app-screen-help` (`peladas.help`), o mesmo botao do Mural
+
+---
+
+### 2026-10-04 — Busca do Wizard, home em quatro portas
+
+- Backup: `D:\Ita\Backups\minhapelada-2026-10-04` (com `.git`; fora `node_modules`, `.gradle-home`, `www`, `android\app\build`, `android\.gradle`, `.angular`, `.gradle`)
+- Busca `/tabs/search`: `Event.search` casa nome do evento **ou** nome da pelada (`matchesQuery` no pointer `pelada`). Card destaca `peladaName`. Filtro de bairro em `address.neighborhood`. Atleta: `equalTo` em `primaryPosition` (`FOOTBALL_POSITIONS`). Lista e ficha mostram altura (`formatHeightLabel`) e peso
+- **Gotcha:** `listTeamMatchesForFeed` nao manda `peladaName`; confronto so casa a pelada se o campo ja vier na linha
+- Home da aba Peladas: hub em `/tabs/peladas`; listas em `lista`, `confrontos`, `times`, `usuarios` e ficha `usuarios/:userId`. Ordenacao pelo endereco logado (bairro, cidade, estado). Eventos dentro da pelada: busca por nome, data e local na lista ja carregada
+- Listas novas: `src/app/core/services/home-directory.service.ts` (times e usuarios no cliente, teto 400). Presidente do confronto e endereco do time ficam "—" quando o DTO nao traz
+
+### 2026-10-04 — Inbox, volta do desafio e Media CB na separacao
+
+- Inbox: toque na mensagem abre o texto e, na Entrada, `markRead`. Saida nao marca lida. Nao lida em cor primaria; lida com opacity 0.55. Linha `Apelido (Nome) · data hora` com `counterpartApelido` / `counterpartFullName` (`18-app-mailbox.js`)
+- Aceite ida e volta: modal com data, hora e local. Nuvem grava `returnStartTime`, `returnEndTime` (duracao da ida, ou +2h), `returnLocationComplement` e copia `returnAddress`. `confronto-create` preenche so a volta
+- Separacao aleatoria padrao: socios em round-robin, demais em cobra por Media CB. Cada time mostra a media no fim
+- Push: token em `Parse.Installation` via `registerPushDevice`. Sem token, o push e pulado e o app segue. `getMuralAppDashboard` pesado: falha vira mensagem na tela, nao derruba o app
+- **Deploy:** publicar `cloud/main.js` de novo no Back4App
 
 ---
 

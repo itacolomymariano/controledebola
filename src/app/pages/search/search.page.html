@@ -47,13 +47,24 @@
 
       </ion-item>
 
+      <ion-item>
+        <ion-input
+          label="Bairro"
+          labelPlacement="stacked"
+          placeholder="Filtrar por bairro"
+          [(ngModel)]="eventNeighborhood"
+          [debounce]="300"
+          (ionInput)="onNeighborhoodInput($event)"
+        ></ion-input>
+      </ion-item>
+
     </ion-list>
 
 
 
     <ion-searchbar
 
-      [placeholder]="'Buscar ' + selectedEventTypeLabel.toLowerCase() + ' por nome...'"
+      [placeholder]="'Buscar ' + selectedEventTypeLabel.toLowerCase() + ' por nome do evento ou da pelada...'"
 
       [(ngModel)]="eventQuery"
 
@@ -96,6 +107,21 @@
         </ion-select>
 
       </ion-item>
+
+      @if (selectedProfileKind === 'athlete') {
+        <ion-item>
+          <ion-select
+            label="Posicao"
+            labelPlacement="stacked"
+            [(ngModel)]="selectedAthletePosition"
+            (ionChange)="onAthletePositionChange()"
+          >
+            @for (option of athletePositionOptions; track option.value) {
+              <ion-select-option [value]="option.value">{{ option.label }}</ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
+      }
 
     </ion-list>
 
@@ -207,7 +233,10 @@
       @for (row of eventRows; track row.event.objectId) {
         <ion-item button (click)="openEvent(row)">
           <ion-label>
-            <h2>{{ row.event.name }}</h2>
+            <h2>{{ row.title }}</h2>
+            @if (row.eventNameLine) {
+              <p>{{ row.eventNameLine }}</p>
+            }
             <p>{{ row.typeLabel }} · {{ row.dateLabel }}</p>
             @if (row.scoreLabel) {
               <p>{{ row.scoreLabel }}</p>
@@ -299,6 +328,12 @@
             @if (profile.subtitle) {
 
               <p>{{ profile.subtitle }}</p>
+
+            }
+
+            @if (athleteBodyLabel(profile)) {
+
+              <p>{{ athleteBodyLabel(profile) }}</p>
 
             }
 

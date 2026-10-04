@@ -170,12 +170,48 @@ export class AthleteSearchService {
     return candidates;
   }
 
-  async search(query: string): Promise<AthleteSearchResult[]> {
+  async search(query: string, primaryPosition?: string): Promise<AthleteSearchResult[]> {
     const normalized = normalizeSearchText(query);
-    if (!normalized) {
+    const position = primaryPosition?.trim() || '';
+    if (!normalized && !position) {
       return [];
     }
 
+    let results: AthleteSearchResult[] = [];
+    if (position) {
+      const byPosition = await this.searchProfilesByExactPosition(position);
+      results = normalized
+        ? byPosition.filter((entry) => this.matchesNameQuery(entry, normalized))
+        : byPosition;
+    }
+
+    if (normalized) {
+      const textResults = await this.searchByText(query, normalized, position);
+      const compatible = position
+        ? textResults.filter(
+            (entry) =>
+              this.samePosition(entry.primaryPosition, position) &&
+              this.matchesNameQuery(entry, normalized)
+          )
+        : textResults;
+      results = this.mergeResultLists(results, compatible);
+    }
+
+    const ranked = normalized
+      ? this.rankResults(results, normalized)
+      : [...results]
+          .sort((a, b) => a.displayName.localeCompare(b.displayName, 'pt-BR'))
+          .slice(0, 100);
+    await this.attachBodyMeasures(ranked);
+    return ranked;
+  }
+
+  /** Busca textual existente (nome, apelido e, sem filtro de posicao, primaryPosition). */
+  private async searchByText(
+    query: string,
+    normalized: string,
+    position = ''
+  ): Promise<AthleteSearchResult[]> {
     try {
       if (this.cloudAthleteFunctionsAvailable) {
         const cloudResults = await Parse.Cloud.run('searchAthletes', { query: query.trim() });
@@ -195,7 +231,7 @@ export class AthleteSearchService {
       return localResults;
     }
 
-    const serverResults = await this.searchOnServer(query.trim());
+    const serverResults = await this.searchOnServer(query.trim(), position);
     this.mergeIntoCatalog(serverResults);
     const merged = new Map<string, AthleteSearchResult>();
     for (const entry of catalog) {
@@ -210,22 +246,140 @@ export class AthleteSearchService {
     return this.filterAndRank(Array.from(merged.values()), normalized);
   }
 
+  /** Igualdade da posicao principal (nao substring: Lateral direito != Lateral esquerdo). */
+  private async searchProfilesByExactPosition(position: string): Promise<AthleteSearchResult[]> {
+    try {
+      const query = new Parse.Query(ATHLETE_PROFILE_CLASS);
+      query.equalTo('primaryPosition', position);
+      query.include('user');
+      query.limit(100);
+      const profiles = await query.find();
+      const results = profiles
+        .map((profile) => this.toSearchResultFromProfile(profile))
+        .filter((entry) => entry.userId && this.samePosition(entry.primaryPosition, position));
+      if (results.length) {
+        this.mergeIntoCatalog(results);
+        return results;
+      }
+    } catch {
+      // CLP pode bloquear a classe; cai no catalogo.
+    }
+
+    const catalog = await this.loadCatalog();
+    return catalog.filter((entry) => this.samePosition(entry.primaryPosition, position));
+  }
+
+  private samePosition(value: string | undefined, position: string): boolean {
+    return (value ?? '').trim().toLowerCase() === position.trim().toLowerCase();
+  }
+
+  private matchesNameQuery(entry: AthleteSearchResult, normalized: string): boolean {
+    if (!normalized) return true;
+    const haystack = normalizeSearchText(
+      `${entry.displayName} ${entry.apelido ?? ''} ${entry.fullName ?? ''}`
+    );
+    return haystack.includes(normalized);
+  }
+
+  private mergeResultLists(
+    primary: AthleteSearchResult[],
+    secondary: AthleteSearchResult[]
+  ): AthleteSearchResult[] {
+    const byUserId = new Map<string, AthleteSearchResult>();
+    for (const entry of primary) {
+      if (!entry.userId) continue;
+      byUserId.set(entry.userId, entry);
+    }
+    for (const entry of secondary) {
+      if (!entry.userId) continue;
+      const existing = byUserId.get(entry.userId);
+      byUserId.set(entry.userId, existing ? this.mergeEntries(existing, entry) : entry);
+    }
+    return Array.from(byUserId.values());
+  }
+
+  private readMeasure(value: unknown): number | undefined {
+    if (value == null || value === '') return undefined;
+    const parsed = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
+    return parsed;
+  }
+
+  private async attachBodyMeasures(results: AthleteSearchResult[]): Promise<void> {
+    const pending = results.filter(
+      (entry) => entry.userId && (entry.heightCm == null || entry.weightKg == null)
+    );
+    if (!pending.length) return;
+
+    const ids = Array.from(new Set(pending.map((entry) => entry.userId)));
+    let profiles: Parse.Object[] = [];
+    try {
+      const byUserId = new Parse.Query(ATHLETE_PROFILE_CLASS);
+      byUserId.containedIn('userId', ids);
+      const byUser = new Parse.Query(ATHLETE_PROFILE_CLASS);
+      byUser.containedIn(
+        'user',
+        ids.map((id) => Parse.User.createWithoutData(id))
+      );
+      profiles = await Parse.Query.or(byUserId, byUser).limit(200).find();
+    } catch {
+      return;
+    }
+
+    const byId = new Map<string, Parse.Object>();
+    for (const profile of profiles) {
+      const user = profile.get('user') as Parse.User | undefined;
+      const userId = ((profile.get('userId') as string | undefined) || user?.id || '').trim();
+      if (userId && !byId.has(userId)) byId.set(userId, profile);
+    }
+
+    for (const entry of pending) {
+      const profile = byId.get(entry.userId);
+      if (!profile) continue;
+      if (entry.heightCm == null) entry.heightCm = this.readMeasure(profile.get('height'));
+      if (entry.weightKg == null) entry.weightKg = this.readMeasure(profile.get('weight'));
+    }
+  }
+
   async getPublicProfile(userId: string): Promise<AthletePublicProfile | null> {
     const normalizedUserId = userId.trim();
     if (!normalizedUserId) return null;
 
+    let profile: AthletePublicProfile | null = null;
     if (this.cloudAthleteFunctionsAvailable) {
       try {
         const result = await Parse.Cloud.run('getAthletePublicProfile', {
           userId: normalizedUserId,
         });
-        if (result) return result as AthletePublicProfile;
+        if (result) profile = result as AthletePublicProfile;
       } catch {
         this.cloudAthleteFunctionsAvailable = false;
       }
     }
 
-    return this.getPublicProfileClient(normalizedUserId);
+    if (!profile) {
+      profile = await this.getPublicProfileClient(normalizedUserId);
+    }
+    if (profile) {
+      await this.fillBodyMeasuresOnProfile(profile);
+    }
+    return profile;
+  }
+
+  private async fillBodyMeasuresOnProfile(profile: AthletePublicProfile): Promise<void> {
+    if (profile.heightCm != null && profile.weightKg != null) return;
+    try {
+      const athleteProfile = await this.findAthleteProfileForUser(profile.userId);
+      if (!athleteProfile) return;
+      if (profile.heightCm == null) {
+        profile.heightCm = this.readMeasure(athleteProfile.get('height'));
+      }
+      if (profile.weightKg == null) {
+        profile.weightKg = this.readMeasure(athleteProfile.get('weight'));
+      }
+    } catch {
+      // Altura e peso sao opcionais na ficha.
+    }
   }
 
   async getActivityIndicators(
@@ -380,14 +534,22 @@ export class AthleteSearchService {
     return Array.from(byUserId.values());
   }
 
-  private async searchOnServer(query: string): Promise<AthleteSearchResult[]> {
+  private async searchOnServer(query: string, position = ''): Promise<AthleteSearchResult[]> {
     const byUserId = new Map<string, AthleteSearchResult>();
 
     const profileQueries = [
       this.matchesQueryForClass(ATHLETE_PROFILE_CLASS, 'userApelido', query),
       this.matchesQueryForClass(ATHLETE_PROFILE_CLASS, 'userName', query),
-      this.matchesQueryForClass(ATHLETE_PROFILE_CLASS, 'primaryPosition', query),
     ];
+    if (position) {
+      for (const profileQuery of profileQueries) {
+        profileQuery.equalTo('primaryPosition', position);
+      }
+    } else {
+      profileQueries.push(
+        this.matchesQueryForClass(ATHLETE_PROFILE_CLASS, 'primaryPosition', query)
+      );
+    }
 
     const profileResults = await Parse.Query.or(...profileQueries).limit(200).find();
     for (const profile of profileResults) {
@@ -464,6 +626,8 @@ export class AthleteSearchService {
       city: primary.city || secondary.city,
       state: primary.state || secondary.state,
       avatarUrl: primary.avatarUrl || secondary.avatarUrl,
+      heightCm: primary.heightCm ?? secondary.heightCm,
+      weightKg: primary.weightKg ?? secondary.weightKg,
     };
   }
 
@@ -545,6 +709,8 @@ export class AthleteSearchService {
         (profile.get('userAvatarUrl') as string | undefined)?.trim() ||
         getUserAvatarUrl(user, this.parseFileService) ||
         undefined,
+      heightCm: this.readMeasure(profile.get('height')),
+      weightKg: this.readMeasure(profile.get('weight')),
     };
   }
 
@@ -711,6 +877,8 @@ export class AthleteSearchService {
           (athleteProfile?.get('primaryPosition') as string | undefined) ||
           catalogEntry?.primaryPosition ||
           '',
+        heightCm: athleteProfile ? this.readMeasure(athleteProfile.get('height')) : undefined,
+        weightKg: athleteProfile ? this.readMeasure(athleteProfile.get('weight')) : undefined,
       };
     } catch {
       return null;

@@ -101,7 +101,7 @@
         <ion-label>Lista de atletas (ordem de chegada · mesma posicao lado a lado)</ion-label>
       </ion-list-header>
       <ion-note class="ion-padding-horizontal ion-margin-bottom">
-        Media de votos = soma dos votos nos eventos da pelada ÷ quantidade de eventos confirmados do atleta.
+        Media CB = media de votos na pelada (soma dos votos nos eventos da pelada ÷ quantidade de eventos confirmados do atleta).
       </ion-note>
 
       <div
@@ -139,7 +139,7 @@
                   @if (athlete.age != null) {
                     <small>{{ athlete.age }} anos</small>
                   }
-                  <small>{{ formatAthletePoints(athlete.accumulatedPoints) }}</small>
+                  <small>Media CB: {{ formatAthletePoints(athlete.accumulatedPoints) }}</small>
                   <small>{{ membershipLabel(athlete) }}</small>
                 </button>
               }
@@ -194,11 +194,12 @@
                     @if (athlete.age != null) {
                       <small>{{ athlete.age }} anos</small>
                     }
-                    <small>{{ formatAthletePoints(athlete.accumulatedPoints) }}</small>
+                    <small>Media CB: {{ formatAthletePoints(athlete.accumulatedPoints) }}</small>
                     <small>{{ membershipLabel(athlete) }}</small>
                   </button>
                 }
               </div>
+              <p class="team-media-cb">Media CB: {{ teamMediaCbLabel(team) }}</p>
             </ion-card-content>
           </ion-card>
         }

@@ -138,11 +138,20 @@
             </ion-card-content>
           </ion-card>
         }
+        <ion-searchbar
+          placeholder="Buscar por nome, data ou local"
+          [value]="eventSearch"
+          [debounce]="200"
+          (ionInput)="onEventSearch($any($event.detail.value))"
+          (ionClear)="onEventSearch('')"
+        ></ion-searchbar>
         @if (events.length === 0) {
           <ion-note>Nenhum evento nesta pelada.</ion-note>
+        } @else if (filteredEvents.length === 0) {
+          <ion-note>Nenhum evento para "{{ eventSearch }}".</ion-note>
         }
         <ion-list>
-          @for (event of events; track event.objectId) {
+          @for (event of filteredEvents; track event.objectId) {
             <ion-item button (click)="openEvent(event)">
               <ion-label class="ion-text-wrap">
                 <h2>{{ event.name }}</h2>

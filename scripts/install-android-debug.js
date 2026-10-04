@@ -8,7 +8,8 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.resolve(__dirname, '..');
-const javaHome = process.env.JAVA_HOME || 'C:\\Program Files\\Android\\Android Studio\\jbr';
+const studioJbr = 'C:\\Program Files\\Android\\Android Studio\\jbr';
+const javaHome = fs.existsSync(studioJbr) ? studioJbr : process.env.JAVA_HOME || studioJbr;
 const cacheRoot = path.join(root, '.gradle-home');
 const tempRoot = path.join(root, '.tmp');
 

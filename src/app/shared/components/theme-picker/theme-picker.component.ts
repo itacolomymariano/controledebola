@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  Input,
   OnDestroy,
   OnInit,
 } from '@angular/core';
@@ -25,6 +26,9 @@ import { ThemePaletteService } from '../../../core/services/theme-palette.servic
   standalone: false,
 })
 export class ThemePickerComponent implements OnInit, OnDestroy {
+  /** O menu abre a cortina por chamada; o botao fica na ficha do perfil. */
+  @Input() showTrigger = true;
+
   readonly paletteIds = THEME_PALETTE_IDS;
   readonly swatches = THEME_PALETTE_SWATCHES;
   readonly surfaces = THEME_SURFACE_IDS;

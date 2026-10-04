@@ -6,12 +6,16 @@ import {
   addressCompleteValidator,
   emptyAddress,
   isAddressComplete,
+  isAddressEmpty,
 } from '../../core/models/address.model';
 import { EventInviteCandidate, suggestOfferAmount } from '../../core/models/event-hiring.model';
 import { AmateurTeam } from '../../core/models/team.model';
 import { AthleteSearchService } from '../../core/services/athlete-search.service';
 import { EventService } from '../../core/services/event.service';
-import { MatchChallengeService } from '../../core/services/match-challenge.service';
+import {
+  MatchChallengeItem,
+  MatchChallengeService,
+} from '../../core/services/match-challenge.service';
 import { TeamService } from '../../core/services/team.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
 
@@ -112,6 +116,7 @@ export class ConfrontoCreatePage {
         this.form.get('returnLeg')?.disable({ emitEvent: false });
       }
       this.prefillScheduleFromChallenge(challenge);
+      this.prefillReturnLegFromChallenge(challenge);
     } catch (error: unknown) {
       this.challengeBlockedMessage = parseErrorMessage(error);
     }
@@ -308,6 +313,35 @@ export class ConfrontoCreatePage {
       this.form.patchValue({
         locationComplement: challenge.proposedLocationComplement,
       });
+    }
+  }
+
+  /** So a volta. A ida continua no prefill de proposedStartTime / endereco proposto. */
+  private prefillReturnLegFromChallenge(challenge: MatchChallengeItem): void {
+    if (!challenge.hasReturnLeg) return;
+    const start = challenge.returnStartTime;
+    if (start && !Number.isNaN(start.getTime()) && !this.form.get('returnStartDate')?.value) {
+      this.form.patchValue({
+        returnStartDate: this.toDateInput(start),
+        returnStartTime: this.toTimeInput(start),
+      });
+    }
+    const end = challenge.returnEndTime;
+    if (end && !Number.isNaN(end.getTime()) && !this.form.get('returnEndDate')?.value) {
+      this.form.patchValue({
+        returnEndDate: this.toDateInput(end),
+        returnEndTime: this.toTimeInput(end),
+      });
+    }
+    if (challenge.returnLocationComplement && !this.form.get('returnLocationComplement')?.value) {
+      this.form.patchValue({ returnLocationComplement: challenge.returnLocationComplement });
+    }
+    const stored = challenge.returnAddress;
+    if (stored && !isAddressEmpty(stored)) {
+      const current = this.form.get('returnAddress')?.value;
+      if (isAddressEmpty(current)) {
+        this.form.patchValue({ returnAddress: stored });
+      }
     }
   }
 

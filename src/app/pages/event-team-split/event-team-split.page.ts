@@ -15,6 +15,7 @@ import {
   buildPositionGroups,
   createEmptyTeams,
   randomTeamSplit,
+  teamMediaCbAverage,
   removeAthleteFromTeams,
   resizeTeamsPreservingAssignments,
   teamsOverCapacity,
@@ -74,7 +75,14 @@ export class EventTeamSplitPage {
 
   formatAthletePoints(points: number): string {
     const value = Number(points) || 0;
-    return `${value.toFixed(1)} media votos`;
+    return value.toFixed(1);
+  }
+
+  /** Media CB do time (1 casa). Vazio: traco. */
+  teamMediaCbLabel(team: TeamSplitAthlete[]): string {
+    const average = teamMediaCbAverage(team);
+    if (average == null) return '—';
+    return average.toFixed(1);
   }
 
   formatArrivalOrder(athlete: TeamSplitAthlete): string | null {

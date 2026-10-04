@@ -50,10 +50,26 @@
   gap: 6px;
 }
 
-/* Nao lida: negrito + ponto de destaque. */
-.message-unread {
+/* Lida (e Saida): cinza e opaca. Nao lida na Entrada: primaria e negrito. */
+.messages-list ion-item.message-read {
+  --color: var(--ion-color-medium);
+  opacity: 0.55;
+
+  .message-title,
+  .message-body,
+  .message-meta {
+    color: var(--ion-color-medium);
+    font-weight: 400;
+  }
+}
+
+.messages-list ion-item.message-unread {
+  --color: var(--ion-color-primary);
+  opacity: 1;
+
   .message-title,
   .message-body {
+    color: var(--ion-color-primary);
     font-weight: 700;
   }
 }
@@ -68,6 +84,15 @@
 
 .message-body {
   white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.message-detail-body {
+  white-space: pre-wrap;
+  margin-top: 12px;
 }
 
 .message-meta {

@@ -1,0 +1,103 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="goHub()">
+        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>{{ 'peladas.door.peladas' | t }}</ion-title>
+    <ion-buttons slot="end">
+      <app-screen-help helpId="peladas-list-help" bodyKey="peladas.listHelp"></app-screen-help>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  @if (!loading && !errorMessage) {
+    <ion-searchbar
+      [placeholder]="'peladas.searchPlaceholder' | t"
+      [value]="search"
+      [debounce]="200"
+      (ionInput)="onSearchChange($any($event.detail.value))"
+      (ionClear)="onSearchChange('')"
+    ></ion-searchbar>
+  }
+
+  @if (loading) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  @if (!loading && errorMessage) {
+    <ion-card color="warning" class="ion-margin">
+      <ion-card-content>
+        <p>{{ errorMessage }}</p>
+        <ion-button fill="clear" (click)="retry()">{{ 'peladas.retry' | t }}</ion-button>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  @if (!loading && !errorMessage && peladaRows.length === 0) {
+    <ion-list>
+      <ion-item>
+        <ion-icon name="people-outline" slot="start"></ion-icon>
+        <ion-label>
+          <h2>{{ 'peladas.emptyTitle' | t }}</h2>
+          <p>{{ 'peladas.emptyBody' | t }}</p>
+        </ion-label>
+      </ion-item>
+    </ion-list>
+  }
+
+  @if (!loading && !errorMessage && peladaRows.length > 0 && visibleRows.length === 0) {
+    <ion-note class="ion-padding">{{ 'peladas.searchEmpty' | t: { query: search } }}</ion-note>
+  }
+
+  @if (!loading && !errorMessage && visibleRows.length > 0) {
+    <ion-list>
+      @for (row of visibleRows; track row.pelada.objectId) {
+        <ion-item button (click)="openPelada(row)" class="list-card-with-action">
+          <ion-icon name="football-outline" slot="start"></ion-icon>
+          <ion-label class="ion-text-wrap">
+            <h2>{{ row.pelada.name }}</h2>
+            @if (row.pelada.isCurrentUserAdmin) {
+              <p class="pelada-admin-flag">{{ 'peladas.youAreAdmin' | t }}</p>
+            }
+            @if (row.pelada.nearby) {
+              <p class="pelada-nearby-flag">{{ 'peladas.nearby' | t }}</p>
+            }
+            <p>{{ row.sportLabel }} · {{ row.locationLabel }}</p>
+            <p>
+              {{ row.pelada.heldEventCount ?? 0 }}
+              {{ (row.pelada.heldEventCount ?? 0) === 1 ? ('peladas.eventsOne' | t) : ('peladas.eventsMany' | t) }}
+              @if ((row.pelada.heldEventCount ?? 0) > 0) {
+                · {{ 'peladas.avgParticipants' | t }}:
+                {{ (row.pelada.avgParticipantsPerEvent ?? 0) | number: '1.0-1' }}
+              }
+            </p>
+            <p>{{ 'peladas.admin' | t }}: {{ row.pelada.adminName }}</p>
+          </ion-label>
+          <ion-button
+            slot="end"
+            fill="solid"
+            size="small"
+            (click)="openPelada(row); $event.stopPropagation()"
+          >
+            Entrar
+          </ion-button>
+        </ion-item>
+      }
+    </ion-list>
+  }
+
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+    <ion-fab-button (click)="createPelada()">
+      <ion-icon name="add"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+</ion-content>

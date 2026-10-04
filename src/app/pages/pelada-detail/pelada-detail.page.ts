@@ -26,6 +26,7 @@ import { formatPeladaLocation, Pelada, PeladaStatsConflictSource } from '../../c
 import { PeladaCashEntry } from '../../core/models/pelada-cash.model';
 import { PeladaMembershipFee } from '../../core/models/pelada-monthly-fee.model';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
+import { dateSearchTokens, directoryTextMatches } from '../peladas/home-directory.util';
 import { EventService } from '../../core/services/event.service';
 import { MuralHighlightsService } from '../../core/services/mural-highlights.service';
 import { MuralParticipantStatsService } from '../../core/services/mural-participant-stats.service';
@@ -74,6 +75,7 @@ export class PeladaDetailPage implements OnDestroy {
   currentMembership: PeladaMembership | null = null;
 
   events: PeladaEventListItem[] = [];
+  eventSearch = '';
   members: PeladaMembership[] = [];
   cotinhas: PeladaCotinha[] = [];
   cotinhaPayments: PeladaCotinhaPayment[] = [];
@@ -399,6 +401,27 @@ export class PeladaDetailPage implements OnDestroy {
       hour: '2-digit',
       minute: '2-digit',
     }).format(date);
+  }
+
+  onEventSearch(value: string | null | undefined): void {
+    this.eventSearch = value ?? '';
+  }
+
+  get filteredEvents(): PeladaEventListItem[] {
+    return this.events.filter((event) => this.eventMatchesSearch(event));
+  }
+
+  private eventMatchesSearch(event: PeladaEventListItem): boolean {
+    return directoryTextMatches(this.eventSearch, [
+      event.name,
+      this.formatDate(event.startTime),
+      dateSearchTokens(event.startTime),
+      event.locationComplement,
+      event.address?.street,
+      event.address?.neighborhood,
+      event.address?.city,
+      event.address?.state,
+    ]);
   }
 
   formatCurrency(amount: number): string {

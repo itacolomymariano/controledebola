@@ -32,12 +32,22 @@ function escapeAppMailboxRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function appMailboxUserDisplayName(user) {
+function appMailboxUserApelido(user) {
   if (!user || !user.get) return '';
-  const apelido = String(user.get('apelido') || '').trim();
+  return String(user.get('apelido') || '').trim();
+}
+
+function appMailboxUserFullName(user) {
+  if (!user || !user.get) return '';
+  return String(user.get('name') || '').trim();
+}
+
+function appMailboxUserDisplayName(user) {
+  const apelido = appMailboxUserApelido(user);
   if (apelido) return apelido;
-  const name = String(user.get('name') || '').trim();
+  const name = appMailboxUserFullName(user);
   if (name) return name;
+  if (!user || !user.get) return '';
   try {
     return String(user.getUsername() || '').trim();
   } catch {
@@ -69,6 +79,8 @@ async function loadAppMailboxUserCards(userIds) {
       for (const row of rows) {
         cards.set(row.id, {
           name: appMailboxUserDisplayName(row),
+          apelido: appMailboxUserApelido(row),
+          fullName: appMailboxUserFullName(row),
           avatarUrl: appMailboxUserAvatarUrl(row),
         });
       }
@@ -122,7 +134,11 @@ async function saveAppMessageRow(payload, cards) {
     buildAppMessageSearchText([
       title,
       body,
+      recipientCard ? recipientCard.apelido : '',
+      recipientCard ? recipientCard.fullName : '',
       recipientCard ? recipientCard.name : '',
+      senderCard ? senderCard.apelido : '',
+      senderCard ? senderCard.fullName : '',
       senderCard ? senderCard.name : '',
       senderId ? '' : APP_MESSAGE_SYSTEM_NAME,
     ])
@@ -191,6 +207,8 @@ function mapAppMessageRow(row, box) {
   const sender = row.get('sender');
   const recipient = row.get('recipient');
   const counterpart = box === 'out' ? recipient : sender;
+  const counterpartApelido = appMailboxUserApelido(counterpart);
+  const counterpartFullName = appMailboxUserFullName(counterpart);
   const counterpartName = appMailboxUserDisplayName(counterpart);
   const sentAt = row.get('sentAt') || row.createdAt;
   const readAt = row.get('readAt');
@@ -208,6 +226,8 @@ function mapAppMessageRow(row, box) {
     relatedId: row.get('relatedId') || '',
     actionRoute: row.get('actionRoute') || '',
     counterpartUserId: counterpart && counterpart.id ? counterpart.id : '',
+    counterpartApelido,
+    counterpartFullName,
     counterpartName:
       counterpartName || (box === 'out' ? 'Destinatario' : APP_MESSAGE_SYSTEM_NAME),
     counterpartAvatarUrl: appMailboxUserAvatarUrl(counterpart),

@@ -1893,6 +1893,13 @@ async function saveTeamMatchEvent(adminUser, payload) {
   return event;
 }
 
+function teamMatchAddressHasContent(value) {
+  if (!value || typeof value !== 'object') return false;
+  return ['street', 'neighborhood', 'city', 'state', 'zipCode'].some((key) =>
+    String(value[key] || '').trim()
+  );
+}
+
 Parse.Cloud.define('createTeamMatch', async (request) => {
   const user = request.user;
   if (!user) {
@@ -2038,13 +2045,39 @@ Parse.Cloud.define('createTeamMatch', async (request) => {
 
   let returnStart = null;
   let returnEnd = null;
+  let returnAddressForLeg = null;
+  let returnComplementForLeg = '';
   const forceReturnLeg = !!challenge.get('hasReturnLeg') || !!request.params.returnLeg;
   if (forceReturnLeg) {
     returnStart = request.params.returnStartTime ? new Date(request.params.returnStartTime) : null;
     returnEnd = request.params.returnEndTime ? new Date(request.params.returnEndTime) : null;
+    if (!returnStart || Number.isNaN(returnStart.getTime())) {
+      const storedStart = challenge.get('returnStartTime');
+      returnStart = storedStart ? new Date(storedStart) : null;
+    }
+    if (!returnEnd || Number.isNaN(returnEnd.getTime())) {
+      const storedEnd = challenge.get('returnEndTime');
+      returnEnd = storedEnd ? new Date(storedEnd) : null;
+    }
     if (!returnStart || Number.isNaN(returnStart.getTime()) || !returnEnd || Number.isNaN(returnEnd.getTime())) {
       throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe data e hora do jogo da volta.');
     }
+    const requestedReturnAddress =
+      request.params.returnAddress && typeof request.params.returnAddress === 'object'
+        ? request.params.returnAddress
+        : null;
+    const storedReturnAddress = challenge.get('returnAddress');
+    returnAddressForLeg = teamMatchAddressHasContent(requestedReturnAddress)
+      ? requestedReturnAddress
+      : teamMatchAddressHasContent(storedReturnAddress)
+        ? storedReturnAddress
+        : address;
+    const requestedComplement = String(request.params.returnLocationComplement || '').trim();
+    returnComplementForLeg = (
+      requestedComplement ||
+      String(challenge.get('returnLocationComplement') || '').trim() ||
+      String(locationComplement || '')
+    ).trim();
     if (returnEnd <= returnStart) {
       throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'O termino da volta deve ser apos o inicio.');
     }
@@ -2104,10 +2137,6 @@ Parse.Cloud.define('createTeamMatch', async (request) => {
 
   let second = null;
   if (forceReturnLeg) {
-    const returnAddress =
-      request.params.returnAddress && typeof request.params.returnAddress === 'object'
-        ? request.params.returnAddress
-        : address;
     const awayPresident = awayTeam.get('president');
     if (!awayPresident || !awayPresident.id) {
       throw new Parse.Error(
@@ -2119,8 +2148,8 @@ Parse.Cloud.define('createTeamMatch', async (request) => {
       name: `${awayName} x ${homeName}`,
       startTime: returnStart,
       endTime: returnEnd,
-      address: returnAddress,
-      locationComplement: String(request.params.returnLocationComplement || locationComplement).trim(),
+      address: returnAddressForLeg || address,
+      locationComplement: returnComplementForLeg,
       homeTeam: awayTeam,
       awayTeam: homeTeam,
       returnOf: first,

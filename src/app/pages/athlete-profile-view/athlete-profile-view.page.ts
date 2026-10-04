@@ -5,6 +5,7 @@ import {
   AthletePublicProfile,
   TeamMatchRecord,
 } from '../../core/models/athlete-search.model';
+import { formatAthleteBodyLabel } from '../../core/models/profile-search.model';
 import {
   AthleteScoutPerformanceSummary,
   SCOUT_STAT_GROUPS,
@@ -93,6 +94,10 @@ export class AthleteProfileViewPage {
     } finally {
       this.performanceLoading = false;
     }
+  }
+
+  get bodyMeasureLabel(): string {
+    return formatAthleteBodyLabel(this.profile?.heightCm, this.profile?.weightKg);
   }
 
   get contactPhoneLabel(): string {

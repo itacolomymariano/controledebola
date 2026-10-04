@@ -93,3 +93,6 @@ android/*.jks
 
 # Auxiliares locais
 .cbf-help.html
+
+# graphify (gerado localmente)
+/graphify-out/

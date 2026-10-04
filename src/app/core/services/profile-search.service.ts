@@ -52,12 +52,17 @@ export class ProfileSearchService {
     return this.loadCatalog(role);
   }
 
-  async search(role: ProfileRole, query: string): Promise<ProfileSearchResult[]> {
+  async search(
+    role: ProfileRole,
+    query: string,
+    options?: { primaryPosition?: string }
+  ): Promise<ProfileSearchResult[]> {
     const normalized = normalizeSearchText(query);
-    if (!normalized) return [];
+    const position = role === 'athlete' ? options?.primaryPosition?.trim() || '' : '';
+    if (!normalized && !position) return [];
 
     if (role === 'athlete') {
-      const athletes = await this.athleteSearchService.search(query);
+      const athletes = await this.athleteSearchService.search(query, position || undefined);
       return athletes.map((entry) => this.fromAthleteResult(entry));
     }
 
@@ -201,6 +206,8 @@ export class ProfileSearchService {
       city: entry.city,
       state: entry.state,
       avatarUrl: entry.avatarUrl,
+      heightCm: entry.heightCm,
+      weightKg: entry.weightKg,
     };
   }
 

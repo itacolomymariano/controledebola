@@ -1,6 +1,6 @@
 /**
  * Cloud Code — gerado por npm run build:cloud
- * Gerado em: 2026-10-01T18:48:31.949Z
+ * Gerado em: 2026-10-04T21:32:50.524Z
  * Copie o conteudo deste arquivo no Back4App (Server Settings > Cloud Code).
  * Fontes modulares em cloud/source/
  * NAO edite este arquivo direto — edite cloud/source/ e rode npm run build:cloud
@@ -11196,6 +11196,13 @@ async function saveTeamMatchEvent(adminUser, payload) {
   return event;
 }
 
+function teamMatchAddressHasContent(value) {
+  if (!value || typeof value !== 'object') return false;
+  return ['street', 'neighborhood', 'city', 'state', 'zipCode'].some((key) =>
+    String(value[key] || '').trim()
+  );
+}
+
 Parse.Cloud.define('createTeamMatch', async (request) => {
   const user = request.user;
   if (!user) {
@@ -11341,13 +11348,39 @@ Parse.Cloud.define('createTeamMatch', async (request) => {
 
   let returnStart = null;
   let returnEnd = null;
+  let returnAddressForLeg = null;
+  let returnComplementForLeg = '';
   const forceReturnLeg = !!challenge.get('hasReturnLeg') || !!request.params.returnLeg;
   if (forceReturnLeg) {
     returnStart = request.params.returnStartTime ? new Date(request.params.returnStartTime) : null;
     returnEnd = request.params.returnEndTime ? new Date(request.params.returnEndTime) : null;
+    if (!returnStart || Number.isNaN(returnStart.getTime())) {
+      const storedStart = challenge.get('returnStartTime');
+      returnStart = storedStart ? new Date(storedStart) : null;
+    }
+    if (!returnEnd || Number.isNaN(returnEnd.getTime())) {
+      const storedEnd = challenge.get('returnEndTime');
+      returnEnd = storedEnd ? new Date(storedEnd) : null;
+    }
     if (!returnStart || Number.isNaN(returnStart.getTime()) || !returnEnd || Number.isNaN(returnEnd.getTime())) {
       throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe data e hora do jogo da volta.');
     }
+    const requestedReturnAddress =
+      request.params.returnAddress && typeof request.params.returnAddress === 'object'
+        ? request.params.returnAddress
+        : null;
+    const storedReturnAddress = challenge.get('returnAddress');
+    returnAddressForLeg = teamMatchAddressHasContent(requestedReturnAddress)
+      ? requestedReturnAddress
+      : teamMatchAddressHasContent(storedReturnAddress)
+        ? storedReturnAddress
+        : address;
+    const requestedComplement = String(request.params.returnLocationComplement || '').trim();
+    returnComplementForLeg = (
+      requestedComplement ||
+      String(challenge.get('returnLocationComplement') || '').trim() ||
+      String(locationComplement || '')
+    ).trim();
     if (returnEnd <= returnStart) {
       throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'O termino da volta deve ser apos o inicio.');
     }
@@ -11407,10 +11440,6 @@ Parse.Cloud.define('createTeamMatch', async (request) => {
 
   let second = null;
   if (forceReturnLeg) {
-    const returnAddress =
-      request.params.returnAddress && typeof request.params.returnAddress === 'object'
-        ? request.params.returnAddress
-        : address;
     const awayPresident = awayTeam.get('president');
     if (!awayPresident || !awayPresident.id) {
       throw new Parse.Error(
@@ -11422,8 +11451,8 @@ Parse.Cloud.define('createTeamMatch', async (request) => {
       name: `${awayName} x ${homeName}`,
       startTime: returnStart,
       endTime: returnEnd,
-      address: returnAddress,
-      locationComplement: String(request.params.returnLocationComplement || locationComplement).trim(),
+      address: returnAddressForLeg || address,
+      locationComplement: returnComplementForLeg,
       homeTeam: awayTeam,
       awayTeam: homeTeam,
       returnOf: first,
@@ -18155,6 +18184,22 @@ async function collectTeamMatchNotifyUserIds(event) {
 
 /** Desafio entre times (MatchChallenge) + resumo do dia do confronto */
 
+function isoOrNull(value) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function matchChallengeReturnEnd(returnStart, proposedStart, proposedEnd) {
+  const startMs = proposedStart ? new Date(proposedStart).getTime() : NaN;
+  const endMs = proposedEnd ? new Date(proposedEnd).getTime() : NaN;
+  const durationMs =
+    Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs
+      ? endMs - startMs
+      : 2 * 60 * 60 * 1000;
+  return new Date(returnStart.getTime() + durationMs);
+}
+
 function mapMatchChallengeRow(row) {
   const challengerTeam = row.get('challengerTeam');
   const challengedTeam = row.get('challengedTeam');
@@ -18167,6 +18212,10 @@ function mapMatchChallengeRow(row) {
     challengeConditions: row.get('challengeConditions') || '',
     returnChallengeConditions: row.get('returnChallengeConditions') || '',
     hasReturnLeg: !!row.get('hasReturnLeg'),
+    returnStartTime: isoOrNull(row.get('returnStartTime')),
+    returnEndTime: isoOrNull(row.get('returnEndTime')),
+    returnLocationComplement: row.get('returnLocationComplement') || '',
+    returnAddress: row.get('returnAddress') || null,
     eventId: row.get('eventId') || '',
     returnEventId: row.get('returnEventId') || '',
     declineReason: row.get('declineReason') || '',
@@ -18351,9 +18400,14 @@ Parse.Cloud.define('respondMatchChallenge', async (request) => {
   const challengeId = String(request.params.challengeId || '').trim();
   const decision = String(request.params.decision || '').trim();
   const declineReason = String(request.params.declineReason || '').trim().slice(0, 500);
-  const returnChallengeConditions = String(request.params.returnChallengeConditions || '')
+  const returnLocationComplement = String(request.params.returnLocationComplement || '')
     .trim()
-    .slice(0, 2000);
+    .slice(0, 300);
+  const returnStartRaw = request.params.returnStartTime
+    ? new Date(request.params.returnStartTime)
+    : null;
+  const returnStart =
+    returnStartRaw && !Number.isNaN(returnStartRaw.getTime()) ? returnStartRaw : null;
   if (!challengeId || (decision !== 'accepted' && decision !== 'declined')) {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o desafio e a decisao.');
   }
@@ -18389,11 +18443,19 @@ Parse.Cloud.define('respondMatchChallenge', async (request) => {
         'Este desafio nao tem data/hora propostas. Peca um novo convite.'
       );
     }
-    if (challenge.get('hasReturnLeg') && returnChallengeConditions.length < 3) {
-      throw new Parse.Error(
-        Parse.Error.VALIDATION_ERROR,
-        'Informe as condicoes para receber o adversario no jogo da volta (voce sera o mandante).'
-      );
+    if (challenge.get('hasReturnLeg')) {
+      if (!returnStart) {
+        throw new Parse.Error(
+          Parse.Error.VALIDATION_ERROR,
+          'Informe data e hora da volta.'
+        );
+      }
+      if (returnLocationComplement.length < 3) {
+        throw new Parse.Error(
+          Parse.Error.VALIDATION_ERROR,
+          'Informe o local da volta (voce sera o mandante).'
+        );
+      }
     }
     const challengerTeam = challenge.get('challengerTeam');
     const challengedTeam = challenge.get('challengedTeam');
@@ -18413,13 +18475,40 @@ Parse.Cloud.define('respondMatchChallenge', async (request) => {
       await assertTeamsFreeForProposedMatch(homeTeam, awayTeam, proposedStart, proposedEnd, {
         excludeChallengeId: challenge.id,
       });
+      if (challenge.get('hasReturnLeg') && returnStart) {
+        const returnEndPreview = matchChallengeReturnEnd(returnStart, proposedStart, proposedEnd);
+        await assertTeamsFreeForProposedMatch(homeTeam, awayTeam, returnStart, returnEndPreview, {
+          excludeChallengeId: challenge.id,
+        });
+      }
     }
   }
 
   challenge.set('status', decision);
   if (decision === 'declined') challenge.set('declineReason', declineReason);
-  if (decision === 'accepted' && challenge.get('hasReturnLeg') && returnChallengeConditions) {
-    challenge.set('returnChallengeConditions', returnChallengeConditions);
+  if (decision === 'accepted' && challenge.get('hasReturnLeg') && returnStart) {
+    const returnEnd = matchChallengeReturnEnd(
+      returnStart,
+      challenge.get('proposedStartTime'),
+      challenge.get('proposedEndTime')
+    );
+    const proposedAddress = challenge.get('proposedAddress');
+    const returnAddress =
+      proposedAddress && typeof proposedAddress === 'object' && !Array.isArray(proposedAddress)
+        ? { ...proposedAddress, locationComplement: returnLocationComplement }
+        : null;
+    const dateLabel =
+      typeof formatEventPushDate === 'function' ? formatEventPushDate(returnStart) : '';
+    const summary = (
+      dateLabel
+        ? `Volta: ${dateLabel} — ${returnLocationComplement}`
+        : `Volta: ${returnLocationComplement}`
+    ).slice(0, 2000);
+    challenge.set('returnStartTime', returnStart);
+    challenge.set('returnEndTime', returnEnd);
+    challenge.set('returnLocationComplement', returnLocationComplement);
+    if (returnAddress) challenge.set('returnAddress', returnAddress);
+    challenge.set('returnChallengeConditions', summary);
   }
   await challenge.save(null, { useMasterKey: true });
 
@@ -19932,16 +20021,17 @@ Parse.Cloud.define('removeTeamMatchAthleteConvocation', async (request) => {
       ? event.get('awayTeamName') || 'Visitante'
       : event.get('homeTeamName') || 'Mandante';
 
+  const removalBody =
+    removerName +
+    ' removeu voce da convocacao de ' +
+    teamName +
+    ' no confronto ' +
+    (event.get('name') || '') +
+    '.';
   try {
     await sendPushToUser(athleteUserId, {
       title: 'Convocacao removida',
-      alert:
-        removerName +
-        ' removeu voce da convocacao de ' +
-        teamName +
-        ' no confronto ' +
-        (event.get('name') || '') +
-        '.',
+      alert: removalBody,
       data: {
         type: 'team_match_convocation_removed',
         eventId: event.id,
@@ -19951,6 +20041,19 @@ Parse.Cloud.define('removeTeamMatchAthleteConvocation', async (request) => {
     });
   } catch (error) {
     console.error('removeTeamMatchAthleteConvocation push failed', error);
+  }
+
+  if (typeof createAppMessage === 'function') {
+    await createAppMessage({
+      recipientId: athleteUserId,
+      senderId: user.id,
+      kind: 'team_match_convocation_removed',
+      title: 'Convocacao removida',
+      body: removalBody,
+      relatedClass: 'Event',
+      relatedId: event.id,
+      actionRoute: `/event/${event.id}`,
+    });
   }
 
   return { ok: true, eventId: event.id, athleteUserId, teamSide };
@@ -20968,43 +21071,79 @@ function teamMatchRefereeGoals(perf) {
   return Number(perf.get('refereeGoals') || 0);
 }
 
+/** Ids que ligam inscricao e desempenho (participantUserId e ponteiro user). */
+function teamMatchPersonKeysFromRegistration(registration) {
+  const keys = [];
+  const explicit = registration.get('participantUserId');
+  if (explicit) keys.push(String(explicit));
+  const user = registration.get('user');
+  if (user && user.id) keys.push(String(user.id));
+  return keys;
+}
+
+function teamMatchPersonKeysFromPerformance(perf) {
+  if (typeof collectPerformanceParticipantKeys === 'function') {
+    return collectPerformanceParticipantKeys(perf);
+  }
+  const keys = [];
+  const explicit = perf.get('participantUserId');
+  if (explicit) keys.push(String(explicit));
+  const user = perf.get('user');
+  if (user && user.id) keys.push(String(user.id));
+  return keys;
+}
+
+/**
+ * Consulta por ponteiro de evento usando os objetos ja carregados.
+ * createWithoutData no containedIn nao casa com o ponteiro gravado e a lista volta vazia.
+ */
+async function findRowsForEvents(className, events, configure) {
+  const rows = [];
+  const pageSize = 1000;
+  for (let i = 0; i < events.length; i += 40) {
+    const batch = events.slice(i, i + 40);
+    let skip = 0;
+    for (;;) {
+      const query = new Parse.Query(className);
+      query.containedIn('event', batch);
+      if (configure) configure(query);
+      query.limit(pageSize);
+      query.skip(skip);
+      const page = await query.find({ useMasterKey: true });
+      rows.push(...page);
+      if (page.length < pageSize) break;
+      skip += page.length;
+      if (skip > 8000) break;
+    }
+  }
+  return rows;
+}
+
 /** Lados (home/away) dos atletas efetivamente confirmados, em lote por evento. */
 async function loadTeamMatchSidesByEvent(events) {
   const byEvent = new Map();
   const feeByEvent = new Map();
   for (const event of events) {
-    byEvent.set(event.id, { home: new Set(), away: new Set() });
-    feeByEvent.set(event.id, Number(event.get('participationFee') || 0));
+    byEvent.set(String(event.id), { home: new Set(), away: new Set() });
+    feeByEvent.set(String(event.id), Number(event.get('participationFee') || 0));
   }
-  const eventIds = events.map((event) => event.id);
-  for (let i = 0; i < eventIds.length; i += 50) {
-    const chunk = eventIds.slice(i, i + 50);
-    const registrations = await new Parse.Query('EventRegistration')
-      .containedIn(
-        'event',
-        chunk.map((id) => Parse.Object.extend('Event').createWithoutData(id))
-      )
-      .containedIn('role', ['athlete', 'goalkeeper'])
-      .limit(5000)
-      .find({ useMasterKey: true });
-    for (const registration of registrations) {
-      const event = registration.get('event');
-      const eventId = event && event.id ? String(event.id) : '';
-      const sides = byEvent.get(eventId);
-      if (!sides) continue;
-      const side = registration.get('teamSide');
-      if (side !== 'home' && side !== 'away') continue;
-      if (
-        typeof computeRegistrationEffectiveConfirmation === 'function' &&
-        !computeRegistrationEffectiveConfirmation(registration, feeByEvent.get(eventId) || 0)
-      ) {
-        continue;
-      }
-      const user = registration.get('user');
-      const participantId = String(
-        registration.get('participantUserId') || (user && user.id ? user.id : '')
-      );
-      if (!participantId) continue;
+  const registrations = await findRowsForEvents('EventRegistration', events, (query) => {
+    query.containedIn('role', ['athlete', 'goalkeeper']);
+  });
+  for (const registration of registrations) {
+    const event = registration.get('event');
+    const eventId = event && event.id ? String(event.id) : '';
+    const sides = byEvent.get(eventId);
+    if (!sides) continue;
+    const side = registration.get('teamSide');
+    if (side !== 'home' && side !== 'away') continue;
+    if (
+      typeof computeRegistrationEffectiveConfirmation === 'function' &&
+      !computeRegistrationEffectiveConfirmation(registration, feeByEvent.get(eventId) || 0)
+    ) {
+      continue;
+    }
+    for (const participantId of teamMatchPersonKeysFromRegistration(registration)) {
       sides[side].add(participantId);
     }
   }
@@ -21068,7 +21207,7 @@ async function buildTeamMatchSpotlightCards(events, performanceRaw) {
   };
   if (!events.length) return empty;
 
-  const eventById = new Map(events.map((event) => [event.id, event]));
+  const eventById = new Map(events.map((event) => [String(event.id), event]));
   const sidesByEvent = await loadTeamMatchSidesByEvent(events);
 
   const perfByEvent = new Map();
@@ -21111,20 +21250,23 @@ async function buildTeamMatchSpotlightCards(events, performanceRaw) {
     const awayId = away && away.id ? String(away.id) : '';
     if (!homeId && !awayId) continue;
 
-    const sides = sidesByEvent.get(event.id) || { home: new Set(), away: new Set() };
+    const sides = sidesByEvent.get(String(event.id)) || { home: new Set(), away: new Set() };
     const score = { home: 0, away: 0 };
     const goalsBySide = { home: new Map(), away: new Map() };
     const pointsBySide = { home: new Map(), away: new Map() };
 
-    for (const perf of perfByEvent.get(event.id) || []) {
-      const participantId = getPerformanceParticipantId(perf);
-      if (!participantId) continue;
-      const side = sides.home.has(participantId)
+    for (const perf of perfByEvent.get(String(event.id)) || []) {
+      const keys = teamMatchPersonKeysFromPerformance(perf);
+      if (!keys.length) continue;
+      const side = keys.some((key) => sides.home.has(key))
         ? 'home'
-        : sides.away.has(participantId)
+        : keys.some((key) => sides.away.has(key))
           ? 'away'
           : '';
       if (!side) continue;
+      const participantId =
+        keys.find((key) => (side === 'home' ? sides.home.has(key) : sides.away.has(key))) ||
+        keys[0];
 
       // Placar do confronto = soma dos refereeGoals por lado (mesma regra da sumula).
       const goals = teamMatchRefereeGoals(perf);
@@ -21402,20 +21544,10 @@ Parse.Cloud.define('getMuralTeamMatchDashboard', async (request) => {
   const totalConfrontos = finishedEvents.length;
   const locationStats = buildEventLocationStats(finishedEvents);
 
-  const eventIds = finishedEvents.map((e) => e.id);
-  let performanceRaw = [];
-  for (let i = 0; i < eventIds.length; i += 50) {
-    const batch = eventIds.slice(i, i + 50);
-    const q = new Parse.Query('EventPerformance');
-    q.containedIn('event', batch.map((id) => Parse.Object.createWithoutData('Event', id)));
-    q.limit(3000);
-    performanceRaw.push(...(await q.find({ useMasterKey: true })));
-  }
+  const spotlightEvents = finishedEvents.slice(0, TEAM_MATCH_SPOTLIGHT_EVENT_LIMIT);
+  const performanceRaw = await findRowsForEvents('EventPerformance', spotlightEvents);
 
-  const spotlight = await buildTeamMatchSpotlightCards(
-    finishedEvents.slice(0, TEAM_MATCH_SPOTLIGHT_EVENT_LIMIT),
-    performanceRaw
-  );
+  const spotlight = await buildTeamMatchSpotlightCards(spotlightEvents, performanceRaw);
 
   let teamRecords;
   if (locationFilter.active) {
@@ -21577,12 +21709,22 @@ function escapeAppMailboxRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function appMailboxUserDisplayName(user) {
+function appMailboxUserApelido(user) {
   if (!user || !user.get) return '';
-  const apelido = String(user.get('apelido') || '').trim();
+  return String(user.get('apelido') || '').trim();
+}
+
+function appMailboxUserFullName(user) {
+  if (!user || !user.get) return '';
+  return String(user.get('name') || '').trim();
+}
+
+function appMailboxUserDisplayName(user) {
+  const apelido = appMailboxUserApelido(user);
   if (apelido) return apelido;
-  const name = String(user.get('name') || '').trim();
+  const name = appMailboxUserFullName(user);
   if (name) return name;
+  if (!user || !user.get) return '';
   try {
     return String(user.getUsername() || '').trim();
   } catch {
@@ -21614,6 +21756,8 @@ async function loadAppMailboxUserCards(userIds) {
       for (const row of rows) {
         cards.set(row.id, {
           name: appMailboxUserDisplayName(row),
+          apelido: appMailboxUserApelido(row),
+          fullName: appMailboxUserFullName(row),
           avatarUrl: appMailboxUserAvatarUrl(row),
         });
       }
@@ -21667,7 +21811,11 @@ async function saveAppMessageRow(payload, cards) {
     buildAppMessageSearchText([
       title,
       body,
+      recipientCard ? recipientCard.apelido : '',
+      recipientCard ? recipientCard.fullName : '',
       recipientCard ? recipientCard.name : '',
+      senderCard ? senderCard.apelido : '',
+      senderCard ? senderCard.fullName : '',
       senderCard ? senderCard.name : '',
       senderId ? '' : APP_MESSAGE_SYSTEM_NAME,
     ])
@@ -21736,6 +21884,8 @@ function mapAppMessageRow(row, box) {
   const sender = row.get('sender');
   const recipient = row.get('recipient');
   const counterpart = box === 'out' ? recipient : sender;
+  const counterpartApelido = appMailboxUserApelido(counterpart);
+  const counterpartFullName = appMailboxUserFullName(counterpart);
   const counterpartName = appMailboxUserDisplayName(counterpart);
   const sentAt = row.get('sentAt') || row.createdAt;
   const readAt = row.get('readAt');
@@ -21753,6 +21903,8 @@ function mapAppMessageRow(row, box) {
     relatedId: row.get('relatedId') || '',
     actionRoute: row.get('actionRoute') || '',
     counterpartUserId: counterpart && counterpart.id ? counterpart.id : '',
+    counterpartApelido,
+    counterpartFullName,
     counterpartName:
       counterpartName || (box === 'out' ? 'Destinatario' : APP_MESSAGE_SYSTEM_NAME),
     counterpartAvatarUrl: appMailboxUserAvatarUrl(counterpart),

@@ -1,0 +1,108 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="goHub()">
+        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>{{ titleKey | t }}</ion-title>
+    <ion-buttons slot="end">
+      <app-screen-help helpId="peladas-directory-help" bodyKey="peladas.directoryHelp"></app-screen-help>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  @if (!loading && !errorMessage) {
+    <ion-searchbar
+      [placeholder]="'peladas.searchPlaceholder' | t"
+      [value]="search"
+      [debounce]="200"
+      (ionInput)="onSearchChange($any($event.detail.value))"
+      (ionClear)="onSearchChange('')"
+    ></ion-searchbar>
+  }
+
+  @if (loading) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  @if (!loading && errorMessage) {
+    <ion-card color="warning" class="ion-margin">
+      <ion-card-content>
+        <p>{{ errorMessage }}</p>
+        <ion-button fill="clear" (click)="retry()">{{ 'peladas.retry' | t }}</ion-button>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  @if (!loading && !errorMessage && !hasRows) {
+    <ion-note class="ion-padding">{{ emptyKey | t }}</ion-note>
+  }
+
+  @if (!loading && !errorMessage && hasRows && !hasVisible) {
+    <ion-note class="ion-padding">{{ 'peladas.searchEmpty' | t: { query: search } }}</ion-note>
+  }
+
+  @if (!loading && !errorMessage && door === 'confrontos' && visibleMatches.length > 0) {
+    <ion-list>
+      @for (row of visibleMatches; track row.id) {
+        <ion-item button (click)="openMatch(row)">
+          <ion-icon name="swap-horizontal-outline" slot="start"></ion-icon>
+          <ion-label class="ion-text-wrap">
+            <h2>{{ row.homeTeamName }} x {{ row.awayTeamName }}</h2>
+            <p>{{ row.homeTeamName }} — {{ 'peladas.president' | t }}: {{ row.homePresident || '—' }}</p>
+            <p>{{ row.awayTeamName }} — {{ 'peladas.president' | t }}: {{ row.awayPresident || '—' }}</p>
+            <p>{{ row.place || ('peladas.localMissing' | t) }}</p>
+            @if (row.when) {
+              <p>{{ row.when }}</p>
+            }
+          </ion-label>
+        </ion-item>
+      }
+    </ion-list>
+  }
+
+  @if (!loading && !errorMessage && door === 'times' && visibleTeams.length > 0) {
+    <ion-list>
+      @for (row of visibleTeams; track row.id) {
+        <ion-item button (click)="openTeam(row)">
+          <ion-icon name="shield-outline" slot="start"></ion-icon>
+          <ion-label class="ion-text-wrap">
+            <h2>{{ row.name }}</h2>
+            <p>{{ 'peladas.president' | t }}: {{ row.presidentName || '—' }}</p>
+            <p>{{ row.place || ('peladas.localMissing' | t) }}</p>
+          </ion-label>
+        </ion-item>
+      }
+    </ion-list>
+  }
+
+  @if (!loading && !errorMessage && door === 'usuarios' && visibleUsers.length > 0) {
+    <ion-list>
+      @for (row of visibleUsers; track row.user.userId) {
+        <ion-item button (click)="openUser(row)">
+          <app-user-avatar
+            slot="start"
+            [avatarUrl]="row.user.avatarUrl"
+            [alt]="row.user.displayName || row.user.apelido"
+            size="md"
+          ></app-user-avatar>
+          <ion-label class="ion-text-wrap">
+            <h2>{{ row.user.displayName || ('peladas.userTitle' | t) }}</h2>
+            <p>{{ 'peladas.fullName' | t }}: {{ row.user.fullName || '—' }}</p>
+            <p>{{ 'peladas.nickname' | t }}: {{ row.user.apelido || '—' }}</p>
+            <p>{{ row.rolesLabel || ('peladas.noProfiles' | t) }}</p>
+            <p>{{ row.place || ('peladas.localMissing' | t) }}</p>
+          </ion-label>
+        </ion-item>
+      }
+    </ion-list>
+  }
+</ion-content>

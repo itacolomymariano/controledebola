@@ -199,6 +199,8 @@ export interface UpdateEventAdminPayload {
 export interface EventSearchFilters {
   query?: string;
   city?: string;
+  /** Contem, sem diferenciar maiusculas (address.neighborhood). */
+  neighborhood?: string;
   type?: EventType;
 }
 

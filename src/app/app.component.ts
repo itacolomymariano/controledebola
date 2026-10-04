@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar } from '@capacitor/status-bar';
@@ -13,6 +13,8 @@ import { AppGuideService } from './core/services/app-guide.service';
 import { I18nService } from './core/services/i18n.service';
 import { WizardTourService } from './core/services/wizard-tour.service';
 import { BiometricUnlockService } from './core/services/biometric-unlock.service';
+import { APP_LOCALE_FLAGS, APP_LOCALE_LABELS, APP_LOCALES, AppLocale } from './core/models/app-locale.model';
+import { ThemePickerComponent } from './shared/components/theme-picker/theme-picker.component';
 
 @Component({
   selector: 'app-root',
@@ -21,6 +23,8 @@ import { BiometricUnlockService } from './core/services/biometric-unlock.service
   standalone: false,
 })
 export class AppComponent implements OnInit {
+  @ViewChild('menuThemePicker') menuThemePicker?: ThemePickerComponent;
+
   pushNotificationsEnabled = true;
   pushToggleBusy = false;
   inviteShareBusy = false;
@@ -148,6 +152,36 @@ export class AppComponent implements OnInit {
       color: 'success',
     });
     await toast.present();
+  }
+
+  async chooseLanguageFromMenu(): Promise<void> {
+    await this.menuCtrl.close('app-menu');
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('menu.language'),
+      inputs: APP_LOCALES.map((locale) => ({
+        type: 'radio' as const,
+        label: `${APP_LOCALE_FLAGS[locale]} ${APP_LOCALE_LABELS[locale]}`,
+        value: locale,
+        checked: locale === this.i18n.locale,
+      })),
+      buttons: [
+        { text: this.i18n.t('confirm.cancel'), role: 'cancel' },
+        {
+          text: this.i18n.t('confirm.yes'),
+          handler: (value: AppLocale) => {
+            if (value && value !== this.i18n.locale) {
+              void this.i18n.setLocale(value);
+            }
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  async openThemeFromMenu(): Promise<void> {
+    await this.menuCtrl.close('app-menu');
+    this.menuThemePicker?.openCurtain();
   }
 
   async openGuideFromMenu(): Promise<void> {

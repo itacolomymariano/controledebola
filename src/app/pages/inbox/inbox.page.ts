@@ -55,6 +55,11 @@ export class InboxPage implements OnDestroy {
   messagesError = '';
   hasMoreMessages = false;
   searchTerm = '';
+  openedMessage: AppMessage | null = null;
+  returnLegChallenge: MatchChallengeItem | null = null;
+  returnLegDate = '';
+  returnLegTime = '';
+  returnLegLocation = '';
 
   private searchDebounce: ReturnType<typeof setTimeout> | null = null;
 
@@ -156,7 +161,10 @@ export class InboxPage implements OnDestroy {
     void this.loadMessages(true);
   }
 
-  /** Marca como lida, atualiza o badge e abre a tela de destino. */
+  /**
+   * Abre o texto completo. Na Entrada, marca como lida.
+   * Na Saida nao chama markRead: mensagem enviada nao fica nao lida para o remetente.
+   */
   async openMessage(message: AppMessage): Promise<void> {
     if (this.mailbox === 'in' && message.unread) {
       message.unread = false;
@@ -165,19 +173,28 @@ export class InboxPage implements OnDestroy {
         await this.appMessageService.markRead(message.objectId);
         this.invitationService.notifyBadgeRefresh();
       } catch {
-        // Leitura e secundaria: nao bloqueia a navegacao.
+        // Leitura e secundaria: o texto abre mesmo se a marcacao falhar.
       }
     }
-    if (!message.actionRoute) return;
+    this.openedMessage = message;
+  }
 
-    // Ja estamos no inbox: trocar o segmento em vez de navegar (nao refaz ionViewWillEnter).
-    if (message.actionRoute.split('?')[0] === '/inbox') {
-      const targetBox = message.actionRoute.includes('box=out') ? 'out' : 'in';
-      if (targetBox !== this.mailbox) this.setMailbox(targetBox);
-      return;
-    }
+  closeOpenedMessage(): void {
+    this.openedMessage = null;
+  }
 
-    void this.router.navigateByUrl(message.actionRoute);
+  messageEventRoute(message: AppMessage): string {
+    const route = (message.actionRoute || '').trim();
+    const path = route.split('?')[0];
+    return path.startsWith('/event/') ? route : '';
+  }
+
+  openMessageEvent(): void {
+    const message = this.openedMessage;
+    const route = message ? this.messageEventRoute(message) : '';
+    if (!route) return;
+    this.openedMessage = null;
+    void this.router.navigateByUrl(route);
   }
 
   async markAllMessagesRead(): Promise<void> {
@@ -190,9 +207,22 @@ export class InboxPage implements OnDestroy {
     }
   }
 
-  messageCounterpartLabel(message: AppMessage): string {
-    const name = message.counterpartName || '—';
-    return message.box === 'out' ? `Para ${name}` : `De ${name}`;
+  /** `Apelido (Nome) · dd/MM/yyyy HH:mm`. Sem parenteses se faltar um dos dois. */
+  messageCounterpartLine(message: AppMessage): string {
+    const apelido = message.counterpartApelido.trim();
+    const fullName = message.counterpartFullName.trim();
+    let who = '';
+    if (apelido && fullName) {
+      who = `${apelido} (${fullName})`;
+    } else if (fullName) {
+      who = fullName;
+    } else if (apelido) {
+      who = apelido;
+    } else {
+      who = message.counterpartName || '—';
+    }
+    const when = this.formatMessageDate(message.sentAt);
+    return when ? `${who} · ${when}` : who;
   }
 
   formatMessageDate(date: Date | null): string {
@@ -511,54 +541,73 @@ export class InboxPage implements OnDestroy {
       .join(' - ');
   }
 
+  challengeReturnLocationLabel(challenge: MatchChallengeItem): string {
+    const address = challenge.returnAddress;
+    return [challenge.returnLocationComplement, address?.neighborhood, address?.city, address?.state]
+      .filter(Boolean)
+      .join(' - ');
+  }
+
   async acceptChallenge(challenge: MatchChallengeItem): Promise<void> {
     if (challenge.hasReturnLeg) {
-      const alert = await this.alertCtrl.create({
-        header: 'Aceitar desafio (ida e volta)',
-        message:
-          'Informe as condicoes para receber o adversario no jogo da volta, em que o seu time sera o mandante.',
-        inputs: [
-          {
-            name: 'returnConditions',
-            type: 'textarea',
-            placeholder: 'Ex.: campo, agua, coletes...',
-          },
-        ],
-        buttons: [
-          { text: 'Cancelar', role: 'cancel' },
-          {
-            text: 'Aceitar',
-            handler: (data) => {
-              void this.confirmAcceptChallenge(
-                challenge.objectId,
-                String(data?.returnConditions || '')
-              );
-            },
-          },
-        ],
-      });
-      await alert.present();
+      this.returnLegChallenge = challenge;
+      this.returnLegDate = '';
+      this.returnLegTime = '';
+      this.returnLegLocation = '';
       return;
     }
     await this.confirmAcceptChallenge(challenge.objectId);
   }
 
+  closeReturnLegModal(): void {
+    this.returnLegChallenge = null;
+  }
+
+  async confirmReturnLegAccept(): Promise<void> {
+    const challenge = this.returnLegChallenge;
+    if (!challenge) return;
+    const date = this.returnLegDate.trim();
+    const time = this.returnLegTime.trim();
+    const location = this.returnLegLocation.trim();
+    if (!date || !time) {
+      await this.showError('Informe data e hora da volta.');
+      return;
+    }
+    if (location.length < 3) {
+      await this.showError('Informe o local da volta.');
+      return;
+    }
+    const start = this.combineReturnDateTime(date, time);
+    if (Number.isNaN(start.getTime())) {
+      await this.showError('Data ou hora da volta invalida.');
+      return;
+    }
+    const accepted = await this.confirmAcceptChallenge(challenge.objectId, {
+      returnStartTime: start,
+      returnLocationComplement: location,
+    });
+    if (accepted) this.returnLegChallenge = null;
+  }
+
+  private combineReturnDateTime(date: string, time: string): Date {
+    const normalized = time.length === 5 ? `${time}:00` : time;
+    return new Date(`${date}T${normalized}`);
+  }
+
   private async confirmAcceptChallenge(
     challengeId: string,
-    returnChallengeConditions = ''
-  ): Promise<void> {
+    returnLeg?: { returnStartTime: Date; returnLocationComplement: string }
+  ): Promise<boolean> {
     this.processingId = challengeId;
     try {
-      await this.challengeService.respond(
-        challengeId,
-        'accepted',
-        '',
-        returnChallengeConditions
-      );
+      await this.challengeService.respond(challengeId, 'accepted', '', returnLeg);
+      this.returnLegChallenge = null;
       this.setMailbox('out');
       await this.load();
+      return true;
     } catch (error: unknown) {
       await this.showError(parseErrorMessage(error));
+      return false;
     } finally {
       this.processingId = '';
     }

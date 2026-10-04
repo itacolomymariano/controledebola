@@ -1,9 +1,11 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/core';
 import { Router } from '@angular/router';
+import { FOOTBALL_POSITIONS } from '../../core/models/athlete-profile.model';
 import { EventType, PeladaEvent } from '../../core/models/event.model';
 import { ProfileRole } from '../../core/models/profile-role.model';
 import {
   ALL_SEARCH_PROFILE_OPTIONS,
+  formatAthleteBodyLabel,
   isLegendSearchKind,
   ProfileSearchResult,
   SearchProfileKind,
@@ -20,6 +22,8 @@ type SearchSegment = 'eventos' | 'perfis' | 'times';
 
 interface EventSearchRow {
   event: PeladaEvent;
+  title: string;
+  eventNameLine?: string;
   typeLabel: string;
   dateLabel: string;
   locationLabel: string;
@@ -60,10 +64,16 @@ export class SearchPage {
   legendTeamResults: AmateurLegendTeam[] = [];
   teamRows: TeamSearchRow[] = [];
   eventQuery = '';
+  eventNeighborhood = '';
   profileQuery = '';
   teamQuery = '';
   selectedEventType: EventType | '' = '';
+  selectedAthletePosition = '';
   selectedProfileKind: SearchProfileKind = 'athlete';
+  readonly athletePositionOptions: Array<{ value: string; label: string }> = [
+    { value: '', label: 'Todas' },
+    ...FOOTBALL_POSITIONS.map((position) => ({ value: position, label: position })),
+  ];
   profileKindOptions = ALL_SEARCH_PROFILE_OPTIONS;
   searched = false;
   loading = false;
@@ -126,8 +136,10 @@ export class SearchPage {
     this.legendTeamResults = [];
     this.teamRows = [];
     this.eventQuery = '';
+    this.eventNeighborhood = '';
     this.profileQuery = '';
     this.teamQuery = '';
+    this.selectedAthletePosition = '';
     this.errorMessage = '';
 
     if (this.segment === 'perfis' && !this.isLegendSearch) {
@@ -142,6 +154,15 @@ export class SearchPage {
     this.eventQuery = '';
     this.errorMessage = '';
     this.cdr.markForCheck();
+    if (this.eventNeighborhood.trim()) {
+      void this.runEventSearch('');
+    }
+  }
+
+  onNeighborhoodInput(event: CustomEvent): void {
+    const value = (event.detail.value as string | null | undefined) ?? '';
+    this.eventNeighborhood = value;
+    void this.runEventSearch(this.eventQuery);
   }
 
   onEventSearchInput(event: CustomEvent): void {
@@ -152,6 +173,10 @@ export class SearchPage {
 
   onEventSearchClear(): void {
     this.eventQuery = '';
+    if (this.eventNeighborhood.trim()) {
+      void this.runEventSearch('');
+      return;
+    }
     this.eventRows = [];
     this.searched = false;
     this.errorMessage = '';
@@ -164,6 +189,7 @@ export class SearchPage {
     this.legendTeamResults = [];
     this.searched = false;
     this.profileQuery = '';
+    this.selectedAthletePosition = '';
     this.errorMessage = '';
     if (!this.isLegendSearch) {
       void this.profileSearchService.preloadCatalog(this.selectedProfileKind as ProfileRole);
@@ -177,14 +203,27 @@ export class SearchPage {
     void this.runProfileSearch(value);
   }
 
+  onAthletePositionChange(): void {
+    void this.runProfileSearch(this.profileQuery);
+  }
+
   onProfileSearchClear(): void {
     this.profileQuery = '';
+    if (this.selectedProfileKind === 'athlete' && this.selectedAthletePosition.trim()) {
+      void this.runProfileSearch('');
+      return;
+    }
     this.profileResults = [];
     this.legendAthleteResults = [];
     this.legendTeamResults = [];
     this.searched = false;
     this.errorMessage = '';
     this.cdr.markForCheck();
+  }
+
+  athleteBodyLabel(profile: ProfileSearchResult): string {
+    if (profile.role !== 'athlete') return '';
+    return formatAthleteBodyLabel(profile.heightCm, profile.weightKg);
   }
 
   onTeamSearchInput(event: CustomEvent): void {
@@ -279,7 +318,8 @@ export class SearchPage {
 
   private async runEventSearch(query: string): Promise<void> {
     const trimmed = query.trim();
-    if (!trimmed) {
+    const neighborhood = this.eventNeighborhood.trim();
+    if (!trimmed && !neighborhood) {
       this.eventRows = [];
       this.searched = false;
       this.loading = false;
@@ -297,6 +337,7 @@ export class SearchPage {
     try {
       const results = await this.eventService.search({
         query: trimmed,
+        neighborhood: neighborhood || undefined,
         type: (this.selectedEventType || undefined) as EventType | undefined,
       });
       if (seq !== this.eventSearchSeq) return;
@@ -363,7 +404,9 @@ export class SearchPage {
 
   private async runProfileSearch(query: string): Promise<void> {
     const trimmed = query.trim();
-    if (!trimmed) {
+    const position =
+      this.selectedProfileKind === 'athlete' ? this.selectedAthletePosition.trim() : '';
+    if (!trimmed && !position) {
       this.profileResults = [];
       this.legendAthleteResults = [];
       this.legendTeamResults = [];
@@ -394,7 +437,9 @@ export class SearchPage {
         this.legendAthleteResults = [];
         this.profileResults = [];
       } else {
-        const results = await this.profileSearchService.search(this.selectedProfileKind, trimmed);
+        const results = await this.profileSearchService.search(this.selectedProfileKind, trimmed, {
+          primaryPosition: position || undefined,
+        });
         if (seq !== this.profileSearchSeq) return;
         this.profileResults = results;
         this.legendAthleteResults = [];
@@ -426,8 +471,11 @@ export class SearchPage {
       const away = event.awayTeamName?.trim() || 'Visitante';
       scoreLabel = `${home} x ${away}`;
     }
+    const peladaName = event.peladaName?.trim() || '';
     return {
       event,
+      title: peladaName || event.name,
+      eventNameLine: peladaName ? event.name : undefined,
       typeLabel: this.eventService.formatType(event.type),
       dateLabel: new Intl.DateTimeFormat('pt-BR', {
         day: '2-digit',

@@ -11,6 +11,10 @@ export interface MatchChallengeItem {
   challengeConditions: string;
   returnChallengeConditions?: string;
   hasReturnLeg?: boolean;
+  returnStartTime?: Date | null;
+  returnEndTime?: Date | null;
+  returnLocationComplement?: string;
+  returnAddress?: Address;
   eventId: string;
   returnEventId?: string;
   declineReason: string;
@@ -68,13 +72,18 @@ export class MatchChallengeService {
     challengeId: string,
     decision: 'accepted' | 'declined',
     declineReason = '',
-    returnChallengeConditions = ''
+    returnLeg?: { returnStartTime: Date; returnLocationComplement: string }
   ): Promise<MatchChallengeItem> {
     const row = await Parse.Cloud.run('respondMatchChallenge', {
       challengeId,
       decision,
       declineReason,
-      returnChallengeConditions: returnChallengeConditions.trim(),
+      ...(returnLeg
+        ? {
+            returnStartTime: returnLeg.returnStartTime.toISOString(),
+            returnLocationComplement: returnLeg.returnLocationComplement.trim(),
+          }
+        : {}),
     });
     this.notifyChanged();
     return this.toItem(row);
@@ -121,6 +130,10 @@ export class MatchChallengeService {
       challengeConditions: String(row['challengeConditions'] || ''),
       returnChallengeConditions: String(row['returnChallengeConditions'] || ''),
       hasReturnLeg: !!row['hasReturnLeg'],
+      returnStartTime: row['returnStartTime'] ? new Date(String(row['returnStartTime'])) : null,
+      returnEndTime: row['returnEndTime'] ? new Date(String(row['returnEndTime'])) : null,
+      returnLocationComplement: String(row['returnLocationComplement'] || ''),
+      returnAddress: (row['returnAddress'] as Address) || undefined,
       eventId: String(row['eventId'] || ''),
       returnEventId: row['returnEventId'] ? String(row['returnEventId']) : undefined,
       declineReason: String(row['declineReason'] || ''),

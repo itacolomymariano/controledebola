@@ -20,7 +20,12 @@ export interface AppMessage {
   actionRoute: string;
   /** Outro lado da conversa: remetente na Entrada, destinatario na Saida. */
   counterpartUserId: string;
+  /** Apelido ou nome resumido (fallback de exibicao). */
   counterpartName: string;
+  /** `_User.apelido` do outro lado. Vazio se nao houver. */
+  counterpartApelido: string;
+  /** `_User.name` do outro lado. Vazio se nao houver. */
+  counterpartFullName: string;
   counterpartAvatarUrl: string;
 }
 
@@ -47,6 +52,8 @@ export function toAppMessage(row: Record<string, unknown>, box: AppMessageBox): 
     actionRoute: String(row['actionRoute'] || ''),
     counterpartUserId: String(row['counterpartUserId'] || ''),
     counterpartName: String(row['counterpartName'] || ''),
+    counterpartApelido: String(row['counterpartApelido'] || ''),
+    counterpartFullName: String(row['counterpartFullName'] || ''),
     counterpartAvatarUrl: String(row['counterpartAvatarUrl'] || ''),
   };
 }

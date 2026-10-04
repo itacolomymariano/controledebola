@@ -18,8 +18,6 @@ export class UserBarComponent implements OnInit, OnDestroy {
   apelido = '';
   avatarUrl: string | null = null;
   pendingInvitations = 0;
-  /** Bandeiras/tema so na pagina inicial (lista de peladas). */
-  showLocaleThemePrefs = false;
   helpKey = '';
 
   private profileSub?: Subscription;
@@ -113,13 +111,6 @@ export class UserBarComponent implements OnInit, OnDestroy {
   }
 
   private refreshPrefsVisibility(url: string): void {
-    const path = (url || '').split('?')[0];
-    // Apenas na home (aba Peladas) — evita sobrepor toolbar de detalhes/outras abas.
-    this.showLocaleThemePrefs =
-      path === '/tabs/peladas' ||
-      path === '/tabs' ||
-      path.endsWith('/tabs/') ||
-      path === '/tabs/peladas/';
     this.helpKey = resolveScreenHelpKey(url);
     this.cdr.markForCheck();
   }

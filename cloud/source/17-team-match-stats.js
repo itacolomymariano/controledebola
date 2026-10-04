@@ -499,43 +499,79 @@ function teamMatchRefereeGoals(perf) {
   return Number(perf.get('refereeGoals') || 0);
 }
 
+/** Ids que ligam inscricao e desempenho (participantUserId e ponteiro user). */
+function teamMatchPersonKeysFromRegistration(registration) {
+  const keys = [];
+  const explicit = registration.get('participantUserId');
+  if (explicit) keys.push(String(explicit));
+  const user = registration.get('user');
+  if (user && user.id) keys.push(String(user.id));
+  return keys;
+}
+
+function teamMatchPersonKeysFromPerformance(perf) {
+  if (typeof collectPerformanceParticipantKeys === 'function') {
+    return collectPerformanceParticipantKeys(perf);
+  }
+  const keys = [];
+  const explicit = perf.get('participantUserId');
+  if (explicit) keys.push(String(explicit));
+  const user = perf.get('user');
+  if (user && user.id) keys.push(String(user.id));
+  return keys;
+}
+
+/**
+ * Consulta por ponteiro de evento usando os objetos ja carregados.
+ * createWithoutData no containedIn nao casa com o ponteiro gravado e a lista volta vazia.
+ */
+async function findRowsForEvents(className, events, configure) {
+  const rows = [];
+  const pageSize = 1000;
+  for (let i = 0; i < events.length; i += 40) {
+    const batch = events.slice(i, i + 40);
+    let skip = 0;
+    for (;;) {
+      const query = new Parse.Query(className);
+      query.containedIn('event', batch);
+      if (configure) configure(query);
+      query.limit(pageSize);
+      query.skip(skip);
+      const page = await query.find({ useMasterKey: true });
+      rows.push(...page);
+      if (page.length < pageSize) break;
+      skip += page.length;
+      if (skip > 8000) break;
+    }
+  }
+  return rows;
+}
+
 /** Lados (home/away) dos atletas efetivamente confirmados, em lote por evento. */
 async function loadTeamMatchSidesByEvent(events) {
   const byEvent = new Map();
   const feeByEvent = new Map();
   for (const event of events) {
-    byEvent.set(event.id, { home: new Set(), away: new Set() });
-    feeByEvent.set(event.id, Number(event.get('participationFee') || 0));
+    byEvent.set(String(event.id), { home: new Set(), away: new Set() });
+    feeByEvent.set(String(event.id), Number(event.get('participationFee') || 0));
   }
-  const eventIds = events.map((event) => event.id);
-  for (let i = 0; i < eventIds.length; i += 50) {
-    const chunk = eventIds.slice(i, i + 50);
-    const registrations = await new Parse.Query('EventRegistration')
-      .containedIn(
-        'event',
-        chunk.map((id) => Parse.Object.extend('Event').createWithoutData(id))
-      )
-      .containedIn('role', ['athlete', 'goalkeeper'])
-      .limit(5000)
-      .find({ useMasterKey: true });
-    for (const registration of registrations) {
-      const event = registration.get('event');
-      const eventId = event && event.id ? String(event.id) : '';
-      const sides = byEvent.get(eventId);
-      if (!sides) continue;
-      const side = registration.get('teamSide');
-      if (side !== 'home' && side !== 'away') continue;
-      if (
-        typeof computeRegistrationEffectiveConfirmation === 'function' &&
-        !computeRegistrationEffectiveConfirmation(registration, feeByEvent.get(eventId) || 0)
-      ) {
-        continue;
-      }
-      const user = registration.get('user');
-      const participantId = String(
-        registration.get('participantUserId') || (user && user.id ? user.id : '')
-      );
-      if (!participantId) continue;
+  const registrations = await findRowsForEvents('EventRegistration', events, (query) => {
+    query.containedIn('role', ['athlete', 'goalkeeper']);
+  });
+  for (const registration of registrations) {
+    const event = registration.get('event');
+    const eventId = event && event.id ? String(event.id) : '';
+    const sides = byEvent.get(eventId);
+    if (!sides) continue;
+    const side = registration.get('teamSide');
+    if (side !== 'home' && side !== 'away') continue;
+    if (
+      typeof computeRegistrationEffectiveConfirmation === 'function' &&
+      !computeRegistrationEffectiveConfirmation(registration, feeByEvent.get(eventId) || 0)
+    ) {
+      continue;
+    }
+    for (const participantId of teamMatchPersonKeysFromRegistration(registration)) {
       sides[side].add(participantId);
     }
   }
@@ -599,7 +635,7 @@ async function buildTeamMatchSpotlightCards(events, performanceRaw) {
   };
   if (!events.length) return empty;
 
-  const eventById = new Map(events.map((event) => [event.id, event]));
+  const eventById = new Map(events.map((event) => [String(event.id), event]));
   const sidesByEvent = await loadTeamMatchSidesByEvent(events);
 
   const perfByEvent = new Map();
@@ -642,20 +678,23 @@ async function buildTeamMatchSpotlightCards(events, performanceRaw) {
     const awayId = away && away.id ? String(away.id) : '';
     if (!homeId && !awayId) continue;
 
-    const sides = sidesByEvent.get(event.id) || { home: new Set(), away: new Set() };
+    const sides = sidesByEvent.get(String(event.id)) || { home: new Set(), away: new Set() };
     const score = { home: 0, away: 0 };
     const goalsBySide = { home: new Map(), away: new Map() };
     const pointsBySide = { home: new Map(), away: new Map() };
 
-    for (const perf of perfByEvent.get(event.id) || []) {
-      const participantId = getPerformanceParticipantId(perf);
-      if (!participantId) continue;
-      const side = sides.home.has(participantId)
+    for (const perf of perfByEvent.get(String(event.id)) || []) {
+      const keys = teamMatchPersonKeysFromPerformance(perf);
+      if (!keys.length) continue;
+      const side = keys.some((key) => sides.home.has(key))
         ? 'home'
-        : sides.away.has(participantId)
+        : keys.some((key) => sides.away.has(key))
           ? 'away'
           : '';
       if (!side) continue;
+      const participantId =
+        keys.find((key) => (side === 'home' ? sides.home.has(key) : sides.away.has(key))) ||
+        keys[0];
 
       // Placar do confronto = soma dos refereeGoals por lado (mesma regra da sumula).
       const goals = teamMatchRefereeGoals(perf);
@@ -933,20 +972,10 @@ Parse.Cloud.define('getMuralTeamMatchDashboard', async (request) => {
   const totalConfrontos = finishedEvents.length;
   const locationStats = buildEventLocationStats(finishedEvents);
 
-  const eventIds = finishedEvents.map((e) => e.id);
-  let performanceRaw = [];
-  for (let i = 0; i < eventIds.length; i += 50) {
-    const batch = eventIds.slice(i, i + 50);
-    const q = new Parse.Query('EventPerformance');
-    q.containedIn('event', batch.map((id) => Parse.Object.createWithoutData('Event', id)));
-    q.limit(3000);
-    performanceRaw.push(...(await q.find({ useMasterKey: true })));
-  }
+  const spotlightEvents = finishedEvents.slice(0, TEAM_MATCH_SPOTLIGHT_EVENT_LIMIT);
+  const performanceRaw = await findRowsForEvents('EventPerformance', spotlightEvents);
 
-  const spotlight = await buildTeamMatchSpotlightCards(
-    finishedEvents.slice(0, TEAM_MATCH_SPOTLIGHT_EVENT_LIMIT),
-    performanceRaw
-  );
+  const spotlight = await buildTeamMatchSpotlightCards(spotlightEvents, performanceRaw);
 
   let teamRecords;
   if (locationFilter.active) {

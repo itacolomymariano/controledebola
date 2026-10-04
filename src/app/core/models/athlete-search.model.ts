@@ -7,6 +7,10 @@ export interface AthleteSearchResult {
   city?: string;
   state?: string;
   avatarUrl?: string;
+  /** AthleteProfile.height, em centimetros. */
+  heightCm?: number;
+  /** AthleteProfile.weight, em quilogramas. */
+  weightKg?: number;
 }
 
 export interface AthletePublicProfile {
@@ -36,6 +40,10 @@ export interface AthletePublicProfile {
   peladaRate?: number;
   teamMatchRate?: number;
   primaryPosition: string;
+  /** AthleteProfile.height, em centimetros. */
+  heightCm?: number;
+  /** AthleteProfile.weight, em quilogramas. */
+  weightKg?: number;
 }
 
 /** Indicadores dos ultimos N meses (padrao 3). */

@@ -8,77 +8,43 @@
 </ion-header>
 
 <ion-content>
-  <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
-    <ion-refresher-content></ion-refresher-content>
-  </ion-refresher>
+  <ion-card button class="home-door" (click)="openDoor('lista')">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="football-outline"></ion-icon>
+        {{ 'peladas.door.peladas' | t }}
+      </ion-card-title>
+      <ion-card-subtitle>{{ 'peladas.door.peladasHint' | t }}</ion-card-subtitle>
+    </ion-card-header>
+  </ion-card>
 
-  @if (loading) {
-    <div class="ion-text-center ion-padding">
-      <ion-spinner name="crescent"></ion-spinner>
-    </div>
-  }
+  <ion-card button class="home-door" (click)="openDoor('confrontos')">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="swap-horizontal-outline"></ion-icon>
+        {{ 'peladas.door.confrontos' | t }}
+      </ion-card-title>
+      <ion-card-subtitle>{{ 'peladas.door.confrontosHint' | t }}</ion-card-subtitle>
+    </ion-card-header>
+  </ion-card>
 
-  @if (!loading && errorMessage) {
-    <ion-card color="warning" class="ion-margin">
-      <ion-card-content>
-        <p>{{ errorMessage }}</p>
-        <ion-button fill="clear" (click)="retry()">{{ 'peladas.retry' | t }}</ion-button>
-      </ion-card-content>
-    </ion-card>
-  }
+  <ion-card button class="home-door" (click)="openDoor('times')">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="shield-outline"></ion-icon>
+        {{ 'peladas.door.times' | t }}
+      </ion-card-title>
+      <ion-card-subtitle>{{ 'peladas.door.timesHint' | t }}</ion-card-subtitle>
+    </ion-card-header>
+  </ion-card>
 
-  @if (!loading && !errorMessage && peladaRows.length === 0) {
-    <ion-list>
-      <ion-item>
-        <ion-icon name="people-outline" slot="start"></ion-icon>
-        <ion-label>
-          <h2>{{ 'peladas.emptyTitle' | t }}</h2>
-          <p>{{ 'peladas.emptyBody' | t }}</p>
-        </ion-label>
-      </ion-item>
-    </ion-list>
-  }
-
-  @if (!loading && peladaRows.length > 0) {
-    <ion-list>
-      @for (row of peladaRows; track row.pelada.objectId) {
-        <ion-item button (click)="openPelada(row)" class="list-card-with-action">
-          <ion-icon name="football-outline" slot="start"></ion-icon>
-          <ion-label class="ion-text-wrap">
-            <h2>{{ row.pelada.name }}</h2>
-            @if (row.pelada.isCurrentUserAdmin) {
-              <p class="pelada-admin-flag">{{ 'peladas.youAreAdmin' | t }}</p>
-            }
-            @if (row.pelada.nearby) {
-              <p class="pelada-nearby-flag">{{ 'peladas.nearby' | t }}</p>
-            }
-            <p>{{ row.sportLabel }} · {{ row.locationLabel }}</p>
-            <p>
-              {{ row.pelada.heldEventCount ?? 0 }}
-              {{ (row.pelada.heldEventCount ?? 0) === 1 ? ('peladas.eventsOne' | t) : ('peladas.eventsMany' | t) }}
-              @if ((row.pelada.heldEventCount ?? 0) > 0) {
-                · {{ 'peladas.avgParticipants' | t }}:
-                {{ (row.pelada.avgParticipantsPerEvent ?? 0) | number: '1.0-1' }}
-              }
-            </p>
-            <p>{{ 'peladas.admin' | t }}: {{ row.pelada.adminName }}</p>
-          </ion-label>
-          <ion-button
-            slot="end"
-            fill="solid"
-            size="small"
-            (click)="openPelada(row); $event.stopPropagation()"
-          >
-            Entrar
-          </ion-button>
-        </ion-item>
-      }
-    </ion-list>
-  }
-
-  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
-    <ion-fab-button (click)="createPelada()">
-      <ion-icon name="add"></ion-icon>
-    </ion-fab-button>
-  </ion-fab>
+  <ion-card button class="home-door" (click)="openDoor('usuarios')">
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="people-outline"></ion-icon>
+        {{ 'peladas.door.users' | t }}
+      </ion-card-title>
+      <ion-card-subtitle>{{ 'peladas.door.usersHint' | t }}</ion-card-subtitle>
+    </ion-card-header>
+  </ion-card>
 </ion-content>

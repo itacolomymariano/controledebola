@@ -121,37 +121,35 @@ export class EventService {
   async search(filters: EventSearchFilters): Promise<PeladaEvent[]> {
     const queryText = filters.query?.trim() || '';
     const cityFilter = filters.city?.trim() || '';
+    const neighborhoodFilter = filters.neighborhood?.trim() || '';
     const userAddress = (Parse.User.current()?.get('address') as Address) || undefined;
 
     // Confrontos: busca mais ampla (nome + times) via feed + proximidade.
     if (filters.type === 'team_match') {
-      return this.searchTeamMatchesFromFeed(queryText, cityFilter, userAddress);
+      return this.searchTeamMatchesFromFeed(
+        queryText,
+        cityFilter,
+        userAddress,
+        neighborhoodFilter
+      );
     }
 
-    const query = new Parse.Query(EVENT_CLASS);
-    includeEventRelations(query);
+    const events = await this.fetchEventsMatchingNameOrPelada(
+      filters,
+      queryText,
+      cityFilter,
+      neighborhoodFilter
+    );
 
-    if (filters.type) {
-      query.equalTo('type', filters.type);
-    }
-
-    if (cityFilter) {
-      query.matches('address.city', cityFilter, 'i');
-    }
-
-    if (queryText) {
-      query.matches('name', queryText, 'i');
-    }
-
-    query.ascending('startTime');
-    query.limit(50);
-    const results = await query.find();
-    let events = results.map((obj) => this.toPeladaEvent(obj));
-
-    // Sem filtro de tipo: inclui confrontos cujo nome de time bate com a busca.
-    if (!filters.type && queryText) {
+    // Sem filtro de tipo: inclui confrontos cujo nome, time ou pelada (se o feed trouxer) bate.
+    if (!filters.type && (queryText || neighborhoodFilter)) {
       try {
-        const teamMatches = await this.searchTeamMatchesFromFeed(queryText, cityFilter, userAddress);
+        const teamMatches = await this.searchTeamMatchesFromFeed(
+          queryText,
+          cityFilter,
+          userAddress,
+          neighborhoodFilter
+        );
         const seen = new Set(events.map((event) => event.objectId));
         for (const match of teamMatches) {
           if (!seen.has(match.objectId)) {
@@ -167,10 +165,83 @@ export class EventService {
     return this.sortEventsByProximity(events, userAddress).slice(0, 50);
   }
 
+  private constrainEventSearch(
+    query: Parse.Query,
+    filters: EventSearchFilters,
+    cityFilter: string,
+    neighborhoodFilter: string
+  ): void {
+    if (filters.type) {
+      query.equalTo('type', filters.type);
+    }
+    if (cityFilter) {
+      query.matches('address.city', cityFilter, 'i');
+    }
+    if (neighborhoodFilter) {
+      query.matches('address.neighborhood', neighborhoodFilter, 'i');
+    }
+  }
+
+  /** Nome do evento ou nome da pelada dona (pointer `pelada`). */
+  private async fetchEventsMatchingNameOrPelada(
+    filters: EventSearchFilters,
+    queryText: string,
+    cityFilter: string,
+    neighborhoodFilter: string
+  ): Promise<PeladaEvent[]> {
+    let query: Parse.Query;
+    if (queryText) {
+      const byName = new Parse.Query(EVENT_CLASS);
+      this.constrainEventSearch(byName, filters, cityFilter, neighborhoodFilter);
+      byName.matches('name', queryText, 'i');
+      includeEventRelations(byName);
+
+      const peladaQuery = new Parse.Query('Pelada');
+      peladaQuery.matches('name', queryText, 'i');
+      const byPelada = new Parse.Query(EVENT_CLASS);
+      this.constrainEventSearch(byPelada, filters, cityFilter, neighborhoodFilter);
+      byPelada.matchesQuery('pelada', peladaQuery);
+      includeEventRelations(byPelada);
+
+      query = Parse.Query.or(byName, byPelada);
+    } else {
+      query = new Parse.Query(EVENT_CLASS);
+      this.constrainEventSearch(query, filters, cityFilter, neighborhoodFilter);
+    }
+
+    includeEventRelations(query);
+    query.ascending('startTime');
+    query.limit(100);
+    let results: Parse.Object[];
+    try {
+      results = await query.find();
+    } catch (error) {
+      if (!queryText) throw error;
+      const fallback = new Parse.Query(EVENT_CLASS);
+      this.constrainEventSearch(fallback, filters, cityFilter, neighborhoodFilter);
+      fallback.matches('name', queryText, 'i');
+      includeEventRelations(fallback);
+      fallback.ascending('startTime');
+      fallback.limit(100);
+      results = await fallback.find();
+    }
+
+    const seen = new Set<string>();
+    const events: PeladaEvent[] = [];
+    for (const obj of results) {
+      const event = this.toPeladaEvent(obj);
+      if (!event.objectId || seen.has(event.objectId)) continue;
+      seen.add(event.objectId);
+      events.push(event);
+    }
+    return events;
+  }
+
   private async searchTeamMatchesFromFeed(
     queryText: string,
     cityFilter: string,
-    userAddress?: Address
+    userAddress?: Address,
+    neighborhoodFilter = ''
   ): Promise<PeladaEvent[]> {
     const rows = await Parse.Cloud.run('listTeamMatchesForFeed');
     if (!Array.isArray(rows)) return [];
@@ -180,6 +251,7 @@ export class EventService {
       items = items.filter((event) => {
         const hay = [
           event.name,
+          event.peladaName,
           event.homeTeamName,
           event.awayTeamName,
           event.address?.city,
@@ -195,6 +267,12 @@ export class EventService {
     if (cityFilter) {
       const city = cityFilter.toLowerCase();
       items = items.filter((event) => event.address?.city?.toLowerCase().trim() === city);
+    }
+    if (neighborhoodFilter) {
+      const neighborhood = neighborhoodFilter.toLowerCase();
+      items = items.filter((event) =>
+        (event.address?.neighborhood || '').toLowerCase().includes(neighborhood)
+      );
     }
     return this.sortEventsByProximity(items, userAddress).slice(0, 50);
   }
@@ -677,9 +755,11 @@ export class EventService {
   private teamMatchRowToPeladaEvent(row: Record<string, unknown>): PeladaEvent {
     const item = this.toTeamMatchListItem(row);
     const now = new Date();
+    const peladaName = typeof row['peladaName'] === 'string' ? row['peladaName'].trim() : '';
     return {
       objectId: item.objectId,
       name: item.name,
+      peladaName: peladaName || undefined,
       type: 'team_match',
       startTime: item.startTime,
       endTime: item.endTime,

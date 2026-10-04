@@ -1,3 +1,4 @@
+import { formatHeightLabel, heightCmToParts } from './athlete-profile.model';
 import { PROFILE_ROLE_LABELS, ProfileRole } from './profile-role.model';
 import { RoleParticipationHistory } from './role-participation-history.model';
 import { RoleProfile } from './role-profile.model';
@@ -39,6 +40,21 @@ export function isLegendSearchKind(role: SearchProfileKind): role is 'legend_ath
   return role === 'legend_athlete' || role === 'legend_team';
 }
 
+/** Altura `1,75 m` e peso `75 kg`, unidos quando os dois existem. */
+export function formatAthleteBodyLabel(heightCm?: number, weightKg?: number): string {
+  const chunks: string[] = [];
+  if (heightCm != null && Number.isFinite(heightCm) && heightCm > 0) {
+    const height = heightCmToParts(Math.round(heightCm));
+    chunks.push(formatHeightLabel(height.meter, height.centimeters));
+  }
+  if (weightKg != null && Number.isFinite(weightKg) && weightKg > 0) {
+    const kg = Number(weightKg);
+    const label = Number.isInteger(kg) ? String(kg) : kg.toLocaleString('pt-BR');
+    chunks.push(`${label} kg`);
+  }
+  return chunks.join(' · ');
+}
+
 export interface ProfileSearchResult {
   userId: string;
   displayName: string;
@@ -49,6 +65,10 @@ export interface ProfileSearchResult {
   city?: string;
   state?: string;
   avatarUrl?: string;
+  /** Somente atleta: altura em centimetros (AthleteProfile.height). */
+  heightCm?: number;
+  /** Somente atleta: peso em quilogramas (AthleteProfile.weight). */
+  weightKg?: number;
 }
 
 export interface RolePublicProfile {
