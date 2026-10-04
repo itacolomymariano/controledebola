@@ -2,7 +2,14 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-10-04 (placar dos cards de confrontos no mural)
+**Ultima atualizacao:** 2026-10-04 (versao de loja iOS 1.0.5)
+
+---
+
+### 2026-10-04 — Apple fechou o trem 1.0.4
+
+- Upload do IPA 1.0.4 (202) falhou com 90062 e 90186: a versao aprovada 1.0.4 nao aceita build novo
+- `package.json` passou a **1.0.5**. Compilacao continua **202** (`CFBundleVersion`). O workflow le a versao de loja do `package.json`
 
 ---
 
