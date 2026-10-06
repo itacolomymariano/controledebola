@@ -2,7 +2,14 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-10-06 (voltar da ficha do juiz)
+**Ultima atualizacao:** 2026-10-06 (versao de loja iOS 1.0.6)
+
+---
+
+### 2026-10-06 — Apple fechou o trem 1.0.5
+
+- Upload do IPA 1.0.5 (207) falhou com 90062 e 90186: a versao aprovada 1.0.5 nao aceita build novo
+- `package.json` passou a **1.0.6**. Compilacao continua **207**. O AAB da Play permanece **2026.10.06.0207**
 
 ---
 
