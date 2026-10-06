@@ -3,7 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { RefresherCustomEvent } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { Address } from '../../core/models/address.model';
-import { PROFILE_ROLE_LABELS } from '../../core/models/profile-role.model';
+import { PROFILE_ROLE_LABELS, PROFILE_ROLE_SEARCH_ALIASES } from '../../core/models/profile-role.model';
 import { AuthService } from '../../core/services/auth.service';
 import { EventService } from '../../core/services/event.service';
 import {
@@ -20,6 +20,7 @@ import {
   dateSearchTokens,
   directoryTextMatches,
   formatPlaceLine,
+  positionSearchTokens,
   formatPlaceLineWithExtra,
   loggedUserAddress,
 } from './home-directory.util';
@@ -142,6 +143,8 @@ export class HomeDirectoryPage implements OnDestroy {
         row.user.apelido,
         row.user.displayName,
         row.rolesLabel,
+        row.user.roles.flatMap((role) => PROFILE_ROLE_SEARCH_ALIASES[role]).join(' '),
+        positionSearchTokens(row.user.positions).join(' '),
         row.place,
       ])
     );

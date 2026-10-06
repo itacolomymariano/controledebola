@@ -1,6 +1,6 @@
-﻿import { Component } from '@angular/core';
+﻿import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { NavigationEnd, Router } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
 import { AuthService } from '../../core/services/auth.service';
 import { APP_RELEASE } from '../../core/constants/app-release';
@@ -10,6 +10,7 @@ import { BiometricUnlockService } from '../../core/services/biometric-unlock.ser
 import { PostAuthNavigationService } from '../../core/services/post-auth-navigation.service';
 import { environment } from '../../../environments/environment';
 import { I18nService } from '../../core/services/i18n.service';
+import { Subscription, filter } from 'rxjs';
 
 @Component({
   selector: 'app-login',
@@ -17,7 +18,7 @@ import { I18nService } from '../../core/services/i18n.service';
   styleUrls: ['./login.page.scss'],
   standalone: false,
 })
-export class LoginPage {
+export class LoginPage implements OnInit, OnDestroy {
   readonly passwordResetEnabled = environment.passwordResetEnabled;
   readonly appVersion = APP_RELEASE.label;
 
@@ -43,6 +44,8 @@ export class LoginPage {
     confirmPassword: ['', Validators.required],
   });
 
+  private navSub?: Subscription;
+
   constructor(
     private readonly fb: FormBuilder,
     private readonly auth: AuthService,
@@ -52,12 +55,24 @@ export class LoginPage {
     private readonly storage: AppStorageService,
     private readonly biometric: BiometricUnlockService,
     private readonly postAuthNav: PostAuthNavigationService,
-    private readonly i18n: I18nService
+    private readonly i18n: I18nService,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
+  ngOnInit(): void {
+    this.navSub = this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe((event) => {
+      const url = (event as NavigationEnd).urlAfterRedirects.split('?')[0];
+      if (url === '/login') void this.refreshBiometricAccess();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.navSub?.unsubscribe();
+  }
+
   async ionViewWillEnter(): Promise<void> {
-    this.biometricEnabled = await this.storage.isBiometricEnabled();
-    this.showBiometricUnlock = await this.biometric.shouldShowUnlock();
+    if (!this.auth.isLoggedIn()) this.forgotPasswordMode = false;
+    await this.refreshBiometricAccess();
 
     if (!this.auth.isLoggedIn()) return;
 
@@ -245,6 +260,18 @@ export class LoginPage {
     } finally {
       await loading.dismiss();
     }
+  }
+
+  private async refreshBiometricAccess(): Promise<void> {
+    this.biometricEnabled = await this.storage.isBiometricEnabled();
+    this.showBiometricUnlock = await this.biometric.shouldShowUnlock();
+    if (this.showBiometricUnlock && !String(this.form.getRawValue().identifier || '').trim()) {
+      const creds = await this.storage.getBiometricCredentials();
+      if (creds?.identifier) {
+        this.form.patchValue({ identifier: creds.identifier });
+      }
+    }
+    this.cdr.detectChanges();
   }
 
   private async offerBiometric(): Promise<void> {

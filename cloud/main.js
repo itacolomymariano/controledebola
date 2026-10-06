@@ -1,6 +1,6 @@
 /**
  * Cloud Code — gerado por npm run build:cloud
- * Gerado em: 2026-10-04T21:32:50.524Z
+ * Gerado em: 2026-10-06T10:46:09.034Z
  * Copie o conteudo deste arquivo no Back4App (Server Settings > Cloud Code).
  * Fontes modulares em cloud/source/
  * NAO edite este arquivo direto — edite cloud/source/ e rode npm run build:cloud
@@ -1565,6 +1565,18 @@ async function notifyNewPeladaEvent(event) {
     { throwOnError: false }
   );
 
+  if (typeof createAppMessages === 'function' && admin && admin.id) {
+    await createAppMessages([...participantIds], {
+      senderId: String(admin.id),
+      kind: 'new_pelada_event',
+      title: 'Novo evento na pelada',
+      body: alert,
+      relatedClass: 'Event',
+      relatedId: eventId,
+      actionRoute: `/event/${eventId}`,
+    });
+  }
+
   event.set('pushNewEventSentAt', new Date());
   try {
     await event.save(null, { useMasterKey: true });
@@ -1630,30 +1642,45 @@ async function notifyProfilePresentationDecision(registration, event, peladaId, 
   if (!participantUserId) return;
 
   const eventName = (event && event.get && event.get('name')) || 'evento';
-  if (decision === 'approved') {
-    await sendPushToUser(participantUserId, {
-      title: 'Participacao aprovada',
-      alert: `Sua participacao no evento "${eventName}" foi aprovada.`,
-      data: {
-        type: 'profile_presentation_approved',
-        eventId: event.id,
-        peladaId,
-        registrationId: registration.id,
-      },
-    });
-    return;
-  }
+  const approved = decision === 'approved';
+  const title = approved ? 'Participacao aprovada' : 'Participacao recusada';
+  const alert = approved
+    ? `Sua participacao no evento "${eventName}" foi aprovada.`
+    : `Sua solicitacao no evento "${eventName}" foi recusada.`;
 
   await sendPushToUser(participantUserId, {
-    title: 'Participacao recusada',
-    alert: `Sua solicitacao no evento "${eventName}" foi recusada.`,
+    title,
+    alert,
     data: {
-      type: 'profile_presentation_rejected',
+      type: approved ? 'profile_presentation_approved' : 'profile_presentation_rejected',
       eventId: event.id,
       peladaId,
       registrationId: registration.id,
     },
   });
+
+  let senderId = '';
+  if (peladaId) {
+    try {
+      const pelada = await new Parse.Query('Pelada').get(String(peladaId), { useMasterKey: true });
+      const admin = pelada.get('admin');
+      if (admin && admin.id) senderId = String(admin.id);
+    } catch (error) {
+      console.error('profile presentation admin lookup failed', error);
+    }
+  }
+  if (typeof createAppMessage === 'function' && senderId && senderId !== participantUserId) {
+    await createAppMessage({
+      recipientId: participantUserId,
+      senderId,
+      kind: approved ? 'profile_presentation_approved' : 'profile_presentation_rejected',
+      title,
+      body: alert,
+      relatedClass: 'EventRegistration',
+      relatedId: registration.id,
+      actionRoute: event && event.id ? `/event/${event.id}` : '',
+    });
+  }
 }
 
 Parse.Cloud.afterSave('Event', async (request) => {
@@ -1713,9 +1740,10 @@ Parse.Cloud.afterSave('EventRegistration', async (request) => {
     registration.get('userDisplayName') || registration.get('apelido') || 'Participante';
   const eventName = event.get('name') || 'evento';
 
+  const requestAlert = `${participantName} pediu para participar do evento "${eventName}".`;
   await sendPushToUser(admin.id, {
     title: 'Nova solicitacao de participacao',
-    alert: `${participantName} pediu para participar do evento "${eventName}".`,
+    alert: requestAlert,
     data: {
       type: 'profile_presentation_request',
       peladaId: pelada.id,
@@ -1723,6 +1751,29 @@ Parse.Cloud.afterSave('EventRegistration', async (request) => {
       registrationId: registration.id,
     },
   });
+
+  const participantUserId = String(
+    registration.get('participantUserId') ||
+      (registration.get('user') && registration.get('user').id) ||
+      (request.user && request.user.id) ||
+      ''
+  );
+  if (
+    typeof createAppMessage === 'function' &&
+    participantUserId &&
+    participantUserId !== admin.id
+  ) {
+    await createAppMessage({
+      recipientId: admin.id,
+      senderId: participantUserId,
+      kind: 'profile_presentation_request',
+      title: 'Nova solicitacao de participacao',
+      body: requestAlert,
+      relatedClass: 'EventRegistration',
+      relatedId: registration.id,
+      actionRoute: `/event/${event.id}`,
+    });
+  }
 });
 
 /** Confirmados efetivos de um evento (para lembrete / remarcacao / cancelamento). */
@@ -1749,7 +1800,16 @@ const RESCHEDULE_MIN_DELTA_MS = 15 * 60 * 1000;
 const REMINDER_2H_WINDOW_BEFORE_MS = 2 * 60 * 60 * 1000;
 const REMINDER_2H_TOLERANCE_MS = 10 * 60 * 1000;
 
-async function notifyEventScheduleOrCancelChange(event, original) {
+function scheduleChangeSenderId(event, actor) {
+  if (actor && actor.id) return String(actor.id);
+  const changedBy = event && event.get ? event.get('lastScheduleChangeBy') : null;
+  if (changedBy && changedBy.id) return String(changedBy.id);
+  const admin = event && event.get ? event.get('admin') : null;
+  if (admin && admin.id) return String(admin.id);
+  return '';
+}
+
+async function notifyEventScheduleOrCancelChange(event, original, actor) {
   if (!original) return;
 
   const wasFinished = !!original.get('isFinished');
@@ -1799,11 +1859,12 @@ async function notifyEventScheduleOrCancelChange(event, original) {
 
   // Cancelamento antecipado: marcado como encerrado antes do horario de inicio.
   if (finishChanged && newStartMs && newStartMs > now) {
+    const cancelAlert = `O evento "${eventName}" foi cancelado.${reasonSuffix}`;
     await sendPushToUsers(
       audienceIds,
       {
         title: cancelTitle,
-        alert: `O evento "${eventName}" foi cancelado.${reasonSuffix}`,
+        alert: cancelAlert,
         data: {
           type: 'event_cancelled',
           eventId,
@@ -1812,6 +1873,17 @@ async function notifyEventScheduleOrCancelChange(event, original) {
       },
       { throwOnError: false }
     );
+    if (typeof createAppMessages === 'function') {
+      await createAppMessages(audienceIds, {
+        senderId: scheduleChangeSenderId(event, actor),
+        kind: 'event_cancelled',
+        title: cancelTitle,
+        body: cancelAlert,
+        relatedClass: 'Event',
+        relatedId: eventId,
+        actionRoute: `/event/${eventId}`,
+      });
+    }
     if (reasonRaw) {
       event.unset('lastScheduleChangeReason');
       try {
@@ -1842,6 +1914,17 @@ async function notifyEventScheduleOrCancelChange(event, original) {
       },
       { throwOnError: false }
     );
+    if (typeof createAppMessages === 'function') {
+      await createAppMessages(audienceIds, {
+        senderId: scheduleChangeSenderId(event, actor),
+        kind: 'event_rescheduled',
+        title: rescheduleTitle,
+        body: alert,
+        relatedClass: 'Event',
+        relatedId: eventId,
+        actionRoute: `/event/${eventId}`,
+      });
+    }
 
     if (reasonRaw) {
       event.unset('lastScheduleChangeReason');
@@ -1863,7 +1946,7 @@ async function notifyEventScheduleOrCancelChange(event, original) {
 Parse.Cloud.afterSave('Event', async (request) => {
   if (!(request.original && request.original.id)) return;
   try {
-    await notifyEventScheduleOrCancelChange(request.object, request.original);
+    await notifyEventScheduleOrCancelChange(request.object, request.original, request.user);
   } catch (error) {
     console.error('notifyEventScheduleOrCancelChange failed', error);
   }
@@ -2325,6 +2408,18 @@ Parse.Cloud.define('sendEventConfirmedParticipantNotification', async (request) 
     },
     { throwOnError: true }
   );
+
+  if (typeof createAppMessages === 'function') {
+    await createAppMessages(uniqueUserIds, {
+      senderId: user.id,
+      kind: 'event_admin_message',
+      title,
+      body: alert,
+      relatedClass: 'Event',
+      relatedId: eventId,
+      actionRoute: `/event/${eventId}`,
+    });
+  }
 
   const focusEmail = String(request.params.focusEmail || '')
     .trim()
@@ -12684,6 +12779,97 @@ Parse.Cloud.define('getParticipationReviewProfile', async (request) => {
   };
 });
 
+/**
+ * Socio de pelada: uma linha AppMessage (entrada do destinatario, saida de quem agiu).
+ * Ignora o vinculo do proprio administrador na criacao da pelada e saves que nao mudam status.
+ */
+Parse.Cloud.afterSave('PeladaMembership', async (request) => {
+  try {
+    const membership = request.object;
+    if (!membership || typeof createAppMessage !== 'function') return;
+
+    const original = request.original;
+    const status = String(membership.get('status') || '');
+    const prevStatus = original ? String(original.get('status') || '') : '';
+    if (original && status === prevStatus) return;
+
+    const member = membership.get('user');
+    const peladaPtr = membership.get('pelada');
+    const memberId = member && member.id ? String(member.id) : '';
+    const peladaId = peladaPtr && peladaPtr.id ? String(peladaPtr.id) : '';
+    if (!memberId || !peladaId) return;
+
+    const pelada = await new Parse.Query('Pelada').get(peladaId, { useMasterKey: true });
+    const admin = pelada.get('admin');
+    const adminId = admin && admin.id ? String(admin.id) : '';
+    if (!adminId || adminId === memberId) return;
+
+    const peladaName = String(pelada.get('name') || 'pelada');
+    const memberLabel =
+      String(membership.get('memberDisplayName') || '').trim() ||
+      String(membership.get('memberApelido') || '').trim() ||
+      String(membership.get('memberFullName') || '').trim() ||
+      'Um usuario';
+    const route = `/pelada/${peladaId}`;
+    const actorId = request.user && request.user.id ? String(request.user.id) : '';
+
+    if (!original && status === 'pending') {
+      await createAppMessage({
+        recipientId: adminId,
+        senderId: memberId,
+        kind: 'pelada_membership_request',
+        title: 'Solicitacao de socio',
+        body: `${memberLabel} pediu para ser socio de "${peladaName}".`,
+        relatedClass: 'PeladaMembership',
+        relatedId: membership.id,
+        actionRoute: route,
+      });
+      return;
+    }
+
+    const senderId = actorId && actorId !== memberId ? actorId : adminId;
+    let kind = '';
+    let title = '';
+    let body = '';
+    if (status === 'active' && !original) {
+      kind = 'pelada_membership_added';
+      title = 'Voce agora e socio';
+      body = `Voce foi adicionado como socio de "${peladaName}".`;
+    } else if (status === 'active' && prevStatus === 'pending') {
+      kind = 'pelada_membership_approved';
+      title = 'Solicitacao de socio aceita';
+      body = `Sua solicitacao para ser socio de "${peladaName}" foi aceita.`;
+    } else if (status === 'active' && prevStatus === 'inactive') {
+      kind = 'pelada_membership_reactivated';
+      title = 'Socio reativado';
+      body = `Voce voltou a ser socio de "${peladaName}".`;
+    } else if (status === 'inactive' && prevStatus === 'pending') {
+      kind = 'pelada_membership_rejected';
+      title = 'Solicitacao de socio recusada';
+      body = `Sua solicitacao para ser socio de "${peladaName}" foi recusada.`;
+    } else if (status === 'inactive' && prevStatus === 'active') {
+      kind = 'pelada_membership_removed';
+      title = 'Socio removido';
+      body = `Voce deixou de ser socio de "${peladaName}".`;
+    } else {
+      return;
+    }
+
+    await createAppMessage({
+      recipientId: memberId,
+      senderId,
+      kind,
+      title,
+      body,
+      relatedClass: 'PeladaMembership',
+      relatedId: membership.id,
+      actionRoute: route,
+    });
+  } catch (error) {
+    console.error('PeladaMembership mailbox failed', error);
+  }
+});
+
 // --- 11-profiles-search.js ---
 
 /** Perfis — busca de atletas, funcoes e escudos de times */
@@ -13684,51 +13870,144 @@ async function loadProfileRegistrationsForUser(userId, role) {
   return query.find({ useMasterKey: true });
 }
 
-async function getMuralCombinedScore(userId, targetRole, scope, scopeId, cache) {
-  if (!scopeId) return 0;
-
-  const cacheKey = `${scope}:${scopeId}:${targetRole}:${userId}`;
-  if (cache.has(cacheKey)) {
-    return cache.get(cacheKey);
+/**
+ * EventPerformance ligado ao evento ja carregado.
+ * createWithoutData dentro de containedIn nao casa com o ponteiro gravado e a lista volta vazia.
+ */
+async function findPerformancesForLoadedEvents(events) {
+  const rows = [];
+  const pageSize = 1000;
+  const loaded = (events || []).filter((event) => event && event.id && typeof event.get === 'function');
+  for (let i = 0; i < loaded.length; i += 40) {
+    const batch = loaded.slice(i, i + 40);
+    let skip = 0;
+    for (;;) {
+      const query = new Parse.Query('EventPerformance');
+      query.containedIn('event', batch);
+      query.limit(pageSize);
+      query.skip(skip);
+      const page = await query.find({ useMasterKey: true });
+      rows.push(...page);
+      if (page.length < pageSize) break;
+      skip += page.length;
+      if (skip > 8000) break;
+    }
   }
+  return rows;
+}
 
-  let performanceScore = 0;
-  const perfQuery = new Parse.Query('EventPerformance');
-  if (scope === 'pelada') {
-    perfQuery.equalTo('pelada', Parse.Object.extend('Pelada').createWithoutData(scopeId));
-  } else {
-    perfQuery.equalTo('event', Parse.Object.extend('Event').createWithoutData(scopeId));
+function historyPerformanceMatchesUser(perf, userId) {
+  const wanted = String(userId || '');
+  if (!wanted) return false;
+  if (typeof getPerformanceParticipantId === 'function') {
+    const participantId = getPerformanceParticipantId(perf);
+    if (participantId && String(participantId) === wanted) return true;
   }
-  perfQuery.limit(1000);
-  const performances = await perfQuery.find({ useMasterKey: true });
+  const explicit = perf.get('participantUserId');
+  if (explicit && String(explicit) === wanted) return true;
+  const user = perf.get('user');
+  return !!(user && user.id && String(user.id) === wanted);
+}
 
-  for (const perf of performances) {
-    if (perf.get('role') !== targetRole) continue;
-    const user = perf.get('user');
-    if (!user || user.id !== userId) continue;
-    performanceScore += computePerformanceScore(perf);
+function historyPerformanceScore(perf) {
+  if (typeof computeEffectivePerformanceScore === 'function') {
+    const priority =
+      typeof resolvePerformanceStatsPriority === 'function'
+        ? resolvePerformanceStatsPriority(perf, new Map())
+        : 'referee';
+    return computeEffectivePerformanceScore(perf, priority);
   }
+  return computePerformanceScore(perf);
+}
 
-  const voteQuery = new Parse.Query('MuralVote');
-  voteQuery.equalTo('scope', scope);
-  voteQuery.equalTo('scopeId', scopeId);
-  voteQuery.equalTo('targetRole', targetRole);
-  voteQuery.limit(1000);
-  const votes = await voteQuery.find({ useMasterKey: true });
+/** Pontos lancados na sumula do arbitro (refereeGoals), nao o voto do atleta nem o campo goals do scout. */
+function refereeSumulaProfileScore(perf) {
+  const hasSumula =
+    typeof performanceHasRefereeSumulaData === 'function'
+      ? performanceHasRefereeSumulaData(perf)
+      : !!(perf.get('refereeSumulaSaved') || Number(perf.get('refereeGoals') || 0));
+  if (!hasSumula) return 0;
 
+  const goals =
+    typeof readRefereeOverlapStat === 'function'
+      ? readRefereeOverlapStat(perf, 'goals')
+      : Number(perf.get('refereeGoals') || 0);
+  const yellow =
+    typeof readRefereeOverlapStat === 'function'
+      ? readRefereeOverlapStat(perf, 'yellowCards')
+      : Number(perf.get('refereeYellowCards') || 0);
+  const red =
+    typeof readRefereeOverlapStat === 'function'
+      ? readRefereeOverlapStat(perf, 'redCards')
+      : Number(perf.get('refereeRedCards') || 0);
+  const assists = Number(perf.get('assists') || 0);
+  const saves = Number(perf.get('saves') || 0);
+  const stored = Number(perf.get('points') || 0);
+  const fromSumula = goals * 3 + assists * 2 + saves * 2 - yellow - red * 3;
+  if (goals > 0 || yellow > 0 || red > 0) return fromSumula;
+  return stored > 0 ? stored : fromSumula;
+}
+
+function scoreHistoryEvent(userId, role, perfs) {
+  const seen = new Set();
   let total = 0;
-  let count = 0;
-  for (const vote of votes) {
-    const targetUser = vote.get('targetUser');
-    if (!targetUser || targetUser.id !== userId) continue;
-    total += Number(vote.get('score') ?? 0);
-    count += 1;
+  for (const perf of perfs || []) {
+    if (!perf || !perf.id || seen.has(perf.id)) continue;
+    seen.add(perf.id);
+    if (role === 'referee') {
+      const hasSumula =
+        typeof performanceHasRefereeSumulaData === 'function'
+          ? performanceHasRefereeSumulaData(perf)
+          : !!(perf.get('refereeSumulaSaved') || Number(perf.get('refereeGoals') || 0));
+      if (hasSumula) {
+        total += refereeSumulaProfileScore(perf);
+        continue;
+      }
+    }
+    if (!historyPerformanceMatchesUser(perf, userId)) continue;
+    const rowRole = perf.get('role') || 'athlete';
+    if (rowRole !== role) continue;
+    total += historyPerformanceScore(perf);
+  }
+  return total;
+}
+
+function voteTargetUserId(vote) {
+  const explicit = vote.get('targetUserId');
+  if (explicit) return String(explicit);
+  const target = vote.get('targetUser');
+  return target && target.id ? String(target.id) : '';
+}
+
+async function loadRoleVoteAveragesByScopeId(userId, targetRole, scope, scopeIds) {
+  const averages = new Map();
+  const ids = (scopeIds || []).map((id) => String(id || '')).filter(Boolean);
+  if (!ids.length || !targetRole) return averages;
+
+  const totals = new Map();
+  for (let i = 0; i < ids.length; i += 80) {
+    const batch = ids.slice(i, i + 80);
+    const query = new Parse.Query('MuralVote');
+    query.equalTo('scope', scope);
+    query.equalTo('targetRole', targetRole);
+    query.containedIn('scopeId', batch);
+    query.limit(1000);
+    const votes = await query.find({ useMasterKey: true });
+    for (const vote of votes) {
+      if (voteTargetUserId(vote) !== String(userId)) continue;
+      const scopeId = String(vote.get('scopeId') || '');
+      if (!scopeId) continue;
+      const current = totals.get(scopeId) || { total: 0, count: 0 };
+      current.total += Number(vote.get('score') || 0);
+      current.count += 1;
+      totals.set(scopeId, current);
+    }
   }
 
-  const averageScore = count > 0 ? total / count : 0;
-  const combinedScore = performanceScore + averageScore * 10;
-  cache.set(cacheKey, combinedScore);
-  return combinedScore;
+  for (const [scopeId, data] of totals) {
+    if (data.count > 0) averages.set(scopeId, data.total / data.count);
+  }
+  return averages;
 }
 
 function upsertHistoryRecord(map, id, name, score) {
@@ -13769,31 +14048,56 @@ async function buildRoleParticipationHistory(userId, role) {
 
   const muralRole = profileRoleToMuralRole(role);
   const registrations = await loadProfileRegistrationsForUser(userId, role);
+  const eventsById = new Map();
+  for (const registration of registrations) {
+    const event = registration.get('event');
+    if (!event || !event.id || typeof event.get !== 'function') continue;
+    eventsById.set(event.id, event);
+  }
+  const events = Array.from(eventsById.values());
+  const performances = await findPerformancesForLoadedEvents(events);
+  const perfsByEventId = new Map();
+  for (const perf of performances) {
+    const event = perf.get('event');
+    const eventId = event && event.id ? event.id : '';
+    if (!eventId) continue;
+    const list = perfsByEventId.get(eventId) || [];
+    list.push(perf);
+    perfsByEventId.set(eventId, list);
+  }
+
+  const peladaIds = [];
+  for (const event of events) {
+    if (event.get('type') === 'team_match') continue;
+    const pelada = event.get('pelada');
+    if (pelada && pelada.id) peladaIds.push(pelada.id);
+  }
+  const eventVoteAverages = muralRole
+    ? await loadRoleVoteAveragesByScopeId(
+        userId,
+        muralRole,
+        'event',
+        events.map((event) => event.id)
+      )
+    : new Map();
+  const peladaVoteAverages = muralRole
+    ? await loadRoleVoteAveragesByScopeId(userId, muralRole, 'pelada', peladaIds)
+    : new Map();
+
   const peladaScores = new Map();
   const matchScores = new Map();
   const teamScores = new Map();
-  const muralCache = new Map();
+  const peladaEventVoteAverages = new Map();
 
-  for (const registration of registrations) {
-    const event = registration.get('event');
-    if (!event || !event.id) continue;
-
+  for (const event of events) {
     const eventType = event.get('type');
-    const pelada = event.get('pelada');
-    const peladaId = pelada && pelada.id ? pelada.id : null;
-    const peladaName = (pelada && pelada.get('name')) || event.get('name');
-
-    const score = muralRole
-      ? await getMuralCombinedScore(
-          userId,
-          muralRole,
-          eventType === 'team_match' ? 'event' : 'pelada',
-          eventType === 'team_match' ? event.id : peladaId,
-          muralCache
-        )
-      : 0;
+    const eventPerfs = perfsByEventId.get(event.id) || [];
+    const performanceScore = scoreHistoryEvent(userId, muralRole || role, eventPerfs);
+    const eventVote = eventVoteAverages.get(String(event.id));
 
     if (eventType === 'team_match') {
+      const votePart = eventVote != null ? eventVote * 10 : 0;
+      const score = performanceScore + votePart;
       const home = String(event.get('homeTeamName') || '').trim();
       const away = String(event.get('awayTeamName') || '').trim();
       const matchLabel = home && away ? `${home} x ${away}` : event.get('name') || 'Partida';
@@ -13803,9 +14107,36 @@ async function buildRoleParticipationHistory(userId, role) {
         if (home) upsertHistoryRecord(teamScores, `team:${home}`, home, score);
         if (away) upsertHistoryRecord(teamScores, `team:${away}`, away, score);
       }
-    } else if (peladaId && peladaName && (mode === 'pelada_match' || mode === 'pelada_teams')) {
-      upsertHistoryRecord(peladaScores, peladaId, peladaName, score);
+      continue;
     }
+
+    const pelada = event.get('pelada');
+    const peladaId = pelada && pelada.id ? pelada.id : null;
+    const peladaName = (pelada && pelada.get('name')) || event.get('name');
+    if (!peladaId || !peladaName || (mode !== 'pelada_match' && mode !== 'pelada_teams')) {
+      continue;
+    }
+
+    const existing = peladaScores.get(peladaId);
+    if (!existing) {
+      peladaScores.set(peladaId, { id: peladaId, name: peladaName, score: performanceScore });
+    } else {
+      existing.score += performanceScore;
+    }
+    if (eventVote != null) {
+      const votes = peladaEventVoteAverages.get(peladaId) || [];
+      votes.push(eventVote);
+      peladaEventVoteAverages.set(peladaId, votes);
+    }
+  }
+
+  for (const [peladaId, record] of peladaScores) {
+    const samples = peladaEventVoteAverages.get(peladaId) || [];
+    const peladaVote = peladaVoteAverages.get(String(peladaId));
+    if (peladaVote != null) samples.push(peladaVote);
+    if (!samples.length) continue;
+    const average = samples.reduce((sum, value) => sum + value, 0) / samples.length;
+    record.score += average * 10;
   }
 
   const sortByName = (a, b) => a.name.localeCompare(b.name, 'pt-BR');
@@ -14489,7 +14820,7 @@ function assertPublicHttpUrl(url, label) {
 }
 
 async function notifyEventMediaPublishedToParticipants(event, publisherUserId, options) {
-  if (typeof sendPushToUsers !== 'function' || typeof computeRegistrationEffectiveConfirmation !== 'function') {
+  if (typeof computeRegistrationEffectiveConfirmation !== 'function') {
     return;
   }
   const participationFee = Number(event.get('participationFee') || 0);
@@ -14522,19 +14853,35 @@ async function notifyEventMediaPublishedToParticipants(event, publisherUserId, o
   }
 
   const eventName = safeDisplayName(event.get('name'), 'Evento');
-  await sendPushToUsers(
-    uniqueUserIds,
-    {
-      title: options.title || 'Nova reportagem no evento',
-      alert: options.alert || `Confira a reportagem de ${eventName}.`,
-      data: {
-        type: options.pushType || 'event_journal_reportage',
-        eventId: event.id,
-        category: options.category || 'journal_reportage',
+  const title = options.title || 'Nova reportagem no evento';
+  const alert = options.alert || `Confira a reportagem de ${eventName}.`;
+  const kind = options.pushType || 'event_journal_reportage';
+  if (typeof sendPushToUsers === 'function') {
+    await sendPushToUsers(
+      uniqueUserIds,
+      {
+        title,
+        alert,
+        data: {
+          type: kind,
+          eventId: event.id,
+          category: options.category || 'journal_reportage',
+        },
       },
-    },
-    { throwOnError: false }
-  );
+      { throwOnError: false }
+    );
+  }
+  if (typeof createAppMessages === 'function') {
+    await createAppMessages(uniqueUserIds, {
+      senderId: String(publisherUserId || ''),
+      kind,
+      title,
+      body: alert,
+      relatedClass: 'Event',
+      relatedId: event.id,
+      actionRoute: `/event/${event.id}`,
+    });
+  }
 }
 
 async function loadEventForMedia(eventId) {
@@ -21684,6 +22031,7 @@ Parse.Cloud.define('getMuralTeamMatchDashboard', async (request) => {
  * quando o assunto e resolvido.
  *
  * Escrita somente pela nuvem: use createAppMessage / createAppMessages ao lado do push.
+ * sendContactMessage (suporte) fica de fora. Socio de pelada e apresentacao de perfil entram aqui.
  */
 
 const APP_MESSAGE_CLASS = 'AppMessage';

@@ -587,21 +587,14 @@
           [class.message-read]="!(message.unread && mailbox === 'in')"
           (click)="openMessage(message)"
         >
-          <app-user-avatar
-            slot="start"
-            [avatarUrl]="message.counterpartAvatarUrl"
-            [alt]="message.counterpartName"
-            size="md"
-          ></app-user-avatar>
           <ion-label>
-            <h3 class="message-title">
-              @if (message.unread && mailbox === 'in') {
-                <span class="message-dot" aria-label="Nao lida"></span>
-              }
-              {{ message.title }}
-            </h3>
-            <p class="message-body">{{ message.body }}</p>
-            <p class="message-meta">{{ messageCounterpartLine(message) }}</p>
+            <h3 class="message-who">{{ messageCounterpartIdentity(message) }}</h3>
+            @if (messageListDate(message)) {
+              <p class="message-when">{{ messageListDate(message) }}</p>
+            }
+            @if (messageListTime(message)) {
+              <p class="message-when">{{ messageListTime(message) }}</p>
+            }
           </ion-label>
         </ion-item>
       }

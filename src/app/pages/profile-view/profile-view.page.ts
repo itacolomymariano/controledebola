@@ -1,5 +1,7 @@
-import { Component } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Location } from '@angular/common';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
+import { ActivatedRoute, NavigationStart, Router } from '@angular/router';
+import { Subscription, filter } from 'rxjs';
 import { ProfileRole, PROFILE_ROLE_LABELS } from '../../core/models/profile-role.model';
 import { RolePublicProfile } from '../../core/models/profile-search.model';
 import {
@@ -20,6 +22,7 @@ import { AthleteSearchService } from '../../core/services/athlete-search.service
 import { ProfileSearchService } from '../../core/services/profile-search.service';
 import { SupportRoleToolsService } from '../../core/services/support-role-tools.service';
 import {
+  buildProfileReturnUrl,
   navigateToProfileReturn,
   peekProfileReturnNavigationState,
   readProfileReturnNavigationState,
@@ -29,9 +32,10 @@ import {
   selector: 'app-profile-view',
   templateUrl: './profile-view.page.html',
   styleUrls: ['./profile-view.page.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: false,
 })
-export class ProfileViewPage {
+export class ProfileViewPage implements OnDestroy {
   loading = true;
   profile: RolePublicProfile | null = null;
   errorMessage = '';
@@ -42,26 +46,55 @@ export class ProfileViewPage {
   operationStats: SupportRoleProfileStats | null = null;
   coachTeamMatchRecord: TeamMatchRecord | null = null;
 
+  /** Rota de onde a ficha foi aberta (busca ou lista de usuarios). */
+  private backUrl = '/tabs/search';
+  private navSub?: Subscription;
+
   constructor(
     private readonly route: ActivatedRoute,
     private readonly router: Router,
+    private readonly location: Location,
     private readonly athleteSearchService: AthleteSearchService,
     private readonly profileSearchService: ProfileSearchService,
-    private readonly supportTools: SupportRoleToolsService
-  ) {}
+    private readonly supportTools: SupportRoleToolsService,
+    private readonly cdr: ChangeDetectorRef
+  ) {
+    this.navSub = this.router.events
+      .pipe(filter((event) => event instanceof NavigationStart))
+      .subscribe((event) => {
+        const next = (event as NavigationStart).url.split('?')[0];
+        if (!next.startsWith('/profile/')) return;
+        const current = this.router.url.split('?')[0];
+        if (current && !current.startsWith('/profile/')) {
+          this.backUrl = current;
+        }
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.navSub?.unsubscribe();
+  }
 
   goBack(): void {
     const returnState =
       peekProfileReturnNavigationState() ?? readProfileReturnNavigationState();
-    if (returnState?.hiringRole) {
-      navigateToProfileReturn(this.router, returnState);
+    const hiringUrl = returnState?.hiringRole ? buildProfileReturnUrl(returnState) : '';
+    if (hiringUrl && !this.isProfilePath(hiringUrl)) {
+      navigateToProfileReturn(this.router, returnState!);
       return;
     }
+
     if (window.history.length > 1) {
-      window.history.back();
+      this.location.back();
       return;
     }
-    void this.router.navigateByUrl('/tabs/search');
+    void this.router.navigateByUrl(this.safeBackUrl());
+  }
+
+  formatScore(value: number | null | undefined): string {
+    const score = Number(value);
+    if (!Number.isFinite(score)) return '0.0';
+    return score.toFixed(1);
   }
 
   get showsPeladaHistory(): boolean {
@@ -93,6 +126,7 @@ export class ProfileViewPage {
   }
 
   ionViewWillEnter(): void {
+    this.rememberBackUrl();
     const roleParam = this.route.snapshot.paramMap.get('role') as ProfileRole | null;
     const userId = this.route.snapshot.paramMap.get('userId') ?? '';
     void this.load(roleParam, userId);
@@ -116,6 +150,7 @@ export class ProfileViewPage {
   private async load(role: ProfileRole | null, userId: string): Promise<void> {
     this.loading = true;
     this.errorMessage = '';
+    this.cdr.markForCheck();
     this.role = role;
     this.roleLabel = role ? PROFILE_ROLE_LABELS[role] : '';
     this.historyMode = role && isProfessionalRole(role) ? ROLE_HISTORY_MODE[role] : role === 'fan' ? 'pelada_match' : 'none';
@@ -155,6 +190,25 @@ export class ProfileViewPage {
         error instanceof Error ? error.message : 'Erro ao carregar perfil.';
     } finally {
       this.loading = false;
+      this.cdr.markForCheck();
     }
+  }
+
+  private rememberBackUrl(): void {
+    const prev =
+      this.router.lastSuccessfulNavigation?.previousNavigation?.finalUrl?.toString() || '';
+    const path = prev.split('?')[0];
+    if (path && !this.isProfilePath(path)) {
+      this.backUrl = path;
+    }
+  }
+
+  private safeBackUrl(): string {
+    return this.isProfilePath(this.backUrl) ? '/tabs/search' : this.backUrl;
+  }
+
+  private isProfilePath(url: string): boolean {
+    const path = url.split('?')[0];
+    return path === '/profile' || path.startsWith('/profile/');
   }
 }

@@ -19,7 +19,7 @@
 
   @if (!loading && !errorMessage) {
     <ion-searchbar
-      [placeholder]="'peladas.searchPlaceholder' | t"
+      [placeholder]="(door === 'usuarios' ? 'peladas.usersSearchPlaceholder' : 'peladas.searchPlaceholder') | t"
       [value]="search"
       [debounce]="200"
       (ionInput)="onSearchChange($any($event.detail.value))"
@@ -99,6 +99,9 @@
             <p>{{ 'peladas.fullName' | t }}: {{ row.user.fullName || '—' }}</p>
             <p>{{ 'peladas.nickname' | t }}: {{ row.user.apelido || '—' }}</p>
             <p>{{ row.rolesLabel || ('peladas.noProfiles' | t) }}</p>
+            @if (row.user.positions.length) {
+              <p>{{ row.user.positions.join(' · ') }}</p>
+            }
             <p>{{ row.place || ('peladas.localMissing' | t) }}</p>
           </ion-label>
         </ion-item>

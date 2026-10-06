@@ -7,6 +7,7 @@
  * quando o assunto e resolvido.
  *
  * Escrita somente pela nuvem: use createAppMessage / createAppMessages ao lado do push.
+ * sendContactMessage (suporte) fica de fora. Socio de pelada e apresentacao de perfil entram aqui.
  */
 
 const APP_MESSAGE_CLASS = 'AppMessage';

@@ -27,6 +27,17 @@
 <ion-content class="ion-padding">
   @if (!passwordResetEnabled || !forgotPasswordMode) {
     <h1 class="login-heading">{{ 'login.title' | t }}</h1>
+    @if (showBiometricUnlock) {
+      <button
+        type="button"
+        class="login-fingerprint"
+        (click)="loginWithBiometric()"
+        [attr.aria-label]="'login.biometricAria' | t"
+      >
+        <img src="assets/icon/fingerprint.svg" alt="" class="login-fingerprint-image" />
+        <span class="login-fingerprint-hint">{{ 'login.biometricHint' | t }}</span>
+      </button>
+    }
     <form [formGroup]="form" (ngSubmit)="submit()">
       <ion-item>
         <ion-input
@@ -63,18 +74,6 @@
       }
       <ion-button expand="block" type="submit" class="ion-margin-top">{{ 'login.submit' | t }}</ion-button>
     </form>
-
-    @if (showBiometricUnlock) {
-      <button
-        type="button"
-        class="login-fingerprint"
-        (click)="loginWithBiometric()"
-        [attr.aria-label]="'login.biometricAria' | t"
-      >
-        <img src="assets/icon/fingerprint.svg" alt="" class="login-fingerprint-image" />
-        <span class="login-fingerprint-hint">{{ 'login.biometricHint' | t }}</span>
-      </button>
-    }
 
     @if (passwordResetEnabled) {
       <ion-button expand="block" fill="clear" (click)="openForgotPassword()">

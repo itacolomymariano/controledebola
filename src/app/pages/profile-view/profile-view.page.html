@@ -174,7 +174,7 @@
             <ion-note>Nenhuma pelada registrada ainda.</ion-note>
           }
           @for (item of profile.history.peladas; track item.id) {
-            <p>{{ item.name }} · Pontuacao: {{ item.score.toFixed(1) }}</p>
+            <p>{{ item.name }} · Pontuacao: {{ formatScore(item.score) }}</p>
           }
         </ion-card-content>
       </ion-card>
@@ -190,7 +190,7 @@
             <ion-note>Nenhuma partida registrada ainda.</ion-note>
           }
           @for (item of profile.history.matches; track item.id) {
-            <p>{{ item.name }} · Pontuacao: {{ item.score.toFixed(1) }}</p>
+            <p>{{ item.name }} · Pontuacao: {{ formatScore(item.score) }}</p>
           }
         </ion-card-content>
       </ion-card>
@@ -206,7 +206,7 @@
             <ion-note>Nenhum time registrado ainda.</ion-note>
           }
           @for (item of profile.history.teams; track item.id) {
-            <p>{{ item.name }} · Pontuacao: {{ item.score.toFixed(1) }}</p>
+            <p>{{ item.name }} · Pontuacao: {{ formatScore(item.score) }}</p>
           }
         </ion-card-content>
       </ion-card>

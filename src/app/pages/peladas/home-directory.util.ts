@@ -70,6 +70,16 @@ export function compareDirectoryProximity(
   return aName.localeCompare(bName, 'pt-BR');
 }
 
+/** "meio campo" tambem encontra a posicao Meia. */
+export function positionSearchTokens(positions: string[]): string[] {
+  const tokens = [...positions];
+  const normalized = positions.map((position) => normalizeSearchText(position));
+  if (normalized.some((position) => position === 'meia' || position.includes('meia'))) {
+    tokens.push('meio campo', 'meio-campo');
+  }
+  return tokens;
+}
+
 export function directoryTextMatches(
   query: string,
   parts: Array<string | undefined | null>

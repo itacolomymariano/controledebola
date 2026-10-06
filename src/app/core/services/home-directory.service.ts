@@ -25,6 +25,7 @@ export interface HomeDirectoryUser {
   fullName: string;
   displayName: string;
   roles: ProfileRole[];
+  positions: string[];
   state: string;
   city: string;
   neighborhood: string;
@@ -48,6 +49,7 @@ interface UserDraft {
   longitude?: number;
   avatarUrl?: string;
   roles: ProfileRole[];
+  positions: string[];
 }
 
 const ROLE_SET = new Set<string>(SEARCHABLE_PROFILE_ROLES);
@@ -233,6 +235,7 @@ export class HomeDirectoryService {
 
     const role = fallbackRole ?? row.get('role');
     if (isProfileRole(role) && !draft.roles.includes(role)) draft.roles.push(role);
+    this.collectPositions(draft, row);
 
     this.fillText(draft, 'apelido', String(row.get('userApelido') || '').trim());
     this.fillText(draft, 'fullName', String(row.get('userFullName') || '').trim());
@@ -293,7 +296,15 @@ export class HomeDirectoryService {
       neighborhood: '',
       state: '',
       roles: [],
+      positions: [],
     };
+  }
+
+  private collectPositions(draft: UserDraft, row: Parse.Object): void {
+    for (const key of ['primaryPosition', 'secondaryPosition', 'thirdPosition'] as const) {
+      const value = String(row.get(key) || '').trim();
+      if (value && !draft.positions.includes(value)) draft.positions.push(value);
+    }
   }
 
   private freeze(draft: UserDraft): HomeDirectoryUser {
@@ -305,6 +316,7 @@ export class HomeDirectoryService {
       fullName,
       displayName: apelido || fullName,
       roles: SEARCHABLE_PROFILE_ROLES.filter((role) => draft.roles.includes(role)),
+      positions: [...draft.positions],
       state: draft.state,
       city: draft.city,
       neighborhood: draft.neighborhood,

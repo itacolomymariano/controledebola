@@ -207,33 +207,62 @@ export class InboxPage implements OnDestroy {
     }
   }
 
-  /** `Apelido (Nome) · dd/MM/yyyy HH:mm`. Sem parenteses se faltar um dos dois. */
-  messageCounterpartLine(message: AppMessage): string {
+  /** Apelido e, quando houver, nome completo entre parenteses. */
+  messageCounterpartIdentity(message: AppMessage): string {
     const apelido = message.counterpartApelido.trim();
     const fullName = message.counterpartFullName.trim();
-    let who = '';
-    if (apelido && fullName) {
-      who = `${apelido} (${fullName})`;
-    } else if (fullName) {
-      who = fullName;
-    } else if (apelido) {
-      who = apelido;
-    } else {
-      who = message.counterpartName || '—';
-    }
+    if (apelido && fullName) return `${apelido} (${fullName})`;
+    if (fullName) return fullName;
+    if (apelido) return apelido;
+    return message.counterpartName || '—';
+  }
+
+  /** Data da mensagem (recebimento na Entrada, envio na Saida): dd/mm/aaaa. */
+  messageListDate(message: AppMessage): string {
+    return this.formatMessagePart(message.sentAt, {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  }
+
+  /** Hora da mensagem: HH:mm. */
+  messageListTime(message: AppMessage): string {
+    return this.formatMessagePart(message.sentAt, {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+  }
+
+  /** No texto aberto: `Apelido (Nome) · dd/mm/aaaa HH:mm`. */
+  messageCounterpartLine(message: AppMessage): string {
+    const who = this.messageCounterpartIdentity(message);
     const when = this.formatMessageDate(message.sentAt);
     return when ? `${who} · ${when}` : who;
   }
 
   formatMessageDate(date: Date | null): string {
     if (!date) return '';
-    return new Intl.DateTimeFormat('pt-BR', {
+    const day = this.formatMessagePart(date, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
+    });
+    const time = this.formatMessagePart(date, {
       hour: '2-digit',
       minute: '2-digit',
-    }).format(date);
+      hour12: false,
+    });
+    return day && time ? `${day} ${time}` : day || time;
+  }
+
+  private formatMessagePart(
+    date: Date | null,
+    options: Intl.DateTimeFormatOptions
+  ): string {
+    if (!date) return '';
+    return new Intl.DateTimeFormat('pt-BR', options).format(date);
   }
 
   /** Recarrega convites e atualiza badge da barra superior. */

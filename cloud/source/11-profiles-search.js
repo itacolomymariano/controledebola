@@ -996,51 +996,144 @@ async function loadProfileRegistrationsForUser(userId, role) {
   return query.find({ useMasterKey: true });
 }
 
-async function getMuralCombinedScore(userId, targetRole, scope, scopeId, cache) {
-  if (!scopeId) return 0;
-
-  const cacheKey = `${scope}:${scopeId}:${targetRole}:${userId}`;
-  if (cache.has(cacheKey)) {
-    return cache.get(cacheKey);
+/**
+ * EventPerformance ligado ao evento ja carregado.
+ * createWithoutData dentro de containedIn nao casa com o ponteiro gravado e a lista volta vazia.
+ */
+async function findPerformancesForLoadedEvents(events) {
+  const rows = [];
+  const pageSize = 1000;
+  const loaded = (events || []).filter((event) => event && event.id && typeof event.get === 'function');
+  for (let i = 0; i < loaded.length; i += 40) {
+    const batch = loaded.slice(i, i + 40);
+    let skip = 0;
+    for (;;) {
+      const query = new Parse.Query('EventPerformance');
+      query.containedIn('event', batch);
+      query.limit(pageSize);
+      query.skip(skip);
+      const page = await query.find({ useMasterKey: true });
+      rows.push(...page);
+      if (page.length < pageSize) break;
+      skip += page.length;
+      if (skip > 8000) break;
+    }
   }
+  return rows;
+}
 
-  let performanceScore = 0;
-  const perfQuery = new Parse.Query('EventPerformance');
-  if (scope === 'pelada') {
-    perfQuery.equalTo('pelada', Parse.Object.extend('Pelada').createWithoutData(scopeId));
-  } else {
-    perfQuery.equalTo('event', Parse.Object.extend('Event').createWithoutData(scopeId));
+function historyPerformanceMatchesUser(perf, userId) {
+  const wanted = String(userId || '');
+  if (!wanted) return false;
+  if (typeof getPerformanceParticipantId === 'function') {
+    const participantId = getPerformanceParticipantId(perf);
+    if (participantId && String(participantId) === wanted) return true;
   }
-  perfQuery.limit(1000);
-  const performances = await perfQuery.find({ useMasterKey: true });
+  const explicit = perf.get('participantUserId');
+  if (explicit && String(explicit) === wanted) return true;
+  const user = perf.get('user');
+  return !!(user && user.id && String(user.id) === wanted);
+}
 
-  for (const perf of performances) {
-    if (perf.get('role') !== targetRole) continue;
-    const user = perf.get('user');
-    if (!user || user.id !== userId) continue;
-    performanceScore += computePerformanceScore(perf);
+function historyPerformanceScore(perf) {
+  if (typeof computeEffectivePerformanceScore === 'function') {
+    const priority =
+      typeof resolvePerformanceStatsPriority === 'function'
+        ? resolvePerformanceStatsPriority(perf, new Map())
+        : 'referee';
+    return computeEffectivePerformanceScore(perf, priority);
   }
+  return computePerformanceScore(perf);
+}
 
-  const voteQuery = new Parse.Query('MuralVote');
-  voteQuery.equalTo('scope', scope);
-  voteQuery.equalTo('scopeId', scopeId);
-  voteQuery.equalTo('targetRole', targetRole);
-  voteQuery.limit(1000);
-  const votes = await voteQuery.find({ useMasterKey: true });
+/** Pontos lancados na sumula do arbitro (refereeGoals), nao o voto do atleta nem o campo goals do scout. */
+function refereeSumulaProfileScore(perf) {
+  const hasSumula =
+    typeof performanceHasRefereeSumulaData === 'function'
+      ? performanceHasRefereeSumulaData(perf)
+      : !!(perf.get('refereeSumulaSaved') || Number(perf.get('refereeGoals') || 0));
+  if (!hasSumula) return 0;
 
+  const goals =
+    typeof readRefereeOverlapStat === 'function'
+      ? readRefereeOverlapStat(perf, 'goals')
+      : Number(perf.get('refereeGoals') || 0);
+  const yellow =
+    typeof readRefereeOverlapStat === 'function'
+      ? readRefereeOverlapStat(perf, 'yellowCards')
+      : Number(perf.get('refereeYellowCards') || 0);
+  const red =
+    typeof readRefereeOverlapStat === 'function'
+      ? readRefereeOverlapStat(perf, 'redCards')
+      : Number(perf.get('refereeRedCards') || 0);
+  const assists = Number(perf.get('assists') || 0);
+  const saves = Number(perf.get('saves') || 0);
+  const stored = Number(perf.get('points') || 0);
+  const fromSumula = goals * 3 + assists * 2 + saves * 2 - yellow - red * 3;
+  if (goals > 0 || yellow > 0 || red > 0) return fromSumula;
+  return stored > 0 ? stored : fromSumula;
+}
+
+function scoreHistoryEvent(userId, role, perfs) {
+  const seen = new Set();
   let total = 0;
-  let count = 0;
-  for (const vote of votes) {
-    const targetUser = vote.get('targetUser');
-    if (!targetUser || targetUser.id !== userId) continue;
-    total += Number(vote.get('score') ?? 0);
-    count += 1;
+  for (const perf of perfs || []) {
+    if (!perf || !perf.id || seen.has(perf.id)) continue;
+    seen.add(perf.id);
+    if (role === 'referee') {
+      const hasSumula =
+        typeof performanceHasRefereeSumulaData === 'function'
+          ? performanceHasRefereeSumulaData(perf)
+          : !!(perf.get('refereeSumulaSaved') || Number(perf.get('refereeGoals') || 0));
+      if (hasSumula) {
+        total += refereeSumulaProfileScore(perf);
+        continue;
+      }
+    }
+    if (!historyPerformanceMatchesUser(perf, userId)) continue;
+    const rowRole = perf.get('role') || 'athlete';
+    if (rowRole !== role) continue;
+    total += historyPerformanceScore(perf);
+  }
+  return total;
+}
+
+function voteTargetUserId(vote) {
+  const explicit = vote.get('targetUserId');
+  if (explicit) return String(explicit);
+  const target = vote.get('targetUser');
+  return target && target.id ? String(target.id) : '';
+}
+
+async function loadRoleVoteAveragesByScopeId(userId, targetRole, scope, scopeIds) {
+  const averages = new Map();
+  const ids = (scopeIds || []).map((id) => String(id || '')).filter(Boolean);
+  if (!ids.length || !targetRole) return averages;
+
+  const totals = new Map();
+  for (let i = 0; i < ids.length; i += 80) {
+    const batch = ids.slice(i, i + 80);
+    const query = new Parse.Query('MuralVote');
+    query.equalTo('scope', scope);
+    query.equalTo('targetRole', targetRole);
+    query.containedIn('scopeId', batch);
+    query.limit(1000);
+    const votes = await query.find({ useMasterKey: true });
+    for (const vote of votes) {
+      if (voteTargetUserId(vote) !== String(userId)) continue;
+      const scopeId = String(vote.get('scopeId') || '');
+      if (!scopeId) continue;
+      const current = totals.get(scopeId) || { total: 0, count: 0 };
+      current.total += Number(vote.get('score') || 0);
+      current.count += 1;
+      totals.set(scopeId, current);
+    }
   }
 
-  const averageScore = count > 0 ? total / count : 0;
-  const combinedScore = performanceScore + averageScore * 10;
-  cache.set(cacheKey, combinedScore);
-  return combinedScore;
+  for (const [scopeId, data] of totals) {
+    if (data.count > 0) averages.set(scopeId, data.total / data.count);
+  }
+  return averages;
 }
 
 function upsertHistoryRecord(map, id, name, score) {
@@ -1081,31 +1174,56 @@ async function buildRoleParticipationHistory(userId, role) {
 
   const muralRole = profileRoleToMuralRole(role);
   const registrations = await loadProfileRegistrationsForUser(userId, role);
+  const eventsById = new Map();
+  for (const registration of registrations) {
+    const event = registration.get('event');
+    if (!event || !event.id || typeof event.get !== 'function') continue;
+    eventsById.set(event.id, event);
+  }
+  const events = Array.from(eventsById.values());
+  const performances = await findPerformancesForLoadedEvents(events);
+  const perfsByEventId = new Map();
+  for (const perf of performances) {
+    const event = perf.get('event');
+    const eventId = event && event.id ? event.id : '';
+    if (!eventId) continue;
+    const list = perfsByEventId.get(eventId) || [];
+    list.push(perf);
+    perfsByEventId.set(eventId, list);
+  }
+
+  const peladaIds = [];
+  for (const event of events) {
+    if (event.get('type') === 'team_match') continue;
+    const pelada = event.get('pelada');
+    if (pelada && pelada.id) peladaIds.push(pelada.id);
+  }
+  const eventVoteAverages = muralRole
+    ? await loadRoleVoteAveragesByScopeId(
+        userId,
+        muralRole,
+        'event',
+        events.map((event) => event.id)
+      )
+    : new Map();
+  const peladaVoteAverages = muralRole
+    ? await loadRoleVoteAveragesByScopeId(userId, muralRole, 'pelada', peladaIds)
+    : new Map();
+
   const peladaScores = new Map();
   const matchScores = new Map();
   const teamScores = new Map();
-  const muralCache = new Map();
+  const peladaEventVoteAverages = new Map();
 
-  for (const registration of registrations) {
-    const event = registration.get('event');
-    if (!event || !event.id) continue;
-
+  for (const event of events) {
     const eventType = event.get('type');
-    const pelada = event.get('pelada');
-    const peladaId = pelada && pelada.id ? pelada.id : null;
-    const peladaName = (pelada && pelada.get('name')) || event.get('name');
-
-    const score = muralRole
-      ? await getMuralCombinedScore(
-          userId,
-          muralRole,
-          eventType === 'team_match' ? 'event' : 'pelada',
-          eventType === 'team_match' ? event.id : peladaId,
-          muralCache
-        )
-      : 0;
+    const eventPerfs = perfsByEventId.get(event.id) || [];
+    const performanceScore = scoreHistoryEvent(userId, muralRole || role, eventPerfs);
+    const eventVote = eventVoteAverages.get(String(event.id));
 
     if (eventType === 'team_match') {
+      const votePart = eventVote != null ? eventVote * 10 : 0;
+      const score = performanceScore + votePart;
       const home = String(event.get('homeTeamName') || '').trim();
       const away = String(event.get('awayTeamName') || '').trim();
       const matchLabel = home && away ? `${home} x ${away}` : event.get('name') || 'Partida';
@@ -1115,9 +1233,36 @@ async function buildRoleParticipationHistory(userId, role) {
         if (home) upsertHistoryRecord(teamScores, `team:${home}`, home, score);
         if (away) upsertHistoryRecord(teamScores, `team:${away}`, away, score);
       }
-    } else if (peladaId && peladaName && (mode === 'pelada_match' || mode === 'pelada_teams')) {
-      upsertHistoryRecord(peladaScores, peladaId, peladaName, score);
+      continue;
     }
+
+    const pelada = event.get('pelada');
+    const peladaId = pelada && pelada.id ? pelada.id : null;
+    const peladaName = (pelada && pelada.get('name')) || event.get('name');
+    if (!peladaId || !peladaName || (mode !== 'pelada_match' && mode !== 'pelada_teams')) {
+      continue;
+    }
+
+    const existing = peladaScores.get(peladaId);
+    if (!existing) {
+      peladaScores.set(peladaId, { id: peladaId, name: peladaName, score: performanceScore });
+    } else {
+      existing.score += performanceScore;
+    }
+    if (eventVote != null) {
+      const votes = peladaEventVoteAverages.get(peladaId) || [];
+      votes.push(eventVote);
+      peladaEventVoteAverages.set(peladaId, votes);
+    }
+  }
+
+  for (const [peladaId, record] of peladaScores) {
+    const samples = peladaEventVoteAverages.get(peladaId) || [];
+    const peladaVote = peladaVoteAverages.get(String(peladaId));
+    if (peladaVote != null) samples.push(peladaVote);
+    if (!samples.length) continue;
+    const average = samples.reduce((sum, value) => sum + value, 0) / samples.length;
+    record.score += average * 10;
   }
 
   const sortByName = (a, b) => a.name.localeCompare(b.name, 'pt-BR');

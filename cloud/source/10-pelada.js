@@ -954,3 +954,94 @@ Parse.Cloud.define('getParticipationReviewProfile', async (request) => {
     sumulaObservations,
   };
 });
+
+/**
+ * Socio de pelada: uma linha AppMessage (entrada do destinatario, saida de quem agiu).
+ * Ignora o vinculo do proprio administrador na criacao da pelada e saves que nao mudam status.
+ */
+Parse.Cloud.afterSave('PeladaMembership', async (request) => {
+  try {
+    const membership = request.object;
+    if (!membership || typeof createAppMessage !== 'function') return;
+
+    const original = request.original;
+    const status = String(membership.get('status') || '');
+    const prevStatus = original ? String(original.get('status') || '') : '';
+    if (original && status === prevStatus) return;
+
+    const member = membership.get('user');
+    const peladaPtr = membership.get('pelada');
+    const memberId = member && member.id ? String(member.id) : '';
+    const peladaId = peladaPtr && peladaPtr.id ? String(peladaPtr.id) : '';
+    if (!memberId || !peladaId) return;
+
+    const pelada = await new Parse.Query('Pelada').get(peladaId, { useMasterKey: true });
+    const admin = pelada.get('admin');
+    const adminId = admin && admin.id ? String(admin.id) : '';
+    if (!adminId || adminId === memberId) return;
+
+    const peladaName = String(pelada.get('name') || 'pelada');
+    const memberLabel =
+      String(membership.get('memberDisplayName') || '').trim() ||
+      String(membership.get('memberApelido') || '').trim() ||
+      String(membership.get('memberFullName') || '').trim() ||
+      'Um usuario';
+    const route = `/pelada/${peladaId}`;
+    const actorId = request.user && request.user.id ? String(request.user.id) : '';
+
+    if (!original && status === 'pending') {
+      await createAppMessage({
+        recipientId: adminId,
+        senderId: memberId,
+        kind: 'pelada_membership_request',
+        title: 'Solicitacao de socio',
+        body: `${memberLabel} pediu para ser socio de "${peladaName}".`,
+        relatedClass: 'PeladaMembership',
+        relatedId: membership.id,
+        actionRoute: route,
+      });
+      return;
+    }
+
+    const senderId = actorId && actorId !== memberId ? actorId : adminId;
+    let kind = '';
+    let title = '';
+    let body = '';
+    if (status === 'active' && !original) {
+      kind = 'pelada_membership_added';
+      title = 'Voce agora e socio';
+      body = `Voce foi adicionado como socio de "${peladaName}".`;
+    } else if (status === 'active' && prevStatus === 'pending') {
+      kind = 'pelada_membership_approved';
+      title = 'Solicitacao de socio aceita';
+      body = `Sua solicitacao para ser socio de "${peladaName}" foi aceita.`;
+    } else if (status === 'active' && prevStatus === 'inactive') {
+      kind = 'pelada_membership_reactivated';
+      title = 'Socio reativado';
+      body = `Voce voltou a ser socio de "${peladaName}".`;
+    } else if (status === 'inactive' && prevStatus === 'pending') {
+      kind = 'pelada_membership_rejected';
+      title = 'Solicitacao de socio recusada';
+      body = `Sua solicitacao para ser socio de "${peladaName}" foi recusada.`;
+    } else if (status === 'inactive' && prevStatus === 'active') {
+      kind = 'pelada_membership_removed';
+      title = 'Socio removido';
+      body = `Voce deixou de ser socio de "${peladaName}".`;
+    } else {
+      return;
+    }
+
+    await createAppMessage({
+      recipientId: memberId,
+      senderId,
+      kind,
+      title,
+      body,
+      relatedClass: 'PeladaMembership',
+      relatedId: membership.id,
+      actionRoute: route,
+    });
+  } catch (error) {
+    console.error('PeladaMembership mailbox failed', error);
+  }
+});

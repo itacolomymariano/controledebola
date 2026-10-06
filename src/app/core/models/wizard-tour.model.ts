@@ -33,14 +33,14 @@ export const WIZARD_TOUR_STEPS: WizardTourStep[] = [
     titleKey: 'coach.nextEventTitle',
     bodyKey: 'coach.nextEventBody',
     ctaKey: 'coach.nextEventCta',
-    route: '/tabs/peladas',
+    route: '/tabs/peladas/lista',
   },
   {
     id: 'invite',
     titleKey: 'coach.hint.inviteTitle',
     bodyKey: 'coach.hint.inviteBody',
     ctaKey: 'coach.inviteCta',
-    route: '/tabs/peladas',
+    route: '/tabs/peladas/lista',
   },
   {
     id: 'mural',

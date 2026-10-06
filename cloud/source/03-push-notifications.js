@@ -277,6 +277,18 @@ async function notifyNewPeladaEvent(event) {
     { throwOnError: false }
   );
 
+  if (typeof createAppMessages === 'function' && admin && admin.id) {
+    await createAppMessages([...participantIds], {
+      senderId: String(admin.id),
+      kind: 'new_pelada_event',
+      title: 'Novo evento na pelada',
+      body: alert,
+      relatedClass: 'Event',
+      relatedId: eventId,
+      actionRoute: `/event/${eventId}`,
+    });
+  }
+
   event.set('pushNewEventSentAt', new Date());
   try {
     await event.save(null, { useMasterKey: true });
@@ -342,30 +354,45 @@ async function notifyProfilePresentationDecision(registration, event, peladaId, 
   if (!participantUserId) return;
 
   const eventName = (event && event.get && event.get('name')) || 'evento';
-  if (decision === 'approved') {
-    await sendPushToUser(participantUserId, {
-      title: 'Participacao aprovada',
-      alert: `Sua participacao no evento "${eventName}" foi aprovada.`,
-      data: {
-        type: 'profile_presentation_approved',
-        eventId: event.id,
-        peladaId,
-        registrationId: registration.id,
-      },
-    });
-    return;
-  }
+  const approved = decision === 'approved';
+  const title = approved ? 'Participacao aprovada' : 'Participacao recusada';
+  const alert = approved
+    ? `Sua participacao no evento "${eventName}" foi aprovada.`
+    : `Sua solicitacao no evento "${eventName}" foi recusada.`;
 
   await sendPushToUser(participantUserId, {
-    title: 'Participacao recusada',
-    alert: `Sua solicitacao no evento "${eventName}" foi recusada.`,
+    title,
+    alert,
     data: {
-      type: 'profile_presentation_rejected',
+      type: approved ? 'profile_presentation_approved' : 'profile_presentation_rejected',
       eventId: event.id,
       peladaId,
       registrationId: registration.id,
     },
   });
+
+  let senderId = '';
+  if (peladaId) {
+    try {
+      const pelada = await new Parse.Query('Pelada').get(String(peladaId), { useMasterKey: true });
+      const admin = pelada.get('admin');
+      if (admin && admin.id) senderId = String(admin.id);
+    } catch (error) {
+      console.error('profile presentation admin lookup failed', error);
+    }
+  }
+  if (typeof createAppMessage === 'function' && senderId && senderId !== participantUserId) {
+    await createAppMessage({
+      recipientId: participantUserId,
+      senderId,
+      kind: approved ? 'profile_presentation_approved' : 'profile_presentation_rejected',
+      title,
+      body: alert,
+      relatedClass: 'EventRegistration',
+      relatedId: registration.id,
+      actionRoute: event && event.id ? `/event/${event.id}` : '',
+    });
+  }
 }
 
 Parse.Cloud.afterSave('Event', async (request) => {
@@ -425,9 +452,10 @@ Parse.Cloud.afterSave('EventRegistration', async (request) => {
     registration.get('userDisplayName') || registration.get('apelido') || 'Participante';
   const eventName = event.get('name') || 'evento';
 
+  const requestAlert = `${participantName} pediu para participar do evento "${eventName}".`;
   await sendPushToUser(admin.id, {
     title: 'Nova solicitacao de participacao',
-    alert: `${participantName} pediu para participar do evento "${eventName}".`,
+    alert: requestAlert,
     data: {
       type: 'profile_presentation_request',
       peladaId: pelada.id,
@@ -435,6 +463,29 @@ Parse.Cloud.afterSave('EventRegistration', async (request) => {
       registrationId: registration.id,
     },
   });
+
+  const participantUserId = String(
+    registration.get('participantUserId') ||
+      (registration.get('user') && registration.get('user').id) ||
+      (request.user && request.user.id) ||
+      ''
+  );
+  if (
+    typeof createAppMessage === 'function' &&
+    participantUserId &&
+    participantUserId !== admin.id
+  ) {
+    await createAppMessage({
+      recipientId: admin.id,
+      senderId: participantUserId,
+      kind: 'profile_presentation_request',
+      title: 'Nova solicitacao de participacao',
+      body: requestAlert,
+      relatedClass: 'EventRegistration',
+      relatedId: registration.id,
+      actionRoute: `/event/${event.id}`,
+    });
+  }
 });
 
 /** Confirmados efetivos de um evento (para lembrete / remarcacao / cancelamento). */
@@ -461,7 +512,16 @@ const RESCHEDULE_MIN_DELTA_MS = 15 * 60 * 1000;
 const REMINDER_2H_WINDOW_BEFORE_MS = 2 * 60 * 60 * 1000;
 const REMINDER_2H_TOLERANCE_MS = 10 * 60 * 1000;
 
-async function notifyEventScheduleOrCancelChange(event, original) {
+function scheduleChangeSenderId(event, actor) {
+  if (actor && actor.id) return String(actor.id);
+  const changedBy = event && event.get ? event.get('lastScheduleChangeBy') : null;
+  if (changedBy && changedBy.id) return String(changedBy.id);
+  const admin = event && event.get ? event.get('admin') : null;
+  if (admin && admin.id) return String(admin.id);
+  return '';
+}
+
+async function notifyEventScheduleOrCancelChange(event, original, actor) {
   if (!original) return;
 
   const wasFinished = !!original.get('isFinished');
@@ -511,11 +571,12 @@ async function notifyEventScheduleOrCancelChange(event, original) {
 
   // Cancelamento antecipado: marcado como encerrado antes do horario de inicio.
   if (finishChanged && newStartMs && newStartMs > now) {
+    const cancelAlert = `O evento "${eventName}" foi cancelado.${reasonSuffix}`;
     await sendPushToUsers(
       audienceIds,
       {
         title: cancelTitle,
-        alert: `O evento "${eventName}" foi cancelado.${reasonSuffix}`,
+        alert: cancelAlert,
         data: {
           type: 'event_cancelled',
           eventId,
@@ -524,6 +585,17 @@ async function notifyEventScheduleOrCancelChange(event, original) {
       },
       { throwOnError: false }
     );
+    if (typeof createAppMessages === 'function') {
+      await createAppMessages(audienceIds, {
+        senderId: scheduleChangeSenderId(event, actor),
+        kind: 'event_cancelled',
+        title: cancelTitle,
+        body: cancelAlert,
+        relatedClass: 'Event',
+        relatedId: eventId,
+        actionRoute: `/event/${eventId}`,
+      });
+    }
     if (reasonRaw) {
       event.unset('lastScheduleChangeReason');
       try {
@@ -554,6 +626,17 @@ async function notifyEventScheduleOrCancelChange(event, original) {
       },
       { throwOnError: false }
     );
+    if (typeof createAppMessages === 'function') {
+      await createAppMessages(audienceIds, {
+        senderId: scheduleChangeSenderId(event, actor),
+        kind: 'event_rescheduled',
+        title: rescheduleTitle,
+        body: alert,
+        relatedClass: 'Event',
+        relatedId: eventId,
+        actionRoute: `/event/${eventId}`,
+      });
+    }
 
     if (reasonRaw) {
       event.unset('lastScheduleChangeReason');
@@ -575,7 +658,7 @@ async function notifyEventScheduleOrCancelChange(event, original) {
 Parse.Cloud.afterSave('Event', async (request) => {
   if (!(request.original && request.original.id)) return;
   try {
-    await notifyEventScheduleOrCancelChange(request.object, request.original);
+    await notifyEventScheduleOrCancelChange(request.object, request.original, request.user);
   } catch (error) {
     console.error('notifyEventScheduleOrCancelChange failed', error);
   }
@@ -1037,6 +1120,18 @@ Parse.Cloud.define('sendEventConfirmedParticipantNotification', async (request) 
     },
     { throwOnError: true }
   );
+
+  if (typeof createAppMessages === 'function') {
+    await createAppMessages(uniqueUserIds, {
+      senderId: user.id,
+      kind: 'event_admin_message',
+      title,
+      body: alert,
+      relatedClass: 'Event',
+      relatedId: eventId,
+      actionRoute: `/event/${eventId}`,
+    });
+  }
 
   const focusEmail = String(request.params.focusEmail || '')
     .trim()

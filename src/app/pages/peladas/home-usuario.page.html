@@ -68,6 +68,58 @@
       </ion-item>
     </ion-list>
 
+    @if (user.roles.includes('athlete') && (athleteLoading || athleteProfile)) {
+      <ion-list-header>
+        <ion-label>{{ 'peladas.athleteProfile' | t }}</ion-label>
+      </ion-list-header>
+      @if (athleteLoading) {
+        <div class="ion-text-center ion-padding">
+          <ion-spinner name="crescent"></ion-spinner>
+        </div>
+      } @else if (athleteProfile) {
+        <ion-list lines="full">
+          <ion-item>
+            <ion-label class="ion-text-wrap">
+              <h3>{{ 'peladas.position' | t }}</h3>
+              <p>{{ user.positions.length ? user.positions.join(' · ') : (athleteProfile.primaryPosition || '—') }}</p>
+            </ion-label>
+          </ion-item>
+          @if (athleteBodyLabel) {
+            <ion-item>
+              <ion-label class="ion-text-wrap">
+                <h3>{{ 'peladas.body' | t }}</h3>
+                <p>{{ athleteBodyLabel }}</p>
+              </ion-label>
+            </ion-item>
+          }
+          <ion-item>
+            <ion-label>
+              <h3>{{ 'peladas.age' | t }}</h3>
+              <p>{{ athleteAgeLabel }}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label class="ion-text-wrap">
+              <h3>{{ 'peladas.athletePeladas' | t }}</h3>
+              <p>{{ joinNames(athleteProfile.peladas) || '—' }}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label class="ion-text-wrap">
+              <h3>{{ 'peladas.athleteTeams' | t }}</h3>
+              <p>{{ joinNames(athleteProfile.teams) || '—' }}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h3>{{ 'peladas.goals' | t }}</h3>
+              <p>{{ athleteProfile.goals }}</p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+      }
+    }
+
     <ion-list-header>
       <ion-label>{{ 'peladas.profiles' | t }}</ion-label>
     </ion-list-header>

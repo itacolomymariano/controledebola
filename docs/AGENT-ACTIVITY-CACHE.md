@@ -2,7 +2,48 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-10-04 (versao de loja iOS 1.0.5)
+**Ultima atualizacao:** 2026-10-06 (voltar da ficha do juiz)
+
+---
+
+### 2026-10-06 — Voltar da ficha do juiz para a lista
+
+- O listener Android em `profile-view` chamava `location.back()` além do voltar do sistema. Um toque pulava a busca e a lista de juízes saía da pilha; o toque seguinte não a recuperava
+- A ficha volta a desempilhar uma vez só. A lista de perfis Juiz permanece na tela de busca
+
+---
+
+### 2026-10-06 — Ficha pública do juiz: pontuação por pelada e voltar
+
+- Pontuação 0 no card Peladas: `getRolePublicProfile` (`cloud/source/11-profiles-search.js`) somava `EventPerformance` pelo ponteiro `pelada` e só a linha do próprio juiz. A súmula grava `refereeGoals` na linha do atleta, no evento. Agora a soma usa esses eventos já carregados: gols×3 − amarelos − vermelhos×3, somados na pelada. Espelho: `role-profile-history.service.ts`
+- Voltar físico: a ficha usava `window.history.back()`. Em `profile-view`, o listener Android só existe com a ficha aberta; se a URL não mudar, volta para a busca ou a lista
+- **Deploy:** publicar `cloud/main.js` de novo. Sem isso a pontuação e os avisos novos da caixa continuam na função antiga
+
+---
+
+### 2026-10-06 — Caixa: card só identidade; avisos entre usuários
+
+- Lista Entrada/Saída: só `Apelido (Nome completo)`, data `dd/mm/aaaa` e hora `HH:mm` (`sentAt`). Título, corpo e avatar saíram do card. Toque abre o texto; Entrada marca lida; Saída não. Não lida na cor primária; lida com opacity 0.55
+- Novos `AppMessage`: sócio (`afterSave PeladaMembership`), apresentação de perfil, novo evento, cancelamento/remarcação, aviso do admin aos confirmados, reportagem do jornal
+- Já gravavam: desafio, participação, arbitragem, convite/resposta, confronto criado. Fora: `sendContactMessage`, lembrete de 2h, push de teste
+- **Deploy:** publicar `cloud/main.js` (22300 linhas)
+
+---
+
+### 2026-10-06 — Restaurar tema padrão
+
+- Cortina de Cores e tema (menu e perfil): botão **Restaurar padrão do app**, com confirmação
+- `ThemePaletteService.restoreDefaults()` grava paleta `default` e superfície `dark`. O botão fica desabilitado quando já está nesse par
+- Arquivos: `theme-palette.service.ts`, `theme-picker` (ts/html/scss), i18n `theme.restoreDefaults` e `confirm.restoreDefaults`
+
+---
+
+### 2026-10-05 — Busca de usuarios, biometria e wizard
+
+- Usuarios (`/tabs/peladas/usuarios`): a busca casa perfil (Atleta, Juiz, Radialista...) e posicao (goleiro, zagueiro, atacante, meio campo...). A ordem continua pelo endereco de quem esta logado
+- Toque no atleta abre a ficha da pessoa com o perfil de atleta na mesma tela (`getAthletePublicProfile`). Os outros perfis seguem em link
+- Sair do menu reabre o login com a digital quando a biometria deste aparelho esta ativa. A digital fica acima do formulario
+- Wizard: o cartao some enquanto o teclado esta aberto, para o campo de busca da pelada continuar visivel. Abrir pelada e Ver peladas vao para `/tabs/peladas/lista`
 
 ---
 

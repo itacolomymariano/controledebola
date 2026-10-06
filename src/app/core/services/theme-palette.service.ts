@@ -65,6 +65,16 @@ export class ThemePaletteService {
     await this.storage.setSurface(surface);
   }
 
+  /** Paleta e superfície iniciais (mesmo estado sem preferência salva). */
+  async restoreDefaults(): Promise<void> {
+    await this.setPalette(DEFAULT_THEME_PALETTE);
+    await this.setSurface(DEFAULT_THEME_SURFACE);
+  }
+
+  get isDefaultTheme(): boolean {
+    return this.current === DEFAULT_THEME_PALETTE && this.surface === DEFAULT_THEME_SURFACE;
+  }
+
   private apply(): void {
     const root = document.documentElement;
     root.setAttribute('data-palette', this.current);

@@ -44,7 +44,7 @@ export class ThemePickerComponent implements OnInit, OnDestroy {
   private surfaceSub?: Subscription;
 
   constructor(
-    private readonly theme: ThemePaletteService,
+    readonly theme: ThemePaletteService,
     private readonly i18n: I18nService,
     private readonly alertCtrl: AlertController,
     private readonly cdr: ChangeDetectorRef
@@ -110,6 +110,20 @@ export class ThemePickerComponent implements OnInit, OnDestroy {
     }
   }
 
+  async onRestoreDefaultsTap(): Promise<void> {
+    if (this.theme.isDefaultTheme) {
+      return;
+    }
+
+    const confirmed = await this.confirmOverCurtain(
+      this.i18n.t('theme.restoreDefaults'),
+      this.i18n.t('confirm.restoreDefaults')
+    );
+    if (confirmed) {
+      await this.applyDefaults();
+    }
+  }
+
   private async confirmOverCurtain(header: string, message: string): Promise<boolean> {
     this.closeCurtain();
     const alert = await this.alertCtrl.create({
@@ -139,6 +153,12 @@ export class ThemePickerComponent implements OnInit, OnDestroy {
   private async applySurface(surface: ThemeSurfaceId): Promise<void> {
     await this.theme.setSurface(surface);
     this.surface = surface;
+    this.cdr.markForCheck();
+  }
+
+  private async applyDefaults(): Promise<void> {
+    await this.theme.restoreDefaults();
+    this.curtainOpen = false;
     this.cdr.markForCheck();
   }
 }

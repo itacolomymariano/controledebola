@@ -99,7 +99,7 @@ function assertPublicHttpUrl(url, label) {
 }
 
 async function notifyEventMediaPublishedToParticipants(event, publisherUserId, options) {
-  if (typeof sendPushToUsers !== 'function' || typeof computeRegistrationEffectiveConfirmation !== 'function') {
+  if (typeof computeRegistrationEffectiveConfirmation !== 'function') {
     return;
   }
   const participationFee = Number(event.get('participationFee') || 0);
@@ -132,19 +132,35 @@ async function notifyEventMediaPublishedToParticipants(event, publisherUserId, o
   }
 
   const eventName = safeDisplayName(event.get('name'), 'Evento');
-  await sendPushToUsers(
-    uniqueUserIds,
-    {
-      title: options.title || 'Nova reportagem no evento',
-      alert: options.alert || `Confira a reportagem de ${eventName}.`,
-      data: {
-        type: options.pushType || 'event_journal_reportage',
-        eventId: event.id,
-        category: options.category || 'journal_reportage',
+  const title = options.title || 'Nova reportagem no evento';
+  const alert = options.alert || `Confira a reportagem de ${eventName}.`;
+  const kind = options.pushType || 'event_journal_reportage';
+  if (typeof sendPushToUsers === 'function') {
+    await sendPushToUsers(
+      uniqueUserIds,
+      {
+        title,
+        alert,
+        data: {
+          type: kind,
+          eventId: event.id,
+          category: options.category || 'journal_reportage',
+        },
       },
-    },
-    { throwOnError: false }
-  );
+      { throwOnError: false }
+    );
+  }
+  if (typeof createAppMessages === 'function') {
+    await createAppMessages(uniqueUserIds, {
+      senderId: String(publisherUserId || ''),
+      kind,
+      title,
+      body: alert,
+      relatedClass: 'Event',
+      relatedId: event.id,
+      actionRoute: `/event/${event.id}`,
+    });
+  }
 }
 
 async function loadEventForMedia(eventId) {

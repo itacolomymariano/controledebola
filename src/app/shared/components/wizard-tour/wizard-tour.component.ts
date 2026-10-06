@@ -23,8 +23,22 @@ export class WizardTourComponent implements OnInit, OnDestroy {
   stepIndex = 0;
   total = 0;
   visible = false;
+  private keyboardOpen = false;
 
   private subs: Subscription[] = [];
+  private readonly onFocusIn = (event: FocusEvent): void => {
+    if (!this.isTextField(event.target)) return;
+    this.keyboardOpen = true;
+    this.sync();
+    const field = event.target as HTMLElement;
+    window.setTimeout(() => field.scrollIntoView({ block: 'center', inline: 'nearest' }), 280);
+  };
+  private readonly onFocusOut = (): void => {
+    window.setTimeout(() => {
+      this.keyboardOpen = this.isTextField(document.activeElement);
+      this.sync();
+    }, 180);
+  };
 
   constructor(
     private readonly tour: WizardTourService,
@@ -49,10 +63,14 @@ export class WizardTourComponent implements OnInit, OnDestroy {
       })
     );
     void this.tour.maybeAutoStart(this.router.url);
+    document.addEventListener('focusin', this.onFocusIn, true);
+    document.addEventListener('focusout', this.onFocusOut, true);
     this.sync();
   }
 
   ngOnDestroy(): void {
+    document.removeEventListener('focusin', this.onFocusIn, true);
+    document.removeEventListener('focusout', this.onFocusOut, true);
     for (const sub of this.subs) {
       sub.unsubscribe();
     }
@@ -81,7 +99,14 @@ export class WizardTourComponent implements OnInit, OnDestroy {
     const paused = this.tour.isPausedOnRoute(this.router.url);
     this.current = this.tour.current;
     this.stepIndex = this.tour.stepIndex;
-    this.visible = !!this.current && !onAuth && !paused && this.auth.isLoggedIn();
+    this.visible = !!this.current && !onAuth && !paused && !this.keyboardOpen && this.auth.isLoggedIn();
     this.cdr.markForCheck();
+  }
+
+  private isTextField(target: EventTarget | null): boolean {
+    if (!(target instanceof HTMLElement)) return false;
+    const tag = target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return true;
+    return !!target.closest('ion-searchbar, ion-input, ion-textarea');
   }
 }

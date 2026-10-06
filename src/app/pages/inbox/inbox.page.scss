@@ -44,20 +44,21 @@
   background: transparent;
 }
 
-.message-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.message-who {
+  font-size: 1rem;
 }
 
-/* Lida (e Saida): cinza e opaca. Nao lida na Entrada: primaria e negrito. */
+.message-when {
+  font-size: 0.9rem;
+}
+
+/* Lida (e Saida): opacidade 0.55. Nao lida na Entrada: cor primaria. */
 .messages-list ion-item.message-read {
   --color: var(--ion-color-medium);
   opacity: 0.55;
 
-  .message-title,
-  .message-body,
-  .message-meta {
+  .message-who,
+  .message-when {
     color: var(--ion-color-medium);
     font-weight: 400;
   }
@@ -67,27 +68,11 @@
   --color: var(--ion-color-primary);
   opacity: 1;
 
-  .message-title,
-  .message-body {
+  .message-who,
+  .message-when {
     color: var(--ion-color-primary);
     font-weight: 700;
   }
-}
-
-.message-dot {
-  flex: 0 0 auto;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--ion-color-primary);
-}
-
-.message-body {
-  white-space: normal;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 .message-detail-body {
