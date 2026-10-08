@@ -132,4 +132,8 @@ export class MuralAppFeedComponent {
     if (Number.isNaN(d.getTime())) return iso;
     return d.toLocaleDateString('pt-BR');
   }
+
+  yesNo(value: boolean | undefined): string {
+    return value ? 'Sim' : 'Não';
+  }
 }

@@ -5,6 +5,7 @@ import { AlertController, LoadingController } from '@ionic/angular';
 import { emptyAddress } from '../../core/models/address.model';
 import { PeladaSport } from '../../core/models/pelada.model';
 import { PeladaService } from '../../core/services/pelada.service';
+import { WizardTourService } from '../../core/services/wizard-tour.service';
 import { buildMissingFieldsMessage } from '../../core/utils/form-validation.util';
 
 @Component({
@@ -40,6 +41,7 @@ export class PeladaFormPage {
   constructor(
     private readonly fb: FormBuilder,
     private readonly peladaService: PeladaService,
+    private readonly wizardTour: WizardTourService,
     private readonly router: Router,
     private readonly route: ActivatedRoute,
     private readonly loadingCtrl: LoadingController,
@@ -138,6 +140,7 @@ export class PeladaFormPage {
           adminPhotoFile: this.adminPhotoFile ?? undefined,
           locationPhotoFile: this.locationPhotoFile ?? undefined,
         });
+        this.wizardTour.completeStepById('pelada-admin-create');
         await this.router.navigate(['/pelada', pelada.objectId]);
       }
     } catch (error: unknown) {

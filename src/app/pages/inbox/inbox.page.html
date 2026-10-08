@@ -324,6 +324,47 @@
     }
   }
 
+  @if (!loading && mailbox === 'in' && incomingAmateurTeamJoinRequests.length > 0) {
+    <h2 class="section-title">Pedidos para o elenco</h2>
+    @for (request of incomingAmateurTeamJoinRequests; track request.objectId) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>
+            {{ request.athleteApelido || request.athleteFullName || 'Atleta' }}
+          </ion-card-title>
+          <ion-card-subtitle>{{ request.teamName }}</ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          @if (request.message) {
+            <p>{{ request.message }}</p>
+          }
+          <ion-button
+            expand="block"
+            class="ion-margin-top"
+            [disabled]="processingId === request.objectId"
+            (click)="acceptAmateurTeamJoinRequest(request)"
+          >
+            Autorizar no elenco
+          </ion-button>
+          <ion-button
+            expand="block"
+            fill="clear"
+            color="danger"
+            [disabled]="processingId === request.objectId"
+            (click)="declineAmateurTeamJoinRequest(request)"
+          >
+            Recusar
+          </ion-button>
+          @if (request.teamId) {
+            <ion-button expand="block" fill="outline" (click)="openTeamProfile(request.teamId)">
+              Ver time
+            </ion-button>
+          }
+        </ion-card-content>
+      </ion-card>
+    }
+  }
+
   @if (!loading && mailbox === 'in' && incomingChallenges.length > 0) {
     <h2 class="section-title">Desafios recebidos</h2>
     @for (challenge of incomingChallenges; track challenge.objectId) {

@@ -10,6 +10,7 @@ import {
   EventMuralVoteSummary,
   MuralAppBucketPayload,
   MuralAppDashboard,
+  MuralAppPeladaRankEntry,
   MuralCoachRankEntry,
   MuralLocationFilter,
   MuralLocationLevel,
@@ -557,7 +558,7 @@ export class MuralService {
       MuralRankingEntry[]
     >, participants);
 
-    return {
+    const payload: MuralAppBucketPayload = {
       bucket: String(row['bucket'] || ''),
       rankings,
       voteAggregates: (row['voteAggregates'] ?? {}) as MuralVoteAggregates,
@@ -565,6 +566,57 @@ export class MuralService {
       topTeams: this.normalizeAppTeamRankList(row['topTeams']),
       topCoaches,
       predictionRankings: this.normalizeAppPredictionRankings(row['predictionRankings']),
+    };
+    if (Object.prototype.hasOwnProperty.call(row, 'bestPelada')) {
+      payload.bestPelada = this.normalizeBestPelada(row['bestPelada']);
+    }
+    if (Object.prototype.hasOwnProperty.call(row, 'topPeladas')) {
+      payload.topPeladas = this.normalizePeladaRankList(row['topPeladas']);
+    }
+    return payload;
+  }
+
+  private normalizeBestPelada(raw: unknown): MuralAppPeladaRankEntry | null {
+    if (!raw || typeof raw !== 'object') return null;
+    const entry = this.normalizePeladaRankEntry(raw);
+    return entry.peladaId ? entry : null;
+  }
+
+  private normalizePeladaRankList(raw: unknown): MuralAppPeladaRankEntry[] {
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((item) => this.normalizePeladaRankEntry(item))
+      .filter((item) => !!item.peladaId)
+      .slice(0, 10);
+  }
+
+  private normalizePeladaRankEntry(raw: unknown): MuralAppPeladaRankEntry {
+    const row = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+    const average = (value: unknown): number => {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return 0;
+      return Math.round(num * 100) / 100;
+    };
+    return {
+      peladaId: String(row['peladaId'] || ''),
+      name: String(row['name'] || 'Pelada'),
+      place: row['place'] ? String(row['place']) : '',
+      imageUrl: row['imageUrl'] ? String(row['imageUrl']) : undefined,
+      adminId: row['adminId'] ? String(row['adminId']) : undefined,
+      adminName: row['adminName'] ? String(row['adminName']) : undefined,
+      adminAvatarUrl: row['adminAvatarUrl'] ? String(row['adminAvatarUrl']) : undefined,
+      createdAt: row['createdAt'] ? String(row['createdAt']) : undefined,
+      eventsHeld: Math.max(0, Math.round(Number(row['eventsHeld']) || 0)),
+      filledCardsAverage: average(row['filledCardsAverage']),
+      distinctProfilesAverage: average(row['distinctProfilesAverage']),
+      participantsAverage: average(row['participantsAverage']),
+      distinctVotersAverage: average(row['distinctVotersAverage']),
+      votesAverage: average(row['votesAverage']),
+      redCardsAverage: average(row['redCardsAverage']),
+      yellowCardsAverage: average(row['yellowCardsAverage']),
+      hasCash: row['hasCash'] === true,
+      hasCotinha: row['hasCotinha'] === true,
+      hasMailbox: row['hasMailbox'] === true,
     };
   }
 

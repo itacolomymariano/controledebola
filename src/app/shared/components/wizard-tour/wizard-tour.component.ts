@@ -7,7 +7,7 @@ import {
 } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
-import { WizardTourStep } from '../../../core/models/wizard-tour.model';
+import { WizardTourChoice, WizardTourStep } from '../../../core/models/wizard-tour.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { WizardTourService } from '../../../core/services/wizard-tour.service';
 
@@ -48,10 +48,10 @@ export class WizardTourComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.total = this.tour.total;
     this.subs.push(
       this.tour.active$.subscribe(() => this.sync()),
       this.tour.stepIndex$.subscribe(() => this.sync()),
+      this.tour.flowRevision$.subscribe(() => this.sync()),
       this.tour.pendingCompletionStepId$.subscribe(() => this.sync()),
       this.auth.onProfileChanged.subscribe(() => {
         void this.tour.maybeAutoStart(this.router.url);
@@ -84,6 +84,16 @@ export class WizardTourComponent implements OnInit, OnDestroy {
     }
   }
 
+  continueWithoutRoute(): void {
+    this.tour.continueWithoutRoute();
+    this.sync();
+  }
+
+  choose(choice: WizardTourChoice): void {
+    this.tour.selectChoice(choice);
+    this.sync();
+  }
+
   skip(): void {
     this.tour.skip();
     this.sync();
@@ -94,11 +104,17 @@ export class WizardTourComponent implements OnInit, OnDestroy {
     this.sync();
   }
 
+  back(): void {
+    this.tour.back();
+    this.sync();
+  }
+
   private sync(): void {
     const onAuth = this.tour.isAuthRoute(this.router.url);
     const paused = this.tour.isPausedOnRoute(this.router.url);
     this.current = this.tour.current;
     this.stepIndex = this.tour.stepIndex;
+    this.total = this.tour.total;
     this.visible = !!this.current && !onAuth && !paused && !this.keyboardOpen && this.auth.isLoggedIn();
     this.cdr.markForCheck();
   }

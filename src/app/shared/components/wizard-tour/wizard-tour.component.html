@@ -24,12 +24,32 @@
       <ion-card-content>
         <p>{{ current.bodyKey | t }}</p>
         <div class="wizard-tour-actions">
-          <ion-button fill="solid" size="small" (click)="follow()">
-            {{ current.ctaKey | t }}
-          </ion-button>
-          <ion-button fill="clear" size="small" (click)="skip()">
-            {{ 'coach.skip' | t }}
-          </ion-button>
+          @if (stepIndex > 0) {
+            <ion-button fill="outline" size="small" (click)="back()">
+              {{ 'coach.back' | t }}
+            </ion-button>
+          }
+          @if (current.kind === 'choices' && current.choices) {
+            @for (choice of current.choices; track choice.id) {
+              <ion-button fill="solid" size="small" (click)="choose(choice)">
+                {{ choice.labelKey | t }}
+              </ion-button>
+            }
+          } @else if (current.ctaKey) {
+            <ion-button fill="solid" size="small" (click)="follow()">
+              {{ current.ctaKey | t }}
+            </ion-button>
+            @if (current.secondaryCtaKey) {
+              <ion-button fill="outline" size="small" (click)="continueWithoutRoute()">
+                {{ current.secondaryCtaKey | t }}
+              </ion-button>
+            }
+          }
+          @if (current.kind !== 'choices' || !current.choices?.length) {
+            <ion-button fill="clear" size="small" (click)="skip()">
+              {{ 'coach.skip' | t }}
+            </ion-button>
+          }
           <ion-button fill="clear" size="small" color="medium" (click)="close()">
             {{ 'coach.close' | t }}
           </ion-button>

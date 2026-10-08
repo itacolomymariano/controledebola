@@ -151,6 +151,64 @@
   </ion-card>
 }
 
+@if (tab === 'peladas') {
+  <ion-card>
+    <ion-card-header>
+      <div class="mural-card-header-row">
+        <ion-card-title>{{ 'mural.app.bestPelada.title' | t }}</ion-card-title>
+        <app-mural-share-button
+          [context]="shareContext"
+          [cardTitle]="('mural.app.bestPelada.title' | t)"
+          ruleKey="mural.rule.melhorPelada"
+        ></app-mural-share-button>
+      </div>
+      @if (filterCaption) {
+        <p class="mural-filter-line">{{ filterCaption }}</p>
+      }
+    </ion-card-header>
+    <ion-card-content>
+      @if (bucket?.bestPelada; as pelada) {
+        <ion-card class="match-rank-card">
+          <ion-card-content>
+            <div class="match-rank-head">
+              @if (pelada.imageUrl) {
+                <img class="amateur-shield" [src]="pelada.imageUrl" [alt]="pelada.name" crossorigin="anonymous" />
+              }
+              <h3>{{ pelada.name }}</h3>
+            </div>
+            @if (pelada.place) {
+              <p><strong>{{ 'mural.app.pelada.local' | t }}:</strong> {{ pelada.place }}</p>
+            }
+            @if (pelada.adminName) {
+              <div class="match-rank-row">
+                <app-user-avatar
+                  [avatarUrl]="pelada.adminAvatarUrl"
+                  [alt]="pelada.adminName"
+                  size="sm"
+                ></app-user-avatar>
+                <span><strong>{{ 'mural.app.pelada.admin' | t }}:</strong> {{ pelada.adminName }}</span>
+              </div>
+            }
+            <p><strong>{{ 'mural.app.pelada.eventsHeld' | t }}:</strong> {{ pelada.eventsHeld }}</p>
+            <p><strong>{{ 'mural.app.pelada.filledCardsAverage' | t }}:</strong> {{ formatAverage(pelada.filledCardsAverage) }}</p>
+            <p><strong>{{ 'mural.app.pelada.distinctProfilesAverage' | t }}:</strong> {{ formatAverage(pelada.distinctProfilesAverage) }}</p>
+            <p><strong>{{ 'mural.app.pelada.participantsAverage' | t }}:</strong> {{ formatAverage(pelada.participantsAverage) }}</p>
+            <p><strong>Média de eleitores:</strong> {{ formatAverage(pelada.distinctVotersAverage) }}</p>
+            <p><strong>Média de votos:</strong> {{ formatAverage(pelada.votesAverage) }}</p>
+            <p><strong>Média de vermelhos:</strong> {{ formatAverage(pelada.redCardsAverage) }}</p>
+            <p><strong>Média de amarelos:</strong> {{ formatAverage(pelada.yellowCardsAverage) }}</p>
+            <p><strong>Caixa:</strong> {{ yesNo(pelada.hasCash) }}</p>
+            <p><strong>Cotinha:</strong> {{ yesNo(pelada.hasCotinha) }}</p>
+            <p><strong>Mensagens:</strong> {{ yesNo(pelada.hasMailbox) }}</p>
+          </ion-card-content>
+        </ion-card>
+      } @else {
+        <ion-note>Sem dados ainda.</ion-note>
+      }
+    </ion-card-content>
+  </ion-card>
+}
+
 <app-mural-highlights-panel
   [highlights]="highlights"
   scope="app"
@@ -187,6 +245,10 @@
     }
   </ion-card-content>
 </ion-card>
+
+@if (tab === 'peladas') {
+  <ng-container [ngTemplateOutlet]="peladaTopCard"></ng-container>
+}
 
 @if (showTeamCoachBlocks()) {
   <ion-card>
@@ -242,6 +304,10 @@
       }
     </ion-card-content>
   </ion-card>
+
+  @if (tab === 'geral') {
+    <ng-container [ngTemplateOutlet]="peladaTopCard"></ng-container>
+  }
 
   <ion-card>
     <ion-card-header>
@@ -386,3 +452,53 @@
     </div>
   </ion-accordion>
 </ion-accordion-group>
+
+<ng-template #peladaTopCard>
+  <ion-card>
+    <ion-card-header>
+      <div class="mural-card-header-row">
+        <ion-card-title>{{ 'mural.app.top.peladas' | t }}</ion-card-title>
+        <app-mural-share-button
+          [context]="shareContext"
+          [cardTitle]="('mural.app.top.peladas' | t)"
+          ruleKey="mural.rule.topPeladas"
+        ></app-mural-share-button>
+      </div>
+      @if (filterCaption) {
+        <p class="mural-filter-line">{{ filterCaption }}</p>
+      }
+    </ion-card-header>
+    <ion-card-content>
+      @if (!bucket?.topPeladas?.length) {
+        <ion-note>Sem dados ainda.</ion-note>
+      }
+      @for (pelada of bucket?.topPeladas ?? []; track pelada.peladaId + $index; let i = $index) {
+        <ion-card class="match-rank-card ion-margin-bottom">
+          <ion-card-content>
+            <div class="match-rank-head">
+              @if (pelada.imageUrl) {
+                <img class="amateur-shield" [src]="pelada.imageUrl" [alt]="pelada.name" crossorigin="anonymous" />
+              }
+              <h3>{{ i + 1 }}. {{ pelada.name }}</h3>
+            </div>
+            @if (pelada.place) {
+              <p><strong>{{ 'mural.app.pelada.local' | t }}:</strong> {{ pelada.place }}</p>
+            }
+            @if (pelada.adminName) {
+              <div class="match-rank-row">
+                <app-user-avatar
+                  [avatarUrl]="pelada.adminAvatarUrl"
+                  [alt]="pelada.adminName"
+                  size="sm"
+                ></app-user-avatar>
+                <span><strong>{{ 'mural.app.pelada.admin' | t }}:</strong> {{ pelada.adminName }}</span>
+              </div>
+            }
+            <p><strong>{{ 'mural.app.pelada.eventsHeld' | t }}:</strong> {{ pelada.eventsHeld }}</p>
+            <p><strong>{{ 'mural.app.pelada.participantsAverage' | t }}:</strong> {{ formatAverage(pelada.participantsAverage) }}</p>
+          </ion-card-content>
+        </ion-card>
+      }
+    </ion-card-content>
+  </ion-card>
+</ng-template>

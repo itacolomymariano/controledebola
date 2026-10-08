@@ -1,11 +1,20 @@
 import { Injectable } from '@angular/core';
+import { Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import Parse from 'parse';
 import {
   WIZARD_TOUR_AUTH_ROUTES,
-  WIZARD_TOUR_STEPS,
+  WIZARD_TOUR_LEGACY_STEPS,
+  WizardTourChoice,
   WizardTourStep,
+  buildOtherWizardFlow,
+  buildPeladaWizardFlow,
+  buildTeamWizardFlow,
+  peladaBranchTail,
+  roleHintStepForPrimaryRole,
+  teamBranchTail,
 } from '../models/wizard-tour.model';
+import { AppInviteShareService } from './app-invite-share.service';
 import { AppStorageService } from './app-storage.service';
 import { AuthService } from './auth.service';
 import { TeamService } from './team.service';
@@ -14,16 +23,20 @@ import { TeamService } from './team.service';
 export class WizardTourService {
   readonly active$ = new BehaviorSubject(false);
   readonly stepIndex$ = new BehaviorSubject(0);
+  readonly flowRevision$ = new BehaviorSubject(0);
   /** When set, overlay stays hidden until the pending step is completed (e.g. athlete save). */
   readonly pendingCompletionStepId$ = new BehaviorSubject<string | null>(null);
 
   private autoTried = false;
   private lastUserId: string | null = null;
+  private flowSteps: WizardTourStep[] = [];
 
   constructor(
     private readonly storage: AppStorageService,
     private readonly auth: AuthService,
-    private readonly teamService: TeamService
+    private readonly teamService: TeamService,
+    private readonly inviteShare: AppInviteShareService,
+    private readonly router: Router
   ) {}
 
   get active(): boolean {
@@ -39,16 +52,16 @@ export class WizardTourService {
   }
 
   get steps(): WizardTourStep[] {
-    return WIZARD_TOUR_STEPS;
+    return this.flowSteps;
   }
 
   get current(): WizardTourStep | null {
     if (!this.active) return null;
-    return WIZARD_TOUR_STEPS[this.stepIndex] ?? null;
+    return this.flowSteps[this.stepIndex] ?? null;
   }
 
   get total(): number {
-    return WIZARD_TOUR_STEPS.length;
+    return this.flowSteps.length;
   }
 
   isAuthRoute(url: string): boolean {
@@ -59,14 +72,15 @@ export class WizardTourService {
   isPausedOnRoute(url: string): boolean {
     const pending = this.pendingCompletionStepId;
     if (!pending) return false;
-    const step = WIZARD_TOUR_STEPS.find((row) => row.id === pending);
+    const step = this.flowSteps.find((row) => row.id === pending);
     if (!step?.route) return false;
+    const stepPath = step.route.split('?')[0];
     const path = url.split('?')[0];
-    return path === step.route || path.startsWith(`${step.route}/`);
+    return path === stepPath || path.startsWith(`${stepPath}/`);
   }
 
   startFromMenu(): void {
-    void this.startAtFirstRelevantStep();
+    void this.startAtFirstRelevantStep(true);
   }
 
   skip(): void {
@@ -81,18 +95,24 @@ export class WizardTourService {
     if (userId) {
       await this.storage.setWizardTourDismissed(userId);
     }
+    await this.router.navigateByUrl('/tabs/peladas');
+  }
+
+  back(): void {
+    if (this.stepIndex <= 0) return;
+    this.clearPendingCompletion();
+    this.stepIndex$.next(this.stepIndex - 1);
   }
 
   /**
-   * CTA "Seguir": for athlete step, navigate without advancing until profile is saved.
-   * Other steps advance immediately as before.
+   * CTA "Seguir": pause on steps that require completion; choice steps use selectChoice instead.
    */
   followRoute(): string | null {
     const step = this.current;
-    if (!step) return null;
+    if (!step || step.kind !== 'route' || !step.route) return null;
 
-    if (step.id === 'athlete') {
-      this.pendingCompletionStepId$.next('athlete');
+    if (step.pauseUntilComplete) {
+      this.pendingCompletionStepId$.next(step.id);
       return step.route;
     }
 
@@ -100,16 +120,56 @@ export class WizardTourService {
     return step.route;
   }
 
+  /** Secondary CTA: advance without navigating (e.g. skip search step). */
+  continueWithoutRoute(): void {
+    this.clearPendingCompletion();
+    this.advance();
+  }
+
+  selectChoice(choice: WizardTourChoice): void {
+    const step = this.current;
+    if (!step || step.kind !== 'choices') return;
+
+    if (choice.action === 'share_invite') {
+      void this.inviteShare.shareInvite();
+      return;
+    }
+    if (choice.action === 'finish') {
+      void this.close();
+      return;
+    }
+
+    if (step.id === 'pelada-role') {
+      this.appendBranchTail(peladaBranchTail(choice.id));
+    } else if (step.id === 'team-role') {
+      this.appendBranchTail(teamBranchTail(choice.id));
+    }
+
+    this.advance();
+    if (choice.route) {
+      void this.router.navigateByUrl(choice.route);
+    }
+  }
+
   /** Called after athlete profile create/update succeeds. */
   completePendingStep(): void {
     const pending = this.pendingCompletionStepId;
     if (!pending) return;
-    this.clearPendingCompletion();
+    this.completeStepById(pending);
+  }
+
+  completeStepById(stepId: string): void {
+    const pending = this.pendingCompletionStepId;
+    const current = this.current;
+    const relevant = pending === stepId || (this.active && current?.id === stepId);
+    if (!relevant) return;
+    if (pending === stepId) {
+      this.clearPendingCompletion();
+    }
     if (!this.active) {
       this.active$.next(true);
     }
-    const current = this.current;
-    if (current?.id === pending) {
+    if (current?.id === stepId) {
       this.advance();
     }
   }
@@ -129,7 +189,7 @@ export class WizardTourService {
     await this.storage.setWizardTourOffered(userId);
     if (hasActivity) return;
 
-    await this.startAtFirstRelevantStep();
+    await this.startAtFirstRelevantStep(false);
   }
 
   resetSession(): void {
@@ -137,19 +197,43 @@ export class WizardTourService {
     this.clearPendingCompletion();
     this.active$.next(false);
     this.stepIndex$.next(0);
+    this.flowSteps = [];
+    this.bumpFlowRevision();
   }
 
-  private async startAtFirstRelevantStep(): Promise<void> {
-    const hasAthlete = await this.hasAthleteProfile();
-    const startIndex = hasAthlete
-      ? Math.max(
-          0,
-          WIZARD_TOUR_STEPS.findIndex((step) => step.id === 'find-pelada')
-        )
-      : 0;
+  private async startAtFirstRelevantStep(fromMenu: boolean): Promise<void> {
+    this.flowSteps = await this.buildFlow(fromMenu);
     this.clearPendingCompletion();
-    this.stepIndex$.next(startIndex >= 0 ? startIndex : 0);
+    this.stepIndex$.next(0);
     this.active$.next(true);
+    this.bumpFlowRevision();
+  }
+
+  private async buildFlow(fromMenu: boolean): Promise<WizardTourStep[]> {
+    const choice = await this.storage.getParticipationChoice();
+    const hasAthlete = await this.hasAthleteProfile();
+
+    if (fromMenu && !choice) {
+      return [...WIZARD_TOUR_LEGACY_STEPS];
+    }
+
+    if (choice === 'amateur_team') {
+      return buildTeamWizardFlow(!hasAthlete);
+    }
+    if (choice === 'other') {
+      return buildOtherWizardFlow(roleHintStepForPrimaryRole(this.auth.getPrimaryRole()));
+    }
+    return buildPeladaWizardFlow(!hasAthlete);
+  }
+
+  private appendBranchTail(tail: WizardTourStep[]): void {
+    const head = this.flowSteps.slice(0, this.stepIndex + 1);
+    this.flowSteps = [...head, ...tail];
+    this.bumpFlowRevision();
+  }
+
+  private bumpFlowRevision(): void {
+    this.flowRevision$.next(this.flowRevision$.value + 1);
   }
 
   private clearPendingCompletion(): void {
@@ -167,11 +251,16 @@ export class WizardTourService {
 
   private advance(): void {
     const next = this.stepIndex + 1;
-    if (next >= WIZARD_TOUR_STEPS.length) {
+    if (next >= this.flowSteps.length) {
       void this.close();
       return;
     }
     this.stepIndex$.next(next);
+  }
+
+  /** Fim natural do tour: Home + marcar como visto. */
+  async finish(): Promise<void> {
+    await this.close();
   }
 
   private async hasAthleteProfile(): Promise<boolean> {

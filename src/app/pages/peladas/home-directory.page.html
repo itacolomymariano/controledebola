@@ -17,6 +17,10 @@
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
 
+  @if (wizardTeamJoin) {
+    <ion-note class="ion-padding wizard-join-banner">{{ 'coach.wizard.teamJoinBanner' | t }}</ion-note>
+  }
+
   @if (!loading && !errorMessage) {
     <ion-searchbar
       [placeholder]="(door === 'usuarios' ? 'peladas.usersSearchPlaceholder' : 'peladas.searchPlaceholder') | t"
@@ -82,6 +86,14 @@
         </ion-item>
       }
     </ion-list>
+  }
+
+  @if (!loading && !errorMessage && door === 'times') {
+    <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+      <ion-fab-button (click)="createTeam()" [attr.aria-label]="'peladas.createTeam' | t">
+        <ion-icon name="add"></ion-icon>
+      </ion-fab-button>
+    </ion-fab>
   }
 
   @if (!loading && !errorMessage && door === 'usuarios' && visibleUsers.length > 0) {

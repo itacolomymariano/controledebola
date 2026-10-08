@@ -17,6 +17,10 @@
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
 
+  @if (wizardPeladaJoin) {
+    <ion-note class="ion-padding wizard-join-banner">{{ 'coach.wizard.peladaJoinBanner' | t }}</ion-note>
+  }
+
   @if (!loading && !errorMessage) {
     <ion-searchbar
       [placeholder]="'peladas.searchPlaceholder' | t"

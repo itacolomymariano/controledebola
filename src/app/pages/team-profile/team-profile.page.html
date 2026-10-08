@@ -2,7 +2,7 @@
   <app-user-bar></app-user-bar>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/inbox"></ion-back-button>
+      <ion-back-button defaultHref="/tabs/peladas/times"></ion-back-button>
     </ion-buttons>
     <ion-title>Perfil do time</ion-title>
   </ion-toolbar>
@@ -107,6 +107,15 @@
       @for (obs of $any(profile['observations']); track obs.text) {
         <p>{{ obs.eventName }}: {{ obs.text }}</p>
       }
+    }
+
+    @if (canRequestJoin) {
+      <ion-button expand="block" class="ion-margin-top" [disabled]="joinBusy" (click)="requestJoin()">
+        {{ 'team.requestJoin' | t }}
+      </ion-button>
+    }
+    @if (pendingJoin) {
+      <ion-note class="ion-margin-top">{{ 'team.requestJoinPending' | t }}</ion-note>
     }
   }
 </ion-content>

@@ -17,6 +17,10 @@ import {
 } from '../../core/services/match-challenge.service';
 import { RefereeInvitationService } from '../../core/services/referee-invitation.service';
 import {
+  AmateurTeamJoinRequestItem,
+  AmateurTeamJoinRequestService,
+} from '../../core/services/amateur-team-join-request.service';
+import {
   TeamMatchJoinRequestItem,
   TeamMatchJoinRequestService,
 } from '../../core/services/team-match-join-request.service';
@@ -42,6 +46,8 @@ export class InboxPage implements OnDestroy {
   outboxChallenges: MatchChallengeItem[] = [];
   incomingJoinRequests: TeamMatchJoinRequestItem[] = [];
   outboxJoinRequests: TeamMatchJoinRequestItem[] = [];
+  incomingAmateurTeamJoinRequests: AmateurTeamJoinRequestItem[] = [];
+  outboxAmateurTeamJoinRequests: AmateurTeamJoinRequestItem[] = [];
   mailbox: 'in' | 'out' = 'in';
   pendingReschedules: TeamMatchRescheduleProposal[] = [];
   incomingRefereeApprovals: TeamMatchRefereeHiringApprovalItem[] = [];
@@ -68,6 +74,7 @@ export class InboxPage implements OnDestroy {
     private readonly eventService: EventService,
     private readonly challengeService: MatchChallengeService,
     private readonly joinRequestService: TeamMatchJoinRequestService,
+    private readonly amateurTeamJoinService: AmateurTeamJoinRequestService,
     private readonly appMessageService: AppMessageService,
     private readonly router: Router,
     private readonly route: ActivatedRoute,
@@ -340,6 +347,28 @@ export class InboxPage implements OnDestroy {
         this.incomingJoinRequests = [];
         this.outboxJoinRequests = [];
       }
+      try {
+        const teamJoinRows = await this.amateurTeamJoinService.listMine();
+        this.incomingAmateurTeamJoinRequests = teamJoinRows.filter(
+          (row) => row.status === 'pending' && row.presidentUserId === this.currentUserId
+        );
+        this.outboxAmateurTeamJoinRequests = teamJoinRows
+          .filter((row) => {
+            if (row.athleteUserId === this.currentUserId) return true;
+            if (row.presidentUserId === this.currentUserId && row.status !== 'pending') {
+              return true;
+            }
+            return false;
+          })
+          .sort((a, b) => {
+            const ta = a.createdAt?.getTime() ?? 0;
+            const tb = b.createdAt?.getTime() ?? 0;
+            return tb - ta;
+          });
+      } catch {
+        this.incomingAmateurTeamJoinRequests = [];
+        this.outboxAmateurTeamJoinRequests = [];
+      }
       await this.loadMessages();
     } finally {
       this.loading = false;
@@ -491,6 +520,53 @@ export class InboxPage implements OnDestroy {
     } finally {
       this.processingId = '';
     }
+  }
+
+  async acceptAmateurTeamJoinRequest(request: AmateurTeamJoinRequestItem): Promise<void> {
+    this.processingId = request.objectId;
+    try {
+      await this.amateurTeamJoinService.respond(request.objectId, 'accepted');
+      this.setMailbox('out');
+      await this.load();
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error));
+    } finally {
+      this.processingId = '';
+    }
+  }
+
+  async declineAmateurTeamJoinRequest(request: AmateurTeamJoinRequestItem): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: 'Recusar pedido de elenco',
+      inputs: [{ name: 'reason', type: 'textarea', placeholder: 'Motivo (opcional)' }],
+      buttons: [
+        { text: 'Cancelar', role: 'cancel' },
+        {
+          text: 'Recusar',
+          role: 'destructive',
+          handler: (data) => {
+            void this.respondAmateurTeamJoinDecline(request.objectId, String(data?.reason || ''));
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  private async respondAmateurTeamJoinDecline(requestId: string, reason: string): Promise<void> {
+    this.processingId = requestId;
+    try {
+      await this.amateurTeamJoinService.respond(requestId, 'declined', reason);
+      await this.load();
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error));
+    } finally {
+      this.processingId = '';
+    }
+  }
+
+  openTeamProfile(teamId: string): void {
+    void this.router.navigate(['/team', teamId]);
   }
 
   async declineJoinRequest(request: TeamMatchJoinRequestItem): Promise<void> {

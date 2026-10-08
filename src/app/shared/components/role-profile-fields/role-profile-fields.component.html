@@ -2,9 +2,10 @@
   @for (field of fields; track field.key) {
     @if (showField(field)) {
       @if (field.type === 'boolean') {
-        <ion-item>
-          <ion-toggle slot="start" [formControlName]="field.key"></ion-toggle>
-          <ion-label class="ion-text-wrap">{{ field.label }}</ion-label>
+        <ion-item lines="full">
+          <ion-toggle justify="space-between" [formControlName]="field.key">
+            {{ field.label }}
+          </ion-toggle>
         </ion-item>
       } @else if (field.type === 'money') {
         <ion-item>

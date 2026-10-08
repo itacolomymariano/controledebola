@@ -8,6 +8,7 @@ import { EventInviteCandidate } from '../../core/models/event-hiring.model';
 import { AmateurTeam, AmateurTeamMember } from '../../core/models/team.model';
 import { AthleteSearchService } from '../../core/services/athlete-search.service';
 import { TeamService } from '../../core/services/team.service';
+import { WizardTourService } from '../../core/services/wizard-tour.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
 import { buildMissingFieldsMessage } from '../../core/utils/form-validation.util';
 import { birthDateToIsoString, parseBirthDateIso } from '../../core/utils/birth-date.util';
@@ -55,7 +56,8 @@ export class TeamFormPage {
     private readonly router: Router,
     private readonly route: ActivatedRoute,
     private readonly loadingCtrl: LoadingController,
-    private readonly alertCtrl: AlertController
+    private readonly alertCtrl: AlertController,
+    private readonly wizardTour: WizardTourService
   ) {
     this.form.get('uniformId')?.valueChanges.subscribe((id) => {
       if (id) this.uniformPickerOpen = false;
@@ -253,6 +255,7 @@ export class TeamFormPage {
           shieldImage: this.shieldImageFile,
           headquartersImage: this.headquartersImageFile,
         });
+        this.wizardTour.completeStepById('team-president-create');
       }
       const returnUrl = this.readReturnUrl();
       if (returnUrl !== '/tabs/profile' && returnUrl !== '/team/form') {

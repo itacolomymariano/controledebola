@@ -258,6 +258,29 @@ export interface MuralAppTeamRankEntry extends MuralTeamMatchRecordHighlight {
   totalScore?: number;
 }
 
+/** Pelada no ranking do Mural do App. Campos opcionais: Cloud antigo pode omitir o objeto. */
+export interface MuralAppPeladaRankEntry {
+  peladaId: string;
+  name: string;
+  place?: string;
+  imageUrl?: string;
+  adminId?: string;
+  adminName?: string;
+  adminAvatarUrl?: string;
+  createdAt?: string;
+  eventsHeld: number;
+  filledCardsAverage: number;
+  distinctProfilesAverage: number;
+  participantsAverage: number;
+  distinctVotersAverage: number;
+  votesAverage: number;
+  redCardsAverage: number;
+  yellowCardsAverage: number;
+  hasCash: boolean;
+  hasCotinha: boolean;
+  hasMailbox: boolean;
+}
+
 export interface MuralAppBucketPayload {
   bucket: MuralAppBucketKey | string;
   rankings: Record<MuralTargetRole, MuralRankingEntry[]>;
@@ -266,6 +289,10 @@ export interface MuralAppBucketPayload {
   topTeams: MuralAppTeamRankEntry[];
   topCoaches: MuralCoachRankEntry[];
   predictionRankings: MuralAppPredictionEntry[];
+  /** Primeira do Top 10. Ausente no Cloud antigo. */
+  bestPelada?: MuralAppPeladaRankEntry | null;
+  /** Até 10. Ausente no Cloud antigo. Só buckets pelada e merged. */
+  topPeladas?: MuralAppPeladaRankEntry[];
 }
 
 export interface MuralAppDashboard {

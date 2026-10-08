@@ -2,7 +2,45 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-10-06 (versao de loja iOS 1.0.6)
+**Ultima atualizacao:** 2026-10-08 (wizard ramificado)
+
+---
+
+### 2026-10-08 — Wizard ramificado (pelada / time / outro)
+
+- `wizard-tour.model.ts`: fluxos dinâmicos (`buildPeladaWizardFlow`, `buildTeamWizardFlow`, `buildOtherWizardFlow`); passos `choices` + cauda por ramo (admin/jogador, presidente/jogador); convite via `AppInviteShareService`
+- `wizard-tour.service.ts`: `flowSteps`, `selectChoice`, `completeStepById`, menu sem `participationChoice` usa `WIZARD_TOUR_LEGACY_STEPS`
+- UI: múltiplos botões no card; banners em `peladas-list?wizard=peladaJoin` e `times?wizard=teamJoin`
+- Hooks: `pelada-form` (create), `team-form` (create), `athlete-profile-form` (`completePendingStep`)
+- i18n `coach.wizard.*` pt/en/es
+
+### 2026-10-08 — Mural pelada, Home Times, elenco
+
+- Mural Melhor/Top Pelada: local com UF, admin (avatar+nome), i18n média participantes; desempate `createdAt` (pelada mais antiga)
+- Home Times FAB → `/team-form`; perfil do time **Pedir para participar**; Cloud `AmateurTeamJoinRequest` + AppMessage; inbox **Pedidos para o elenco**
+- Wizard: fechar/fim → Home; **Voltar**; `participationChoice` no storage
+- Juiz profile-setup: labels nos toggles (`role-profile-fields`)
+- `docs/AUDITORIA-PLAY-I18N-2026-10-08.md`. Publicar `cloud/main.js`
+
+---
+
+### 2026-10-07 — Ranking de peladas no Mural do App
+
+- Aba Peladas: card **Melhor Pelada do App** antes dos destaques; **Top 10 — Peladas** logo abaixo de Top 10 — Atletas. Aba Geral: o mesmo Top 10 entre Top 10 — Times e Top 10 — Treinadores. Aba Confrontos não leva esses cards
+- Cloud `getMuralAppDashboard` (`cloud/source/07-mural.js`): calcula uma vez e devolve `bestPelada` e `topPeladas` (até 10) só nos buckets `pelada` e `merged`. Campos: peladaId, name, place, imageUrl, eventsHeld, filledCardsAverage, distinctProfilesAverage, participantsAverage, distinctVotersAverage, votesAverage, redCardsAverage, yellowCardsAverage, hasCash, hasCotinha, hasMailbox
+- Critérios: mais eventos realizados (não confronto; `isFinished` ou `endTime` passado; filtro de região em `buildMuralLocationEventQuery`); depois médias de cards preenchidos, perfis distintos, participantes confirmados, eleitores e votos; menos vermelhos e menos amarelos (`yellowCards`/`redCards` uma vez, sem somar `refereeYellowCards`/`scoutYellowCards`); por último caixa, cotinha confirmada e mensagem. Empate: nome
+- Cards preenchidos (máx. 8): voto de atleta, gols, goleiro (voto ou defesas/gols sofridos), juiz (voto ou número de súmula), palpite, mídia publicada (`EventMediaPublication`), nascimento, time do coração (`favoriteProTeam` do inscrito confirmado — mesma fonte do card do evento, sem classe nova). Papel goleiro conta como atleta na média de perfis
+- **Teto:** 5000 eventos realizados (`MURAL_LOCATION_EVENT_SCAN_LIMIT`), unindo a consulta de tipo ≠ `team_match` e a de tipo ausente (cada uma já limitada a 5000). Lotes: MuralVote 10000/200 scopeId; EventPerformance 3000/50; EventRegistration 2000/50; FanPrediction 1000/50; EventMediaPublication 500/50; RefereeInvitation 500/50; PeladaCashEntry e PeladaCotinha 1000/50; PeladaMembership 1000/20; AppMessage 1000 por 100 `relatedId` candidatos. Caixa, cotinha e mensagem são da pelada inteira, sem filtro de bairro
+- Cliente: `mural.model.ts`, `mural.service.ts` (campos opcionais), `mural-app-feed`. Share segue o card de time (`app-mural-share-button` + captura já existente; foto `locationPhoto`, senão sem imagem). i18n: `mural.app.bestPelada.title`, `mural.app.top.peladas`, `mural.rule.melhorPelada.default`, `mural.rule.topPeladas.default`
+- **Deploy:** publicar `cloud/main.js` no Back4App. Sem isso os cards ficam em "Sem dados ainda."
+
+---
+
+### 2026-10-06 — Manual: textos alinhados e lista de fotos
+
+- Site `controledebolasite`: capítulos 01, 02, 05, 06, 07, 10, 11, 14 e 15. Home com quatro portas, idioma e tema no menu, busca de usuários, card da caixa, mural de confrontos, Média CB e wizard na lista de peladas
+- `p69-ficha-time.jpeg` e `p70-busca-times.jpeg` entraram em `public/guia`. Fotos velhas (23, 50, 56, 62 e a separação antiga) saíram do MDX e ficaram como `{/* print ... */}`
+- Lista para fotografar: `docs/MANUAL-SCREENSHOTS-PEDIDOS.md`. Sem commit nem deploy do site
 
 ---
 

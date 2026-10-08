@@ -677,3 +677,238 @@ async function collectTeamMatchNotifyUserIds(event) {
 
   return [...userIds];
 }
+
+const TEAM_JOIN_REQUEST_CLASS = 'AmateurTeamJoinRequest';
+
+function mapAmateurTeamJoinRequestRow(row) {
+  const team = row.get('team');
+  const athlete = row.get('athlete');
+  const president = row.get('president');
+  return {
+    objectId: row.id,
+    status: String(row.get('status') || 'pending'),
+    teamId: team && team.id ? team.id : '',
+    teamName: String(row.get('teamName') || ''),
+    athleteUserId: athlete && athlete.id ? athlete.id : '',
+    athleteApelido: String(row.get('athleteApelido') || ''),
+    athleteFullName: String(row.get('athleteFullName') || ''),
+    athleteAvatarUrl: row.get('athleteAvatarUrl') || undefined,
+    presidentUserId: president && president.id ? president.id : '',
+    presidentApelido: String(row.get('presidentApelido') || ''),
+    message: String(row.get('message') || ''),
+    declineReason: String(row.get('declineReason') || ''),
+    createdAt: row.get('createdAt') ? row.get('createdAt').toISOString() : null,
+    respondedAt: row.get('respondedAt') ? row.get('respondedAt').toISOString() : null,
+  };
+}
+
+Parse.Cloud.define('requestAmateurTeamJoin', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const teamId = String(request.params.teamId || '').trim();
+  const message = String(request.params.message || '').trim().slice(0, 500);
+  if (!teamId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o time.');
+  }
+
+  const team = await new Parse.Query('AmateurTeam').include('president').get(teamId, {
+    useMasterKey: true,
+  });
+  const president = team.get('president');
+  if (!president || !president.id) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Time sem presidente cadastrado.');
+  }
+  if (president.id === user.id) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Voce ja e o presidente deste time.');
+  }
+
+  const teamPtr = Parse.Object.extend('AmateurTeam').createWithoutData(teamId);
+  const rosterQ = new Parse.Query(MEMBERSHIP_CLASS)
+    .equalTo('team', teamPtr)
+    .equalTo('user', user)
+    .equalTo('active', true);
+  const onRoster = await rosterQ.first({ useMasterKey: true });
+  if (onRoster) {
+    throw new Parse.Error(Parse.Error.DUPLICATE_VALUE, 'Voce ja faz parte do elenco.');
+  }
+
+  const duplicate = await new Parse.Query(TEAM_JOIN_REQUEST_CLASS)
+    .equalTo('team', teamPtr)
+    .equalTo('athlete', user)
+    .equalTo('status', 'pending')
+    .first({ useMasterKey: true });
+  if (duplicate) {
+    throw new Parse.Error(Parse.Error.DUPLICATE_VALUE, 'Ja existe uma solicitacao pendente.');
+  }
+
+  try {
+    await user.fetch({ useMasterKey: true });
+  } catch {
+    /* sessao */
+  }
+  const athleteApelido = String(user.get('apelido') || '').trim();
+  const athleteFullName = String(user.get('name') || '').trim();
+  const athleteAvatar = String(user.get('avatarUrl') || '').trim();
+  let presidentApelido = '';
+  try {
+    await president.fetch({ useMasterKey: true });
+    presidentApelido = String(president.get('apelido') || president.get('name') || '').trim();
+  } catch {
+    presidentApelido = '';
+  }
+
+  const teamName = String(team.get('name') || 'Time');
+  const row = new Parse.Object(TEAM_JOIN_REQUEST_CLASS);
+  row.set('team', teamPtr);
+  row.set('athlete', user);
+  row.set('president', president);
+  row.set('teamName', teamName);
+  row.set('status', 'pending');
+  row.set('message', message);
+  row.set('athleteApelido', athleteApelido);
+  row.set('athleteFullName', athleteFullName);
+  if (athleteAvatar) row.set('athleteAvatarUrl', athleteAvatar);
+  row.set('presidentApelido', presidentApelido);
+  const acl = new Parse.ACL();
+  acl.setReadAccess(user.id, true);
+  acl.setWriteAccess(user.id, true);
+  acl.setReadAccess(president.id, true);
+  acl.setWriteAccess(president.id, true);
+  row.setACL(acl);
+  await row.save(null, { useMasterKey: true });
+
+  if (typeof createAppMessage === 'function') {
+    const athleteName = athleteApelido || athleteFullName || 'Um atleta';
+    await createAppMessage({
+      recipientId: president.id,
+      senderId: user.id,
+      kind: 'amateur_team_join_request',
+      title: `Pedido para entrar no time ${teamName}`,
+      body: `${athleteName} pediu para participar do elenco de "${teamName}". Autorize ou recuse na Entrada.`,
+      relatedClass: TEAM_JOIN_REQUEST_CLASS,
+      relatedId: row.id,
+      actionRoute: '/inbox',
+    });
+    await createAppMessage({
+      recipientId: user.id,
+      senderId: user.id,
+      kind: 'amateur_team_join_outbox',
+      title: `Solicitacao enviada — ${teamName}`,
+      body: `Seu pedido para participar de "${teamName}" foi enviado ao presidente.`,
+      relatedClass: TEAM_JOIN_REQUEST_CLASS,
+      relatedId: row.id,
+      actionRoute: `/team/${teamId}`,
+    });
+  }
+
+  return mapAmateurTeamJoinRequestRow(row);
+});
+
+Parse.Cloud.define('respondAmateurTeamJoin', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const requestId = String(request.params.requestId || '').trim();
+  const decision = String(request.params.decision || '').trim();
+  const declineReason = String(request.params.declineReason || '').trim().slice(0, 500);
+  if (!requestId || (decision !== 'accepted' && decision !== 'declined')) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe a solicitacao e a decisao.');
+  }
+
+  const row = await new Parse.Query(TEAM_JOIN_REQUEST_CLASS)
+    .include('team')
+    .include('athlete')
+    .include('president')
+    .get(requestId, { useMasterKey: true });
+  const president = row.get('president');
+  if (!president || president.id !== user.id) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Somente o presidente pode responder.');
+  }
+  if (String(row.get('status') || '') !== 'pending') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Esta solicitacao ja foi respondida.');
+  }
+
+  const athlete = row.get('athlete');
+  const team = row.get('team');
+  const teamName = String(row.get('teamName') || 'Time');
+  row.set('respondedAt', new Date());
+
+  if (decision === 'declined') {
+    row.set('status', 'declined');
+    row.set('declineReason', declineReason);
+    await row.save(null, { useMasterKey: true });
+    if (typeof createAppMessage === 'function' && athlete && athlete.id) {
+      await createAppMessage({
+        recipientId: athlete.id,
+        senderId: user.id,
+        kind: 'amateur_team_join_declined',
+        title: `Pedido recusado — ${teamName}`,
+        body: declineReason
+          ? `Seu pedido para "${teamName}" foi recusado: ${declineReason}`
+          : `Seu pedido para participar de "${teamName}" foi recusado.`,
+        relatedClass: TEAM_JOIN_REQUEST_CLASS,
+        relatedId: row.id,
+        actionRoute: team && team.id ? `/team/${team.id}` : '/inbox',
+      });
+    }
+    return mapAmateurTeamJoinRequestRow(row);
+  }
+
+  if (!team || !team.id || !athlete || !athlete.id) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Solicitacao incompleta.');
+  }
+
+  const existingQ = new Parse.Query(MEMBERSHIP_CLASS)
+    .equalTo('team', team)
+    .equalTo('user', athlete)
+    .equalTo('active', true);
+  const already = await existingQ.first({ useMasterKey: true });
+  if (!already) {
+    const membership = new Parse.Object(MEMBERSHIP_CLASS);
+    membership.set('team', team);
+    membership.set('user', athlete);
+    membership.set('active', true);
+    membership.set('addedBy', user);
+    membership.set('source', 'join_request');
+    const acl = new Parse.ACL();
+    acl.setPublicReadAccess(true);
+    acl.setWriteAccess(user.id, true);
+    membership.setACL(acl);
+    await membership.save(null, { useMasterKey: true });
+  }
+
+  row.set('status', 'accepted');
+  await row.save(null, { useMasterKey: true });
+
+  if (typeof createAppMessage === 'function') {
+    await createAppMessage({
+      recipientId: athlete.id,
+      senderId: user.id,
+      kind: 'amateur_team_join_accepted',
+      title: `Pedido aceito — ${teamName}`,
+      body: `Voce foi incluido no elenco de "${teamName}".`,
+      relatedClass: TEAM_JOIN_REQUEST_CLASS,
+      relatedId: row.id,
+      actionRoute: `/team/${team.id}`,
+    });
+  }
+
+  return mapAmateurTeamJoinRequestRow(row);
+});
+
+Parse.Cloud.define('listMyAmateurTeamJoinRequests', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const asAthlete = new Parse.Query(TEAM_JOIN_REQUEST_CLASS).equalTo('athlete', user);
+  const asPresident = new Parse.Query(TEAM_JOIN_REQUEST_CLASS).equalTo('president', user);
+  const query = Parse.Query.or(asAthlete, asPresident);
+  query.descending('createdAt');
+  query.limit(100);
+  const rows = await query.find({ useMasterKey: true });
+  return rows.map(mapAmateurTeamJoinRequestRow);
+});

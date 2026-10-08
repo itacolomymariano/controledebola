@@ -71,6 +71,7 @@ export class HomeDirectoryPage implements OnDestroy {
   matchRows: MatchRow[] = [];
   teamRows: TeamRow[] = [];
   userRows: UserRow[] = [];
+  wizardTeamJoin = false;
   private loadSeq = 0;
   private localeSub?: Subscription;
 
@@ -100,8 +101,11 @@ export class HomeDirectoryPage implements OnDestroy {
       this.userRows = [];
     }
     this.door = next;
+    this.wizardTeamJoin =
+      this.door === 'times' && this.route.snapshot.queryParamMap.get('wizard') === 'teamJoin';
     this.parseConfigured = this.parseService.isConfigured;
     void this.load();
+    this.cdr.markForCheck();
   }
 
   get titleKey(): string {
@@ -177,6 +181,10 @@ export class HomeDirectoryPage implements OnDestroy {
 
   openTeam(row: TeamRow): void {
     void this.router.navigate(['/team', row.id]);
+  }
+
+  createTeam(): void {
+    void this.router.navigateByUrl('/team-form');
   }
 
   openUser(row: UserRow): void {

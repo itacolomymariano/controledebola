@@ -513,7 +513,7 @@ flowchart LR
 
 **Mural:** `getMuralAppDashboard`, `getEventMuralDashboard`, `getMuralRankings`, `castEventMuralVote`, `getMuralPerformanceAnalytics`, `getPredictionRankings`, `configureMuralClassPermissions`
 
-**Mural do App (tab Mural):** tres abas — **Geral** (notas/gols de confronto peso 3x), **Peladas**, **Confrontos**. `getMuralAppDashboard` retorna `buckets.merged|pelada|team_match` (rankings, topScorers ponderados, topTeams/topCoaches V/E/D 3-1-0, palpites filtrados). Desempate de ranking: maior idade. Papéis de voto incluem `fan` e `gatekeeper`. Compartilhamento: titulo por aba via `MuralShareContext.appMuralVariant`.
+**Mural do App (tab Mural):** tres abas — **Geral** (notas/gols de confronto peso 3x), **Peladas**, **Confrontos**. `getMuralAppDashboard` retorna `buckets.merged|pelada|team_match` (rankings, topScorers ponderados, topTeams/topCoaches V/E/D 3-1-0, palpites filtrados). Desempate de ranking: maior idade. Papéis de voto incluem `fan` e `gatekeeper`. Compartilhamento: titulo por aba via `MuralShareContext.appMuralVariant`. Aba Peladas abre com Melhor Pelada do App e, abaixo dos atletas, Top 10 — Peladas; a aba Geral repete esse Top 10 abaixo de Top 10 — Times (`bestPelada` e `topPeladas` nos buckets `pelada` e `merged`).
 
 **Imprensa/Midia:** `getEventMediaDashboard`, `publishEventRadioNarration`, `publishEventRadioInterview`, `publishEventJournalReportage`, `publishEventJournalInterview`, `publishEventHighlightVideo`, `castEventMediaVote`, `recordEventMediaView`, `setEventMediaReaction`, `upsertEventMediaComment`, `getEventMediaEngagement`, `getTopEventMedia`, `configureEventMediaClassPermissions`. Detalhes: [EVENT-MEDIA.md](EVENT-MEDIA.md).
 

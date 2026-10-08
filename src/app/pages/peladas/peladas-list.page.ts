@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { RefresherCustomEvent } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { formatPeladaLocation, PeladaListItem } from '../../core/models/pelada.model';
@@ -32,6 +32,7 @@ export class PeladasListPage implements OnDestroy {
   loading = true;
   errorMessage = '';
   parseConfigured = false;
+  wizardPeladaJoin = false;
   private peladasSub?: Subscription;
   private localeSub?: Subscription;
 
@@ -39,6 +40,7 @@ export class PeladasListPage implements OnDestroy {
     private readonly auth: AuthService,
     private readonly peladaService: PeladaService,
     private readonly parseService: ParseService,
+    private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly cdr: ChangeDetectorRef,
     private readonly i18n: I18nService
@@ -55,8 +57,10 @@ export class PeladasListPage implements OnDestroy {
   }
 
   ionViewWillEnter(): void {
+    this.wizardPeladaJoin = this.route.snapshot.queryParamMap.get('wizard') === 'peladaJoin';
     this.parseConfigured = this.parseService.isConfigured;
     void this.loadPeladas();
+    this.cdr.markForCheck();
   }
 
   get visibleRows(): PeladaListRow[] {

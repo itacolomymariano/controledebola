@@ -10,7 +10,7 @@ import {
   ThemePaletteId,
   ThemeSurfaceId,
 } from '../models/theme-palette.model';
-import { WizardPath } from '../models/wizard.model';
+import { ParticipationChoice, WizardPath } from '../models/wizard.model';
 
 export interface BiometricCredentials {
   identifier: string;
@@ -21,6 +21,7 @@ const ONBOARDING_KEY = 'onboarding_complete';
 const BIOMETRIC_KEY = 'biometric_enabled';
 const BIOMETRIC_CREDS_KEY = 'biometric_creds';
 const WIZARD_PATH_KEY = 'wizard_path';
+const PARTICIPATION_CHOICE_KEY = 'participation_choice';
 const PROFILE_WIZARD_COMPLETE_KEY = 'profile_wizard_complete';
 const LOCALE_KEY = 'app_locale';
 const PALETTE_KEY = 'app_palette';
@@ -113,6 +114,17 @@ export class AppStorageService {
   async clearWizardPath(): Promise<void> {
     await this.init();
     await this.storage.remove(WIZARD_PATH_KEY);
+  }
+
+  async getParticipationChoice(): Promise<ParticipationChoice | null> {
+    await this.init();
+    const value = await this.storage.get(PARTICIPATION_CHOICE_KEY);
+    return value === 'pelada' || value === 'amateur_team' || value === 'other' ? value : null;
+  }
+
+  async setParticipationChoice(choice: ParticipationChoice): Promise<void> {
+    await this.init();
+    await this.storage.set(PARTICIPATION_CHOICE_KEY, choice);
   }
 
   async isProfileWizardComplete(): Promise<boolean> {

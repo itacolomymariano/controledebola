@@ -1,6 +1,6 @@
 /**
  * Cloud Code — gerado por npm run build:cloud
- * Gerado em: 2026-10-06T10:46:09.034Z
+ * Gerado em: 2026-10-08T18:02:57.124Z
  * Copie o conteudo deste arquivo no Back4App (Server Settings > Cloud Code).
  * Fontes modulares em cloud/source/
  * NAO edite este arquivo direto — edite cloud/source/ e rode npm run build:cloud
@@ -5967,6 +5967,711 @@ function unweightPerformanceRowsForDisplay(performanceRows) {
   }));
 }
 
+/**
+ * Ranking de peladas do Mural do App.
+ * Teto: MURAL_LOCATION_EVENT_SCAN_LIMIT (5000) eventos realizados, depois de unir
+ * a consulta com tipo diferente de team_match e a de tipo ausente (cada uma limitada a 5000).
+ * Demais lotes: MuralVote 10000/200 scopeId; EventPerformance 3000/50 eventos;
+ * EventRegistration 2000/50; FanPrediction 1000/50; EventMediaPublication 500/50;
+ * RefereeInvitation 500/50; caixa, cotinha, socios e AppMessage 1000 por lote de ids candidatos.
+ */
+const PELADA_RANK_EVENT_LIMIT = MURAL_LOCATION_EVENT_SCAN_LIMIT;
+const PELADA_RANK_PROFILE_ROLES = {
+  athlete: 'athlete',
+  goalkeeper: 'athlete',
+  referee: 'referee',
+  scout: 'scout',
+  journalist: 'journalist',
+  narrator: 'narrator',
+  cameraman: 'cameraman',
+  coach: 'coach',
+  physical_trainer: 'physical_trainer',
+  masseur: 'masseur',
+  kitman: 'kitman',
+  gandula: 'gandula',
+  gatekeeper: 'gatekeeper',
+  fan: 'fan',
+};
+
+function peladaRankChunks(items, size) {
+  const chunks = [];
+  const list = items || [];
+  const step = Math.max(1, size);
+  for (let i = 0; i < list.length; i += step) {
+    chunks.push(list.slice(i, i + step));
+  }
+  return chunks;
+}
+
+function peladaRankPointerId(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  return value.id ? String(value.id) : '';
+}
+
+function peladaRankRound(total, count) {
+  if (!count) return 0;
+  return Math.round((Number(total) / count) * 100) / 100;
+}
+
+function peladaRankProfileRole(role) {
+  return PELADA_RANK_PROFILE_ROLES[String(role || '').trim()] || '';
+}
+
+function peladaRankEventEndPassed(event, now) {
+  const endTime = event.get('endTime');
+  if (!endTime) return false;
+  const time = endTime instanceof Date ? endTime.getTime() : new Date(endTime).getTime();
+  return !Number.isNaN(time) && time < now.getTime();
+}
+
+function peladaRankImageUrl(pelada) {
+  const file = pelada && pelada.get ? pelada.get('locationPhoto') : null;
+  if (!file || typeof file.url !== 'function') return '';
+  try {
+    return String(file.url() || '').trim();
+  } catch (error) {
+    return '';
+  }
+}
+
+function peladaRankPlace(pelada) {
+  const address = (pelada && pelada.get && pelada.get('address')) || {};
+  const state = normalizeLocationLabel(address.state);
+  const city = normalizeLocationLabel(address.city);
+  const neighborhood = normalizeLocationLabel(address.neighborhood);
+  return [state, city, neighborhood].filter(Boolean).join(' · ');
+}
+
+function peladaRankAdminFields(pelada) {
+  const admin = pelada && pelada.get ? pelada.get('admin') : null;
+  if (!admin || !admin.id) return {};
+  const apelido = (admin.get('apelido') || '').trim();
+  const fullName = (admin.get('name') || '').trim();
+  const adminName = apelido || fullName || admin.getUsername() || '';
+  const fields = { adminId: admin.id, adminName };
+  const avatarUrl = admin.get('avatarUrl');
+  if (avatarUrl) fields.adminAvatarUrl = String(avatarUrl);
+  return fields;
+}
+
+function peladaRankCreatedAtIso(pelada) {
+  const createdAt = pelada && pelada.get ? pelada.get('createdAt') : null;
+  if (!createdAt) return '';
+  const date = createdAt instanceof Date ? createdAt : new Date(createdAt);
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString();
+}
+
+function peladaRankFavoriteName(value) {
+  const name = normalizeLocationLabel(value);
+  if (!name || name.toLowerCase() === 'sem time') return '';
+  return name;
+}
+
+function peladaRankUserHasBirthDate(user) {
+  const birth = user && user.get ? user.get('birthDate') : null;
+  if (!birth) return false;
+  if (birth instanceof Date) return !Number.isNaN(birth.getTime());
+  return String(birth).trim().length > 0;
+}
+
+function emptyPeladaRankEventStats() {
+  return {
+    athleteVote: false,
+    goalkeeperVote: false,
+    refereeVote: false,
+    goals: false,
+    goalkeeperStats: false,
+    refereeSumula: false,
+    prediction: false,
+    media: false,
+    birthDate: false,
+    favoriteTeam: false,
+    profiles: new Set(),
+    participantIds: new Set(),
+    voterIds: new Set(),
+    voteCount: 0,
+    redCards: 0,
+    yellowCards: 0,
+  };
+}
+
+function performanceHasRecordedGoals(perf) {
+  if (Number(perf.get('goals') || 0) > 0) return true;
+  if (Number(perf.get('scoutGoals') || 0) > 0) return true;
+  if (Number(perf.get('refereeGoals') || 0) > 0) return true;
+  const typed = [
+    'goalsHeader',
+    'goalsFreeKick',
+    'goalsRightFoot',
+    'goalsLeftFoot',
+    'goalsOlympic',
+    'goalsCrazy',
+    'goalsPenalty',
+  ];
+  for (const field of typed) {
+    if (Number(perf.get(field) || 0) > 0) return true;
+  }
+  return false;
+}
+
+function performanceHasGoalkeeperFill(perf) {
+  return (
+    Number(perf.get('saves') || 0) > 0 ||
+    Number(perf.get('goalsConceded') || 0) > 0 ||
+    Number(perf.get('refereeGoalsConceded') || 0) > 0
+  );
+}
+
+function performanceHasRefereeSumulaNumbers(perf) {
+  const sumulaFields = [
+    'refereeGoals',
+    'refereeYellowCards',
+    'refereeRedCards',
+    'refereeFoulsCommitted',
+  ];
+  for (const field of sumulaFields) {
+    if (Number(perf.get(field) || 0) > 0) return true;
+  }
+  if (String(perf.get('role') || '') !== 'referee') return false;
+  return (
+    Number(perf.get('goals') || 0) > 0 ||
+    Number(perf.get('yellowCards') || 0) > 0 ||
+    Number(perf.get('redCards') || 0) > 0 ||
+    Number(perf.get('fouls') || 0) > 0 ||
+    Number(perf.get('foulsCommitted') || 0) > 0
+  );
+}
+
+function mediaPublicationIsPublished(row) {
+  return !!(
+    String(row.get('highlightVideoUrl') || '').trim() ||
+    String(row.get('radioNarrationTitle') || '').trim() ||
+    String(row.get('radioInterviewTitle') || '').trim() ||
+    String(row.get('journalReportageHeadline') || '').trim() ||
+    String(row.get('journalInterviewHeadline') || '').trim()
+  );
+}
+
+async function loadHeldPeladaEventsForRanking(filter) {
+  const now = new Date();
+  async function load(applyType) {
+    const finishedQuery = new Parse.Query('Event').equalTo('isFinished', true);
+    const endedQuery = new Parse.Query('Event').lessThan('endTime', now);
+    applyType(finishedQuery);
+    applyType(endedQuery);
+    const combined = Parse.Query.or(finishedQuery, endedQuery);
+    if (filter && filter.active) {
+      combined.exists('address');
+      applyMuralLocationFilterToEventQuery(combined, filter);
+    }
+    combined.include('pelada');
+    combined.limit(PELADA_RANK_EVENT_LIMIT);
+    return combined.find({ useMasterKey: true });
+  }
+
+  const [typed, untyped] = await Promise.all([
+    load((query) => query.notEqualTo('type', 'team_match')),
+    load((query) => query.doesNotExist('type')),
+  ]);
+
+  const byId = new Map();
+  for (const event of typed.concat(untyped)) {
+    if (!event || !event.id || byId.has(event.id)) continue;
+    if (event.get('type') === 'team_match') continue;
+    const pelada = event.get('pelada');
+    if (!pelada || !pelada.id) continue;
+    const finished = event.get('isFinished') === true;
+    if (!finished && !peladaRankEventEndPassed(event, now)) continue;
+    byId.set(event.id, event);
+  }
+
+  const events = Array.from(byId.values());
+  events.sort((a, b) => {
+    const aEnd = a.get('endTime') instanceof Date ? a.get('endTime').getTime() : 0;
+    const bEnd = b.get('endTime') instanceof Date ? b.get('endTime').getTime() : 0;
+    return bEnd - aEnd;
+  });
+  return events.slice(0, PELADA_RANK_EVENT_LIMIT);
+}
+
+async function loadPeladasByIdsForRanking(ids) {
+  const byId = new Map();
+  for (const chunk of peladaRankChunks(ids, 100)) {
+    const query = new Parse.Query('Pelada');
+    query.containedIn('objectId', chunk);
+    query.select(['name', 'address', 'locationPhoto', 'createdAt', 'admin']);
+    query.include('admin');
+    query.limit(chunk.length);
+    const rows = await query.find({ useMasterKey: true });
+    for (const row of rows) {
+      if (row.id) byId.set(row.id, row);
+    }
+  }
+  return byId;
+}
+
+async function loadPeladaRankUserSignals(userIds) {
+  const birth = new Set();
+  const teams = new Set();
+  const missingTeamUsers = [];
+  for (const chunk of peladaRankChunks(userIds, 100)) {
+    const query = new Parse.Query(Parse.User);
+    query.containedIn('objectId', chunk);
+    query.select(['birthDate', 'favoriteProTeam']);
+    query.limit(chunk.length);
+    const users = await query.find({ useMasterKey: true });
+    for (const user of users) {
+      if (!user.id) continue;
+      if (peladaRankUserHasBirthDate(user)) birth.add(user.id);
+      const direct =
+        typeof readUserFavoriteProTeam === 'function'
+          ? readUserFavoriteProTeam(user)
+          : user.get('favoriteProTeam');
+      if (peladaRankFavoriteName(direct)) teams.add(user.id);
+      else missingTeamUsers.push(user);
+    }
+  }
+
+  for (const chunk of peladaRankChunks(missingTeamUsers, 100)) {
+    const athleteQuery = new Parse.Query('AthleteProfile');
+    athleteQuery.containedIn('user', chunk);
+    athleteQuery.select(['user', 'favoriteProTeam']);
+    athleteQuery.limit(chunk.length);
+    const fanQuery = new Parse.Query('FanProfile');
+    fanQuery.containedIn('user', chunk);
+    fanQuery.select(['user', 'favoriteProTeam']);
+    fanQuery.limit(chunk.length);
+    const [athletes, fans] = await Promise.all([
+      athleteQuery.find({ useMasterKey: true }),
+      fanQuery.find({ useMasterKey: true }),
+    ]);
+    const legacy = new Map();
+    for (const row of athletes.concat(fans)) {
+      const userId = peladaRankPointerId(row.get('user'));
+      const team = peladaRankFavoriteName(row.get('favoriteProTeam'));
+      if (!userId || !team || legacy.has(userId)) continue;
+      legacy.set(userId, team);
+    }
+    for (const userId of legacy.keys()) teams.add(userId);
+  }
+
+  return { birth, teams };
+}
+
+async function pointerIdsPresent(className, field, objects, perChunkLimit, constrain) {
+  const found = new Set();
+  for (const chunk of peladaRankChunks(objects, 50)) {
+    const pending = chunk.filter((obj) => obj && obj.id && !found.has(obj.id));
+    if (!pending.length) continue;
+    const query = new Parse.Query(className);
+    query.containedIn(field, pending);
+    query.select([field]);
+    query.limit(perChunkLimit);
+    if (constrain) constrain(query);
+    const rows = await query.find({ useMasterKey: true });
+    for (const row of rows) {
+      const id = peladaRankPointerId(row.get(field));
+      if (id) found.add(id);
+    }
+    if (rows.length < perChunkLimit) continue;
+    for (const obj of pending) {
+      if (!obj.id || found.has(obj.id)) continue;
+      const one = new Parse.Query(className);
+      one.equalTo(field, obj);
+      one.select([field]);
+      one.limit(1);
+      if (constrain) constrain(one);
+      const hit = await one.first({ useMasterKey: true });
+      if (hit) found.add(obj.id);
+    }
+  }
+  return found;
+}
+
+async function loadConfirmedCotinhaPeladaIds(peladas) {
+  const cotinhaToPelada = new Map();
+  const cotinhas = [];
+  for (const chunk of peladaRankChunks(peladas, 50)) {
+    const query = new Parse.Query('PeladaCotinha');
+    query.containedIn('pelada', chunk);
+    query.select(['pelada']);
+    query.limit(1000);
+    const rows = await query.find({ useMasterKey: true });
+    for (const row of rows) {
+      const peladaId = peladaRankPointerId(row.get('pelada'));
+      if (!row.id || !peladaId) continue;
+      cotinhaToPelada.set(row.id, peladaId);
+      cotinhas.push(row);
+    }
+  }
+
+  const confirmed = new Set();
+  for (const chunk of peladaRankChunks(cotinhas, 50)) {
+    const query = new Parse.Query('PeladaCotinhaPayment');
+    query.containedIn('cotinha', chunk);
+    query.equalTo('confirmedByAdmin', true);
+    query.select(['cotinha']);
+    query.limit(1000);
+    const rows = await query.find({ useMasterKey: true });
+    for (const row of rows) {
+      const peladaId = cotinhaToPelada.get(peladaRankPointerId(row.get('cotinha')));
+      if (peladaId) confirmed.add(peladaId);
+    }
+  }
+  return confirmed;
+}
+
+async function loadMembershipIdsByPelada(peladas) {
+  const membershipToPelada = new Map();
+  for (const chunk of peladaRankChunks(peladas, 20)) {
+    const query = new Parse.Query('PeladaMembership');
+    query.containedIn('pelada', chunk);
+    query.select(['pelada']);
+    query.limit(1000);
+    const rows = await query.find({ useMasterKey: true });
+    for (const row of rows) {
+      const peladaId = peladaRankPointerId(row.get('pelada'));
+      if (row.id && peladaId) membershipToPelada.set(row.id, peladaId);
+    }
+  }
+  return membershipToPelada;
+}
+
+async function loadMailboxPeladaIds(peladaIds, eventsByPelada, membershipToPelada) {
+  const relatedToPelada = new Map();
+  for (const peladaId of peladaIds) relatedToPelada.set(peladaId, peladaId);
+  for (const [peladaId, events] of eventsByPelada.entries()) {
+    for (const event of events) {
+      if (event.id) relatedToPelada.set(event.id, peladaId);
+    }
+  }
+  for (const [membershipId, peladaId] of membershipToPelada.entries()) {
+    relatedToPelada.set(membershipId, peladaId);
+  }
+
+  const hit = new Set();
+  const ids = Array.from(relatedToPelada.keys());
+  for (const chunk of peladaRankChunks(ids, 100)) {
+    const unseen = chunk.filter((id) => {
+      const peladaId = relatedToPelada.get(id);
+      return peladaId && !hit.has(peladaId);
+    });
+    if (!unseen.length) continue;
+    const query = new Parse.Query('AppMessage');
+    query.containedIn('relatedId', unseen);
+    query.select(['relatedId']);
+    query.limit(1000);
+    const rows = await query.find({ useMasterKey: true });
+    for (const row of rows) {
+      const peladaId = relatedToPelada.get(String(row.get('relatedId') || ''));
+      if (peladaId) hit.add(peladaId);
+    }
+    if (rows.length < 1000) continue;
+    for (const id of unseen) {
+      const peladaId = relatedToPelada.get(id);
+      if (!peladaId || hit.has(peladaId)) continue;
+      const one = new Parse.Query('AppMessage');
+      one.equalTo('relatedId', id);
+      one.select(['relatedId']);
+      one.limit(1);
+      const row = await one.first({ useMasterKey: true });
+      if (row) hit.add(peladaId);
+    }
+  }
+  return hit;
+}
+
+function comparePeladaRank(a, b) {
+  if (b.eventsHeld !== a.eventsHeld) return b.eventsHeld - a.eventsHeld;
+  if (b.filledCardsAverage !== a.filledCardsAverage) {
+    return b.filledCardsAverage - a.filledCardsAverage;
+  }
+  if (b.distinctProfilesAverage !== a.distinctProfilesAverage) {
+    return b.distinctProfilesAverage - a.distinctProfilesAverage;
+  }
+  if (b.participantsAverage !== a.participantsAverage) {
+    return b.participantsAverage - a.participantsAverage;
+  }
+  if (b.distinctVotersAverage !== a.distinctVotersAverage) {
+    return b.distinctVotersAverage - a.distinctVotersAverage;
+  }
+  if (b.votesAverage !== a.votesAverage) return b.votesAverage - a.votesAverage;
+  if (a.redCardsAverage !== b.redCardsAverage) return a.redCardsAverage - b.redCardsAverage;
+  if (a.yellowCardsAverage !== b.yellowCardsAverage) {
+    return a.yellowCardsAverage - b.yellowCardsAverage;
+  }
+  const cashDiff = (b.hasCash ? 1 : 0) - (a.hasCash ? 1 : 0);
+  if (cashDiff !== 0) return cashDiff;
+  const cotinhaDiff = (b.hasCotinha ? 1 : 0) - (a.hasCotinha ? 1 : 0);
+  if (cotinhaDiff !== 0) return cotinhaDiff;
+  const mailDiff = (b.hasMailbox ? 1 : 0) - (a.hasMailbox ? 1 : 0);
+  if (mailDiff !== 0) return mailDiff;
+  const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : Number.MAX_SAFE_INTEGER;
+  const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : Number.MAX_SAFE_INTEGER;
+  if (aCreated !== bCreated) return aCreated - bCreated;
+  const nameDiff = String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR');
+  if (nameDiff !== 0) return nameDiff;
+  return String(a.peladaId).localeCompare(String(b.peladaId));
+}
+
+async function buildAppPeladaRanking(locationFilter) {
+  const empty = { bestPelada: null, topPeladas: [] };
+  try {
+    const events = await loadHeldPeladaEventsForRanking(locationFilter);
+    if (!events.length) return empty;
+
+    const eventById = new Map();
+    const eventsByPelada = new Map();
+    for (const event of events) {
+      const peladaId = peladaRankPointerId(event.get('pelada'));
+      if (!peladaId) continue;
+      eventById.set(event.id, event);
+      if (!eventsByPelada.has(peladaId)) eventsByPelada.set(peladaId, []);
+      eventsByPelada.get(peladaId).push(event);
+    }
+    if (!eventById.size) return empty;
+
+    const peladaById = await loadPeladasByIdsForRanking(Array.from(eventsByPelada.keys()));
+    const peladaObjects = Array.from(peladaById.values());
+    const eventList = Array.from(eventById.values());
+    const statsByEvent = new Map();
+    const ensureStats = (eventId) => {
+      if (!statsByEvent.has(eventId)) {
+        statsByEvent.set(eventId, emptyPeladaRankEventStats());
+      }
+      return statsByEvent.get(eventId);
+    };
+
+    const collectVotes = async () => {
+      const eventIds = Array.from(eventById.keys());
+      for (const chunk of peladaRankChunks(eventIds, 200)) {
+        const query = new Parse.Query('MuralVote');
+        query.equalTo('scope', 'event');
+        query.containedIn('scopeId', chunk);
+        query.select(['scopeId', 'targetRole', 'voter']);
+        query.limit(10000);
+        const rows = await query.find({ useMasterKey: true });
+        for (const row of rows) {
+          const eventId = String(row.get('scopeId') || '');
+          if (!eventById.has(eventId)) continue;
+          const stats = ensureStats(eventId);
+          stats.voteCount += 1;
+          const voterId = peladaRankPointerId(row.get('voter'));
+          if (voterId) stats.voterIds.add(voterId);
+          const role = String(row.get('targetRole') || '');
+          if (role === 'athlete') stats.athleteVote = true;
+          if (role === 'goalkeeper') stats.goalkeeperVote = true;
+          if (role === 'referee') stats.refereeVote = true;
+        }
+      }
+    };
+
+    const collectPerformances = async () => {
+      for (const chunk of peladaRankChunks(eventList, 50)) {
+        const query = new Parse.Query('EventPerformance');
+        query.containedIn('event', chunk);
+        query.limit(3000);
+        const rows = await query.find({ useMasterKey: true });
+        for (const row of rows) {
+          const eventId = peladaRankPointerId(row.get('event'));
+          if (!eventById.has(eventId)) continue;
+          const stats = ensureStats(eventId);
+          if (performanceHasRecordedGoals(row)) stats.goals = true;
+          if (performanceHasGoalkeeperFill(row)) stats.goalkeeperStats = true;
+          if (performanceHasRefereeSumulaNumbers(row)) stats.refereeSumula = true;
+          stats.yellowCards += Number(row.get('yellowCards') || 0);
+          stats.redCards += Number(row.get('redCards') || 0);
+        }
+      }
+    };
+
+    const participantIds = new Set();
+    const collectRegistrations = async () => {
+      for (const chunk of peladaRankChunks(eventList, 50)) {
+        const query = new Parse.Query('EventRegistration');
+        query.containedIn('event', chunk);
+        query.limit(2000);
+        const rows = await query.find({ useMasterKey: true });
+        for (const row of rows) {
+          const eventId = peladaRankPointerId(row.get('event'));
+          const event = eventById.get(eventId);
+          if (!event) continue;
+          const fee = Number(event.get('participationFee') || 0);
+          const confirmed =
+            typeof computeRegistrationEffectiveConfirmation === 'function'
+              ? !!computeRegistrationEffectiveConfirmation(row, fee)
+              : row.get('isEffectivelyConfirmed') === true;
+          if (!confirmed) continue;
+          const stats = ensureStats(eventId);
+          const profile = peladaRankProfileRole(row.get('role') || 'athlete');
+          if (profile) stats.profiles.add(profile);
+          const userId = String(
+            row.get('participantUserId') || peladaRankPointerId(row.get('user')) || ''
+          );
+          if (!userId) continue;
+          stats.participantIds.add(userId);
+          participantIds.add(userId);
+        }
+      }
+    };
+
+    const collectInvitations = async () => {
+      for (const chunk of peladaRankChunks(eventList, 50)) {
+        const query = new Parse.Query('RefereeInvitation');
+        query.containedIn('event', chunk);
+        query.equalTo('status', 'accepted');
+        query.select(['event', 'role']);
+        query.limit(500);
+        const rows = await query.find({ useMasterKey: true });
+        for (const row of rows) {
+          const eventId = peladaRankPointerId(row.get('event'));
+          if (!eventById.has(eventId)) continue;
+          const profile = peladaRankProfileRole(row.get('role'));
+          if (!profile) continue;
+          ensureStats(eventId).profiles.add(profile);
+        }
+      }
+    };
+
+    const collectPredictions = async () => {
+      for (const chunk of peladaRankChunks(eventList, 50)) {
+        const query = new Parse.Query('FanPrediction');
+        query.containedIn('event', chunk);
+        query.select(['event']);
+        query.limit(1000);
+        const rows = await query.find({ useMasterKey: true });
+        for (const row of rows) {
+          const eventId = peladaRankPointerId(row.get('event'));
+          if (eventById.has(eventId)) ensureStats(eventId).prediction = true;
+        }
+      }
+    };
+
+    const collectMedia = async () => {
+      for (const chunk of peladaRankChunks(eventList, 50)) {
+        const query = new Parse.Query('EventMediaPublication');
+        query.containedIn('event', chunk);
+        query.limit(500);
+        const rows = await query.find({ useMasterKey: true });
+        for (const row of rows) {
+          if (!mediaPublicationIsPublished(row)) continue;
+          const eventId =
+            peladaRankPointerId(row.get('event')) || String(row.get('eventId') || '');
+          if (eventById.has(eventId)) ensureStats(eventId).media = true;
+        }
+      }
+    };
+
+    await Promise.all([
+      collectVotes(),
+      collectPerformances(),
+      collectRegistrations(),
+      collectInvitations(),
+      collectPredictions(),
+      collectMedia(),
+    ]);
+
+    const signals = await loadPeladaRankUserSignals(Array.from(participantIds));
+    for (const stats of statsByEvent.values()) {
+      for (const userId of stats.participantIds) {
+        if (signals.birth.has(userId)) stats.birthDate = true;
+        if (signals.teams.has(userId)) stats.favoriteTeam = true;
+        if (stats.birthDate && stats.favoriteTeam) break;
+      }
+    }
+
+    let cashIds = new Set();
+    let cotinhaIds = new Set();
+    let mailboxIds = new Set();
+    try {
+      cashIds = await pointerIdsPresent('PeladaCashEntry', 'pelada', peladaObjects, 1000);
+    } catch (error) {
+      console.error('pelada rank cash failed', error);
+    }
+    try {
+      cotinhaIds = await loadConfirmedCotinhaPeladaIds(peladaObjects);
+    } catch (error) {
+      console.error('pelada rank cotinha failed', error);
+    }
+    try {
+      const membershipToPelada = await loadMembershipIdsByPelada(peladaObjects);
+      mailboxIds = await loadMailboxPeladaIds(
+        Array.from(eventsByPelada.keys()),
+        eventsByPelada,
+        membershipToPelada
+      );
+    } catch (error) {
+      console.error('pelada rank mailbox failed', error);
+    }
+
+    const ranked = [];
+    for (const [peladaId, peladaEvents] of eventsByPelada.entries()) {
+      const count = peladaEvents.length;
+      if (!count) continue;
+      let filled = 0;
+      let profiles = 0;
+      let participants = 0;
+      let voters = 0;
+      let votes = 0;
+      let red = 0;
+      let yellow = 0;
+      for (const event of peladaEvents) {
+        const stats = statsByEvent.get(event.id) || emptyPeladaRankEventStats();
+        let cards = 0;
+        if (stats.athleteVote) cards += 1;
+        if (stats.goals) cards += 1;
+        if (stats.goalkeeperVote || stats.goalkeeperStats) cards += 1;
+        if (stats.refereeVote || stats.refereeSumula) cards += 1;
+        if (stats.prediction) cards += 1;
+        if (stats.media) cards += 1;
+        if (stats.birthDate) cards += 1;
+        if (stats.favoriteTeam) cards += 1;
+        filled += cards;
+        profiles += stats.profiles.size;
+        participants += stats.participantIds.size;
+        voters += stats.voterIds.size;
+        votes += stats.voteCount;
+        red += stats.redCards;
+        yellow += stats.yellowCards;
+      }
+      const pelada = peladaById.get(peladaId) || peladaEvents[0].get('pelada');
+      const imageUrl = peladaRankImageUrl(pelada);
+      const entry = {
+        peladaId,
+        name: (pelada && pelada.get && pelada.get('name')) || 'Pelada',
+        place: peladaRankPlace(pelada),
+        ...peladaRankAdminFields(pelada),
+        eventsHeld: count,
+        filledCardsAverage: peladaRankRound(filled, count),
+        distinctProfilesAverage: peladaRankRound(profiles, count),
+        participantsAverage: peladaRankRound(participants, count),
+        distinctVotersAverage: peladaRankRound(voters, count),
+        votesAverage: peladaRankRound(votes, count),
+        redCardsAverage: peladaRankRound(red, count),
+        yellowCardsAverage: peladaRankRound(yellow, count),
+        hasCash: cashIds.has(peladaId),
+        hasCotinha: cotinhaIds.has(peladaId),
+        hasMailbox: mailboxIds.has(peladaId),
+      };
+      const createdAt = peladaRankCreatedAtIso(pelada);
+      if (createdAt) entry.createdAt = createdAt;
+      if (imageUrl) entry.imageUrl = imageUrl;
+      ranked.push(entry);
+    }
+
+    ranked.sort(comparePeladaRank);
+    const topPeladas = ranked.slice(0, 10);
+    return {
+      bestPelada: topPeladas.length ? topPeladas[0] : null,
+      topPeladas,
+    };
+  } catch (error) {
+    console.error('buildAppPeladaRanking failed', error);
+    return empty;
+  }
+}
+
 async function buildAppMuralBucketPayload(
   scope,
   performanceRows,
@@ -6409,11 +7114,17 @@ Parse.Cloud.define('getMuralAppDashboard', async (request) => {
 
   const performanceRows = await mapPerformanceRowsForMural(scope, undefined, performanceRaw);
 
-  const [bucketMerged, bucketPelada, bucketTeamMatch] = await Promise.all([
+  const peladaRankingPromise = buildAppPeladaRanking(locationFilter);
+  const [bucketMerged, bucketPelada, bucketTeamMatch, peladaRanking] = await Promise.all([
     buildAppMuralBucketPayload(scope, performanceRows, voteRows, performanceRaw, 'merged', locationFilter),
     buildAppMuralBucketPayload(scope, performanceRows, voteRows, performanceRaw, 'pelada', locationFilter),
     buildAppMuralBucketPayload(scope, performanceRows, voteRows, performanceRaw, 'team_match', locationFilter),
+    peladaRankingPromise,
   ]);
+  bucketMerged.bestPelada = peladaRanking.bestPelada;
+  bucketMerged.topPeladas = peladaRanking.topPeladas;
+  bucketPelada.bestPelada = peladaRanking.bestPelada;
+  bucketPelada.topPeladas = peladaRanking.topPeladas;
 
   const rankings = bucketMerged.rankings;
   const rankingsPelada = bucketPelada.rankings;
@@ -18526,6 +19237,241 @@ async function collectTeamMatchNotifyUserIds(event) {
 
   return [...userIds];
 }
+
+const TEAM_JOIN_REQUEST_CLASS = 'AmateurTeamJoinRequest';
+
+function mapAmateurTeamJoinRequestRow(row) {
+  const team = row.get('team');
+  const athlete = row.get('athlete');
+  const president = row.get('president');
+  return {
+    objectId: row.id,
+    status: String(row.get('status') || 'pending'),
+    teamId: team && team.id ? team.id : '',
+    teamName: String(row.get('teamName') || ''),
+    athleteUserId: athlete && athlete.id ? athlete.id : '',
+    athleteApelido: String(row.get('athleteApelido') || ''),
+    athleteFullName: String(row.get('athleteFullName') || ''),
+    athleteAvatarUrl: row.get('athleteAvatarUrl') || undefined,
+    presidentUserId: president && president.id ? president.id : '',
+    presidentApelido: String(row.get('presidentApelido') || ''),
+    message: String(row.get('message') || ''),
+    declineReason: String(row.get('declineReason') || ''),
+    createdAt: row.get('createdAt') ? row.get('createdAt').toISOString() : null,
+    respondedAt: row.get('respondedAt') ? row.get('respondedAt').toISOString() : null,
+  };
+}
+
+Parse.Cloud.define('requestAmateurTeamJoin', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const teamId = String(request.params.teamId || '').trim();
+  const message = String(request.params.message || '').trim().slice(0, 500);
+  if (!teamId) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o time.');
+  }
+
+  const team = await new Parse.Query('AmateurTeam').include('president').get(teamId, {
+    useMasterKey: true,
+  });
+  const president = team.get('president');
+  if (!president || !president.id) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Time sem presidente cadastrado.');
+  }
+  if (president.id === user.id) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Voce ja e o presidente deste time.');
+  }
+
+  const teamPtr = Parse.Object.extend('AmateurTeam').createWithoutData(teamId);
+  const rosterQ = new Parse.Query(MEMBERSHIP_CLASS)
+    .equalTo('team', teamPtr)
+    .equalTo('user', user)
+    .equalTo('active', true);
+  const onRoster = await rosterQ.first({ useMasterKey: true });
+  if (onRoster) {
+    throw new Parse.Error(Parse.Error.DUPLICATE_VALUE, 'Voce ja faz parte do elenco.');
+  }
+
+  const duplicate = await new Parse.Query(TEAM_JOIN_REQUEST_CLASS)
+    .equalTo('team', teamPtr)
+    .equalTo('athlete', user)
+    .equalTo('status', 'pending')
+    .first({ useMasterKey: true });
+  if (duplicate) {
+    throw new Parse.Error(Parse.Error.DUPLICATE_VALUE, 'Ja existe uma solicitacao pendente.');
+  }
+
+  try {
+    await user.fetch({ useMasterKey: true });
+  } catch {
+    /* sessao */
+  }
+  const athleteApelido = String(user.get('apelido') || '').trim();
+  const athleteFullName = String(user.get('name') || '').trim();
+  const athleteAvatar = String(user.get('avatarUrl') || '').trim();
+  let presidentApelido = '';
+  try {
+    await president.fetch({ useMasterKey: true });
+    presidentApelido = String(president.get('apelido') || president.get('name') || '').trim();
+  } catch {
+    presidentApelido = '';
+  }
+
+  const teamName = String(team.get('name') || 'Time');
+  const row = new Parse.Object(TEAM_JOIN_REQUEST_CLASS);
+  row.set('team', teamPtr);
+  row.set('athlete', user);
+  row.set('president', president);
+  row.set('teamName', teamName);
+  row.set('status', 'pending');
+  row.set('message', message);
+  row.set('athleteApelido', athleteApelido);
+  row.set('athleteFullName', athleteFullName);
+  if (athleteAvatar) row.set('athleteAvatarUrl', athleteAvatar);
+  row.set('presidentApelido', presidentApelido);
+  const acl = new Parse.ACL();
+  acl.setReadAccess(user.id, true);
+  acl.setWriteAccess(user.id, true);
+  acl.setReadAccess(president.id, true);
+  acl.setWriteAccess(president.id, true);
+  row.setACL(acl);
+  await row.save(null, { useMasterKey: true });
+
+  if (typeof createAppMessage === 'function') {
+    const athleteName = athleteApelido || athleteFullName || 'Um atleta';
+    await createAppMessage({
+      recipientId: president.id,
+      senderId: user.id,
+      kind: 'amateur_team_join_request',
+      title: `Pedido para entrar no time ${teamName}`,
+      body: `${athleteName} pediu para participar do elenco de "${teamName}". Autorize ou recuse na Entrada.`,
+      relatedClass: TEAM_JOIN_REQUEST_CLASS,
+      relatedId: row.id,
+      actionRoute: '/inbox',
+    });
+    await createAppMessage({
+      recipientId: user.id,
+      senderId: user.id,
+      kind: 'amateur_team_join_outbox',
+      title: `Solicitacao enviada — ${teamName}`,
+      body: `Seu pedido para participar de "${teamName}" foi enviado ao presidente.`,
+      relatedClass: TEAM_JOIN_REQUEST_CLASS,
+      relatedId: row.id,
+      actionRoute: `/team/${teamId}`,
+    });
+  }
+
+  return mapAmateurTeamJoinRequestRow(row);
+});
+
+Parse.Cloud.define('respondAmateurTeamJoin', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const requestId = String(request.params.requestId || '').trim();
+  const decision = String(request.params.decision || '').trim();
+  const declineReason = String(request.params.declineReason || '').trim().slice(0, 500);
+  if (!requestId || (decision !== 'accepted' && decision !== 'declined')) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe a solicitacao e a decisao.');
+  }
+
+  const row = await new Parse.Query(TEAM_JOIN_REQUEST_CLASS)
+    .include('team')
+    .include('athlete')
+    .include('president')
+    .get(requestId, { useMasterKey: true });
+  const president = row.get('president');
+  if (!president || president.id !== user.id) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Somente o presidente pode responder.');
+  }
+  if (String(row.get('status') || '') !== 'pending') {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Esta solicitacao ja foi respondida.');
+  }
+
+  const athlete = row.get('athlete');
+  const team = row.get('team');
+  const teamName = String(row.get('teamName') || 'Time');
+  row.set('respondedAt', new Date());
+
+  if (decision === 'declined') {
+    row.set('status', 'declined');
+    row.set('declineReason', declineReason);
+    await row.save(null, { useMasterKey: true });
+    if (typeof createAppMessage === 'function' && athlete && athlete.id) {
+      await createAppMessage({
+        recipientId: athlete.id,
+        senderId: user.id,
+        kind: 'amateur_team_join_declined',
+        title: `Pedido recusado — ${teamName}`,
+        body: declineReason
+          ? `Seu pedido para "${teamName}" foi recusado: ${declineReason}`
+          : `Seu pedido para participar de "${teamName}" foi recusado.`,
+        relatedClass: TEAM_JOIN_REQUEST_CLASS,
+        relatedId: row.id,
+        actionRoute: team && team.id ? `/team/${team.id}` : '/inbox',
+      });
+    }
+    return mapAmateurTeamJoinRequestRow(row);
+  }
+
+  if (!team || !team.id || !athlete || !athlete.id) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Solicitacao incompleta.');
+  }
+
+  const existingQ = new Parse.Query(MEMBERSHIP_CLASS)
+    .equalTo('team', team)
+    .equalTo('user', athlete)
+    .equalTo('active', true);
+  const already = await existingQ.first({ useMasterKey: true });
+  if (!already) {
+    const membership = new Parse.Object(MEMBERSHIP_CLASS);
+    membership.set('team', team);
+    membership.set('user', athlete);
+    membership.set('active', true);
+    membership.set('addedBy', user);
+    membership.set('source', 'join_request');
+    const acl = new Parse.ACL();
+    acl.setPublicReadAccess(true);
+    acl.setWriteAccess(user.id, true);
+    membership.setACL(acl);
+    await membership.save(null, { useMasterKey: true });
+  }
+
+  row.set('status', 'accepted');
+  await row.save(null, { useMasterKey: true });
+
+  if (typeof createAppMessage === 'function') {
+    await createAppMessage({
+      recipientId: athlete.id,
+      senderId: user.id,
+      kind: 'amateur_team_join_accepted',
+      title: `Pedido aceito — ${teamName}`,
+      body: `Voce foi incluido no elenco de "${teamName}".`,
+      relatedClass: TEAM_JOIN_REQUEST_CLASS,
+      relatedId: row.id,
+      actionRoute: `/team/${team.id}`,
+    });
+  }
+
+  return mapAmateurTeamJoinRequestRow(row);
+});
+
+Parse.Cloud.define('listMyAmateurTeamJoinRequests', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const asAthlete = new Parse.Query(TEAM_JOIN_REQUEST_CLASS).equalTo('athlete', user);
+  const asPresident = new Parse.Query(TEAM_JOIN_REQUEST_CLASS).equalTo('president', user);
+  const query = Parse.Query.or(asAthlete, asPresident);
+  query.descending('createdAt');
+  query.limit(100);
+  const rows = await query.find({ useMasterKey: true });
+  return rows.map(mapAmateurTeamJoinRequestRow);
+});
 
 // --- 16-match-challenge.js ---
 

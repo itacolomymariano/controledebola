@@ -53,6 +53,7 @@ export class OnboardingPage {
 
   async chooseParticipation(choice: ParticipationChoice): Promise<void> {
     const path = choice === 'other' ? 'other' : 'athlete';
+    await this.storage.setParticipationChoice(choice);
     await this.storage.setWizardPath(path);
     await this.router.navigateByUrl('/register');
   }
