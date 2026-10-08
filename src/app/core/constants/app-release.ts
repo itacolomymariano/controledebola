@@ -1,6 +1,6 @@
 /** Gerado automaticamente por scripts/bump-app-release.js — nao editar manualmente */
 export const APP_RELEASE = {
-  label: '2026.10.08.0209',
-  number: 209,
-  generatedAt: '2026-10-08T18:58:31.968Z',
+  label: '2026.10.08.0210',
+  number: 210,
+  generatedAt: '2026-10-08T19:16:33.725Z',
 };
