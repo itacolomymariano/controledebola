@@ -62,20 +62,57 @@ npm run build:ios:ci
 
 Workflow: `.github/workflows/ios-capacitor-build.yml` (runner `macos-26`, Xcode 26). Guia completo: [docs/IOS_GITHUB_ACTIONS.md](docs/IOS_GITHUB_ACTIONS.md). Bundle ID: `com.minhapelada.app`. Secrets: `ENVIRONMENT_LOCAL_TS` (obrigatorio); `IOS_DISTRIBUTION_*` so para IPA.
 
-**TestFlight / `release-ipa` — build number (`CFBundleVersion`) obrigatorio antes do workflow**
+**TestFlight / `release-ipa` — checklist antes do workflow (evitar falhas repetidas no altool)**
 
-O upload usa `versionCode` de [`.app-release-state.json`](.app-release-state.json) (mesmo numero do Android). A Apple **rejeita** se for igual ou menor ao ultimo build ja enviado (`ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE`, ex.: *previousBundleVersion: 208*).
+Dois numeros distintos no IPA:
 
-Checklist **antes** de Actions → **iOS Capacitor Build** → `release-ipa` (e **depois** de push na `main`):
+| Campo iOS | Fonte no repo | Regra Apple |
+|-----------|--------------|-------------|
+| **CFBundleVersion** (build) | `versionCode` em [`.app-release-state.json`](.app-release-state.json) | Inteiro **maior** que o ultimo build ja enviado ao TestFlight |
+| **CFBundleShortVersionString** (versao de loja) | `version` em [`package.json`](package.json) (ex. `1.0.6`) | Ate **3** segmentos numericos; **nao** usar o label `2026.10.20.0267` |
 
-1. **App Store Connect** → app → **TestFlight** → anote o **Build** mais recente (numero inteiro, ex. 208).
-2. **Local:** confira `versionCode` em `.app-release-state.json`. Tem de ser **estritamente maior** que o ultimo build no TestFlight.
-3. Se precisar subir: `node scripts/bump-app-release.js` (ou `npm run build`, que roda o bump no `prebuild`) **ate** `versionCode` > ultimo build Apple. Isso atualiza tambem `src/app/core/constants/app-release.ts` e `android/app/build.gradle`.
-4. **Commit + push** na `main` dos tres arquivos acima (o CI le o JSON do GitHub, nao o disco local).
-5. No log do job, confira a linha `iOS version … (NNN)` — `NNN` deve ser > ultimo build TestFlight.
-6. **Nao** use *Re-run* de um workflow antigo sem novo commit de bump; o Re-run reenvia o **mesmo** `versionCode` e falha de novo.
+O job usa runner **`macos-26`** (Xcode 26 / iOS 26 SDK). Upload: `xcrun altool` + secrets `APP_STORE_CONNECT_*`.
 
-Detalhes e outros erros: [docs/IOS_GITHUB_ACTIONS.md](docs/IOS_GITHUB_ACTIONS.md) (secao Troubleshooting).
+**A) Build number (409 DUPLICATE / `previousBundleVersion`)**
+
+1. App Store Connect → **TestFlight** → anote o **Build** mais recente (ex. 208).
+2. Local: `versionCode` **>** esse numero.
+3. Subir: `node scripts/bump-app-release.js` ou `npm run build` (prebuild).
+4. **Commit + push** de `.app-release-state.json`, `app-release.ts`, `android/app/build.gradle`.
+5. No log: `iOS version … (NNN)` com `NNN` novo.
+
+**B) Chaves API App Store Connect (falha no step *Upload IPA to TestFlight*, log `ContentDelivery.Uploader` / autenticacao)**
+
+Conferir **antes** de cada `release-ipa` (Settings → Secrets → Actions):
+
+1. **`APP_STORE_CONNECT_KEY_ID`** — Key ID de 10 caracteres (igual ao nome `AuthKey_XXXXXXXXXX.p8`). **Nao** confundir com Team ID (`3MZ…`).
+2. **`APP_STORE_CONNECT_ISSUER_ID`** — Issuer ID (UUID) no topo de App Store Connect → **Users and Access** → **Integrations** → App Store Connect API.
+3. **`APP_STORE_CONNECT_API_KEY`** — conteudo **inteiro** do `.p8` (linhas `BEGIN PRIVATE KEY` / `END PRIVATE KEY`), colado como secret multilinha. Sem aspas extras; se colou com `\n` literais, o workflow normaliza — preferir quebras de linha reais.
+4. Papel da chave: **Admin** ou **App Manager** com acesso ao app `com.minhapelada.app`.
+5. Chave revogada ou `.p8` perdido → criar nova chave no Connect e **atualizar os 3 secrets**; depois **Run workflow** novo (nao so Re-run).
+
+**C) Versao de marketing / trilha fechada (90186 / 90062)**
+
+Quando o altool mostra **`Invalid Pre-Release Train`** (`90186`) ou **`CFBundleShortVersionString … must contain a higher version than … previously approved`** (`90062`), a versao de loja em [`package.json`](package.json) (ex. `1.0.6`) **ja foi aprovada ou fechada** no App Store Connect — nao aceita mais builds nessa trilha.
+
+1. App Store Connect → app → **TestFlight** / versao em preparacao: confirme a ultima **versao de marketing** aprovada ou fechada (ex. `1.0.6`).
+2. Suba **so** o marketing: edite `package.json` `"version"` para o proximo patch (ex. **`1.0.7`**). **Nao** confundir com `versionCode` / label `2026.*`.
+3. **Commit + push** de `package.json` (e `package-lock.json` se alterado).
+4. **Run workflow** `release-ipa` na `main` nova; no log: `iOS version 1.0.7 (267)` (build pode continuar o `versionCode` atual se ainda for > ultimo build TestFlight).
+5. No Connect, crie ou selecione a versao **1.0.7** ao anexar o build (se o Connect pedir).
+
+Outros:
+
+- **SDK version issue** → workflow em `macos-26`.
+- Acordos pendentes no Connect → resolver antes do upload.
+
+**D) Depois do run**
+
+1. Leia o log **completo** do step *Upload IPA to TestFlight* (linhas apos `ERROR: [ContentDelivery.Uploader…]` — `Validation failed`, `ITMS-`, `authentication`, `409`).
+2. Se o upload falhar mas **Upload IPA artifact** tiver sucesso, baixe **`ios-release-ipa`** e envie manualmente (Transporter no Mac) ou corrija secrets e rode workflow novo.
+3. **Nao** use *Re-run* para corrigir bump ou secrets — use **Run workflow** na `main` atualizada apos commit/push.
+
+Detalhes: [docs/IOS_GITHUB_ACTIONS.md](docs/IOS_GITHUB_ACTIONS.md) (secoes 3 e 7).
 
 ---
 

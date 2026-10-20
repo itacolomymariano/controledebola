@@ -97,15 +97,17 @@ Cole cada valor **em uma unica linha** no secret correspondente.
 
 ### Antes de `release-ipa` (evitar falha no TestFlight)
 
-O IPA usa **`CURRENT_PROJECT_VERSION` = `versionCode`** de [`.app-release-state.json`](../.app-release-state.json) (igual ao Android). A Apple exige numero **maior** que qualquer build ja enviado.
+Checklist completa em [AGENTS.md](../AGENTS.md) (secao iOS). Resumo:
 
-1. TestFlight / App Store Connect → ultimo **Build** (ex. 208).
-2. Local: `versionCode` no JSON **>** esse numero (`node scripts/bump-app-release.js` ou `npm run build`).
-3. **Commit + push** de `.app-release-state.json`, `src/app/core/constants/app-release.ts` e `android/app/build.gradle`.
-4. Dispare o workflow na `main` atualizada; no log: `iOS version … (NNN)` com `NNN` novo.
-5. Nao reexecute (*Re-run*) um job antigo sem bump commitado.
+| Verificacao | Onde |
+|-------------|------|
+| Build (`CFBundleVersion`) | `.app-release-state.json` → `versionCode` **>** ultimo build TestFlight |
+| Versao de loja | `package.json` → `version` (3 segmentos; ex. `1.0.6`) |
+| Secrets API | `APP_STORE_CONNECT_KEY_ID`, `ISSUER_ID`, `API_KEY` (`.p8` completo) |
+| Runner | Workflow em `macos-26` (Xcode 26 SDK) |
+| Git | Bump + **commit + push** antes do workflow; CI nao le arquivos so locais |
 
-Ver tambem checklist em [AGENTS.md](../AGENTS.md) (secao iOS).
+Depois do run: expandir o log do step **Upload IPA to TestFlight** (mensagens apos `ContentDelivery.Uploader`). Se upload falhar, artefato **`ios-release-ipa`** pode estar OK mesmo assim.
 
 ## 4. Artefatos
 
@@ -151,6 +153,13 @@ Falha de **validacao do YAML** (nao do Xcode). Tipico: usar `inputs.*` em evento
 | `IONCameraLib does not support provisioning profiles` | Nao passar `PROVISIONING_PROFILE` no `xcodebuild`. O CI aplica o perfil so no target App (`scripts/apply-ios-app-target-signing.js`) |
 | `Node.js 20 is deprecated` em `import-codesign-certs` | Aviso, nao falha. O workflow ja usa `@v7` (Node 24). Nao precisa gerar outro IPA so por isso |
 | `bundle version must be higher than the previously uploaded version` / `previousBundleVersion` / `ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE` (409 no altool) | O `versionCode` commitado no GitHub e **<=** ultimo build TestFlight. Siga a checklist da secao 3; bump + commit + push; **novo** workflow (nao Re-run do mesmo SHA). Conferir `meta.previousBundleVersion` na mensagem de erro |
+| `Validation failed (409) SDK version issue` / iOS 18.x SDK | Runner antigo (`macos-15`). Confirmar `runs-on: macos-26` no workflow na `main` |
+| `CFBundleShortVersionString` invalid / mais de 3 segmentos | CI usa `package.json` `version`, nao o label `2026.*` do Android. Ajuste `version` e push |
+| `Failed to authenticate` / `Unable to authenticate` / `authentication` / upload falha logo apos `ContentDelivery.Uploader` | Secrets `APP_STORE_CONNECT_*` incorretos: Key ID ≠ nome do `.p8`, Issuer ID errado (nao e Team ID), `.p8` truncado ou sem BEGIN/END, chave revogada. Recadastrar secrets; **Run workflow** novo |
+| Log cortado so com `ERROR: [ContentDelivery.Uploader…]` | Abrir log completo do step; a causa (`Validation failed`, `ITMS-`, 409) vem nas linhas seguintes |
+| Upload falhou mas job gerou IPA | Baixar artefato `ios-release-ipa`; corrigir secrets ou versao e reenviar, ou Transporter no Mac |
+| `90186` / `Invalid Pre-Release Train` / train closed | Trilha `package.json` `version` fechada no Connect. Bump marketing (ex. `1.0.6` → `1.0.7`), commit + push, novo `release-ipa` |
+| `90062` / `CFBundleShortVersionString` must be higher than previously approved | Mesmo caso: marketing em `package.json` **<=** versao ja aprovada. Subir patch/minor em `package.json` |
 
 ## 8. Proximos passos (fora deste workflow)
 

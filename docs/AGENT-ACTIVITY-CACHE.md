@@ -6,10 +6,20 @@ Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `do
 
 ---
 
-### 2026-10-20 — iOS TestFlight: duplicate CFBundleVersion
+### 2026-10-20 — iOS TestFlight: trilha 1.0.6 fechada (90186 / 90062)
+
+- **Erro:** marketing `1.0.6` aprovada/fechada — altool rejeita novo build na mesma trilha
+- **Fix:** `package.json` → **1.0.7**; AGENTS secao C; bump marketing != bump `versionCode`
+
+### 2026-10-20 — iOS TestFlight: altool upload (build + API + validacao)
+
+- **Build 409:** `versionCode` no GitHub <= TestFlight — bump + push (checklist AGENTS)
+- **Upload/API:** secrets `APP_STORE_CONNECT_*`, `.p8` completo; workflow valida PEM + `altool --validate-app` antes do upload
+- **Docs:** AGENTS secao iOS expandida; IOS_GITHUB_ACTIONS troubleshooting
+
+### 2026-10-20 — iOS TestFlight: duplicate CFBundleVersion (208)
 
 - **Erro:** altool 409 — build deve ser > `previousBundleVersion` (ex. 208); CI usa `.app-release-state.json` do **GitHub**
-- **Docs:** checklist pre-`release-ipa` em `AGENTS.md` + `docs/IOS_GITHUB_ACTIONS.md` secao 3 / troubleshooting
 
 ### 2026-10-19 — Ajuda (?): regressão /tabs/home
 

@@ -284,10 +284,22 @@ jobs:
           ISSUER="$(printf '%s' "$ASC_ISSUER_ID" | tr -d '[:space:]')"
           mkdir -p "$HOME/.appstoreconnect/private_keys"
           KEY_FILE="$HOME/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8"
-          printf '%s\n' "$ASC_KEY_P8" > "$KEY_FILE"
+          # Secret pode vir com quebras reais ou com \n literais (GitHub Actions).
+          printf '%s' "$ASC_KEY_P8" | sed 's/\\n/\n/g' > "$KEY_FILE"
           chmod 600 "$KEY_FILE"
+          if ! grep -q 'BEGIN PRIVATE KEY' "$KEY_FILE"; then
+            echo "::error::APP_STORE_CONNECT_API_KEY invalido: falta BEGIN PRIVATE KEY. Cole o .p8 inteiro no secret."
+            exit 1
+          fi
 
           IPA=$(ls ios/build/ipa/*.ipa | head -n 1)
+          echo "Validando $IPA antes do upload..."
+          xcrun altool --validate-app \
+            --type ios \
+            --file "$IPA" \
+            --apiKey "$KEY_ID" \
+            --apiIssuer "$ISSUER"
+
           echo "Enviando $IPA para o TestFlight via altool..."
           # Evita o stub iTMSTransporter do Xcode 16 (-10814) e o cask inexistente.
           xcrun altool --upload-app \
