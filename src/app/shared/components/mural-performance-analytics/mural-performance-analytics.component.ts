@@ -2,6 +2,7 @@ import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import {
   ATHLETE_FOOT_LABELS,
   formatFootPreference,
+  SCOUT_GOAL_METHOD_OPTIONS,
 } from '../../../core/models/athlete-performance.model';
 import { MuralShareContext } from '../../../core/models/mural-share.model';
 import {
@@ -24,6 +25,10 @@ export class MuralPerformanceAnalyticsComponent implements OnChanges {
   @Input() preloadAnalytics = false;
   @Input() shareContext: MuralShareContext | null = null;
   @Input() filterCaption = '';
+  /** Exibe só um bloco (mural do evento em drill-down). */
+  @Input() panel: 'all' | 'qualitative' | 'quantitative' | 'charts' | 'goalTypes' = 'all';
+
+  readonly goalMethodOptions = SCOUT_GOAL_METHOD_OPTIONS;
 
   loading = false;
   loadedAnalytics: MuralPerformanceAnalytics | null = null;
@@ -35,12 +40,17 @@ export class MuralPerformanceAnalyticsComponent implements OnChanges {
       const normalized = this.analytics
         ? this.performanceService.normalizeMuralAnalytics(this.analytics)
         : null;
-      this.loadedAnalytics =
-        normalized?.qualitative && normalized?.charts ? normalized : null;
+      this.loadedAnalytics = normalized?.charts ? normalized : null;
       this.loading = false;
       return;
     }
-    if (!changes['scope'] && !changes['scopeId'] && !changes['preloadAnalytics']) {
+    if (
+      !changes['scope'] &&
+      !changes['scopeId'] &&
+      !changes['preloadAnalytics'] &&
+      !changes['analytics'] &&
+      !changes['panel']
+    ) {
       return;
     }
     void this.load();
@@ -74,12 +84,19 @@ export class MuralPerformanceAnalyticsComponent implements OnChanges {
     return Math.max(c.foulsCommitted, c.athleteCount, 1);
   }
 
+  showPanel(name: 'qualitative' | 'quantitative' | 'charts' | 'goalTypes'): boolean {
+    return this.panel === 'all' || this.panel === name;
+  }
+
+  goalTypeCount(field: string): number {
+    return Number(this.loadedAnalytics?.goalTypes?.[field] ?? 0);
+  }
+
   private async load(): Promise<void> {
     this.loading = true;
     try {
       const analytics = await this.performanceService.loadMuralAnalytics(this.scope, this.scopeId);
-      this.loadedAnalytics =
-        analytics?.qualitative && analytics?.charts ? analytics : null;
+      this.loadedAnalytics = analytics?.charts ? analytics : null;
     } catch {
       this.loadedAnalytics = null;
     } finally {

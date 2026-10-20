@@ -7,10 +7,8 @@ import { HomeDirectoryPage } from './home-directory.page';
 import { HomeUsuarioPage } from './home-usuario.page';
 import { PeladasListPage } from './peladas-list.page';
 import { PeladasPageRoutingModule } from './peladas-routing.module';
-import { PeladasPage } from './peladas.page';
-
 @NgModule({
   imports: [CommonModule, FormsModule, IonicModule, SharedModule, PeladasPageRoutingModule],
-  declarations: [PeladasPage, PeladasListPage, HomeDirectoryPage, HomeUsuarioPage],
+  declarations: [PeladasListPage, HomeDirectoryPage, HomeUsuarioPage],
 })
 export class PeladasPageModule {}

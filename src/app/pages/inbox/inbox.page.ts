@@ -25,6 +25,7 @@ import {
   TeamMatchJoinRequestService,
 } from '../../core/services/team-match-join-request.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
+import { I18nService } from '../../core/services/i18n.service';
 import Parse from 'parse';
 
 const MESSAGES_PAGE_SIZE = 50;
@@ -79,8 +80,13 @@ export class InboxPage implements OnDestroy {
     private readonly router: Router,
     private readonly route: ActivatedRoute,
     private readonly loadingCtrl: LoadingController,
-    private readonly alertCtrl: AlertController
+    private readonly alertCtrl: AlertController,
+    private readonly i18n: I18nService
   ) {}
+
+  private t(key: string, params?: Record<string, string | number>): string {
+    return this.i18n.t(key, params);
+  }
 
   ionViewWillEnter(): void {
     this.currentUserId = Parse.User.current()?.id || '';
@@ -269,7 +275,7 @@ export class InboxPage implements OnDestroy {
     options: Intl.DateTimeFormatOptions
   ): string {
     if (!date) return '';
-    return new Intl.DateTimeFormat('pt-BR', options).format(date);
+    return new Intl.DateTimeFormat(this.i18n.locale, options).format(date);
   }
 
   /** Recarrega convites e atualiza badge da barra superior. */
@@ -377,7 +383,7 @@ export class InboxPage implements OnDestroy {
   }
 
   formatDate(date: Date): string {
-    return new Intl.DateTimeFormat('pt-BR', {
+    return new Intl.DateTimeFormat(this.i18n.locale, {
       day: '2-digit',
       month: 'short',
       hour: '2-digit',
@@ -386,7 +392,7 @@ export class InboxPage implements OnDestroy {
   }
 
   formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
+    return new Intl.NumberFormat(this.i18n.locale, { style: 'currency', currency: 'BRL' }).format(amount);
   }
 
   invitationRoleLabel(invitation: RefereeInvitation): string {
@@ -397,14 +403,14 @@ export class InboxPage implements OnDestroy {
     const role = this.invitationRoleLabel(invitation);
     if (invitation.eventType === 'team_match') {
       if (invitation.teamMatchLeg === 'volta') {
-        return `Convite de ${role} — Volta do confronto`;
+        return this.t('inbox.inviteTitleRoleReturn', { role });
       }
       if (invitation.teamMatchLeg === 'ida') {
-        return `Convite de ${role} — Ida do confronto`;
+        return this.t('inbox.inviteTitleRoleOutbound', { role });
       }
-      return `Convite de ${role} — Confronto`;
+      return this.t('inbox.inviteTitleRoleMatch', { role });
     }
-    return `Convite de ${role}`;
+    return this.t('inbox.inviteTitleRole', { role });
   }
 
   invitationTeamLabel(invitation: RefereeInvitation): string {
@@ -439,21 +445,23 @@ export class InboxPage implements OnDestroy {
 
   joinOutboxTitle(request: TeamMatchJoinRequestItem): string {
     if (request.athleteUserId === this.currentUserId) {
-      return `Participacao — ${request.teamName || 'Time'}`;
+      return this.t('inbox.joinOutboxParticipation', { team: request.teamName || this.t('inbox.team') });
     }
-    return `Resposta — ${request.athleteApelido || request.athleteFullName || 'Atleta'}`;
+    return this.t('inbox.joinOutboxReply', {
+      name: request.athleteApelido || request.athleteFullName || this.t('inbox.athlete'),
+    });
   }
 
   joinOutboxStatus(request: TeamMatchJoinRequestItem): string {
     switch (request.status) {
       case 'pending':
-        return 'Aguardando presidente';
+        return this.t('inbox.joinStatusPending');
       case 'accepted':
-        return 'Aceita';
+        return this.t('inbox.joinStatusAccepted');
       case 'declined':
-        return 'Recusada';
+        return this.t('inbox.joinStatusDeclined');
       case 'cancelled':
-        return 'Cancelada';
+        return this.t('inbox.joinStatusCancelled');
       default:
         return request.status;
     }
@@ -464,17 +472,21 @@ export class InboxPage implements OnDestroy {
   }
 
   refereeApprovalSideLabel(side: TeamMatchRefereeHiringApprovalItem['refereeHiringRequestedByTeamSide']): string {
-    if (side === 'home') return 'mandante';
-    if (side === 'away') return 'visitante';
+    if (side === 'home') return this.t('inbox.sideHome');
+    if (side === 'away') return this.t('inbox.sideAway');
     return '—';
+  }
+
+  teamProposalLine(side: TeamMatchRefereeHiringApprovalItem['refereeHiringRequestedByTeamSide']): string {
+    return this.t('inbox.teamProposal', { side: this.refereeApprovalSideLabel(side) });
   }
 
   refereeApprovalOutboxStatus(item: TeamMatchRefereeHiringApprovalItem): string {
     if (item.refereeHiringApprovalStatus === 'pending') {
-      return 'Aguardando aprovacao do presidente adversario';
+      return this.t('inbox.refereeApprovalPending');
     }
     if (item.refereeHiringApprovalStatus === 'rejected') {
-      return 'Proposta recusada';
+      return this.t('inbox.refereeApprovalRejected');
     }
     return item.eventName;
   }
@@ -537,12 +549,12 @@ export class InboxPage implements OnDestroy {
 
   async declineAmateurTeamJoinRequest(request: AmateurTeamJoinRequestItem): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Recusar pedido de elenco',
-      inputs: [{ name: 'reason', type: 'textarea', placeholder: 'Motivo (opcional)' }],
+      header: this.t('inbox.declineRosterHeader'),
+      inputs: [{ name: 'reason', type: 'textarea', placeholder: this.t('inbox.reasonOptional') }],
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.t('inbox.cancel'), role: 'cancel' },
         {
-          text: 'Recusar',
+          text: this.t('inbox.decline'),
           role: 'destructive',
           handler: (data) => {
             void this.respondAmateurTeamJoinDecline(request.objectId, String(data?.reason || ''));
@@ -571,13 +583,13 @@ export class InboxPage implements OnDestroy {
 
   async declineJoinRequest(request: TeamMatchJoinRequestItem): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Recusar participacao',
-      message: 'Informe o motivo (opcional).',
-      inputs: [{ name: 'reason', type: 'textarea', placeholder: 'Motivo' }],
+      header: this.t('inbox.declineJoinHeader'),
+      message: this.t('inbox.declineJoinMessage'),
+      inputs: [{ name: 'reason', type: 'textarea', placeholder: this.t('inbox.reasonPlaceholder') }],
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.t('inbox.cancel'), role: 'cancel' },
         {
-          text: 'Recusar',
+          text: this.t('inbox.decline'),
           handler: (data) => {
             void this.confirmDeclineJoin(request.objectId, String(data?.reason || ''));
           },
@@ -609,21 +621,21 @@ export class InboxPage implements OnDestroy {
   challengeOutboxTitle(challenge: MatchChallengeItem): string {
     const isSender = challenge.challengerUserId === this.currentUserId;
     if (isSender) {
-      return `Desafio para ${challenge.challengedTeamName}`;
+      return this.t('inbox.challengeOutboxTo', { team: challenge.challengedTeamName });
     }
-    return `Resposta ao desafio de ${challenge.challengerTeamName}`;
+    return this.t('inbox.challengeOutboxReply', { team: challenge.challengerTeamName });
   }
 
   challengeOutboxStatus(challenge: MatchChallengeItem): string {
     switch (challenge.status) {
       case 'pending':
-        return 'Aguardando resposta';
+        return this.t('inbox.challengeStatusPending');
       case 'accepted':
-        return 'Aceito';
+        return this.t('inbox.challengeStatusAccepted');
       case 'declined':
-        return 'Recusado';
+        return this.t('inbox.challengeStatusDeclined');
       case 'scheduled':
-        return 'Confronto marcado';
+        return this.t('inbox.challengeStatusScheduled');
       default:
         return challenge.status;
     }
@@ -675,16 +687,16 @@ export class InboxPage implements OnDestroy {
     const time = this.returnLegTime.trim();
     const location = this.returnLegLocation.trim();
     if (!date || !time) {
-      await this.showError('Informe data e hora da volta.');
+      await this.showError(this.t('inbox.returnLegDateRequired'));
       return;
     }
     if (location.length < 3) {
-      await this.showError('Informe o local da volta.');
+      await this.showError(this.t('inbox.returnLegLocationRequired'));
       return;
     }
     const start = this.combineReturnDateTime(date, time);
     if (Number.isNaN(start.getTime())) {
-      await this.showError('Data ou hora da volta invalida.');
+      await this.showError(this.t('inbox.returnLegInvalidDateTime'));
       return;
     }
     const accepted = await this.confirmAcceptChallenge(challenge.objectId, {
@@ -732,13 +744,13 @@ export class InboxPage implements OnDestroy {
 
   async declineReschedule(proposal: TeamMatchRescheduleProposal): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Recusar remarcacao',
-      message: 'Informe o motivo (opcional).',
-      inputs: [{ name: 'reason', type: 'textarea', placeholder: 'Motivo' }],
+      header: this.t('inbox.declineRescheduleHeader'),
+      message: this.t('inbox.declineJoinMessage'),
+      inputs: [{ name: 'reason', type: 'textarea', placeholder: this.t('inbox.reasonPlaceholder') }],
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.t('inbox.cancel'), role: 'cancel' },
         {
-          text: 'Recusar',
+          text: this.t('inbox.decline'),
           handler: (data) => {
             void this.confirmDeclineReschedule(proposal.eventId, String(data?.reason || ''));
           },
@@ -762,13 +774,13 @@ export class InboxPage implements OnDestroy {
 
   async declineChallenge(challenge: MatchChallengeItem): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Recusar desafio',
-      message: 'Informe o motivo da rejeicao.',
-      inputs: [{ name: 'reason', type: 'textarea', placeholder: 'Motivo' }],
+      header: this.t('inbox.declineChallengeHeader'),
+      message: this.t('inbox.declineChallengeMessage'),
+      inputs: [{ name: 'reason', type: 'textarea', placeholder: this.t('inbox.reasonPlaceholder') }],
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.t('inbox.cancel'), role: 'cancel' },
         {
-          text: 'Recusar',
+          text: this.t('inbox.decline'),
           handler: (data) => {
             void this.confirmDecline(challenge.objectId, String(data?.reason || ''));
           },
@@ -796,7 +808,9 @@ export class InboxPage implements OnDestroy {
   }
 
   supplementaryTitle(opportunity: SupplementaryHiringOpportunity): string {
-    return opportunity.mode === 'flags' ? 'Contratar bandeiras' : 'Contratar auxiliares scout';
+    return opportunity.mode === 'flags'
+      ? this.t('inbox.supplementaryFlags')
+      : this.t('inbox.supplementaryScout');
   }
 
   openSupplementaryHiring(opportunity: SupplementaryHiringOpportunity): void {
@@ -821,10 +835,7 @@ export class InboxPage implements OnDestroy {
     const conflicts = await this.invitationService.getAcceptConflicts(invitation.objectId);
     const hard = conflicts.filter((row) => row.hardBlock);
     if (hard.length) {
-      await this.showError(
-        `Conflito com compromisso ja confirmado em "${hard[0].eventName}". ` +
-          'Cancele o outro compromisso antes de aceitar este convite.'
-      );
+      await this.showError(this.t('inbox.conflictHard', { event: hard[0].eventName }));
       return;
     }
 
@@ -835,13 +846,11 @@ export class InboxPage implements OnDestroy {
       const confirmed = await new Promise<boolean>((resolve) => {
         void this.alertCtrl
           .create({
-            header: 'Outros convites no mesmo horario',
-            message:
-              `Voce tem outro(s) convite(s) pendente(s) em conflito (${names}). ` +
-              `Ao aceitar este, os demais serao recusados automaticamente. Continuar?`,
+            header: this.t('inbox.conflictInvitesHeader'),
+            message: this.t('inbox.conflictInvitesMessage', { names }),
             buttons: [
-              { text: 'Cancelar', role: 'cancel', handler: () => resolve(false) },
-              { text: 'Aceitar este', handler: () => resolve(true) },
+              { text: this.t('inbox.cancel'), role: 'cancel', handler: () => resolve(false) },
+              { text: this.t('inbox.acceptThis'), handler: () => resolve(true) },
             ],
           })
           .then((alert) => alert.present());
@@ -853,7 +862,7 @@ export class InboxPage implements OnDestroy {
     }
 
     this.processingId = invitation.objectId;
-    const loading = await this.loadingCtrl.create({ message: 'Aceitando convite...' });
+    const loading = await this.loadingCtrl.create({ message: this.t('inbox.acceptingInvite') });
     await loading.present();
 
     let accepted: RefereeInvitation;
@@ -877,7 +886,7 @@ export class InboxPage implements OnDestroy {
     const buttons = needsSupplementary
       ? [
           {
-            text: 'Contratar agora',
+            text: this.t('inbox.hireNow'),
             handler: () => {
               void this.router.navigate(['/event', accepted.eventId, 'supplementary-hiring'], {
                 queryParams: {
@@ -887,29 +896,29 @@ export class InboxPage implements OnDestroy {
             },
           },
           {
-            text: 'Ir para o evento',
+            text: this.t('inbox.goToEvent'),
             handler: () => {
               void this.router.navigate(['/event', accepted.eventId]);
             },
           },
-          { text: 'Voltar ao inicio', role: 'cancel' as const },
+          { text: this.t('inbox.backToHome'), role: 'cancel' as const },
         ]
       : [
           {
-            text: 'Ir para o evento',
+            text: this.t('inbox.goToEvent'),
             handler: () => {
               void this.router.navigate(['/event', accepted.eventId]);
             },
           },
-          { text: 'Voltar ao inicio', role: 'cancel' as const },
+          { text: this.t('inbox.backToHome'), role: 'cancel' as const },
         ];
     const alert = await this.alertCtrl.create({
-      header: 'Convite aceito',
+      header: this.t('inbox.inviteAcceptedHeader'),
       message: needsSupplementary
-        ? 'Voce foi inscrito no evento. Deseja contratar auxiliares agora ou ir para o evento?'
+        ? this.t('inbox.inviteAcceptedSupplementary')
         : accepted.offeredAmount > 0
-          ? 'Voce foi inscrito no evento. O pagamento sera liberado apos o administrador confirmar sua presenca.'
-          : 'Voce foi inscrito no evento.',
+          ? this.t('inbox.inviteAcceptedPaid')
+          : this.t('inbox.inviteAcceptedFree'),
       buttons,
     });
     await alert.present();
@@ -925,12 +934,15 @@ export class InboxPage implements OnDestroy {
 
   async decline(invitation: RefereeInvitation): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Recusar convite',
-      message: `Recusar o convite de ${this.formatCurrency(invitation.offeredAmount)} para ${invitation.eventName}?`,
+      header: this.t('inbox.declineInviteHeader'),
+      message: this.t('inbox.declineInviteMessage', {
+        amount: this.formatCurrency(invitation.offeredAmount),
+        event: invitation.eventName,
+      }),
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.t('inbox.cancel'), role: 'cancel' },
         {
-          text: 'Recusar',
+          text: this.t('inbox.decline'),
           role: 'destructive',
           handler: () => {
             void this.doDecline(invitation.objectId);
@@ -943,12 +955,15 @@ export class InboxPage implements OnDestroy {
 
   async confirmPaymentReceived(invitation: RefereeInvitation): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Confirmar recebimento',
-      message: `Confirmar que voce recebeu ${this.formatCurrency(invitation.offeredAmount)} pelo evento ${invitation.eventName}?`,
+      header: this.t('inbox.confirmPaymentHeader'),
+      message: this.t('inbox.confirmPaymentMessage', {
+        amount: this.formatCurrency(invitation.offeredAmount),
+        event: invitation.eventName,
+      }),
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.t('inbox.cancel'), role: 'cancel' },
         {
-          text: 'Confirmar',
+          text: this.t('inbox.confirm'),
           handler: () => {
             void this.doConfirmPaymentReceived(invitation.objectId);
           },
@@ -960,7 +975,7 @@ export class InboxPage implements OnDestroy {
 
   private async doConfirmPaymentReceived(invitationId: string): Promise<void> {
     this.processingId = invitationId;
-    const loading = await this.loadingCtrl.create({ message: 'Confirmando...' });
+    const loading = await this.loadingCtrl.create({ message: this.t('inbox.confirming') });
     await loading.present();
 
     try {
@@ -977,9 +992,9 @@ export class InboxPage implements OnDestroy {
     await loading.dismiss();
 
     const alert = await this.alertCtrl.create({
-      header: 'Pagamento confirmado',
-      message: 'Recebimento registrado com sucesso.',
-      buttons: ['OK'],
+      header: this.t('inbox.paymentConfirmedHeader'),
+      message: this.t('inbox.paymentConfirmedMessage'),
+      buttons: [this.t('inbox.ok')],
     });
     await alert.present();
   }
@@ -1004,7 +1019,11 @@ export class InboxPage implements OnDestroy {
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.t('inbox.error'),
+      message,
+      buttons: [this.t('inbox.ok')],
+    });
     await alert.present();
   }
 }

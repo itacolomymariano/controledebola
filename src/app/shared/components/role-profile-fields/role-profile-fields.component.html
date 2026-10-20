@@ -1,56 +1,57 @@
-<ng-container [formGroup]="form">
+<div class="role-profile-fields" [formGroup]="form">
   @for (field of fields; track field.key) {
     @if (showField(field)) {
       @if (field.type === 'boolean') {
-        <ion-item lines="full">
-          <ion-toggle justify="space-between" [formControlName]="field.key">
-            {{ field.label }}
-          </ion-toggle>
+        <ion-item lines="full" class="item-toggle-wrap role-profile-toggle-item">
+          <ion-label class="ion-text-wrap">{{ field.label }}</ion-label>
+          <ion-toggle slot="end" [formControlName]="field.key"></ion-toggle>
         </ion-item>
       } @else if (field.type === 'money') {
-        <ion-item>
-          <ion-input
-            type="number"
-            [label]="field.label"
-            labelPlacement="stacked"
-            [formControlName]="field.key"
-            min="0"
-            step="0.01"
-            inputmode="decimal"
-            placeholder="R$"
-          ></ion-input>
-        </ion-item>
+        <ion-input
+          class="role-profile-control"
+          fill="outline"
+          type="number"
+          [label]="field.label"
+          labelPlacement="stacked"
+          [formControlName]="field.key"
+          min="0"
+          step="0.01"
+          inputmode="decimal"
+          placeholder="R$"
+        ></ion-input>
       } @else if (field.type === 'textarea') {
-        <ion-item>
-          <ion-textarea
-            [label]="field.label"
-            labelPlacement="stacked"
-            [formControlName]="field.key"
-            autoGrow="true"
-            rows="4"
-          ></ion-textarea>
-        </ion-item>
+        <ion-textarea
+          class="role-profile-control"
+          fill="outline"
+          [label]="field.label"
+          labelPlacement="stacked"
+          [formControlName]="field.key"
+          autoGrow="true"
+          rows="3"
+        ></ion-textarea>
       } @else if (field.type === 'pix') {
-        <ion-item>
+        <div class="role-profile-pix-row">
           <ion-input
+            class="role-profile-control role-profile-pix-input"
+            fill="outline"
             [label]="field.label"
             labelPlacement="stacked"
             [formControlName]="field.key"
           ></ion-input>
           <app-pix-copy-button
-            slot="end"
+            class="role-profile-pix-copy"
             [text]="pixFieldValue(field.key)"
           ></app-pix-copy-button>
-        </ion-item>
+        </div>
       } @else {
-        <ion-item>
-          <ion-input
-            [label]="field.label"
-            labelPlacement="stacked"
-            [formControlName]="field.key"
-          ></ion-input>
-        </ion-item>
+        <ion-input
+          class="role-profile-control"
+          fill="outline"
+          [label]="field.label"
+          labelPlacement="stacked"
+          [formControlName]="field.key"
+        ></ion-input>
       }
     }
   }
-</ng-container>
+</div>

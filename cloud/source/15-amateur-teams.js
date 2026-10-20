@@ -365,6 +365,62 @@ function mapAmateurTeamListRow(team) {
   };
 }
 
+function serializeHomeVenueAddress(value) {
+  if (!value || typeof value !== 'object') {
+    return {
+      street: '',
+      neighborhood: '',
+      city: '',
+      state: '',
+      zipCode: '',
+    };
+  }
+  return {
+    street: String(value.street || ''),
+    neighborhood: String(value.neighborhood || ''),
+    city: String(value.city || ''),
+    state: String(value.state || ''),
+    zipCode: String(value.zipCode || ''),
+    latitude: typeof value.latitude === 'number' ? value.latitude : undefined,
+    longitude: typeof value.longitude === 'number' ? value.longitude : undefined,
+  };
+}
+
+function mapHomeDirectoryTeamRow(team) {
+  const base = mapAmateurTeamListRow(team);
+  const president = team.get('president');
+  const imageUrl = base.shieldImageUrl || base.imageUrl || undefined;
+  return {
+    objectId: base.objectId,
+    name: base.name,
+    presidentName: personDisplayFromUser(president).name,
+    imageUrl,
+    homeVenueAddress: serializeHomeVenueAddress(team.get('homeVenueAddress')),
+  };
+}
+
+Parse.Cloud.define('listHomeDirectoryTeams', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const limit = Math.min(Math.max(Number(request.params.limit) || 400, 1), 400);
+  const rawIds = request.params.objectIds;
+  const objectIds = Array.isArray(rawIds)
+    ? rawIds.map((id) => String(id || '').trim()).filter(Boolean)
+    : [];
+
+  const query = new Parse.Query('AmateurTeam');
+  if (objectIds.length) {
+    query.containedIn('objectId', objectIds.slice(0, limit));
+  }
+  query.include('president');
+  query.ascending('name');
+  query.limit(objectIds.length ? Math.min(objectIds.length, limit) : limit);
+  const rows = await query.find({ useMasterKey: true });
+  return rows.map(mapHomeDirectoryTeamRow);
+});
+
 Parse.Cloud.define('listMyAmateurTeams', async (request) => {
   const user = request.user;
   if (!user) {

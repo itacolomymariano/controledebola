@@ -13,6 +13,16 @@ export interface AthleteSearchResult {
   weightKg?: number;
 }
 
+export interface SumulaObservationEntry {
+  eventId: string;
+  eventName: string;
+  peladaName?: string;
+  eventDate?: string;
+  observation: string;
+  yellowCards?: number;
+  redCards?: number;
+}
+
 export interface AthletePublicProfile {
   userId: string;
   displayName: string;
@@ -44,6 +54,7 @@ export interface AthletePublicProfile {
   heightCm?: number;
   /** AthleteProfile.weight, em quilogramas. */
   weightKg?: number;
+  sumulaObservations?: SumulaObservationEntry[];
 }
 
 /** Indicadores dos ultimos N meses (padrao 3). */

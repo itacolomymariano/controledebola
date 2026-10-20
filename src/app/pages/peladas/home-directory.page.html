@@ -77,7 +77,12 @@
     <ion-list>
       @for (row of visibleTeams; track row.id) {
         <ion-item button (click)="openTeam(row)">
-          <ion-icon name="shield-outline" slot="start"></ion-icon>
+          <app-user-avatar
+            slot="start"
+            [avatarUrl]="row.imageUrl"
+            [alt]="row.name"
+            size="md"
+          ></app-user-avatar>
           <ion-label class="ion-text-wrap">
             <h2>{{ row.name }}</h2>
             <p>{{ 'peladas.president' | t }}: {{ row.presidentName || '—' }}</p>
@@ -108,7 +113,7 @@
           ></app-user-avatar>
           <ion-label class="ion-text-wrap">
             <h2>{{ row.user.displayName || ('peladas.userTitle' | t) }}</h2>
-            <p>{{ 'peladas.fullName' | t }}: {{ row.user.fullName || '—' }}</p>
+            <p>{{ 'peladas.fullName' | t }}: {{ row.user.listFullName || '—' }}</p>
             <p>{{ 'peladas.nickname' | t }}: {{ row.user.apelido || '—' }}</p>
             <p>{{ row.rolesLabel || ('peladas.noProfiles' | t) }}</p>
             @if (row.user.positions.length) {

@@ -11,13 +11,18 @@
   align-items: center;
   gap: 8px;
   margin-inline-start: 8px;
+  flex-shrink: 0;
+  max-height: 48px;
 }
 
 .user-bar-logo {
   width: 28px;
   height: 28px;
+  max-width: 28px;
+  max-height: 28px;
   object-fit: contain;
   flex-shrink: 0;
+  display: block;
 }
 
 .apelido-title {

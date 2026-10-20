@@ -29,8 +29,14 @@ export class MuralHighlightsPanelComponent {
   } | null = null;
   /** Frase do filtro de regiao (Brasil ou Filtro: Estado...). Vazia fora do mural do app. */
   @Input() filterCaption = '';
+  /** Event mural: craque → juiz, sem time mais amado. */
+  @Input() layout: 'default' | 'eventOrdered' = 'default';
 
   ageBands: MuralAgeBand[] = ['sub30', 'sub60', 'plus60'];
+
+  get isEventOrdered(): boolean {
+    return this.layout === 'eventOrdered' && this.scope === 'event';
+  }
 
   get showBirthdays(): boolean {
     return this.scope === 'pelada';

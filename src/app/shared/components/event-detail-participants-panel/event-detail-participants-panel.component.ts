@@ -196,4 +196,15 @@ export class EventDetailParticipantsPanelComponent {
     if (participant.teamSide === value) return;
     this.teamSideChange.emit({ participant, teamSide: value });
   }
+
+  showAthletePosition(participant: EventRegistrationListItem): boolean {
+    return participant.role === 'athlete' && !!participant.primaryPosition?.trim();
+  }
+
+  formatCbAverageScore(participant: EventRegistrationListItem): string | null {
+    if (participant.appAverageScore == null) return null;
+    const score = Number(participant.appAverageScore);
+    if (!Number.isFinite(score)) return null;
+    return score.toFixed(1);
+  }
 }

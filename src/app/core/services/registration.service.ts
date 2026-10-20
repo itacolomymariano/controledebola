@@ -21,6 +21,12 @@ import { PeladaParticipant } from '../models/pelada-participant.model';
 import { ProfileRole, PROFILE_ROLE_LABELS } from '../models/profile-role.model';
 import { isInvalidCloudFunctionError, parseErrorMessage } from '../utils/parse-error.util';
 import { getUserAvatarUrl } from '../utils/user-avatar.util';
+import {
+  readUserAmateurFootballIdol,
+  readUserFavoriteAmateurTeam,
+  readUserFavoriteProTeam,
+  readUserProFootballIdol,
+} from '../utils/user-personal-profile.util';
 import { EventService } from './event.service';
 import { ParseFileService } from './parse-file.service';
 import { ParseService } from './parse.service';
@@ -210,12 +216,13 @@ export class RegistrationService {
 
   async listParticipantsForEvent(eventId: string): Promise<PeladaParticipant[]> {
     const fromCloud = await this.listParticipantsForEventViaCloud(eventId);
-    if (fromCloud !== null) {
+    if (fromCloud !== null && fromCloud.length > 0) {
       return fromCloud;
     }
 
     const query = new Parse.Query(CLASS);
     query.equalTo('event', EventPointer.createWithoutData(eventId));
+    query.include('user');
     query.limit(500);
     const results = await query.find();
 
@@ -262,6 +269,14 @@ export class RegistrationService {
         amateurFootballIdol: row['amateurFootballIdol']
           ? String(row['amateurFootballIdol'])
           : undefined,
+        favoriteProTeam: row['favoriteProTeam'] ? String(row['favoriteProTeam']) : undefined,
+        favoriteAmateurTeam: row['favoriteAmateurTeam']
+          ? String(row['favoriteAmateurTeam'])
+          : undefined,
+        heightCm:
+          row['heightCm'] != null && Number(row['heightCm']) > 0
+            ? Number(row['heightCm'])
+            : undefined,
       }));
     } catch {
       return null;
@@ -316,6 +331,9 @@ export class RegistrationService {
         address: participant.address || meta.address,
         proFootballIdol: participant.proFootballIdol || meta.proFootballIdol,
         amateurFootballIdol: participant.amateurFootballIdol || meta.amateurFootballIdol,
+        favoriteProTeam: participant.favoriteProTeam || meta.favoriteProTeam,
+        favoriteAmateurTeam: participant.favoriteAmateurTeam || meta.favoriteAmateurTeam,
+        heightCm: participant.heightCm ?? meta.heightCm,
       };
     });
   }
@@ -1402,8 +1420,10 @@ export class RegistrationService {
       avatarUrl,
       birthDate,
       address,
-      proFootballIdol: (user?.get('proFootballIdol') as string | undefined)?.trim(),
-      amateurFootballIdol: (user?.get('amateurFootballIdol') as string | undefined)?.trim(),
+      proFootballIdol: readUserProFootballIdol(user),
+      amateurFootballIdol: readUserAmateurFootballIdol(user),
+      favoriteProTeam: readUserFavoriteProTeam(user),
+      favoriteAmateurTeam: readUserFavoriteAmateurTeam(user),
     };
   }
 

@@ -24,7 +24,7 @@ Onde a tela mudou, a foto antiga foi tirada do MDX. O capítulo ficou com `{/* p
 | `p57-cinegrafista-video.jpeg` | Cinegrafista enviando o vídeo | 08 |
 | `p58-hub-midia-video.jpeg` | Hub de mídia, quem assiste ao vídeo | 08 |
 | `p60-confrontos-proximo.jpeg` | Aba Confrontos com o selo **Próximo** e um desafio aceito ainda sem data | 10 |
-| `p23-home-portas.jpeg` | Home com as quatro portas (Peladas, Confrontos, Times, Usuários) e o **?** de ajuda. Sem bandeiras nem tema no topo | 01 |
+| `p23-home-portas.jpeg` | Home com as quatro portas (Peladas, Confrontos, Times, Usuários). **Um** header: logo + avatar + apelido + **?** + home + inbox + menu. **Sem** segunda faixa azul com titulo do app; sem bandeiras nem tema no topo | 01 |
 | `p-lista-peladas.jpeg` | Lista de peladas aberta pela porta **Peladas** | 02 |
 | `p50-mural-confrontos.jpeg` | Mural, aba Confrontos: **Melhor time do app**, **Maior invencibilidade**, **Melhor ataque** e **Melhor defesa** | 06 |
 | `p56-caixa-card.jpeg` | Caixa: card só com apelido, nome entre parênteses, data e hora | 07 e 14 |

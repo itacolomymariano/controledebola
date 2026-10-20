@@ -27,6 +27,7 @@ import { EventPerformanceService } from './event-performance.service';
 import { MuralService } from './mural.service';
 import { ParseFileService } from './parse-file.service';
 import { ParseService } from './parse.service';
+import { I18nService } from './i18n.service';
 
 interface ParticipantProfile {
   userId: string;
@@ -41,6 +42,7 @@ interface ParticipantProfile {
   birthDate?: Date;
   age: number | null;
   ageBand: MuralAgeBand | null;
+  heightCm?: number;
 }
 
 interface CloudMuralParticipantProfile {
@@ -56,6 +58,7 @@ interface CloudMuralParticipantProfile {
   birthDate?: string;
   age?: number | null;
   ageBand?: MuralAgeBand | null;
+  heightCm?: number;
 }
 
 const AGE_BANDS: MuralAgeBand[] = ['sub30', 'sub60', 'plus60'];
@@ -75,7 +78,8 @@ export class MuralHighlightsService {
     private readonly parseService: ParseService,
     private readonly performanceService: EventPerformanceService,
     private readonly muralService: MuralService,
-    private readonly parseFileService: ParseFileService
+    private readonly parseFileService: ParseFileService,
+    private readonly i18n: I18nService
   ) {
     this.parseService.init();
   }
@@ -253,6 +257,9 @@ export class MuralHighlightsService {
         rankings.referee ?? []
       );
       const timeMaisAmado = await this.loadFavoriteProTeam(scope, scopeId, [...userIds], profiles);
+      const timeAmadorMaisAmado = this.aggregateFavoriteAmateurTeamFromProfiles(profiles);
+      const athleteUserIds = this.collectEventAthleteUserIds(participants, profiles);
+      const heightExtremes = this.pickExtremeHeights(profiles, athleteUserIds);
       const highlights: MuralHighlights = {
         craque: { sub30: craqueWinner, sub60: null, plus60: null },
         craquePelada: null,
@@ -269,6 +276,9 @@ export class MuralHighlightsService {
         melhorGoleiroPelada: null,
         melhorGoleiroConfronto: null,
         timeMaisAmado,
+        timeAmadorMaisAmado,
+        atletaMaisAlto: heightExtremes.tallest,
+        atletaMaisBaixo: heightExtremes.shortest,
         promessa,
         master,
         birthdays: [],
@@ -379,6 +389,34 @@ export class MuralHighlightsService {
       }
     }
 
+    let timeAmadorMaisAmado: MuralFavoriteTeamEntry | null = null;
+    let atletaMaisAlto: MuralShowcaseEntry | null = null;
+    let atletaMaisBaixo: MuralShowcaseEntry | null = null;
+
+    if (scope === 'event') {
+      const cloudCuriosities =
+        scopeId != null ? await this.loadEventMuralCuriositiesFromCloud(scopeId) : null;
+      if (cloudCuriosities) {
+        timeAmadorMaisAmado = cloudCuriosities.favoriteAmateurTeam;
+        atletaMaisAlto = cloudCuriosities.tallest;
+        atletaMaisBaixo = cloudCuriosities.shortest;
+      } else {
+        const participantProfiles = participants?.length
+          ? this.buildProfilesFromParticipants(participants)
+          : null;
+        if (participants?.length) {
+          this.mergeParticipantProfileFields(profiles, participants);
+        }
+        const profileSource =
+          participantProfiles && participantProfiles.size > 0 ? participantProfiles : profiles;
+        timeAmadorMaisAmado = this.aggregateFavoriteAmateurTeamFromProfiles(profileSource);
+        const athleteUserIds = this.collectEventAthleteUserIds(participants, profiles);
+        const heightExtremes = this.pickExtremeHeights(profileSource, athleteUserIds);
+        atletaMaisAlto = heightExtremes.tallest;
+        atletaMaisBaixo = heightExtremes.shortest;
+      }
+    }
+
     return await this.backfillHighlightFavoriteProTeams(
       {
         craque,
@@ -392,6 +430,9 @@ export class MuralHighlightsService {
         melhorGoleiroPelada,
         melhorGoleiroConfronto,
         timeMaisAmado,
+        timeAmadorMaisAmado,
+        atletaMaisAlto,
+        atletaMaisBaixo,
         promessa,
         master,
         birthdays,
@@ -424,6 +465,88 @@ export class MuralHighlightsService {
       return this.aggregateFavoriteProTeamFromProfiles(profiles);
     }
     return null;
+  }
+
+  /** Inscricao pode vir com role goalkeeper (Cloud) fora do union ProfileRole. */
+  private participantRoleCountsForHeight(roles: ProfileRole[]): boolean {
+    const list = roles as string[];
+    return list.includes('athlete') || list.includes('goalkeeper');
+  }
+
+  private collectEventAthleteUserIds(
+    participants: PeladaParticipant[] | undefined,
+    profiles: Map<string, ParticipantProfile>
+  ): Set<string> {
+    const ids = new Set<string>();
+    if (participants?.length) {
+      for (const p of participants) {
+        if (!p.userId) continue;
+        if (this.participantRoleCountsForHeight(p.roles)) {
+          ids.add(p.userId);
+        }
+      }
+    }
+    if (!ids.size) {
+      for (const profile of profiles.values()) {
+        if (profile.isAthlete && profile.userId) ids.add(profile.userId);
+      }
+    }
+    return ids;
+  }
+
+  private aggregateFavoriteAmateurTeamFromProfiles(
+    profiles: Map<string, ParticipantProfile>
+  ): MuralFavoriteTeamEntry | null {
+    const counts = new Map<string, number>();
+    for (const profile of profiles.values()) {
+      const teamName = String(profile.favoriteAmateurTeam || '').trim();
+      if (!teamName || teamName.toLowerCase() === 'sem time') continue;
+      counts.set(teamName, (counts.get(teamName) ?? 0) + 1);
+    }
+    const sorted = [...counts.entries()].sort((a, b) => {
+      if (b[1] !== a[1]) return b[1] - a[1];
+      return a[0].localeCompare(b[0], 'pt-BR');
+    });
+    if (!sorted.length) return null;
+    return { teamName: sorted[0][0], count: sorted[0][1] };
+  }
+
+  private pickExtremeHeights(
+    profiles: Map<string, ParticipantProfile>,
+    athleteUserIds: Set<string>
+  ): { tallest: MuralShowcaseEntry | null; shortest: MuralShowcaseEntry | null } {
+    const rows: Array<{ userId: string; heightCm: number }> = [];
+    for (const profile of profiles.values()) {
+      if (!profile.userId || !athleteUserIds.has(profile.userId)) continue;
+      const heightCm = Number(profile.heightCm || 0);
+      if (heightCm > 0) rows.push({ userId: profile.userId, heightCm });
+    }
+    if (!rows.length) {
+      return { tallest: null, shortest: null };
+    }
+    rows.sort((a, b) => {
+      const diff = a.heightCm - b.heightCm;
+      if (diff !== 0) return diff;
+      const nameA = profiles.get(a.userId)?.displayName ?? a.userId;
+      const nameB = profiles.get(b.userId)?.displayName ?? b.userId;
+      return nameA.localeCompare(nameB, 'pt-BR');
+    });
+    const shortestRow = rows[0];
+    const tallestRow = rows[rows.length - 1];
+    const toEntry = (row: { userId: string; heightCm: number }): MuralShowcaseEntry | null => {
+      const profile = profiles.get(row.userId);
+      if (!profile) return null;
+      return {
+        ...this.toShowcaseEntry(profile),
+        profileLabel: 'Atleta',
+        score: row.heightCm,
+        scoreLabel: 'Altura (cm)',
+      };
+    };
+    return {
+      shortest: toEntry(shortestRow),
+      tallest: toEntry(tallestRow),
+    };
   }
 
   private aggregateFavoriteProTeamFromProfiles(
@@ -491,6 +614,33 @@ export class MuralHighlightsService {
       }
     }
     return counts;
+  }
+
+  private async loadEventMuralCuriositiesFromCloud(eventId: string): Promise<{
+    favoriteAmateurTeam: MuralFavoriteTeamEntry | null;
+    tallest: MuralShowcaseEntry | null;
+    shortest: MuralShowcaseEntry | null;
+  } | null> {
+    try {
+      const result = (await Parse.Cloud.run('getEventMuralCuriosities', { eventId })) as {
+        favoriteAmateurTeam?: { teamName?: string; count?: number } | null;
+        tallest?: MuralShowcaseEntry | null;
+        shortest?: MuralShowcaseEntry | null;
+      };
+      if (!result || typeof result !== 'object') return null;
+      const fav = result.favoriteAmateurTeam;
+      const favoriteAmateurTeam =
+        fav?.teamName && Number(fav.count) > 0
+          ? { teamName: String(fav.teamName), count: Number(fav.count) }
+          : null;
+      return {
+        favoriteAmateurTeam,
+        tallest: result.tallest ?? null,
+        shortest: result.shortest ?? null,
+      };
+    } catch {
+      return null;
+    }
   }
 
   private async loadPerformancesForHighlights(
@@ -949,10 +1099,16 @@ export class MuralHighlightsService {
     const withDisplay = { ...entry, score: displayScore };
     if (withDisplay.avatarUrl) return withDisplay;
     if (!ranking) return withDisplay;
+    const distinct = ranking.distinctVoterCount ?? ranking.voteCount;
+    const evaluatorCountLabel =
+      distinct && distinct > 0 && (ranking.voteCount ?? 0) > 0
+        ? this.i18n.t('mural.showcase.evaluators', { count: distinct })
+        : undefined;
     return {
       ...withDisplay,
       displayName: ranking.userName || withDisplay.displayName,
       avatarUrl: ranking.avatarUrl ?? withDisplay.avatarUrl,
+      evaluatorCountLabel,
     };
   }
 
@@ -1236,6 +1392,8 @@ export class MuralHighlightsService {
     userIds: string[],
     participants?: PeladaParticipant[]
   ): Promise<Map<string, ParticipantProfile>> {
+    let profiles = new Map<string, ParticipantProfile>();
+
     try {
       const rows = (await Parse.Cloud.run('getMuralParticipantProfiles', {
         scope,
@@ -1243,17 +1401,57 @@ export class MuralHighlightsService {
         userIds,
       })) as CloudMuralParticipantProfile[];
       if (Array.isArray(rows) && rows.length) {
-        return this.mapCloudProfiles(rows);
+        profiles = this.mapCloudProfiles(rows);
       }
     } catch {
       // Cloud Code pode ainda nao estar publicado; usa fallback local.
     }
 
-    if (participants?.length) {
-      return this.buildProfilesFromParticipants(participants);
+    if (!profiles.size) {
+      if (participants?.length) {
+        profiles = this.buildProfilesFromParticipants(participants);
+      } else {
+        profiles = await this.loadParticipantProfilesClient(userIds);
+      }
     }
 
-    return this.loadParticipantProfilesClient(userIds);
+    if (participants?.length) {
+      this.mergeParticipantProfileFields(profiles, participants);
+    }
+
+    return profiles;
+  }
+
+  /** Dados do evento via listEventMuralParticipants complementam getMuralParticipantProfiles. */
+  private mergeParticipantProfileFields(
+    profiles: Map<string, ParticipantProfile>,
+    participants: PeladaParticipant[]
+  ): void {
+    for (const participant of participants) {
+      if (!participant.userId) continue;
+      const fromParticipant = this.participantToProfile(participant);
+      const existing = profiles.get(participant.userId);
+      if (!existing) {
+        profiles.set(participant.userId, fromParticipant);
+        continue;
+      }
+      profiles.set(participant.userId, {
+        ...existing,
+        heightCm:
+          fromParticipant.heightCm != null && fromParticipant.heightCm > 0
+            ? fromParticipant.heightCm
+            : existing.heightCm,
+        favoriteAmateurTeam:
+          (fromParticipant.favoriteAmateurTeam || '').trim() ||
+          existing.favoriteAmateurTeam,
+        favoriteProTeam:
+          (fromParticipant.favoriteProTeam || '').trim() || existing.favoriteProTeam,
+        proFootballIdol: existing.proFootballIdol || fromParticipant.proFootballIdol,
+        amateurFootballIdol:
+          existing.amateurFootballIdol || fromParticipant.amateurFootballIdol,
+        isAthlete: existing.isAthlete || fromParticipant.isAthlete,
+      });
+    }
   }
 
   private participantToProfile(participant: PeladaParticipant): ParticipantProfile {
@@ -1269,7 +1467,7 @@ export class MuralHighlightsService {
         (participant.roles.includes('athlete') ? 'Atleta' : undefined) ||
         (primaryRole ? PROFILE_ROLE_LABELS[primaryRole] : undefined) ||
         'Participante',
-      isAthlete: participant.roles.includes('athlete'),
+      isAthlete: this.participantRoleCountsForHeight(participant.roles),
       favoriteProTeam: participant.favoriteProTeam,
       favoriteAmateurTeam: participant.favoriteAmateurTeam,
       proFootballIdol: participant.proFootballIdol,
@@ -1277,6 +1475,7 @@ export class MuralHighlightsService {
       birthDate,
       age,
       ageBand: age !== null ? this.getAgeBand(age) : null,
+      heightCm: participant.heightCm,
     };
   }
 
@@ -1298,7 +1497,7 @@ export class MuralHighlightsService {
           (participant.roles.includes('athlete') ? 'Atleta' : undefined) ||
           (primaryRole ? PROFILE_ROLE_LABELS[primaryRole] : undefined) ||
           'Participante',
-        isAthlete: participant.roles.includes('athlete'),
+        isAthlete: this.participantRoleCountsForHeight(participant.roles),
         favoriteProTeam: participant.favoriteProTeam,
         favoriteAmateurTeam: participant.favoriteAmateurTeam,
         proFootballIdol: participant.proFootballIdol,
@@ -1306,6 +1505,7 @@ export class MuralHighlightsService {
         birthDate,
         age,
         ageBand: age !== null ? this.getAgeBand(age) : null,
+        heightCm: participant.heightCm,
       });
     }
     return map;
@@ -1330,6 +1530,7 @@ export class MuralHighlightsService {
         birthDate,
         age,
         ageBand: row.ageBand ?? (age !== null ? this.getAgeBand(age) : null),
+        heightCm: row.heightCm != null && row.heightCm > 0 ? row.heightCm : undefined,
       });
     }
     return map;
@@ -1380,6 +1581,7 @@ export class MuralHighlightsService {
         (primaryRole ? PROFILE_ROLE_LABELS[primaryRole] : undefined) ||
         'Participante';
 
+      const heightRaw = Number(athlete?.get('height') || 0);
       map.set(user.id, {
         userId: user.id,
         displayName:
@@ -1403,6 +1605,7 @@ export class MuralHighlightsService {
         birthDate,
         age,
         ageBand: age !== null ? this.getAgeBand(age) : null,
+        heightCm: heightRaw > 0 ? heightRaw : undefined,
       });
     }
 

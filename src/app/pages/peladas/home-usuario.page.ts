@@ -70,6 +70,15 @@ export class HomeUsuarioPage implements OnDestroy {
     return this.i18n.t('peladas.ageYears', { age });
   }
 
+  get headerDisplayName(): string {
+    return (
+      this.user?.displayName?.trim() ||
+      this.athleteProfile?.displayName?.trim() ||
+      this.athleteProfile?.apelido?.trim() ||
+      ''
+    );
+  }
+
   joinNames(values: string[] | undefined): string {
     return values?.filter((value) => !!value?.trim()).join(', ') || '';
   }

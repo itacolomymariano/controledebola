@@ -31,6 +31,49 @@
   gap: 12px;
 }
 
+.participant-confirmed-list-item {
+  --padding-start: 12px;
+  --inner-padding-end: 12px;
+
+  &::part(native) {
+    align-items: flex-start;
+  }
+}
+
+.participant-arrival-status {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  color: var(--ion-color-medium);
+}
+
+.participant-confirmed-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  .participant-confirmed-fields {
+    flex: 1;
+    min-width: 0;
+
+    h3 {
+      margin: 0 0 6px;
+      font-size: 1rem;
+    }
+
+    p {
+      margin: 0 0 4px;
+      font-size: 0.9rem;
+      color: var(--ion-color-step-600, #666);
+    }
+  }
+}
+
+.participant-admin-operational {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ion-color-step-150, #eee);
+}
+
 .participant-admin-summary {
   flex: 1;
   min-width: 0;
@@ -48,6 +91,14 @@
 
 .participant-admin-actions {
   flex-shrink: 0;
+  align-self: flex-start;
+
+  ion-button {
+    white-space: nowrap;
+    min-width: max-content;
+    --padding-start: 12px;
+    --padding-end: 12px;
+  }
 }
 
 .participant-admin-controls {
@@ -78,7 +129,15 @@
 
   .participant-admin-actions {
     width: 100%;
+    display: flex;
+    justify-content: flex-end;
   }
+}
+
+.arrival-order-footnote {
+  display: block;
+  line-height: 1.4;
+  white-space: normal;
 }
 
 @media (orientation: landscape) and (max-height: 500px) {

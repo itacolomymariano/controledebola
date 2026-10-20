@@ -15,6 +15,7 @@ import {
   payloadFromRoleProfileForm,
   roleProfileFieldLabels,
 } from '../../core/models/role-profile.model';
+import { formatAppReleaseFullLabel } from '../../core/constants/app-release-display.util';
 import { WizardPath } from '../../core/models/wizard.model';
 import { AppStorageService } from '../../core/services/app-storage.service';
 import { AthleteProfileService } from '../../core/services/athlete-profile.service';
@@ -32,6 +33,7 @@ type OtherSetupStep = 'pick' | 'form' | 'fan';
   standalone: false,
 })
 export class ProfileSetupPage {
+  readonly appVersion = formatAppReleaseFullLabel();
   loading = true;
   wizardPath: WizardPath | null = null;
   selectedRole: ProfileRole | null = null;

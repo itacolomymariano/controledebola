@@ -17,6 +17,8 @@ export class EventDetailVotingPanelComponent {
   @Input() votesSubmitted = false;
   @Input() voteScores: Record<string, number | null> = {};
   @Input() voteScoreOptions: number[] = [];
+  /** Notas 10 ainda permitidas nesta cedula (max. 2 por evento). */
+  @Input() scoreTenRemaining = 2;
   @Input() savingVotes = false;
   @Input() isTeamMatch = false;
   @Input() homeTeamName?: string;

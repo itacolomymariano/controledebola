@@ -6,6 +6,7 @@ import { emptyAddress } from '../../core/models/address.model';
 import { PeladaSport } from '../../core/models/pelada.model';
 import { PeladaService } from '../../core/services/pelada.service';
 import { WizardTourService } from '../../core/services/wizard-tour.service';
+import { birthDateToIsoString, parseBirthDateIso } from '../../core/utils/birth-date.util';
 import { buildMissingFieldsMessage } from '../../core/utils/form-validation.util';
 
 @Component({
@@ -66,9 +67,7 @@ export class PeladaFormPage {
         sport: pelada.sport,
         memberCount: pelada.memberCount,
         monthlyFee: pelada.monthlyFee,
-        foundedDate: pelada.foundedAt
-          ? pelada.foundedAt.toISOString().slice(0, 10)
-          : '',
+        foundedDate: pelada.foundedAt ? birthDateToIsoString(pelada.foundedAt) : '',
         address: pelada.address,
       });
     }
@@ -110,7 +109,7 @@ export class PeladaFormPage {
     }
 
     const v = this.form.getRawValue();
-    const foundedAt = v.foundedDate ? new Date(v.foundedDate!) : undefined;
+    const foundedAt = v.foundedDate ? parseBirthDateIso(v.foundedDate) ?? undefined : undefined;
     const loading = await this.loadingCtrl.create({
       message: this.isEdit ? 'Salvando...' : 'Criando pelada...',
     });
@@ -141,7 +140,14 @@ export class PeladaFormPage {
           locationPhotoFile: this.locationPhotoFile ?? undefined,
         });
         this.wizardTour.completeStepById('pelada-admin-create');
-        await this.router.navigate(['/pelada', pelada.objectId]);
+        if (this.wizardTour.current?.id === 'pelada-admin-first-event') {
+          await this.router.navigate(['/event-create'], {
+            queryParams: { peladaId: pelada.objectId },
+            replaceUrl: true,
+          });
+        } else {
+          await this.router.navigate(['/pelada', pelada.objectId]);
+        }
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Nao foi possivel salvar.';

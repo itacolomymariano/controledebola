@@ -50,6 +50,8 @@ export interface MuralRankingEntry {
   combinedScore: number;
   /** Sort key ponderado (ex.: confronto 3x); nao exibir no card. */
   rankingScore?: number;
+  /** Avaliadores distintos (mural app, anticorrupcao). */
+  distinctVoterCount?: number;
 }
 
 export interface CreateMuralVotePayload {

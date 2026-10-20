@@ -28,6 +28,7 @@ import {
   toDateInputValue,
   toTimeInputValue,
 } from '../../../core/utils/invite-response-deadline.util';
+import { I18nService } from '../../../core/services/i18n.service';
 
 @Component({
   selector: 'app-event-role-hiring-panel',
@@ -75,8 +76,13 @@ export class EventRoleHiringPanelComponent implements OnChanges {
     private readonly loadingCtrl: LoadingController,
     private readonly toastCtrl: ToastController,
     private readonly cdr: ChangeDetectorRef,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly i18n: I18nService
   ) {}
+
+  private t(key: string, params?: Record<string, string | number>): string {
+    return this.i18n.t(key, params);
+  }
 
   get roleLabel(): string {
     return hireableRoleLabel(this.role);
@@ -308,7 +314,7 @@ export class EventRoleHiringPanelComponent implements OnChanges {
   }
 
   formatDate(date: Date): string {
-    return new Intl.DateTimeFormat('pt-BR', {
+    return new Intl.DateTimeFormat(this.i18n.locale, {
       day: '2-digit',
       month: 'short',
       hour: '2-digit',
@@ -369,7 +375,7 @@ export class EventRoleHiringPanelComponent implements OnChanges {
         return;
       }
 
-      const loading = await this.loadingCtrl.create({ message: 'Enviando convite...' });
+      const loading = await this.loadingCtrl.create({ message: this.t('hiring.sendingInvite') });
       await loading.present();
       try {
         if (this.isTeamMatchRefereeHiring) {
@@ -423,10 +429,10 @@ export class EventRoleHiringPanelComponent implements OnChanges {
         this.panelInteraction.emit(this.role);
         const toast = await this.toastCtrl.create({
           message: this.isTeamMatchRefereeHiring
-            ? 'Proposta enviada. Aguardando aprovacao do presidente adversario.'
+            ? this.t('hiring.toastRefereePending')
             : this.isTeamMatchAthleteHiring
-              ? 'Convocacao enviada. Aguardando resposta.'
-              : 'Convite enviado. Aguardando resposta.',
+              ? this.t('hiring.toastAthleteSent')
+              : this.t('hiring.toastInviteSent'),
           duration: 2500,
           color: 'success',
         });
@@ -435,7 +441,7 @@ export class EventRoleHiringPanelComponent implements OnChanges {
         await loading.dismiss();
       }
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Erro ao enviar convite.');
+      await this.showError(error instanceof Error ? error.message : this.t('hiring.inviteSendError'));
     } finally {
       this.sendingInvite = false;
       this.cdr.markForCheck();
@@ -447,7 +453,7 @@ export class EventRoleHiringPanelComponent implements OnChanges {
   ): Promise<boolean> {
     if (!this.event?.startTime || !this.event?.endTime) return true;
 
-    const checking = await this.loadingCtrl.create({ message: 'Verificando agenda...' });
+    const checking = await this.loadingCtrl.create({ message: this.t('hiring.checkingSchedule') });
     await checking.present();
     let conflict: ScheduleConflict | null;
     try {
@@ -469,13 +475,16 @@ export class EventRoleHiringPanelComponent implements OnChanges {
     return new Promise<boolean>((resolve) => {
       void this.alertCtrl
         .create({
-          header: 'Conflito de agenda',
-          message:
-            `${name} ja tem compromisso confirmado no evento "${conflict.eventName}" ` +
-            `no mesmo horario (${start} - ${end}). Deseja enviar o convite mesmo assim?`,
+          header: this.t('hiring.scheduleConflictHeader'),
+          message: this.t('hiring.scheduleConflictMessage', {
+            name,
+            event: conflict.eventName,
+            start,
+            end,
+          }),
           buttons: [
-            { text: 'Cancelar', role: 'cancel', handler: () => resolve(false) },
-            { text: 'Enviar mesmo assim', handler: () => resolve(true) },
+            { text: this.t('eventDetail.alert.cancel'), role: 'cancel', handler: () => resolve(false) },
+            { text: this.t('hiring.sendAnyway'), handler: () => resolve(true) },
           ],
         })
         .then((alert) => alert.present());
@@ -860,7 +869,11 @@ export class EventRoleHiringPanelComponent implements OnChanges {
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.t('eventDetail.alert.error'),
+      message,
+      buttons: [this.t('eventDetail.alert.ok')],
+    });
     await alert.present();
   }
 }

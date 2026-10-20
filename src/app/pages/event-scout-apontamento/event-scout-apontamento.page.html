@@ -137,16 +137,21 @@
                       [value]="statValue(athlete, 'goals')"
                       [readonly]="true"
                     ></app-scout-stat-counter>
+                    @if ((athlete.refereeGoals ?? 0) > 0) {
+                      <ion-note color="medium">
+                        {{ 'scout.apontamento.refereeGoalsHint' | t: { classified: scoutGoalsClassified(athlete), total: athlete.refereeGoals ?? 0 } }}
+                      </ion-note>
+                    }
                     <div class="scout-goal-actions">
                       <ion-button
                         size="small"
                         expand="block"
-                        [disabled]="isLocked"
+                        [disabled]="isLocked || !canClassifyMoreGoals(athlete)"
                         (click)="promptRegisterGoalForSelected()"
                       >
-                        Registrar gol convertido
+                        Registrar tipo de gol
                       </ion-button>
-                      @if (statValue(athlete, 'goals') > 0) {
+                      @if (showRemoveGoalAction(athlete)) {
                         <ion-button
                           size="small"
                           expand="block"
@@ -215,17 +220,22 @@
                   [readonly]="true"
                   [compact]="true"
                 ></app-scout-stat-counter>
+                @if ((athlete.refereeGoals ?? 0) > 0) {
+                  <ion-note color="medium">
+                    {{ 'scout.apontamento.refereeGoalsHint' | t: { classified: scoutGoalsClassified(athlete), total: athlete.refereeGoals ?? 0 } }}
+                  </ion-note>
+                }
 
                 <div class="scout-goal-actions scout-goal-actions--compact">
                   <ion-button
                     size="small"
                     expand="block"
-                    [disabled]="isLocked"
+                    [disabled]="isLocked || !canClassifyMoreGoals(athlete)"
                     (click)="promptRegisterGoal(athlete)"
                   >
-                    Registrar gol
+                    Registrar tipo de gol
                   </ion-button>
-                  @if (statValue(athlete, 'goals') > 0) {
+                  @if (showRemoveGoalAction(athlete)) {
                     <ion-button
                       size="small"
                       expand="block"

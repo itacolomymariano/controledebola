@@ -119,6 +119,31 @@
           </ion-label>
         </ion-item>
 
+        @if (profile.sumulaObservations?.length) {
+          <ion-list-header>
+            <ion-label>{{ 'athleteProfile.sumulaObservationsTitle' | t }}</ion-label>
+          </ion-list-header>
+          @for (entry of profile.sumulaObservations; track entry.eventId) {
+            <ion-item>
+              <ion-label class="ion-text-wrap">
+                <h3>{{ entry.eventName }}</h3>
+                @if (entry.peladaName || entry.eventDate) {
+                  <p>
+                    {{ entry.peladaName }}
+                    @if (entry.eventDate) {
+                      · {{ entry.eventDate | date: 'dd/MM/yyyy' }}
+                    }
+                  </p>
+                }
+                <p>{{ entry.observation }}</p>
+                @if (entry.yellowCards || entry.redCards) {
+                  <p>{{ 'athleteProfile.sumulaCards' | t }}: A {{ entry.yellowCards ?? 0 }} · V {{ entry.redCards ?? 0 }}</p>
+                }
+              </ion-label>
+            </ion-item>
+          }
+        }
+
         @if (teamMatchRecord && teamMatchRecord.matchesPlayed > 0) {
           <ion-list-header>
             <ion-label>Confrontos (atleta)</ion-label>

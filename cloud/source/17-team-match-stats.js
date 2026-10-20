@@ -115,11 +115,16 @@ async function resolveCoachTeamSideForStats(event, userId, reg) {
 
 async function computeUserTeamMatchRecord(userId, roleContext) {
   const userPtr = Parse.User.createWithoutData(userId);
-  const regQuery = new Parse.Query('EventRegistration')
-    .equalTo('user', userPtr)
-    .containedIn('role', roleContext === 'coach' ? ['coach'] : ['athlete', 'goalkeeper'])
-    .limit(500);
-  const registrations = await regQuery.find({ useMasterKey: true });
+  const roles = roleContext === 'coach' ? ['coach'] : ['athlete', 'goalkeeper'];
+  const regByUser = new Parse.Query('EventRegistration');
+  regByUser.equalTo('user', userPtr);
+  regByUser.containedIn('role', roles);
+  const regByParticipant = new Parse.Query('EventRegistration');
+  regByParticipant.equalTo('participantUserId', userId);
+  regByParticipant.containedIn('role', roles);
+  const registrations = await Parse.Query.or(regByUser, regByParticipant)
+    .limit(500)
+    .find({ useMasterKey: true });
   if (!registrations.length) {
     return { matchesPlayed: 0, wins: 0, losses: 0, draws: 0, winRatePercent: 0 };
   }

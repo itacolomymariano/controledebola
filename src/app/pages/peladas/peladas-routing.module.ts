@@ -3,10 +3,8 @@ import { RouterModule, Routes } from '@angular/router';
 import { HomeDirectoryPage } from './home-directory.page';
 import { HomeUsuarioPage } from './home-usuario.page';
 import { PeladasListPage } from './peladas-list.page';
-import { PeladasPage } from './peladas.page';
-
 const routes: Routes = [
-  { path: '', component: PeladasPage },
+  { path: '', redirectTo: '/tabs/home', pathMatch: 'full' },
   { path: 'lista', component: PeladasListPage },
   { path: 'confrontos', component: HomeDirectoryPage, data: { door: 'confrontos' } },
   { path: 'times', component: HomeDirectoryPage, data: { door: 'times' } },

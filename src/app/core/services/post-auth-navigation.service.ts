@@ -39,14 +39,14 @@ export class PostAuthNavigationService {
   async navigateAfterAuth(): Promise<void> {
     if (await this.storage.isProfileWizardComplete()) {
       void this.syncProfileWizardForCurrentUser();
-      await this.router.navigateByUrl('/tabs/peladas', { replaceUrl: true });
+      await this.router.navigateByUrl('/tabs/home', { replaceUrl: true });
       return;
     }
 
     const wizardPath = await this.storage.getWizardPath();
     if (!wizardPath) {
       void this.syncProfileWizardForCurrentUser();
-      await this.router.navigateByUrl('/tabs/peladas', { replaceUrl: true });
+      await this.router.navigateByUrl('/tabs/home', { replaceUrl: true });
       return;
     }
 
@@ -57,6 +57,6 @@ export class PostAuthNavigationService {
       return;
     }
 
-    await this.router.navigateByUrl('/tabs/peladas', { replaceUrl: true });
+    await this.router.navigateByUrl('/tabs/home', { replaceUrl: true });
   }
 }

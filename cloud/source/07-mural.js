@@ -99,6 +99,79 @@ function dedupeMuralVoteRowsByVoter(voteRows) {
 /** Confrontos (team_match) pesam 3x em votacao/pontuacao agregada do mural. */
 const TEAM_MATCH_MURAL_WEIGHT = 3;
 
+/** Mural do app: ranking de craque/goleiro com confianca estatistica (fase anticorrupcao). */
+const APP_MURAL_RANKING_PRIOR_WEIGHT = 5;
+const APP_MURAL_RANKING_PRIOR_MEAN = 7.5;
+const APP_MURAL_MIN_DISTINCT_VOTERS_FOR_FULL_WEIGHT = 3;
+const EVENT_MURAL_MAX_SCORE_TEN_COUNT = 2;
+
+function distinctVoterCountByTargetKey(voteRows) {
+  const map = new Map();
+  for (const vote of dedupeMuralVoteRowsByVoter(voteRows)) {
+    if (!vote.targetUserId || !vote.voterId) continue;
+    const key = `${vote.targetUserId}:${vote.targetRole || 'athlete'}`;
+    const set = map.get(key) || new Set();
+    set.add(String(vote.voterId));
+    map.set(key, set);
+  }
+  const out = new Map();
+  for (const [key, set] of map) out.set(key, set.size);
+  return out;
+}
+
+function athleteAppConfidenceRankingScore(entry, distinctVoters) {
+  const voteCount = Number(entry.voteCount || 0);
+  const avg = Number(entry.averageScore || 0);
+  if (voteCount <= 0) {
+    return Number(entry.rankingScore ?? entry.combinedScore ?? entry.totalScore ?? 0);
+  }
+  const shrunk =
+    (voteCount * avg + APP_MURAL_RANKING_PRIOR_WEIGHT * APP_MURAL_RANKING_PRIOR_MEAN) /
+    (voteCount + APP_MURAL_RANKING_PRIOR_WEIGHT);
+  const diversity =
+    distinctVoters >= APP_MURAL_MIN_DISTINCT_VOTERS_FOR_FULL_WEIGHT
+      ? 1
+      : distinctVoters / APP_MURAL_MIN_DISTINCT_VOTERS_FOR_FULL_WEIGHT;
+  return shrunk * diversity;
+}
+
+function applyAppMuralRankingConfidence(rankings, voteRowsForScope, topN = 10) {
+  const distinctByKey = distinctVoterCountByTargetKey(voteRowsForScope);
+  const result = { ...rankings };
+  for (const role of ['athlete', 'goalkeeper']) {
+    const list = [...(rankings[role] || [])];
+    list.sort((a, b) => {
+      const keyA = `${a.userId}:${role}`;
+      const keyB = `${b.userId}:${role}`;
+      const scoreA = athleteAppConfidenceRankingScore(a, distinctByKey.get(keyA) || 0);
+      const scoreB = athleteAppConfidenceRankingScore(b, distinctByKey.get(keyB) || 0);
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      const voteDiff = (b.voteCount || 0) - (a.voteCount || 0);
+      if (voteDiff !== 0) return voteDiff;
+      return (b.averageScore || 0) - (a.averageScore || 0);
+    });
+    result[role] = list.slice(0, topN).map((entry) => {
+      const distinctVoterCount = distinctByKey.get(`${entry.userId}:${role}`) || 0;
+      return {
+        ...entry,
+        distinctVoterCount,
+        confidenceRankingScore: athleteAppConfidenceRankingScore(entry, distinctVoterCount),
+      };
+    });
+  }
+  return result;
+}
+
+function assertEventMuralBallotScoreTenLimit(entries) {
+  const tens = entries.filter((entry) => Number(entry.score) === 10).length;
+  if (tens > EVENT_MURAL_MAX_SCORE_TEN_COUNT) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      `Voce so pode dar nota 10 para no maximo ${EVENT_MURAL_MAX_SCORE_TEN_COUNT} jogadores neste evento.`
+    );
+  }
+}
+
 async function attachTeamMatchVoteWeights(voteRows) {
   const eventIds = [
     ...new Set(
@@ -971,6 +1044,7 @@ function buildMuralLocationTopRankingsFromUsers(users, fullRankings, includeStat
 
 async function loadEventMuralParticipantRows(eventId) {
   const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
+  const participationFee = Number(event.get('participationFee') || 0);
   const registrations = await new Parse.Query('EventRegistration')
     .equalTo('event', event)
     .include('user')
@@ -981,6 +1055,7 @@ async function loadEventMuralParticipantRows(eventId) {
   const toSave = [];
 
   for (const registration of registrations) {
+    if (!computeRegistrationEffectiveConfirmation(registration, participationFee)) continue;
     const resolved = await resolveRegistrationParticipantUserId(registration);
     if (!resolved.userId) continue;
     if (resolved.shouldSave) toSave.push(registration);
@@ -998,6 +1073,14 @@ async function loadEventMuralParticipantRows(eventId) {
     const birthDate = user && user.get ? user.get('birthDate') : undefined;
     const address = user && user.get ? user.get('address') : undefined;
     const avatarUrl = resolveStoredAvatarUrl(user, registration);
+    const favoriteProTeam =
+      user && user.get
+        ? readUserFavoriteProTeam(user)
+        : undefined;
+    const favoriteAmateurTeam =
+      user && user.get
+        ? readUserFavoriteAmateurTeam(user)
+        : undefined;
 
     if (!byUser[resolved.userId]) {
       byUser[resolved.userId] = {
@@ -1012,6 +1095,8 @@ async function loadEventMuralParticipantRows(eventId) {
         avatarUrl,
         birthDate: birthDate ? birthDate.toISOString() : undefined,
         address: address || undefined,
+        favoriteProTeam: favoriteProTeam || undefined,
+        favoriteAmateurTeam: favoriteAmateurTeam || undefined,
         proFootballIdol:
           user && user.get ? (user.get('proFootballIdol') || '').trim() || undefined : undefined,
         amateurFootballIdol:
@@ -1032,6 +1117,24 @@ async function loadEventMuralParticipantRows(eventId) {
 
   if (toSave.length) {
     await Parse.Object.saveAll(toSave, { useMasterKey: true });
+  }
+
+  const userIdList = Object.keys(byUser);
+  if (userIdList.length) {
+    const users = userIdList.map((id) => Parse.User.createWithoutData(id));
+    const athleteQuery = new Parse.Query('AthleteProfile');
+    athleteQuery.containedIn('user', users);
+    athleteQuery.limit(Math.min(userIdList.length, 500));
+    const athleteProfiles = await athleteQuery.find({ useMasterKey: true });
+    for (const athleteProfile of athleteProfiles) {
+      const userPtr = athleteProfile.get('user');
+      const uid = userPtr && userPtr.id ? String(userPtr.id) : '';
+      if (!uid || !byUser[uid]) continue;
+      const height = Number(athleteProfile.get('height') || 0);
+      if (height > 0) {
+        byUser[uid].heightCm = height;
+      }
+    }
   }
 
   return Object.values(byUser).sort((a, b) => a.userName.localeCompare(b.userName, 'pt-BR'));
@@ -1289,6 +1392,10 @@ function buildMuralParticipantProfile(user, athleteProfile, amateurTeam, fanProf
     birthDate: birthDate ? birthDate.toISOString() : undefined,
     age,
     ageBand: getAgeBandFromAge(age),
+    heightCm:
+      athleteProfile && Number(athleteProfile.get('height') || 0) > 0
+        ? Number(athleteProfile.get('height'))
+        : undefined,
   };
 }
 
@@ -2613,6 +2720,7 @@ async function buildAppMuralBucketPayload(
   rankings = await enrichMuralRankingNames(scope, undefined, rankings);
   rankings = await finalizeEventGoalkeeperRankings(rankings);
   rankings = await finalizeMuralRankingsAgeTiebreak(rankings);
+  rankings = applyAppMuralRankingConfidence(rankings, votes, 10);
 
   let voteAggregates = buildMuralVoteAggregatesFromRows(votes);
 
@@ -2879,7 +2987,32 @@ async function loadRecentAppParticipantRows(limit, locationFilter) {
   return Object.values(byUser).sort((a, b) => a.userName.localeCompare(b.userName, 'pt-BR'));
 }
 
+function buildSyntheticPerformancesForScoutAnalytics(performances) {
+  const scoutPerfs = (performances || []).filter(hasScoutApontamentoSaved);
+  const source = scoutPerfs.length ? scoutPerfs : performances || [];
+  if (typeof buildMergedScoutStatsByParticipantId !== 'function' || !source.length) {
+    return source;
+  }
+  const merged = buildMergedScoutStatsByParticipantId(source);
+  if (!merged.size) {
+    return source;
+  }
+  const rows = [];
+  for (const [userId, stats] of merged.entries()) {
+    const perf = new Parse.Object('EventPerformance');
+    perf.set('participantUserId', userId);
+    for (const field of SCOUT_APONTAMENTO_FIELDS) {
+      if (field === 'goals') continue;
+      perf.set(field, Number(stats[field] || 0));
+    }
+    perf.set('goals', Number(stats.goals || 0));
+    rows.push(perf);
+  }
+  return rows.length ? rows : source;
+}
+
 async function buildMuralPerformanceAnalyticsPayload(scope, scopeId, performances) {
+  performances = buildSyntheticPerformancesForScoutAnalytics(performances);
   let totalShotsOn = 0;
   let totalShotsOff = 0;
   let totalGoals = 0;
@@ -2887,6 +3020,10 @@ async function buildMuralPerformanceAnalyticsPayload(scope, scopeId, performance
   let totalPassesMiss = 0;
   let totalFouls = 0;
   const athleteIds = new Set();
+  const goalTypes = {};
+  for (const field of SCOUT_GOAL_TYPE_FIELDS) {
+    goalTypes[field] = 0;
+  }
 
   for (const perf of performances) {
     const userId = getPerformanceParticipantId(perf);
@@ -2898,6 +3035,9 @@ async function buildMuralPerformanceAnalyticsPayload(scope, scopeId, performance
     totalPassesOk += Number(stats.passesCompleted || 0);
     totalPassesMiss += Number(stats.passesMissed || 0);
     totalFouls += Number(stats.foulsCommitted || 0);
+    for (const field of SCOUT_GOAL_TYPE_FIELDS) {
+      goalTypes[field] += Number(stats[field] || 0);
+    }
   }
 
   const totalShots = totalShotsOn + totalShotsOff;
@@ -2929,6 +3069,7 @@ async function buildMuralPerformanceAnalyticsPayload(scope, scopeId, performance
       foulsCommitted: totalFouls,
       athleteCount: athleteIds.size,
     },
+    goalTypes,
   };
 
   return enrichMuralPerformanceAnalytics(scope, scopeId, analytics);
@@ -3022,11 +3163,16 @@ Parse.Cloud.define('getMuralAppDashboard', async (request) => {
   const scope = 'app';
   const locationFilter = normalizeMuralLocationFilter(request.params);
 
-  const [participants, performanceRaw, voteRows] = await Promise.all([
+  const [participants, performanceRaw, voteRowsRaw] = await Promise.all([
     loadRecentAppParticipantRows(participantLimit, locationFilter),
     loadMuralPerformanceRows(scope, undefined, locationFilter),
     mapMuralVoteRowsForScope(scope, undefined, locationFilter),
   ]);
+
+  const voteRows =
+    typeof attachVoterReliabilityWeightsFromRows === 'function'
+      ? attachVoterReliabilityWeightsFromRows(voteRowsRaw)
+      : voteRowsRaw;
 
   const performanceRows = await mapPerformanceRowsForMural(scope, undefined, performanceRaw);
 
@@ -3255,6 +3401,96 @@ Parse.Cloud.define('getEventMuralVoteSummary', async (request) => {
   };
 });
 
+function muralParticipantHeightEligible(row) {
+  const roles = row.roles || [];
+  return roles.includes('athlete') || roles.includes('goalkeeper');
+}
+
+function buildMuralShowcaseFromParticipantRow(row, score, scoreLabel) {
+  if (!row || !row.userId) return null;
+  return {
+    userId: String(row.userId),
+    displayName: (row.apelido || row.userName || 'Participante').trim(),
+    avatarUrl: row.avatarUrl || undefined,
+    profileLabel: 'Atleta',
+    favoriteProTeam: row.favoriteProTeam || undefined,
+    favoriteAmateurTeam: row.favoriteAmateurTeam || undefined,
+    proFootballIdol: row.proFootballIdol || undefined,
+    amateurFootballIdol: row.amateurFootballIdol || undefined,
+    score,
+    scoreLabel,
+  };
+}
+
+function buildEventMuralCuriositiesFromRows(rows) {
+  const counts = new Map();
+  for (const row of rows || []) {
+    const teamName = String(row.favoriteAmateurTeam || '').trim();
+    if (!teamName || teamName.toLowerCase() === 'sem time') continue;
+    counts.set(teamName, (counts.get(teamName) || 0) + 1);
+  }
+  let favoriteAmateurTeam = null;
+  const sortedTeams = [...counts.entries()].sort((a, b) => {
+    if (b[1] !== a[1]) return b[1] - a[1];
+    return a[0].localeCompare(b[0], 'pt-BR');
+  });
+  if (sortedTeams.length) {
+    favoriteAmateurTeam = { teamName: sortedTeams[0][0], count: sortedTeams[0][1] };
+  }
+
+  const heightRows = [];
+  for (const row of rows || []) {
+    if (!muralParticipantHeightEligible(row)) continue;
+    const heightCm = Number(row.heightCm || 0);
+    if (heightCm > 0) {
+      heightRows.push({ row, heightCm });
+    }
+  }
+  heightRows.sort((a, b) => {
+    const diff = a.heightCm - b.heightCm;
+    if (diff !== 0) return diff;
+    const nameA = (a.row.apelido || a.row.userName || '').trim();
+    const nameB = (b.row.apelido || b.row.userName || '').trim();
+    return nameA.localeCompare(nameB, 'pt-BR');
+  });
+
+  const shortest = heightRows.length
+    ? buildMuralShowcaseFromParticipantRow(
+        heightRows[0].row,
+        heightRows[0].heightCm,
+        'Altura (cm)'
+      )
+    : null;
+  const tallest = heightRows.length
+    ? buildMuralShowcaseFromParticipantRow(
+        heightRows[heightRows.length - 1].row,
+        heightRows[heightRows.length - 1].heightCm,
+        'Altura (cm)'
+      )
+    : null;
+
+  return {
+    participants: rows,
+    favoriteAmateurTeam,
+    tallest,
+    shortest,
+  };
+}
+
+Parse.Cloud.define('getEventMuralCuriosities', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+
+  const eventId = request.params.eventId ? String(request.params.eventId) : '';
+  if (!eventId) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'eventId obrigatorio.');
+  }
+
+  const rows = await loadEventMuralParticipantRows(eventId);
+  return buildEventMuralCuriositiesFromRows(rows);
+});
+
 Parse.Cloud.define('listEventMuralParticipants', async (request) => {
   if (!request.user) {
     throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
@@ -3268,6 +3504,7 @@ Parse.Cloud.define('listEventMuralParticipants', async (request) => {
   return loadEventMuralParticipantRows(eventId);
 });
 
+/** Uma cedula por conta Parse (voter), independente de quantas inscricoes/perfis no evento. */
 async function assertConfirmedEventVoter(user, event) {
   const ownRegistration = await new Parse.Query('EventRegistration')
     .equalTo('event', event)
@@ -3304,6 +3541,14 @@ async function voterHasEventMuralVotes(eventId, voterId, period) {
 }
 
 async function createEventMuralVoteForTarget(user, event, eventId, period, entry) {
+  const partOfBallot = entry._ballotBatch === true;
+  if (!partOfBallot && (await voterHasEventMuralVotes(eventId, user.id, period))) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Um voto por conta; trocar de perfil no app nao permite votar de novo neste evento.'
+    );
+  }
+
   const registrationId = entry.registrationId ? String(entry.registrationId) : '';
   const targetRole = entry.targetRole ? String(entry.targetRole) : '';
   const score = Number(entry.score);
@@ -3460,10 +3705,15 @@ Parse.Cloud.define('submitEventMuralBallot', async (request) => {
     );
   }
 
+  assertEventMuralBallotScoreTenLimit(entries);
+
   const created = [];
   const seenTargets = new Set();
   for (const entry of entries.slice(0, 200)) {
-    const result = await createEventMuralVoteForTarget(user, event, eventId, period, entry);
+    const result = await createEventMuralVoteForTarget(user, event, eventId, period, {
+      ...entry,
+      _ballotBatch: true,
+    });
     const dedupeKey = result.targetUserId + ':' + result.targetRole;
     if (seenTargets.has(dedupeKey)) continue;
     seenTargets.add(dedupeKey);
@@ -3939,57 +4189,5 @@ Parse.Cloud.define('getMuralPerformanceAnalytics', async (request) => {
   const scope = String(request.params.scope || 'app');
   const scopeId = request.params.scopeId ? String(request.params.scopeId) : undefined;
   const performances = await loadMuralPerformanceRows(scope, scopeId);
-
-  let totalShotsOn = 0;
-  let totalShotsOff = 0;
-  let totalGoals = 0;
-  let totalPassesOk = 0;
-  let totalPassesMiss = 0;
-  let totalFouls = 0;
-  const athleteIds = new Set();
-
-  for (const perf of performances) {
-    const userId = getPerformanceParticipantId(perf);
-    if (userId) athleteIds.add(userId);
-    const stats = mapPerformanceToScoutStats(perf);
-    totalShotsOn += Number(stats.shotsOnTarget || 0);
-    totalShotsOff += Number(stats.shotsOffTarget || 0);
-    totalGoals += Number(stats.goals || 0);
-    totalPassesOk += Number(stats.passesCompleted || 0);
-    totalPassesMiss += Number(stats.passesMissed || 0);
-    totalFouls += Number(stats.foulsCommitted || 0);
-  }
-
-  const totalShots = totalShotsOn + totalShotsOff;
-  const totalPasses = totalPassesOk + totalPassesMiss;
-
-  const analytics = {
-    qualitative: {
-      shotsOnTarget: buildPerformanceTopEntries(performances, 'shotsOnTarget'),
-      totalShots: buildPerformanceTopEntries(performances, 'totalShots'),
-      assists: buildPerformanceTopEntries(performances, 'assists'),
-    },
-    quantitative: {
-      totalShots: buildPerformanceTopEntries(performances, 'totalShots'),
-      passesCompleted: buildPerformanceTopEntries(performances, 'passesCompleted'),
-      foulsSuffered: buildPerformanceTopEntries(performances, 'foulsSuffered'),
-      foulsCommitted: buildPerformanceTopEntries(performances, 'foulsCommitted'),
-      passesMissed: buildPerformanceTopEntries(performances, 'passesMissed'),
-    },
-    charts: {
-      shotsOnTarget: totalShotsOn,
-      shotsOffTarget: totalShotsOff,
-      goals: totalGoals,
-      totalShots,
-      totalPasses,
-      passesCompleted: totalPassesOk,
-      shotAccuracyPct: totalShots ? Math.round((totalShotsOn / totalShots) * 100) : 0,
-      goalConversionPct: totalShotsOn ? Math.round((totalGoals / totalShotsOn) * 100) : 0,
-      passAccuracyPct: totalPasses ? Math.round((totalPassesOk / totalPasses) * 100) : 0,
-      foulsCommitted: totalFouls,
-      athleteCount: athleteIds.size,
-    },
-  };
-
-  return enrichMuralPerformanceAnalytics(scope, scopeId, analytics);
+  return buildMuralPerformanceAnalyticsPayload(scope, scopeId, performances);
 });

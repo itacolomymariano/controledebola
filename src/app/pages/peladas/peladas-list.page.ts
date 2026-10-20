@@ -84,7 +84,7 @@ export class PeladasListPage implements OnDestroy {
   }
 
   goHub(): void {
-    void this.router.navigateByUrl('/tabs/peladas');
+    void this.router.navigateByUrl('/tabs/home');
   }
 
   createPelada(): void {
@@ -92,7 +92,8 @@ export class PeladasListPage implements OnDestroy {
   }
 
   openPelada(row: PeladaListRow): void {
-    void this.router.navigate(['/pelada', row.pelada.objectId]);
+    const queryParams = this.wizardPeladaJoin ? { wizard: 'peladaJoin' } : undefined;
+    void this.router.navigate(['/pelada', row.pelada.objectId], { queryParams });
   }
 
   retry(): void {

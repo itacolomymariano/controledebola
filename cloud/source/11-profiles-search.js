@@ -261,6 +261,7 @@ function mapAthleteProfileToHiringCandidate(profile, user) {
     state: profile.get('userState') || address.state || undefined,
     peladaRate: profile.get('peladaRate') ?? undefined,
     matchRate: profile.get('teamMatchRate') ?? undefined,
+    primaryPosition: profile.get('primaryPosition') || undefined,
   };
 }
 
@@ -296,7 +297,12 @@ Parse.Cloud.define('listAthleteHiringCandidates', async (request) => {
     }
 
     const candidate = mapAthleteProfileToHiringCandidate(profile, user);
-    if (!matchesAthleteHiringSearch([candidate.apelido, candidate.userName, candidate.city, candidate.state], search)) {
+    if (
+      !matchesAthleteHiringSearch(
+        [candidate.apelido, candidate.userName, candidate.primaryPosition, candidate.city, candidate.state],
+        search
+      )
+    ) {
       continue;
     }
     byUserId.set(candidate.userId, candidate);
@@ -352,6 +358,7 @@ Parse.Cloud.define('listAthleteHiringCandidates', async (request) => {
       state: registration.get('userState') || address.state || undefined,
       peladaRate: athlete && athlete.get ? athlete.get('peladaRate') ?? undefined : undefined,
       matchRate: athlete && athlete.get ? athlete.get('teamMatchRate') ?? undefined : undefined,
+      primaryPosition: athlete && athlete.get ? athlete.get('primaryPosition') || undefined : undefined,
     });
   }
 
@@ -438,9 +445,13 @@ Parse.Cloud.define('getAthletePublicProfile', async (request) => {
   teamQuery.equalTo('president', user);
   const amateurTeams = await teamQuery.find({ useMasterKey: true });
 
-  const regQuery = new Parse.Query('EventRegistration');
-  regQuery.equalTo('user', user);
-  regQuery.equalTo('role', 'athlete');
+  const regByUser = new Parse.Query('EventRegistration');
+  regByUser.equalTo('user', user);
+  regByUser.containedIn('role', ['athlete', 'goalkeeper']);
+  const regByParticipant = new Parse.Query('EventRegistration');
+  regByParticipant.equalTo('participantUserId', userId);
+  regByParticipant.containedIn('role', ['athlete', 'goalkeeper']);
+  const regQuery = Parse.Query.or(regByUser, regByParticipant);
   regQuery.include('event');
   regQuery.include('event.pelada');
   regQuery.limit(2000);
@@ -483,19 +494,20 @@ Parse.Cloud.define('getAthletePublicProfile', async (request) => {
     }
   }
 
-  const perfQuery = new Parse.Query('EventPerformance');
-  perfQuery.equalTo('user', user);
-  perfQuery.limit(2000);
-  const performances = await perfQuery.find({ useMasterKey: true });
-
-  let goals = 0;
-  let yellowCards = 0;
-  let redCards = 0;
-  for (const perf of performances) {
-    goals += Number(perf.get('goals') ?? 0);
-    yellowCards += Number(perf.get('yellowCards') ?? 0);
-    redCards += Number(perf.get('redCards') ?? 0);
-  }
+  const performances =
+    typeof loadEventPerformancesForAthleteUserId === 'function'
+      ? await loadEventPerformancesForAthleteUserId(userId, 2000)
+      : await new Parse.Query('EventPerformance')
+          .equalTo('user', user)
+          .limit(2000)
+          .find({ useMasterKey: true });
+  const sumulaTotals =
+    typeof aggregateRefereeSumulaCareerStats === 'function'
+      ? aggregateRefereeSumulaCareerStats(performances, userId)
+      : { goals: 0, yellowCards: 0, redCards: 0 };
+  const goals = sumulaTotals.goals;
+  const yellowCards = sumulaTotals.yellowCards;
+  const redCards = sumulaTotals.redCards;
 
   const craquePeladas = [];
   for (const peladaId of peladaIds) {
@@ -511,6 +523,11 @@ Parse.Cloud.define('getAthletePublicProfile', async (request) => {
     user,
     amateurTeams[0] ? amateurTeams[0].get('name') : undefined
   );
+
+  const sumulaObservations =
+    typeof collectRefereeObservationsForUser === 'function'
+      ? await collectRefereeObservationsForUser(userId)
+      : [];
 
   return {
     userId,
@@ -542,6 +559,7 @@ Parse.Cloud.define('getAthletePublicProfile', async (request) => {
     peladaRate: athleteProfile.get('peladaRate') ?? undefined,
     teamMatchRate: athleteProfile.get('teamMatchRate') ?? undefined,
     primaryPosition: athleteProfile.get('primaryPosition') || '',
+    sumulaObservations: sumulaObservations.slice(0, 10),
   };
 });
 
@@ -559,9 +577,13 @@ Parse.Cloud.define('getAthleteActivityIndicators', async (request) => {
   windowStart.setMonth(windowStart.getMonth() - months);
 
   const user = Parse.User.createWithoutData(userId);
-  const registrations = await new Parse.Query('EventRegistration')
-    .equalTo('user', user)
-    .containedIn('role', ['athlete', 'goalkeeper'])
+  const regByUser = new Parse.Query('EventRegistration');
+  regByUser.equalTo('user', user);
+  regByUser.containedIn('role', ['athlete', 'goalkeeper']);
+  const regByParticipant = new Parse.Query('EventRegistration');
+  regByParticipant.equalTo('participantUserId', userId);
+  regByParticipant.containedIn('role', ['athlete', 'goalkeeper']);
+  const registrations = await Parse.Query.or(regByUser, regByParticipant)
     .include('event')
     .limit(2000)
     .find({ useMasterKey: true });

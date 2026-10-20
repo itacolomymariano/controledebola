@@ -50,7 +50,7 @@ export class AppComponent implements OnInit {
     void this.deepLinkService.start();
   }
 
-  /** Android 15+ (targetSdk 36) desenha atras da barra do sistema; sem inset o rodape fica tapado. */
+  /** Android: rodape com --app-bottom-inset; topo = WebView abaixo da status bar (layout do manual, sem faixa azul). */
   private async configureNativeChrome(): Promise<void> {
     if (!Capacitor.isNativePlatform()) return;
     if (Capacitor.getPlatform() !== 'android') return;

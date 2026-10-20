@@ -95,6 +95,18 @@ Cole cada valor **em uma unica linha** no secret correspondente.
 | Push/PR em `main`/`master` (paths do workflow) | **Simulator** (valida compilacao) |
 | Actions → **iOS Capacitor Build** → Run workflow | Escolher `simulator` ou `release-ipa` |
 
+### Antes de `release-ipa` (evitar falha no TestFlight)
+
+O IPA usa **`CURRENT_PROJECT_VERSION` = `versionCode`** de [`.app-release-state.json`](../.app-release-state.json) (igual ao Android). A Apple exige numero **maior** que qualquer build ja enviado.
+
+1. TestFlight / App Store Connect → ultimo **Build** (ex. 208).
+2. Local: `versionCode` no JSON **>** esse numero (`node scripts/bump-app-release.js` ou `npm run build`).
+3. **Commit + push** de `.app-release-state.json`, `src/app/core/constants/app-release.ts` e `android/app/build.gradle`.
+4. Dispare o workflow na `main` atualizada; no log: `iOS version … (NNN)` com `NNN` novo.
+5. Nao reexecute (*Re-run*) um job antigo sem bump commitado.
+
+Ver tambem checklist em [AGENTS.md](../AGENTS.md) (secao iOS).
+
 ## 4. Artefatos
 
 Apos o job, em **Summary → Artifacts**:
@@ -138,6 +150,7 @@ Falha de **validacao do YAML** (nao do Xcode). Tipico: usar `inputs.*` em evento
 | IPA nao aparece no artifact | Abrir log do step `Build iOS (Release IPA)`; conferir Team ID do perfil |
 | `IONCameraLib does not support provisioning profiles` | Nao passar `PROVISIONING_PROFILE` no `xcodebuild`. O CI aplica o perfil so no target App (`scripts/apply-ios-app-target-signing.js`) |
 | `Node.js 20 is deprecated` em `import-codesign-certs` | Aviso, nao falha. O workflow ja usa `@v7` (Node 24). Nao precisa gerar outro IPA so por isso |
+| `bundle version must be higher than the previously uploaded version` / `previousBundleVersion` / `ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE` (409 no altool) | O `versionCode` commitado no GitHub e **<=** ultimo build TestFlight. Siga a checklist da secao 3; bump + commit + push; **novo** workflow (nao Re-run do mesmo SHA). Conferir `meta.previousBundleVersion` na mensagem de erro |
 
 ## 8. Proximos passos (fora deste workflow)
 

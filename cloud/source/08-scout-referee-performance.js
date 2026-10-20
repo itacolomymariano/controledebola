@@ -654,36 +654,26 @@ async function assertConfirmedAthleteInEvent(event, athleteUserId) {
 }
 
 async function assertCanAccessScoutApontamento(user, eventId) {
-  try {
-    const result = await assertConfirmedScoutForEvent(user, eventId, true);
-    return { ...result, viewOnly: false };
-  } catch (scoutError) {
-    const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
-    const participationFee = Number(event.get('participationFee') || 0);
+  const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
+  const participationFee = Number(event.get('participationFee') || 0);
 
-    const registration = await new Parse.Query('EventRegistration')
-      .equalTo('event', event)
-      .equalTo('user', user)
-      .first({ useMasterKey: true });
+  const scoutRegistration = await new Parse.Query('EventRegistration')
+    .equalTo('event', event)
+    .equalTo('user', user)
+    .equalTo('role', 'scout')
+    .first({ useMasterKey: true });
 
-    if (!registration || !computeRegistrationEffectiveConfirmation(registration, participationFee)) {
-      throw scoutError;
-    }
+  const isConfirmedScout =
+    scoutRegistration &&
+    computeRegistrationEffectiveConfirmation(scoutRegistration, participationFee);
 
-    const savedPerf = await new Parse.Query('EventPerformance')
-      .equalTo('event', event)
-      .equalTo('scoutApontamentoSaved', true)
-      .first({ useMasterKey: true });
-
-    if (!savedPerf) {
-      throw new Parse.Error(
-        Parse.Error.OPERATION_FORBIDDEN,
-        'Apontamento scout ainda nao disponivel para consulta.'
-      );
-    }
-
-    return { event, scoutRegistration: null, viewOnly: true };
+  if (isConfirmedScout) {
+    const inWindow = isWithinApontamentoWindow(event, 'scoutApontamento');
+    const viewOnly = !!event.get('isFinished') || !inWindow;
+    return { event, scoutRegistration, viewOnly };
   }
+
+  return { event, scoutRegistration: null, viewOnly: true };
 }
 
 Parse.Cloud.define('eventHasScoutApontamento', async (request) => {
@@ -740,6 +730,7 @@ Parse.Cloud.define('getScoutApontamentoBoard', async (request) => {
     .find({ useMasterKey: true });
 
   const perfStatsByParticipantId = buildMergedScoutStatsByParticipantId(performances);
+  const refereeStatsByParticipantId = buildMergedRefereeStatsByParticipantId(performances);
 
   const assignedScouts = await new Parse.Query('EventRegistration')
     .equalTo('event', event)
@@ -763,6 +754,8 @@ Parse.Cloud.define('getScoutApontamentoBoard', async (request) => {
     const row = mapRegistrationForEventListItem(registration, eventId, participationFee);
     const stats =
       perfStatsByParticipantId.get(resolved.userId) || emptyScoutApontamentoStats();
+    const refereeRow = refereeStatsByParticipantId.get(resolved.userId);
+    const refereeGoals = refereeRow ? Math.max(0, Number(refereeRow.goals || 0)) : 0;
 
     athletes.push({
       userId: resolved.userId,
@@ -773,6 +766,7 @@ Parse.Cloud.define('getScoutApontamentoBoard', async (request) => {
       primaryPosition: row.primaryPosition || undefined,
       isAssignedToAnotherScout:
         assignedAthleteIds.has(resolved.userId) && resolved.userId !== assignedAthleteUserId,
+      refereeGoals,
       stats,
     });
   }
@@ -905,6 +899,28 @@ Parse.Cloud.define('incrementScoutApontamento', async (request) => {
 
   const pelada = event.get('pelada');
   let perf = await findEventPerformanceForParticipant(event, athleteUserId, pelada);
+
+  if (SCOUT_GOAL_TYPE_FIELDS.includes(field)) {
+    const refereeGoals = readRefereeOverlapStat(perf, 'goals');
+    let typedNow = 0;
+    for (const goalField of SCOUT_GOAL_TYPE_FIELDS) {
+      typedNow += Number(perf.get(goalField) || 0);
+    }
+    if (delta > 0) {
+      if (refereeGoals <= 0) {
+        throw new Parse.Error(
+          Parse.Error.VALIDATION_ERROR,
+          'Gols a favor vem da sumula do juiz. Aguarde o arbitro registrar o gol.'
+        );
+      }
+      if (typedNow + delta > refereeGoals) {
+        throw new Parse.Error(
+          Parse.Error.VALIDATION_ERROR,
+          `Classifique no maximo ${refereeGoals} gol(s) conforme a sumula do juiz.`
+        );
+      }
+    }
+  }
 
   const storageField = SCOUT_OVERLAP_STORAGE_FIELDS[field] || field;
   let current = Number(perf.get(storageField));
@@ -1328,6 +1344,51 @@ function mapPerformanceToRefereeSumula(perf) {
   };
 }
 
+function performanceMatchesAthleteUserId(perf, userId) {
+  const wanted = String(userId || '').trim();
+  if (!wanted) return false;
+  if (typeof historyPerformanceMatchesUser === 'function') {
+    return historyPerformanceMatchesUser(perf, wanted);
+  }
+  return collectPerformanceParticipantKeys(perf).some((key) => String(key) === wanted);
+}
+
+async function loadEventPerformancesForAthleteUserId(userId, limit) {
+  const cap = Math.min(Math.max(Number(limit) || 2000, 1), 2000);
+  const byUser = new Parse.Query('EventPerformance');
+  byUser.equalTo('user', Parse.User.createWithoutData(userId));
+  const byParticipant = new Parse.Query('EventPerformance');
+  byParticipant.equalTo('participantUserId', userId);
+  const rows = await Parse.Query.or(byUser, byParticipant).limit(cap).find({ useMasterKey: true });
+  const seen = new Set();
+  const out = [];
+  for (const perf of rows) {
+    if (!perf.id || seen.has(perf.id)) continue;
+    seen.add(perf.id);
+    out.push(perf);
+  }
+  return out;
+}
+
+/** Totais de carreira a partir da sumula do arbitro (nao scout). */
+function aggregateRefereeSumulaCareerStats(performances, userId) {
+  let goals = 0;
+  let yellowCards = 0;
+  let redCards = 0;
+  const seen = new Set();
+  for (const perf of performances || []) {
+    if (!perf || !perf.id || seen.has(perf.id)) continue;
+    seen.add(perf.id);
+    if (!performanceHasRefereeSumulaData(perf)) continue;
+    if (!performanceMatchesAthleteUserId(perf, userId)) continue;
+    const stats = mapPerformanceToRefereeSumula(perf);
+    goals += Number(stats.goals || 0);
+    yellowCards += Number(stats.yellowCards || 0);
+    redCards += Number(stats.redCards || 0);
+  }
+  return { goals, yellowCards, redCards };
+}
+
 async function assertCanViewRefereeSumula(user, eventId) {
   const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
   const participationFee = Number(event.get('participationFee') || 0);
@@ -1350,39 +1411,7 @@ async function assertCanViewRefereeSumula(user, eventId) {
 
   const canEdit = isReferee && !finished && withinSumulaWindow;
 
-  // Confronto: qualquer usuario logado consulta; so o arbitro edita na janela.
-  if (isTeamMatch) {
-    return { event, locked, canEdit };
-  }
-
-  const eventAdmin = event.get('admin');
-  if (eventAdmin && eventAdmin.id === user.id) {
-    return { event, locked, canEdit: false };
-  }
-
-  const pelada = event.get('pelada');
-  if (pelada && pelada.id) {
-    const peladaObj = await new Parse.Query('Pelada').get(pelada.id, { useMasterKey: true });
-    const peladaAdmin = peladaObj.get('admin');
-    if (peladaAdmin && peladaAdmin.id === user.id) {
-      return { event, locked, canEdit: false };
-    }
-  }
-
-  if (!registration || !computeRegistrationEffectiveConfirmation(registration, participationFee)) {
-    throw new Parse.Error(
-      Parse.Error.OPERATION_FORBIDDEN,
-      'Voce nao tem permissao para consultar a sumula deste evento.'
-    );
-  }
-
-  if (!finished && !isReferee) {
-    throw new Parse.Error(
-      Parse.Error.OPERATION_FORBIDDEN,
-      'A sumula fica disponivel para consulta apos o encerramento do evento.'
-    );
-  }
-
+  // Pelada e confronto: qualquer usuario logado consulta; so o arbitro edita na janela.
   return { event, locked, canEdit };
 }
 

@@ -12,13 +12,16 @@
 #   public *;
 #}
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Preserve line numbers for Play Console deobfuscation / crash reports.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
 # Capacitor / WebView
 -keep class com.getcapacitor.** { *; }
 -keep @com.getcapacitor.annotation.CapacitorPlugin class * { *; }
+
+# Capacitor community plugins
+-keep class com.capacitorjs.plugins.** { *; }
 
 # Firebase (push)
 -keep class com.google.firebase.** { *; }

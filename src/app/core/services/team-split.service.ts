@@ -3,6 +3,7 @@ import Parse from 'parse';
 import {
   EventTeamSplitState,
   SaveEventTeamSplitPayload,
+  TEAM_SPLIT_MODES,
   TeamSplitAthlete,
   TeamSplitMode,
   TeamSplitRandomStrategy,
@@ -14,6 +15,13 @@ import {
 import { ParseService } from './parse.service';
 
 const EVENT_CLASS = 'Event';
+
+const VALID_RANDOM_STRATEGIES: TeamSplitRandomStrategy[] = [
+  'default',
+  'marital',
+  'favoriteTeam',
+  'neighborhood',
+];
 
 @Injectable({ providedIn: 'root' })
 export class TeamSplitService {
@@ -44,6 +52,18 @@ export class TeamSplitService {
     } catch (error: unknown) {
       if (isCloudFunctionUnavailableError(error)) {
         return this.saveSplitClient(payload);
+      }
+      throw new Error(parseErrorMessage(error));
+    }
+  }
+
+  async clearSplit(eventId: string): Promise<void> {
+    try {
+      await Parse.Cloud.run('clearEventTeamSplit', { eventId });
+    } catch (error: unknown) {
+      if (isCloudFunctionUnavailableError(error)) {
+        await this.clearSplitClient(eventId);
+        return;
       }
       throw new Error(parseErrorMessage(error));
     }
@@ -82,6 +102,21 @@ export class TeamSplitService {
     }
   }
 
+  private async clearSplitClient(eventId: string): Promise<void> {
+    const user = Parse.User.current();
+    if (!user) throw new Error('Faca login.');
+
+    const query = new Parse.Query(EVENT_CLASS);
+    query.include('admin');
+    const event = await query.get(eventId);
+    const admin = event.get('admin');
+    if (admin?.id !== user.id) {
+      throw new Error('Apenas o administrador pode desfazer a separacao.');
+    }
+    event.unset('teamSplit');
+    await event.save();
+  }
+
   private async saveSplitClient(payload: SaveEventTeamSplitPayload): Promise<EventTeamSplitState> {
     const user = Parse.User.current();
     if (!user) {
@@ -108,27 +143,34 @@ export class TeamSplitService {
   }
 
   private buildTeamSplitState(payload: SaveEventTeamSplitPayload): Record<string, unknown> {
-    const validStrategies: TeamSplitRandomStrategy[] = [
-      'default',
-      'marital',
-      'favoriteTeam',
-      'neighborhood',
-    ];
+    const splitMode = this.normalizeSplitMode(payload.splitMode);
     const randomStrategy =
-      payload.randomStrategy && validStrategies.includes(payload.randomStrategy)
+      payload.randomStrategy && VALID_RANDOM_STRATEGIES.includes(payload.randomStrategy)
         ? payload.randomStrategy
         : 'default';
 
-    return {
+    const state: Record<string, unknown> = {
       athletesPerTeam: Math.max(1, Math.min(20, Number(payload.athletesPerTeam) || 1)),
       teamCount: Math.max(1, Math.min(8, Number(payload.teamCount) || 1)),
-      splitMode: payload.splitMode === 'random' ? 'random' : 'manual',
+      splitMode,
       randomStrategy,
       teams: payload.teams
         .map((team) => team.map((userId) => String(userId || '')).filter(Boolean))
         .slice(0, 8),
       savedAt: new Date().toISOString(),
     };
+
+    if (splitMode === 'ageSides' && payload.ageThreshold != null) {
+      const ageThreshold = Math.max(1, Math.min(99, Number(payload.ageThreshold)));
+      state['ageThreshold'] = ageThreshold;
+    }
+
+    return state;
+  }
+
+  private normalizeSplitMode(value: unknown): TeamSplitMode {
+    const mode = String(value || 'manual');
+    return TEAM_SPLIT_MODES.includes(mode as TeamSplitMode) ? (mode as TeamSplitMode) : 'manual';
   }
 
   private normalizeSavedState(raw: unknown): EventTeamSplitState | null {
@@ -141,26 +183,29 @@ export class TeamSplitService {
     const teamCount = Number(entry['teamCount']);
     if (!athletesPerTeam || !teamCount) return null;
 
-    const splitMode = entry['splitMode'] === 'random' ? 'random' : 'manual';
+    const splitMode = this.normalizeSplitMode(entry['splitMode']);
     const randomStrategy = entry['randomStrategy'] as TeamSplitRandomStrategy | undefined;
-    const validStrategies: TeamSplitRandomStrategy[] = [
-      'default',
-      'marital',
-      'favoriteTeam',
-      'neighborhood',
-    ];
+    const ageThreshold = Number(entry['ageThreshold']);
 
-    return {
+    const state: EventTeamSplitState = {
       athletesPerTeam: Math.max(1, Math.min(20, athletesPerTeam)),
       teamCount: Math.max(1, Math.min(8, teamCount)),
-      splitMode: splitMode as TeamSplitMode,
+      splitMode,
       randomStrategy:
-        randomStrategy && validStrategies.includes(randomStrategy) ? randomStrategy : 'default',
+        randomStrategy && VALID_RANDOM_STRATEGIES.includes(randomStrategy)
+          ? randomStrategy
+          : 'default',
       teams: teamsRaw.map((team) =>
         Array.isArray(team) ? team.map((userId) => String(userId || '')).filter(Boolean) : []
       ),
       savedAt: entry['savedAt'] ? String(entry['savedAt']) : undefined,
     };
+
+    if (splitMode === 'ageSides' && ageThreshold >= 1 && ageThreshold <= 99) {
+      state.ageThreshold = ageThreshold;
+    }
+
+    return state;
   }
 
   private mapAthlete(row: unknown): TeamSplitAthlete {

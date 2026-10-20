@@ -107,6 +107,19 @@
     <h1 class="login-heading">{{ 'login.resetCodeTitle' | t }}</h1>
     <p class="reset-hint">{{ 'login.resetCodeHint' | t }}</p>
 
+    @if (resetCodeSentNotice) {
+      <ion-card color="light" class="ion-margin-bottom reset-sent-card">
+        <ion-card-header>
+          <ion-card-subtitle>{{ 'login.resetSentTitle' | t }}</ion-card-subtitle>
+          <ion-card-title>{{ resetEmailMasked }}</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <p>{{ 'login.resetSentBody' | t }}</p>
+          <p>{{ 'login.resetReturnToAppHint' | t }}</p>
+        </ion-card-content>
+      </ion-card>
+    }
+
     <form [formGroup]="confirmResetForm" (ngSubmit)="submitPasswordResetConfirm()">
       <ion-item>
         <ion-input

@@ -4,7 +4,7 @@
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/tabs/peladas"></ion-back-button>
     </ion-buttons>
-    <ion-title>Mensagens</ion-title>
+    <ion-title>{{ 'inbox.title' | t }}</ion-title>
     <ion-buttons slot="end">
       <app-screen-help helpId="inbox-help" bodyKey="inbox.help"></app-screen-help>
     </ion-buttons>
@@ -12,10 +12,10 @@
   <ion-toolbar>
     <ion-segment [value]="mailbox" (ionChange)="setMailbox($any($event.detail.value))">
       <ion-segment-button value="in">
-        <ion-label>Entrada</ion-label>
+        <ion-label>{{ 'inbox.mailboxIn' | t }}</ion-label>
       </ion-segment-button>
       <ion-segment-button value="out">
-        <ion-label>Saida</ion-label>
+        <ion-label>{{ 'inbox.mailboxOut' | t }}</ion-label>
       </ion-segment-button>
     </ion-segment>
   </ion-toolbar>
@@ -26,7 +26,7 @@
     class="inbox-searchbar"
     [value]="searchTerm"
     debounce="0"
-    placeholder="Buscar nas mensagens"
+    [placeholder]="'inbox.searchPlaceholder' | t"
     (ionInput)="onSearchInput($any($event.detail.value))"
     (ionClear)="onSearchInput('')"
   ></ion-searchbar>
@@ -38,19 +38,19 @@
   }
 
   @if (!loading && hasPendingItems) {
-    <h2 class="section-title">Precisa da sua resposta</h2>
+    <h2 class="section-title">{{ 'inbox.sectionNeedsResponse' | t }}</h2>
   }
 
   @if (!loading && mailbox === 'in' && !hasPendingItems) {
-    <ion-note color="medium">Nenhum convite pendente na entrada.</ion-note>
+    <ion-note color="medium">{{ 'inbox.noPendingIn' | t }}</ion-note>
   }
 
   @if (!loading && mailbox === 'out' && !hasPendingItems) {
-    <ion-note color="medium">Nenhum desafio ou solicitacao na saida.</ion-note>
+    <ion-note color="medium">{{ 'inbox.noPendingOut' | t }}</ion-note>
   }
 
   @if (!loading && mailbox === 'out' && outboxJoinRequests.length > 0) {
-    <h2 class="section-title">Participacao em confrontos</h2>
+    <h2 class="section-title">{{ 'inbox.sectionJoinOutbox' | t }}</h2>
     @for (request of outboxJoinRequests; track request.objectId) {
       <ion-card>
         <ion-card-header>
@@ -60,22 +60,22 @@
         <ion-card-content>
           <p>{{ request.eventName }}</p>
           @if (request.eventStartTime) {
-            <p>Inicio: {{ formatDate(request.eventStartTime) }}</p>
+            <p>{{ 'inbox.start' | t }}: {{ formatDate(request.eventStartTime) }}</p>
           }
           @if (joinOutboxIsAthlete(request)) {
-            <p>Presidente: {{ request.presidentApelido || '—' }}</p>
+            <p>{{ 'inbox.president' | t }}: {{ request.presidentApelido || '—' }}</p>
           } @else {
-            <p>Atleta: {{ request.athleteApelido || request.athleteFullName || '—' }}</p>
+            <p>{{ 'inbox.athlete' | t }}: {{ request.athleteApelido || request.athleteFullName || '—' }}</p>
           }
           @if (request.message) {
             <p>{{ request.message }}</p>
           }
           @if (request.status === 'declined' && request.declineReason) {
-            <p>Motivo: {{ request.declineReason }}</p>
+            <p>{{ 'inbox.reason' | t }}: {{ request.declineReason }}</p>
           }
           @if (request.eventId) {
             <ion-button expand="block" fill="outline" (click)="openEventById(request.eventId)">
-              Ver confronto
+              {{ 'inbox.viewMatch' | t }}
             </ion-button>
           }
         </ion-card-content>
@@ -84,7 +84,7 @@
   }
 
   @if (!loading && mailbox === 'out' && outboxRefereeApprovals.length > 0) {
-    <h2 class="section-title">Arbitragem em confrontos</h2>
+    <h2 class="section-title">{{ 'inbox.sectionRefereeOutbox' | t }}</h2>
     @for (item of outboxRefereeApprovals; track item.invitationId) {
       <ion-card>
         <ion-card-header>
@@ -94,18 +94,15 @@
         <ion-card-content>
           <p>{{ item.eventName }}</p>
           @if (item.eventStartTime) {
-            <p>Inicio: {{ formatDate(item.eventStartTime) }}</p>
+            <p>{{ 'inbox.start' | t }}: {{ formatDate(item.eventStartTime) }}</p>
           }
-          <p>Pagamento: {{ item.refereePaymentModeLabel || item.refereePaymentMode }}</p>
+          <p>{{ 'inbox.payment' | t }}: {{ item.refereePaymentModeLabel || item.refereePaymentMode }}</p>
           @if (item.refereeHiringApprovalStatus === 'rejected') {
-            <p>
-              O presidente adversario recusou esta proposta. Voce pode contratar outro arbitro no
-              confronto.
-            </p>
+            <p>{{ 'inbox.refereeRejectedHint' | t }}</p>
           }
           @if (item.eventId) {
             <ion-button expand="block" fill="outline" (click)="openEventById(item.eventId)">
-              Ver confronto
+              {{ 'inbox.viewMatch' | t }}
             </ion-button>
           }
         </ion-card-content>
@@ -114,7 +111,7 @@
   }
 
   @if (!loading && mailbox === 'out' && outboxChallenges.length > 0) {
-    <h2 class="section-title">Desafios e respostas</h2>
+    <h2 class="section-title">{{ 'inbox.sectionChallengesOutbox' | t }}</h2>
     @for (challenge of outboxChallenges; track challenge.objectId) {
       <ion-card>
         <ion-card-header>
@@ -123,42 +120,42 @@
         </ion-card-header>
         <ion-card-content>
           @if (challenge.proposedStartTime) {
-            <p>Proposta: {{ formatDate(challenge.proposedStartTime) }}</p>
+            <p>{{ 'inbox.proposal' | t }}: {{ formatDate(challenge.proposedStartTime) }}</p>
           }
           @if (challengeLocationLabel(challenge)) {
-            <p>Local: {{ challengeLocationLabel(challenge) }}</p>
+            <p>{{ 'inbox.location' | t }}: {{ challengeLocationLabel(challenge) }}</p>
           }
           @if (challenge.message) {
             <p>{{ challenge.message }}</p>
           }
           @if (challenge.challengeConditions) {
-            <p><strong>Condicoes e beneficios:</strong> {{ challenge.challengeConditions }}</p>
+            <p><strong>{{ 'inbox.conditionsBenefits' | t }}:</strong> {{ challenge.challengeConditions }}</p>
           }
           @if (challenge.hasReturnLeg) {
-            <p><strong>Formato:</strong> Ida e volta</p>
+            <p><strong>{{ 'inbox.format' | t }}:</strong> {{ 'inbox.formatHomeAway' | t }}</p>
           }
           @if (challenge.returnStartTime) {
             <p>
-              Volta: {{ formatDate(challenge.returnStartTime) }}
+              {{ 'inbox.returnLeg' | t }}: {{ formatDate(challenge.returnStartTime) }}
               @if (challenge.returnEndTime) {
                 – {{ formatDate(challenge.returnEndTime) }}
               }
             </p>
           }
           @if (challengeReturnLocationLabel(challenge)) {
-            <p>Local da volta: {{ challengeReturnLocationLabel(challenge) }}</p>
+            <p>{{ 'inbox.returnLocation' | t }}: {{ challengeReturnLocationLabel(challenge) }}</p>
           }
           @if (challenge.status === 'declined' && challenge.declineReason) {
-            <p>Motivo: {{ challenge.declineReason }}</p>
+            <p>{{ 'inbox.reason' | t }}: {{ challenge.declineReason }}</p>
           }
           @if (challengeOutboxIsSender(challenge) && challenge.status === 'accepted') {
             <ion-button expand="block" (click)="scheduleChallenge(challenge)">
-              Marcar confronto
+              {{ 'inbox.scheduleMatch' | t }}
             </ion-button>
           }
           @if (challenge.eventId) {
             <ion-button expand="block" fill="outline" (click)="openEventById(challenge.eventId)">
-              Ver confronto
+              {{ 'inbox.viewMatch' | t }}
             </ion-button>
           }
         </ion-card-content>
@@ -167,7 +164,7 @@
   }
 
   @if (!loading && mailbox === 'in' && pendingReschedules.length > 0) {
-    <h2 class="section-title">Remarcacoes de confronto</h2>
+    <h2 class="section-title">{{ 'inbox.sectionReschedules' | t }}</h2>
     @for (proposal of pendingReschedules; track proposal.eventId) {
       <ion-card>
         <ion-card-header>
@@ -176,20 +173,20 @@
         </ion-card-header>
         <ion-card-content>
           @if (proposal.currentStartTime) {
-            <p>Atual: {{ formatDate(proposal.currentStartTime) }}</p>
+            <p>{{ 'inbox.current' | t }}: {{ formatDate(proposal.currentStartTime) }}</p>
           }
           @if (proposal.proposedStartTime) {
-            <p>Proposta: {{ formatDate(proposal.proposedStartTime) }}</p>
+            <p>{{ 'inbox.proposal' | t }}: {{ formatDate(proposal.proposedStartTime) }}</p>
           }
           @if (proposal.reason) {
-            <p>Motivo: {{ proposal.reason }}</p>
+            <p>{{ 'inbox.reason' | t }}: {{ proposal.reason }}</p>
           }
           <ion-button
             expand="block"
             [disabled]="processingId === proposal.eventId"
             (click)="acceptReschedule(proposal)"
           >
-            Aceitar remarcacao
+            {{ 'inbox.acceptReschedule' | t }}
           </ion-button>
           <ion-button
             expand="block"
@@ -198,10 +195,10 @@
             [disabled]="processingId === proposal.eventId"
             (click)="declineReschedule(proposal)"
           >
-            Recusar
+            {{ 'inbox.decline' | t }}
           </ion-button>
           <ion-button expand="block" fill="outline" (click)="openEventById(proposal.eventId)">
-            Ver confronto
+            {{ 'inbox.viewMatch' | t }}
           </ion-button>
         </ion-card-content>
       </ion-card>
@@ -209,30 +206,30 @@
   }
 
   @if (!loading && mailbox === 'in' && incomingRefereeApprovals.length > 0) {
-    <h2 class="section-title">Aprovar arbitragem</h2>
+    <h2 class="section-title">{{ 'inbox.sectionRefereeApprove' | t }}</h2>
     @for (item of incomingRefereeApprovals; track item.invitationId) {
       <ion-card>
         <ion-card-header>
-          <ion-card-title>Arbitro: {{ item.invitedUserName }}</ion-card-title>
+          <ion-card-title>{{ 'inbox.referee' | t }}: {{ item.invitedUserName }}</ion-card-title>
           <ion-card-subtitle>{{ item.eventName }}</ion-card-subtitle>
         </ion-card-header>
         <ion-card-content>
           @if (item.eventStartTime) {
-            <p>Inicio: {{ formatDate(item.eventStartTime) }}</p>
+            <p>{{ 'inbox.start' | t }}: {{ formatDate(item.eventStartTime) }}</p>
           }
-          <p>Proposta do time {{ refereeApprovalSideLabel(item.refereeHiringRequestedByTeamSide) }}</p>
-          <p>Pagamento: <strong>{{ item.refereePaymentModeLabel || item.refereePaymentMode }}</strong></p>
+          <p>{{ teamProposalLine(item.refereeHiringRequestedByTeamSide) }}</p>
+          <p>{{ 'inbox.payment' | t }}: <strong>{{ item.refereePaymentModeLabel || item.refereePaymentMode }}</strong></p>
           @if (item.offeredAmount > 0) {
-            <p>Valor oferecido: <strong>{{ formatCurrency(item.offeredAmount) }}</strong></p>
+            <p>{{ 'inbox.offeredAmount' | t }}: <strong>{{ formatCurrency(item.offeredAmount) }}</strong></p>
           }
-          <p>Solicitado por: {{ item.invitedByName }}</p>
+          <p>{{ 'inbox.requestedBy' | t }}: {{ item.invitedByName }}</p>
           <ion-button
             expand="block"
             class="ion-margin-top"
             [disabled]="processingId === item.invitationId"
             (click)="approveRefereeHiring(item)"
           >
-            Aprovar contratacao
+            {{ 'inbox.approveHiring' | t }}
           </ion-button>
           <ion-button
             expand="block"
@@ -241,11 +238,11 @@
             [disabled]="processingId === item.invitationId"
             (click)="rejectRefereeHiring(item)"
           >
-            Recusar
+            {{ 'inbox.decline' | t }}
           </ion-button>
           @if (item.eventId) {
             <ion-button expand="block" fill="outline" (click)="openEventById(item.eventId)">
-              Ver confronto
+              {{ 'inbox.viewMatch' | t }}
             </ion-button>
           }
         </ion-card-content>
@@ -254,18 +251,18 @@
   }
 
   @if (!loading && mailbox === 'in' && incomingJoinRequests.length > 0) {
-    <h2 class="section-title">Solicitacoes de participacao</h2>
+    <h2 class="section-title">{{ 'inbox.sectionJoinRequests' | t }}</h2>
     @for (request of incomingJoinRequests; track request.objectId) {
       <ion-card>
         <ion-card-header>
           <ion-card-title>
-            {{ request.athleteApelido || request.athleteFullName || 'Atleta' }}
+            {{ request.athleteApelido || request.athleteFullName || ('inbox.athlete' | t) }}
           </ion-card-title>
           <ion-card-subtitle>{{ request.eventName }} — {{ request.teamName }}</ion-card-subtitle>
         </ion-card-header>
         <ion-card-content>
           @if (request.eventStartTime) {
-            <p>Inicio: {{ formatDate(request.eventStartTime) }}</p>
+            <p>{{ 'inbox.start' | t }}: {{ formatDate(request.eventStartTime) }}</p>
           }
           @if (request.message) {
             <p>{{ request.message }}</p>
@@ -277,7 +274,7 @@
               size="md"
             ></app-user-avatar>
             <div class="inviter-info">
-              <p class="inviter-label">Solicitante</p>
+              <p class="inviter-label">{{ 'inbox.applicant' | t }}</p>
               <p class="inviter-name">
                 <strong>{{ request.athleteApelido || request.athleteFullName }}</strong>
               </p>
@@ -295,7 +292,7 @@
             class="ion-margin-top"
             (click)="viewJoinAthleteProfile(request)"
           >
-            Ver perfil do atleta
+            {{ 'inbox.viewAthleteProfile' | t }}
           </ion-button>
           <ion-button
             expand="block"
@@ -303,7 +300,7 @@
             [disabled]="processingId === request.objectId"
             (click)="acceptJoinRequest(request)"
           >
-            Autorizar participacao
+            {{ 'inbox.authorizeJoin' | t }}
           </ion-button>
           <ion-button
             expand="block"
@@ -312,11 +309,11 @@
             [disabled]="processingId === request.objectId"
             (click)="declineJoinRequest(request)"
           >
-            Recusar
+            {{ 'inbox.decline' | t }}
           </ion-button>
           @if (request.eventId) {
             <ion-button expand="block" fill="outline" (click)="openEventById(request.eventId)">
-              Ver confronto
+              {{ 'inbox.viewMatch' | t }}
             </ion-button>
           }
         </ion-card-content>
@@ -325,12 +322,12 @@
   }
 
   @if (!loading && mailbox === 'in' && incomingAmateurTeamJoinRequests.length > 0) {
-    <h2 class="section-title">Pedidos para o elenco</h2>
+    <h2 class="section-title">{{ 'inbox.sectionTeamRosterRequests' | t }}</h2>
     @for (request of incomingAmateurTeamJoinRequests; track request.objectId) {
       <ion-card>
         <ion-card-header>
           <ion-card-title>
-            {{ request.athleteApelido || request.athleteFullName || 'Atleta' }}
+            {{ request.athleteApelido || request.athleteFullName || ('inbox.athlete' | t) }}
           </ion-card-title>
           <ion-card-subtitle>{{ request.teamName }}</ion-card-subtitle>
         </ion-card-header>
@@ -344,7 +341,7 @@
             [disabled]="processingId === request.objectId"
             (click)="acceptAmateurTeamJoinRequest(request)"
           >
-            Autorizar no elenco
+            {{ 'inbox.authorizeRoster' | t }}
           </ion-button>
           <ion-button
             expand="block"
@@ -353,11 +350,11 @@
             [disabled]="processingId === request.objectId"
             (click)="declineAmateurTeamJoinRequest(request)"
           >
-            Recusar
+            {{ 'inbox.decline' | t }}
           </ion-button>
           @if (request.teamId) {
             <ion-button expand="block" fill="outline" (click)="openTeamProfile(request.teamId)">
-              Ver time
+              {{ 'inbox.viewTeam' | t }}
             </ion-button>
           }
         </ion-card-content>
@@ -366,35 +363,35 @@
   }
 
   @if (!loading && mailbox === 'in' && incomingChallenges.length > 0) {
-    <h2 class="section-title">Desafios recebidos</h2>
+    <h2 class="section-title">{{ 'inbox.sectionChallengesIn' | t }}</h2>
     @for (challenge of incomingChallenges; track challenge.objectId) {
       <ion-card>
         <ion-card-header>
-          <ion-card-title>Desafio de {{ challenge.challengerTeamName }}</ion-card-title>
-          <ion-card-subtitle>Para {{ challenge.challengedTeamName }}</ion-card-subtitle>
+          <ion-card-title>{{ 'inbox.challengeFrom' | t: { team: challenge.challengerTeamName } }}</ion-card-title>
+          <ion-card-subtitle>{{ 'inbox.challengeTo' | t: { team: challenge.challengedTeamName } }}</ion-card-subtitle>
         </ion-card-header>
         <ion-card-content>
           @if (challenge.proposedStartTime) {
-            <p>Proposta: {{ formatDate(challenge.proposedStartTime) }}</p>
+            <p>{{ 'inbox.proposal' | t }}: {{ formatDate(challenge.proposedStartTime) }}</p>
           }
           @if (challengeLocationLabel(challenge)) {
-            <p>Local: {{ challengeLocationLabel(challenge) }}</p>
+            <p>{{ 'inbox.location' | t }}: {{ challengeLocationLabel(challenge) }}</p>
           }
           @if (challenge.message) {
             <p>{{ challenge.message }}</p>
           }
           @if (challenge.challengeConditions) {
-            <p><strong>Condicoes e beneficios:</strong> {{ challenge.challengeConditions }}</p>
+            <p><strong>{{ 'inbox.conditionsBenefits' | t }}:</strong> {{ challenge.challengeConditions }}</p>
           }
           @if (challenge.hasReturnLeg) {
-            <p><strong>Formato:</strong> Ida e volta</p>
+            <p><strong>{{ 'inbox.format' | t }}:</strong> {{ 'inbox.formatHomeAway' | t }}</p>
           }
           <ion-button
             expand="block"
             fill="outline"
             (click)="viewChallengeTeam(challenge.challengerTeamId)"
           >
-            Ver perfil do desafiante
+            {{ 'inbox.viewChallengerProfile' | t }}
           </ion-button>
           <ion-button
             expand="block"
@@ -402,7 +399,7 @@
             [disabled]="processingId === challenge.objectId"
             (click)="acceptChallenge(challenge)"
           >
-            Aceitar desafio
+            {{ 'inbox.acceptChallenge' | t }}
           </ion-button>
           <ion-button
             expand="block"
@@ -411,7 +408,7 @@
             [disabled]="processingId === challenge.objectId"
             (click)="declineChallenge(challenge)"
           >
-            Recusar
+            {{ 'inbox.decline' | t }}
           </ion-button>
         </ion-card-content>
       </ion-card>
@@ -419,23 +416,23 @@
   }
 
   @if (!loading && mailbox === 'in' && teamMatchNotices.length > 0) {
-    <h2 class="section-title">Confrontos do seu time</h2>
+    <h2 class="section-title">{{ 'inbox.sectionTeamMatches' | t }}</h2>
     @for (notice of teamMatchNotices; track notice.objectId) {
       <ion-card button (click)="openTeamMatchNotice(notice)">
         <ion-card-header>
-          <ion-card-title>Novo confronto</ion-card-title>
+          <ion-card-title>{{ 'inbox.newMatch' | t }}</ion-card-title>
           <ion-card-subtitle>{{ notice.homeTeamName }} x {{ notice.awayTeamName }}</ion-card-subtitle>
         </ion-card-header>
         <ion-card-content>
-          <p>Inicio: {{ formatDate(notice.startTime) }}</p>
-          <ion-button expand="block" (click)="openTeamMatchNotice(notice)">Abrir confronto</ion-button>
+          <p>{{ 'inbox.start' | t }}: {{ formatDate(notice.startTime) }}</p>
+          <ion-button expand="block" (click)="openTeamMatchNotice(notice)">{{ 'inbox.openMatch' | t }}</ion-button>
         </ion-card-content>
       </ion-card>
     }
   }
 
   @if (!loading && mailbox === 'in' && supplementaryOpportunities.length > 0) {
-    <h2 class="section-title">Negociacao pos-convite</h2>
+    <h2 class="section-title">{{ 'inbox.sectionPostInvite' | t }}</h2>
     @for (opportunity of supplementaryOpportunities; track opportunity.invitationId) {
       <ion-card>
         <ion-card-header>
@@ -443,13 +440,13 @@
           <ion-card-subtitle>{{ opportunity.eventName }}</ion-card-subtitle>
         </ion-card-header>
         <ion-card-content>
-          <p>Inicio: {{ formatDate(opportunity.eventStartTime) }}</p>
+          <p>{{ 'inbox.start' | t }}: {{ formatDate(opportunity.eventStartTime) }}</p>
           <ion-button
             expand="block"
             [disabled]="processingId === opportunity.invitationId"
             (click)="openSupplementaryHiring(opportunity)"
           >
-            Contratar / negociar
+            {{ 'inbox.hireNegotiate' | t }}
           </ion-button>
           <ion-button
             expand="block"
@@ -459,7 +456,7 @@
             [disabled]="processingId === opportunity.invitationId"
             (click)="skipSupplementaryHiring(opportunity)"
           >
-            Concluir sem contratar
+            {{ 'inbox.finishWithoutHiring' | t }}
           </ion-button>
         </ion-card-content>
       </ion-card>
@@ -467,23 +464,23 @@
   }
 
   @if (!loading && mailbox === 'in' && contractConfirmations.length > 0) {
-    <h2 class="section-title">Contratacoes confirmadas</h2>
+    <h2 class="section-title">{{ 'inbox.sectionContracts' | t }}</h2>
     @for (invitation of contractConfirmations; track invitation.objectId) {
       <ion-card>
         <ion-card-header>
-          <ion-card-title>Contratacao confirmada</ion-card-title>
+          <ion-card-title>{{ 'inbox.contractConfirmed' | t }}</ion-card-title>
           <ion-card-subtitle>
             {{ invitationRoleLabel(invitation) }} · {{ invitation.eventName }}
           </ion-card-subtitle>
         </ion-card-header>
         <ion-card-content>
-          <p>Inicio: {{ formatDate(invitation.eventStartTime) }}</p>
+          <p>{{ 'inbox.start' | t }}: {{ formatDate(invitation.eventStartTime) }}</p>
           @if (invitation.offeredAmount > 0) {
-            <p>Valor acordado: <strong>{{ formatCurrency(invitation.offeredAmount) }}</strong></p>
+            <p>{{ 'inbox.agreedAmount' | t }}: <strong>{{ formatCurrency(invitation.offeredAmount) }}</strong></p>
           }
-          <p>Contratado por {{ invitation.invitedByApelido || invitation.invitedByName }}.</p>
+          <p>{{ 'inbox.hiredBy' | t: { name: invitation.invitedByApelido || invitation.invitedByName } }}</p>
           <ion-button expand="block" class="ion-margin-top" (click)="openContractConfirmation(invitation)">
-            Ver evento
+            {{ 'inbox.viewEvent' | t }}
           </ion-button>
         </ion-card-content>
       </ion-card>
@@ -498,14 +495,14 @@
         <ion-card-subtitle>{{ invitation.eventName }}</ion-card-subtitle>
       </ion-card-header>
       <ion-card-content>
-        <p>Pelada: {{ invitation.peladaName || (invitation.eventType === 'team_match' ? 'Confronto' : '—') }}</p>
-        <p>Inicio: {{ formatDate(invitation.eventStartTime) }}</p>
-        <p>Valor oferecido: <strong>{{ formatCurrency(invitation.offeredAmount) }}</strong></p>
+        <p>{{ 'inbox.pelada' | t }}: {{ invitation.peladaName || (invitation.eventType === 'team_match' ? ('inbox.matchFallback' | t) : '—') }}</p>
+        <p>{{ 'inbox.start' | t }}: {{ formatDate(invitation.eventStartTime) }}</p>
+        <p>{{ 'inbox.offeredValue' | t }}: <strong>{{ formatCurrency(invitation.offeredAmount) }}</strong></p>
         @if (invitationTeamLabel(invitation)) {
-          <p>Time: <strong>{{ invitationTeamLabel(invitation) }}</strong></p>
+          <p>{{ 'inbox.team' | t }}: <strong>{{ invitationTeamLabel(invitation) }}</strong></p>
         }
         @if (invitation.responseDeadline) {
-          <p>Responder ate: <strong>{{ formatDate(invitation.responseDeadline) }}</strong></p>
+          <p>{{ 'inbox.respondBy' | t }}: <strong>{{ formatDate(invitation.responseDeadline) }}</strong></p>
         }
 
         <div class="inviter-row ion-margin-top">
@@ -515,7 +512,7 @@
             size="md"
           ></app-user-avatar>
           <div class="inviter-info">
-            <p class="inviter-label">Enviado por</p>
+            <p class="inviter-label">{{ 'inbox.sentBy' | t }}</p>
             <p class="inviter-name">
               <strong>{{ invitation.invitedByApelido || invitation.invitedByName }}</strong>
             </p>
@@ -528,7 +525,7 @@
           </div>
         </div>
 
-        <ion-button expand="block" fill="outline" (click)="openEvent(invitation)">Ver evento</ion-button>
+        <ion-button expand="block" fill="outline" (click)="openEvent(invitation)">{{ 'inbox.viewEvent' | t }}</ion-button>
         <ion-button
           expand="block"
           color="success"
@@ -536,7 +533,7 @@
           [disabled]="processingId === invitation.objectId"
           (click)="accept(invitation)"
         >
-          Aceitar valor e inscrever-se
+          {{ 'inbox.acceptAndRegister' | t }}
         </ion-button>
         <ion-button
           expand="block"
@@ -545,39 +542,39 @@
           [disabled]="processingId === invitation.objectId"
           (click)="decline(invitation)"
         >
-          Recusar
+          {{ 'inbox.decline' | t }}
         </ion-button>
       </ion-card-content>
     </ion-card>
   }
 
   @if (!loading && mailbox === 'in' && paymentConfirmations.length > 0) {
-    <h2 class="section-title">Confirmar recebimento de pagamento</h2>
+    <h2 class="section-title">{{ 'inbox.sectionPaymentConfirm' | t }}</h2>
     @for (invitation of paymentConfirmations; track invitation.objectId) {
       <ion-card>
         <ion-card-header>
           <ion-card-title>
-            Pagamento — {{ invitationRoleLabel(invitation)
+            {{ 'inbox.paymentTitle' | t }} — {{ invitationRoleLabel(invitation)
             }}{{
               invitation.teamMatchLeg === 'volta'
-                ? ' (Volta)'
+                ? ('inbox.legReturn' | t)
                 : invitation.teamMatchLeg === 'ida'
-                  ? ' (Ida)'
+                  ? ('inbox.legOutbound' | t)
                   : ''
             }}
           </ion-card-title>
           <ion-card-subtitle>{{ invitation.eventName }}</ion-card-subtitle>
         </ion-card-header>
         <ion-card-content>
-          <p>Valor: <strong>{{ formatCurrency(invitation.offeredAmount) }}</strong></p>
-          <p>Pelada: {{ invitation.peladaName || '—' }}</p>
+          <p>{{ 'inbox.offeredValue' | t }}: <strong>{{ formatCurrency(invitation.offeredAmount) }}</strong></p>
+          <p>{{ 'inbox.pelada' | t }}: {{ invitation.peladaName || '—' }}</p>
           <ion-button
             expand="block"
             color="success"
             [disabled]="processingId === invitation.objectId"
             (click)="confirmPaymentReceived(invitation)"
           >
-            Confirmar pagamento recebido
+            {{ 'inbox.confirmPaymentReceived' | t }}
           </ion-button>
         </ion-card-content>
       </ion-card>
@@ -587,11 +584,11 @@
 
   <div class="messages-header">
     <h2 class="section-title">
-      {{ mailbox === 'out' ? 'Mensagens enviadas' : 'Mensagens recebidas' }}
+      {{ mailbox === 'out' ? ('inbox.messagesSent' | t) : ('inbox.messagesReceived' | t) }}
     </h2>
     @if (mailbox === 'in' && unreadMessageCount > 0) {
       <ion-button fill="clear" size="small" (click)="markAllMessagesRead()">
-        Marcar todas como lidas
+        {{ 'inbox.markAllRead' | t }}
       </ion-button>
     }
   </div>
@@ -609,11 +606,11 @@
   @if (!messagesLoading && !messagesError && messages.length === 0) {
     <ion-note color="medium">
       @if (searchTerm) {
-        Nenhuma mensagem encontrada para "{{ searchTerm }}".
+        {{ 'inbox.noSearchResults' | t: { term: searchTerm } }}
       } @else if (mailbox === 'out') {
-        Voce ainda nao enviou mensagens.
+        {{ 'inbox.noSentYet' | t }}
       } @else {
-        Voce ainda nao recebeu mensagens.
+        {{ 'inbox.noReceivedYet' | t }}
       }
     </ion-note>
   }
@@ -649,22 +646,22 @@
         [disabled]="messagesLoading"
         (click)="loadMoreMessages()"
       >
-        Carregar mais mensagens
+        {{ 'inbox.loadMore' | t }}
       </ion-button>
     }
   }
 
   <ion-button expand="block" class="ion-margin-top" fill="outline" (click)="goBack()">
-    Voltar
+    {{ 'inbox.back' | t }}
   </ion-button>
 
   <ion-modal [isOpen]="!!openedMessage" (didDismiss)="closeOpenedMessage()">
     <ng-template>
       <ion-header>
         <ion-toolbar>
-          <ion-title>Mensagem</ion-title>
+          <ion-title>{{ 'inbox.messageModalTitle' | t }}</ion-title>
           <ion-buttons slot="end">
-            <ion-button (click)="closeOpenedMessage()">Fechar</ion-button>
+            <ion-button (click)="closeOpenedMessage()">{{ 'inbox.close' | t }}</ion-button>
           </ion-buttons>
         </ion-toolbar>
       </ion-header>
@@ -675,7 +672,7 @@
           <p class="message-detail-body">{{ openedMessage.body }}</p>
           @if (messageEventRoute(openedMessage)) {
             <ion-button expand="block" class="ion-margin-top" (click)="openMessageEvent()">
-              Ver evento
+              {{ 'inbox.viewEvent' | t }}
             </ion-button>
           }
         }
@@ -687,22 +684,19 @@
     <ng-template>
       <ion-header>
         <ion-toolbar>
-          <ion-title>Volta do desafio</ion-title>
+          <ion-title>{{ 'inbox.returnLegModalTitle' | t }}</ion-title>
           <ion-buttons slot="end">
-            <ion-button (click)="closeReturnLegModal()">Cancelar</ion-button>
+            <ion-button (click)="closeReturnLegModal()">{{ 'inbox.cancel' | t }}</ion-button>
           </ion-buttons>
         </ion-toolbar>
       </ion-header>
       <ion-content class="ion-padding">
-        <p>
-          A ida permanece com a data e o local propostos pelo desafiante. Informe data, hora e
-          local da volta, em que o seu time sera o mandante.
-        </p>
+        <p>{{ 'inbox.returnLegIntro' | t }}</p>
         <ion-list lines="full">
           <ion-item>
             <ion-input
               type="date"
-              label="Data da volta"
+              [label]="'inbox.returnDate' | t"
               labelPlacement="stacked"
               [(ngModel)]="returnLegDate"
             ></ion-input>
@@ -710,17 +704,17 @@
           <ion-item>
             <ion-input
               type="time"
-              label="Hora da volta"
+              [label]="'inbox.returnTime' | t"
               labelPlacement="stacked"
               [(ngModel)]="returnLegTime"
             ></ion-input>
           </ion-item>
           <ion-item>
             <ion-input
-              label="Local da volta"
+              [label]="'inbox.returnLocationLabel' | t"
               labelPlacement="stacked"
               [(ngModel)]="returnLegLocation"
-              placeholder="Quadra, campo, endereco..."
+              [placeholder]="'inbox.returnLocationPlaceholder' | t"
             ></ion-input>
           </ion-item>
         </ion-list>
@@ -730,7 +724,7 @@
           [disabled]="!!processingId"
           (click)="confirmReturnLegAccept()"
         >
-          Confirmar aceite
+          {{ 'inbox.confirmAccept' | t }}
         </ion-button>
       </ion-content>
     </ng-template>

@@ -5,6 +5,9 @@
       <ion-back-button defaultHref="/tabs/peladas/times"></ion-back-button>
     </ion-buttons>
     <ion-title>Perfil do time</ion-title>
+    <ion-buttons slot="end">
+      <app-screen-help helpId="team-profile-help" bodyKey="screen.help.team-profile"></app-screen-help>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -20,6 +23,9 @@
     </ion-card>
   }
   @if (!loading && profile) {
+    @if (wizardTeamJoin) {
+      <ion-note class="ion-padding wizard-join-banner">{{ 'coach.wizard.teamJoinProfileBanner' | t }}</ion-note>
+    }
     <div class="team-identity">
       @if (profile['shieldImageUrl']) {
         <img class="team-shield" [src]="$any(profile['shieldImageUrl'])" [alt]="'' + profile['name']" />

@@ -7,12 +7,17 @@ const routes: Routes = [
     path: '',
     component: TabsPage,
     children: [
+      {
+        path: 'home',
+        loadChildren: () =>
+          import('../pages/peladas/home-portas.module').then((m) => m.HomePortasPageModule),
+      },
       { path: 'peladas', loadChildren: () => import('../pages/peladas/peladas.module').then(m => m.PeladasPageModule) },
       { path: 'events', loadChildren: () => import('../pages/events/events.module').then(m => m.EventsPageModule) },
       { path: 'search', loadChildren: () => import('../pages/search/search.module').then(m => m.SearchPageModule) },
       { path: 'mural', loadChildren: () => import('../pages/mural/mural.module').then(m => m.MuralPageModule) },
       { path: 'profile', loadChildren: () => import('../pages/profile/profile.module').then(m => m.ProfilePageModule) },
-      { path: '', redirectTo: 'peladas', pathMatch: 'full' },
+      { path: '', redirectTo: 'home', pathMatch: 'full' },
     ],
   },
 ];

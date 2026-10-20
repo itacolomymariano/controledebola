@@ -9,6 +9,7 @@ import {
 } from '../models/athlete-search.model';
 import { EventInviteCandidate } from '../models/event-hiring.model';
 import { normalizeSearchText } from '../utils/search-text.util';
+import { FOOTBALL_POSITIONS } from '../models/athlete-profile.model';
 import { getUserAvatarUrl } from '../utils/user-avatar.util';
 import {
   readUserAmateurFootballIdol,
@@ -52,6 +53,11 @@ export class AthleteSearchService {
       return baseCandidates.length ? baseCandidates : await this.listHiringCandidates();
     }
 
+    const positionMatches = await this.searchHiringCandidatesByPosition(trimmed);
+    if (positionMatches.length) {
+      return positionMatches;
+    }
+
     const localMatches = this.filterHiringCandidates(baseCandidates, trimmed);
     const cloudMatches = await this.fetchHiringCandidatesFromCloud(trimmed);
 
@@ -79,10 +85,28 @@ export class AthleteSearchService {
     return candidates
       .filter((candidate) => {
         const haystack = normalizeSearchText(
-          `${candidate.userName} ${candidate.apelido} ${candidate.city ?? ''} ${candidate.state ?? ''}`
+          `${candidate.userName} ${candidate.apelido} ${candidate.primaryPosition ?? ''} ${candidate.city ?? ''} ${candidate.state ?? ''}`
         );
         return haystack.includes(normalizedSearch);
       })
+      .sort((a, b) => (a.apelido || a.userName).localeCompare(b.apelido || b.userName, 'pt-BR'));
+  }
+
+  /** Busca por posicao principal (mesma lista da aba Buscar). */
+  private async searchHiringCandidatesByPosition(query: string): Promise<EventInviteCandidate[]> {
+    const normalized = normalizeSearchText(query);
+    if (!normalized || normalized.length < 3) return [];
+
+    const exact = FOOTBALL_POSITIONS.find((position) => normalizeSearchText(position) === normalized);
+    const partial = FOOTBALL_POSITIONS.filter((position) =>
+      normalizeSearchText(position).includes(normalized)
+    );
+    const position = exact || (partial.length === 1 ? partial[0] : '');
+    if (!position) return [];
+
+    const rows = await this.search('', position);
+    return rows
+      .map((row) => this.mapSearchResultToInviteCandidate(row))
       .sort((a, b) => (a.apelido || a.userName).localeCompare(b.apelido || b.userName, 'pt-BR'));
   }
 
@@ -97,6 +121,7 @@ export class AthleteSearchService {
       avatarUrl: row.avatarUrl,
       city: row.city,
       state: row.state,
+      primaryPosition: row.primaryPosition || profile?.primaryPosition,
       peladaRate: row.peladaRate ?? profile?.peladaRate,
       matchRate: row.teamMatchRate ?? profile?.teamMatchRate,
     };
@@ -153,6 +178,7 @@ export class AthleteSearchService {
           row.matchRate != null && !Number.isNaN(Number(row.matchRate))
             ? Number(row.matchRate)
             : undefined,
+        primaryPosition: row.primaryPosition ? String(row.primaryPosition) : undefined,
       };
     });
   }
@@ -772,19 +798,11 @@ export class AthleteSearchService {
       }
 
       const userPtr = Parse.User.createWithoutData(userId);
-      const performances = await new Parse.Query('EventPerformance')
-        .equalTo('user', userPtr)
-        .limit(2000)
-        .find();
-
-      let goals = 0;
-      let yellowCards = 0;
-      let redCards = 0;
-      for (const perf of performances) {
-        goals += Number(perf.get('goals') ?? 0);
-        yellowCards += Number(perf.get('yellowCards') ?? 0);
-        redCards += Number(perf.get('redCards') ?? 0);
-      }
+      const performances = await this.loadPerformancesForUser(userId);
+      const sumulaTotals = this.sumRefereeSumulaStatsClient(performances, userId);
+      const goals = sumulaTotals.goals;
+      const yellowCards = sumulaTotals.yellowCards;
+      const redCards = sumulaTotals.redCards;
 
       const peladaNames = new Set<string>();
       const teamNames = new Set<string>();
@@ -896,6 +914,72 @@ export class AthleteSearchService {
     byUser.equalTo('user', userPtr);
     const byUserProfile = await byUser.first();
     return byUserProfile ?? null;
+  }
+
+  private async loadPerformancesForUser(userId: string): Promise<Parse.Object[]> {
+    const userPtr = Parse.User.createWithoutData(userId);
+    const byUser = new Parse.Query('EventPerformance');
+    byUser.equalTo('user', userPtr);
+    const byParticipant = new Parse.Query('EventPerformance');
+    byParticipant.equalTo('participantUserId', userId);
+    const rows = await Parse.Query.or(byUser, byParticipant).limit(2000).find();
+    const seen = new Set<string>();
+    return rows.filter((perf) => {
+      if (!perf.id || seen.has(perf.id)) return false;
+      seen.add(perf.id);
+      return true;
+    });
+  }
+
+  private performanceRowMatchesUser(perf: Parse.Object, userId: string): boolean {
+    const wanted = userId.trim();
+    if (!wanted) return false;
+    const explicit = String(perf.get('participantUserId') || '').trim();
+    if (explicit === wanted) return true;
+    const user = perf.get('user') as Parse.User | undefined;
+    return !!(user?.id && user.id === wanted);
+  }
+
+  private hasRefereeSumulaDataClient(perf: Parse.Object): boolean {
+    if (perf.get('refereeSumulaSaved')) return true;
+    return (
+      Number(perf.get('refereeGoals') || 0) > 0 ||
+      Number(perf.get('refereeGoalsConceded') || 0) > 0 ||
+      Number(perf.get('refereeYellowCards') || 0) > 0 ||
+      Number(perf.get('refereeRedCards') || 0) > 0 ||
+      Number(perf.get('refereeFoulsCommitted') || 0) > 0
+    );
+  }
+
+  private readRefereeStatClient(perf: Parse.Object, field: 'goals' | 'yellowCards' | 'redCards'): number {
+    const map: Record<string, string> = {
+      goals: 'refereeGoals',
+      yellowCards: 'refereeYellowCards',
+      redCards: 'refereeRedCards',
+    };
+    const storage = map[field];
+    const explicit = perf.get(storage);
+    if (explicit !== undefined && explicit !== null) {
+      return Number(explicit) || 0;
+    }
+    return 0;
+  }
+
+  private sumRefereeSumulaStatsClient(
+    performances: Parse.Object[],
+    userId: string
+  ): { goals: number; yellowCards: number; redCards: number } {
+    let goals = 0;
+    let yellowCards = 0;
+    let redCards = 0;
+    for (const perf of performances) {
+      if (!this.performanceRowMatchesUser(perf, userId)) continue;
+      if (!this.hasRefereeSumulaDataClient(perf)) continue;
+      goals += this.readRefereeStatClient(perf, 'goals');
+      yellowCards += this.readRefereeStatClient(perf, 'yellowCards');
+      redCards += this.readRefereeStatClient(perf, 'redCards');
+    }
+    return { goals, yellowCards, redCards };
   }
 
   private async loadRegistrationsForUser(userId: string): Promise<Parse.Object[]> {

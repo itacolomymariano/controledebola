@@ -2,9 +2,149 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-10-08 (wizard ramificado)
+**Ultima atualizacao:** 2026-10-20 (iOS TestFlight build number)
 
 ---
+
+### 2026-10-20 — iOS TestFlight: duplicate CFBundleVersion
+
+- **Erro:** altool 409 — build deve ser > `previousBundleVersion` (ex. 208); CI usa `.app-release-state.json` do **GitHub**
+- **Docs:** checklist pre-`release-ipa` em `AGENTS.md` + `docs/IOS_GITHUB_ACTIONS.md` secao 3 / troubleshooting
+
+### 2026-10-19 — Ajuda (?): regressão /tabs/home
+
+- **Causa:** `resolveScreenHelpKey` só casava `/tabs` e `/tabs/peladas`; Home em `/tabs/home` → `helpKey` vazio → `app-help-balloon` oculto.
+- **Fix:** [`screen-help.config.ts`](src/app/core/config/screen-help.config.ts) — `screen.help.home`, lista, portas; i18n pt/en/es; `user-bar` casa → `/tabs/home`.
+
+### 2026-10-19 — Primeiro Coordenador: rodapé e participantes
+
+- **Home:** rota `/tabs/home` (`home-portas.module`); redirect `/tabs/peladas` → home; splash/post-auth/wizard hub em `/tabs/home`
+- **Rodapé:** `tabs-footer.util` + `[selected]` por URL (Peladas só em `/tabs/peladas/lista`)
+- **Participantes admin:** confirmados com resumo compacto (6 campos) + faixa operacional; i18n `eventDetail.participants.*`
+
+### 2026-10-19 — Primeiro Coordenador + UX Xaiana (2º sprint)
+
+- **Chegou:** SCSS nowrap no botao participantes; i18n `eventDetail.arrival.*`
+- **Team split:** `clearEventTeamSplit` Cloud + UI; dirty snapshot desabilita Salvar
+- **Scout:** `refereeGoals` no board; incremento tipo limitado pela sumula
+- **Perfil:** `sumulaObservations` em `getAthletePublicProfile`; link perfil completo nos modais
+- **Pelada help:** TTS em `app-screen-help` `[enableSpeech]`
+- **UX:** register/profile-setup/voting copy; `docs/UX-AUDIT-2026-10.md` secao validar
+
+### 2026-10-19 — Feedback familia (Taiuan/Xaiana): notas e UX
+
+- **Mural app:** ranking craque/goleiro com confianca (`applyAppMuralRankingConfidence` em `07-mural.js`); peso avaliador `01e-voter-reliability.js`; UI hint + `evaluatorCountLabel`
+- **Evento:** max 2 notas 10 por cedula (`assertEventMuralBallotScoreTenLimit` + UI contador)
+- **Login:** reset senha — card pos-envio (codigo no app, nao link); i18n pt/en/es
+- **Docs:** `docs/UX-AUDIT-2026-10.md`, smoke + guia mural; **deploy** `cloud/main.js` obrigatorio
+
+### 2026-10-16 — Wizard: fechar ao selecionar pelada ou time
+
+- **Comportamento:** passo `pelada-player-search` / `team-player-search` — ao abrir detalhe com `wizard=peladaJoin` ou `teamJoin`, `dismissJoinSearchStayOnPage()` (dispensado, sem ir para Home); CTA “Continuar sem pedir agora” inalterado
+- **Arquivos:** `wizard-tour.service.ts`, `pelada-detail`, `team-profile`; `app-screen-help` no header (`screen.help.pelada-detail`, `screen.help.team-profile`)
+
+### 2026-10-16 — Formularios perfil profissional: vao em branco (Scout/Juiz)
+
+- **Causa:** `global.scss` aplicava `width:100%` em todo `ion-item ion-toggle` (incl. `slot="end"`) + `ion-input`/`textarea` dentro de `ion-item` quebrava altura no WebView Android
+- **Fix:** toggle `slot="end"` com largura auto; `role-profile-fields` usa `fill="outline"` fora de `ion-item` (money, textarea, pix, text); toggles permanecem em `ion-item.item-toggle-wrap`
+- **Escopo:** profile-setup, role-profile-form — todos os perfis em `ROLE_PROFILE_FIELDS`
+
+### 2026-10-16 — Wizard primeiro acesso: perfil Juiz + pelada
+
+- **UI:** `role-profile-fields` — toggles com `ion-label` + `slot="end"` (corrige vazios no Juiz/scout); `lines="full"` nos demais campos; fan toggle em `profile-setup` alinhado
+- **Fluxo other:** `buildOtherWizardFlow` usa `PELADA_PLAYER_SEARCH_STEP` (remove `other-welcome`); hints juiz/scout viram passo `choices` (`continueAfterPelada`)
+- **Pelada:** `peladas-list` repassa `wizard=peladaJoin`; `pelada-detail` banner, card eventos abertos / sem inscricao + CTA lista, `completeStepById('pelada-player-search')`
+- **i18n:** `coach.wizard.peladaNoOpenEvents*`, `peladaJoinDetailBanner`, `continueAfterPelada` (pt/en/es)
+
+### 2026-10-15 — Scout: detalhe evento + analytics mural zerados
+
+- **Detalhe evento:** `canViewScoutApontamento` = qualquer logado com evento (espelha sumula); edicao = scout confirmado + `isScoutApontamentoEditOpen` (`event.model.ts`)
+- **Cloud:** `assertCanAccessScoutApontamento` — consulta para qualquer usuario; scout fora da janela ou evento encerrado = `viewOnly`
+- **Mural analytics:** `getMuralPerformanceAnalytics` delegava logica duplicada sem `goalTypes`; agora usa `buildMuralPerformanceAnalyticsPayload` + merge por atleta (`buildSyntheticPerformancesForScoutAnalytics`)
+- **Deploy:** publicar `cloud/main.js` (obrigatorio para mural scout no device)
+
+### 2026-10-15 — Mural evento: altura / time amador vazios (regressao)
+
+- **Causa:** `computeHighlights` no ramo `scope === 'event'` **nao** incluia `timeAmadorMaisAmado`, `atletaMaisAlto`, `atletaMaisBaixo` no objeto retornado (campos so existiam no bloco `appBucket`).
+- **Fix:** preencher esses campos no ramo evento; Cloud `getEventMuralCuriosities`; fallback participantes + merge; `listParticipantsForEvent` nao trata array vazio do Cloud como sucesso; participantes recarregam a cada entrada no mural.
+- **Deploy:** publicar `cloud/main.js` (`getEventMuralCuriosities` + `listEventMuralParticipants`).
+
+### 2026-10-15 — Primeiro Coordenador: wizard time, aba Peladas, curiosidades mural
+
+- **Wizard time (1.1):** `TEAM_PLAYER_SEARCH_STEP` + `PELADA_PLAYER_SEARCH_STEP` com `pauseUntilComplete`; overlay pausa em `/team/:id` e `/pelada/:id`; `home-directory` repassa `wizard=teamJoin`; `team-profile` banner + `completeStepById('team-player-search')` apos pedido; alerta ao fechar wizard sem solicitar (`coach.wizard.leaveJoinSearch*`)
+- **Tabs (1.2):** botao Peladas forca `/tabs/peladas/lista` (`tabs.page.ts`)
+- **Mural evento (1.3–1.4):** `mergeParticipantProfileFields` em `mural-highlights.service.ts` — altura e time amador de `listEventMuralParticipants` complementam `getMuralParticipantProfiles`; goleiros (`goalkeeper`) no pool de altura
+- **Deploy:** publicar `cloud/main.js` no Back4App (curiosidades no device dependem de `listEventMuralParticipants` publicado)
+
+### 2026-10-15 — Voto unico + curiosidades (altura/time amador)
+
+- **Cloud:** `listEventMuralParticipantRows` — confirmados, `favoriteAmateurTeam`/`favoriteProTeam`, `heightCm`; `getMuralParticipantProfiles` com `heightCm`; guard voto em `createEventMuralVoteForTarget` (cedula usa `_ballotBatch`)
+- **Cliente:** highlights usam `heightCm` do Cloud (sem query client AthleteProfile); participantes mapeiam campos Meus dados; mural carrega participantes antes dos highlights
+- **UI:** card sumula removido do mural; i18n `eventDetail.voting.oneVotePerAccount*`
+- **Deploy:** publicar `cloud/main.js`
+
+### 2026-10-15 — Mural do evento: ordem, drill-down, sumula
+
+- **UI:** [event-mural.page](src/app/pages/event-mural/event-mural.page.ts) com pilha in-page (Top 10 / Scout / Notas / Curiosidades / sumula); highlights `layout="eventOrdered"`; Imprensa e palpites colapsados no final
+- **Top 10 outros:** so juiz, jornalista, cinegrafista, narrador, gandula (pelada e confronto)
+- **Cloud:** `goalTypes` em `getMuralPerformanceAnalytics` (`07-mural.js`); `assertCanViewRefereeSumula` consulta para qualquer logado (`08-scout-referee-performance.js`)
+- **Cliente:** `canViewRefereeSumula` no detalhe do evento = qualquer usuario com evento carregado
+- **Deploy:** publicar `cloud/main.js` no Back4App
+
+### 2026-10-14 — Convidar amigos (badges na imagem do share)
+
+- **UI:** removido `app-invite-store-links` do wizard/menu/perfil/sobre
+- **Share:** badges Play/App Store desenhados na PNG (`assets/invite/*.svg` + `composeInviteImage`); legenda com links Android, iOS e landing `controledebola.com/app`
+
+### 2026-10-14 — Convidar amigos (duas lojas) + Home Usuarios nome
+
+- **Home Usuarios:** `listFullName` na lista
+- **Home Usuarios:** campo Nome usa `listFullName` (fallback `profileUserName` / userName do perfil quando `_User.name` nao vem no cliente)
+
+### 2026-10-13 — Primeiro coordenador: Times, versao, fundacao pelada, wizard
+
+- **Home → Times:** Cloud `listHomeDirectoryTeams` (`15-amateur-teams.js`); lista com presidente + escudo (`app-user-avatar`); confrontos usam mesma Cloud em `teamsByIds`
+- **Versao completa:** `formatAppReleaseFullLabel()` em `app-release-display.util.ts` (nao sobrescrever `app-release.ts` no bump)
+- **Pelada:** `pelada-form` usa `app-birth-date-picker` para fundacao
+- **Wizard admin pelada:** passo `pelada-admin-first-event` entre criar pelada e convite; `event-create` completa o passo
+- **Wizard time:** apos criar time, navega para `/tabs/peladas` para exibir passo convite
+- **Deploy:** publicar `cloud/main.js` no Back4App (funcao nova)
+
+### 2026-10-12 — Regressao header Home (faixa azul + logo distorcido) — **corrigido no app**
+
+- **Manual:** `p23-home-portas` = so `app-user-bar` (ver `docs/MANUAL-SCREENSHOTS-PEDIDOS.md`); nunca houve faixa azul “Controle de Bola” nesta tela
+- **Causa:** `EdgeToEdge.enable` no `MainActivity` sem `@capacitor/system-bars` + header duplicado em `peladas.page.html`
+- **Aplicado:** `MainActivity` sem EdgeToEdge; `StatusBar.setOverlaysWebView({ overlay: false })`; hub sem `ion-header`; logo fixo em `user-bar.component.scss`; `AGENTS.md` / auditoria alinhados
+- **Gotcha:** hub só com `ion-content` precisa `.home-portas-content { --padding-top: var(--ion-toolbar-height) }` senão o 1º card fica atrás da `user-bar` das tabs
+- **Pendente humano:** refazer `p23-home-portas.jpeg` apos smoke no Samsung
+
+### 2026-10-12 — Home Usuários: nome no card + gols/cartões/confrontos (súmula)
+
+- **Nome vazio:** `HomeDirectoryUser.displayName` inclui `profileUserName` (campo `userName` dos perfis); busca na lista; `headerDisplayName` em `home-usuario` com fallback do perfil de atleta (Cloud MK)
+- **Gols/cartões:** `getAthletePublicProfile` agrega `aggregateRefereeSumulaCareerStats` + `loadEventPerformancesForAthleteUserId` (`08-scout-referee-performance.js`); não usa mais `goals`/`yellowCards` do scout
+- **Confrontos (3 meses) e V/E/D:** `getAthleteActivityIndicators` e `computeUserTeamMatchRecord` com `Query.or(user, participantUserId)` nas inscrições
+- Cliente: paridade mínima em `getPublicProfileClient` (`athlete-search.service.ts`)
+- **Deploy:** publicar `cloud/main.js` no Back4App
+
+### 2026-10-09 — Bugs: FAB Times, busca posição contratação, hora e-mail convite juiz
+
+- **Home → Times (+):** rota errada `/team-form` → `/team/form` (`home-directory.page.ts`); FAB com margem `--app-bottom-inset`
+- **Negociação/Contratações (atletas):** filtro e Cloud `listAthleteHiringCandidates` incluem `primaryPosition`; candidatos só-inscrição também recebem posição do perfil atleta
+- **Texto convite juiz (23:00):** `formatEventPushDate` em `03-push-notifications.js` usa `timeZone: 'America/Sao_Paulo'` — **publicar** `cloud/main.js` no Back4App
+- Build app OK (`2026.10.09.0214`); `npm run build:cloud` OK
+
+### 2026-10-09 — Play Console: DEX (R8) + edge-to-edge + i18n inbox/evento
+
+- Release Android: `minifyEnabled true`, ProGuard Capacitor/plugins/Firebase; mapping no AAB
+- Edge-to-edge: `EdgeToEdge.enable` em `MainActivity`; removido `StatusBar.setOverlaysWebView` no Android; fallbacks `--safe-area-inset-*` em `global.scss`. Pacote `@capacitor/system-bars` ainda indisponível no npm — acompanhar Capacitor 8
+- i18n: `inbox.*` completo; `eventDetail.teamMatch.*` + alertas comuns; `hiring.*` no painel de contratação
+- `docs/AUDITORIA-PLAY-I18N-2026-10-08.md` atualizado
+
+### 2026-10-09 — Separação de times: modos preset + i18n + Cloud
+
+- Modos **Soleiros×Casados**, **Times do coração** (grupos balanceados), **Por idade** (corte 1–99); Manual e Aleatória mantidos; ajuste manual após preset (drag/toque)
+- `presetBinarySplit` + `team-split.util.spec.ts`; Cloud `normalizeTeamSplitMode` / `ageThreshold`
+- `teamSplit.*` i18n pt/en/es; auditoria atualizada em `docs/AUDITORIA-PLAY-I18N-2026-10-08.md`
 
 ### 2026-10-08 — Wizard ramificado (pelada / time / outro)
 

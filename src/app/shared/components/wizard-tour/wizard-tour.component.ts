@@ -6,9 +6,11 @@ import {
   OnInit,
 } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
+import { AlertController } from '@ionic/angular';
 import { Subscription, filter } from 'rxjs';
 import { WizardTourChoice, WizardTourStep } from '../../../core/models/wizard-tour.model';
 import { AuthService } from '../../../core/services/auth.service';
+import { I18nService } from '../../../core/services/i18n.service';
 import { WizardTourService } from '../../../core/services/wizard-tour.service';
 
 @Component({
@@ -44,6 +46,8 @@ export class WizardTourComponent implements OnInit, OnDestroy {
     private readonly tour: WizardTourService,
     private readonly auth: AuthService,
     private readonly router: Router,
+    private readonly alertCtrl: AlertController,
+    private readonly i18n: I18nService,
     private readonly cdr: ChangeDetectorRef
   ) {}
 
@@ -99,7 +103,29 @@ export class WizardTourComponent implements OnInit, OnDestroy {
     this.sync();
   }
 
-  close(): void {
+  async close(): Promise<void> {
+    if (this.tour.pendingJoinSearchStepId()) {
+      const alert = await this.alertCtrl.create({
+        header: this.i18n.t('coach.wizard.leaveJoinSearchTitle'),
+        message: this.i18n.t('coach.wizard.leaveJoinSearchMessage'),
+        buttons: [
+          {
+            text: this.i18n.t('coach.wizard.leaveJoinSearchCancel'),
+            role: 'cancel',
+          },
+          {
+            text: this.i18n.t('coach.wizard.leaveJoinSearchConfirm'),
+            role: 'destructive',
+            handler: () => {
+              void this.tour.close();
+              this.sync();
+            },
+          },
+        ],
+      });
+      await alert.present();
+      return;
+    }
     void this.tour.close();
     this.sync();
   }

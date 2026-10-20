@@ -3,7 +3,7 @@
     <div class="event-panel-header">
       <div>
         <ion-card-title>Votacao do evento</ion-card-title>
-        <ion-card-subtitle>Notas de 0 a 10 para cada participante (exceto torcedor)</ion-card-subtitle>
+        <ion-card-subtitle>{{ 'eventDetail.voting.subtitle' | t }}</ion-card-subtitle>
       </div>
       <ion-button fill="clear" size="small" class="event-panel-back" (click)="back.emit()">
         <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
@@ -21,7 +21,10 @@
       <ion-spinner name="crescent"></ion-spinner>
     } @else if (canVote && !votesSubmitted) {
       <ion-note color="medium" class="ion-padding-bottom">
-        Suas notas alimentam o ranking do mural do evento. Apos confirmar, nao sera possivel alterar.
+        {{ 'eventDetail.voting.oneVotePerAccountHint' | t }}
+      </ion-note>
+      <ion-note color="medium" class="ion-padding-bottom">
+        {{ 'eventDetail.voting.maxTenHint' | t:{ count: scoreTenRemaining } }}
       </ion-note>
       <ion-list lines="full">
         @for (participant of votingTargets; track participant.objectId) {
@@ -64,7 +67,7 @@
       </ion-button>
     } @else if (votesSubmitted) {
       <ion-note color="success" class="ion-padding-bottom">
-        Sua votacao foi registrada. Voce pode consultar suas notas abaixo, mas nao pode altera-las.
+        {{ 'eventDetail.voting.oneVotePerAccountDone' | t }}
       </ion-note>
       <ion-list lines="full">
         @for (participant of votingTargets; track participant.objectId) {

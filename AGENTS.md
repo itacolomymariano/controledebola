@@ -51,6 +51,8 @@ npm run build:android:aab      # AAB para Google Play Console (teste interno / p
 
 **Google Play (AAB):** saídas em `android/app/build/outputs/bundle/release/app-release.aab`. Pacote: `com.minhapelada.app` (nao alterar apos o 1º upload). A Play exige AAB (nao APK) para apps novos. Keystore local (`android/keystore.properties` + `android/*.keystore`, no `.gitignore`) e a **upload key** — faca backup seguro; com Play App Signing a Google guarda a chave de assinatura do app.
 
+**Play — otimizacao DEX / Android 15+:** release com `minifyEnabled true` (`android/app/build.gradle`) e ProGuard em `proguard-rules.pro`. Android 15+ (targetSdk 36): manter `StatusBar.setOverlaysWebView({ overlay: false })` em `app.component.ts` e `--app-bottom-inset` em `global.scss` (`viewport-fit=cover`). **Nao** habilitar `EdgeToEdge.enable` no `MainActivity` ate `@capacitor/system-bars` com `insetsHandling: 'css'` estar no npm e validado na Home (manual `p23-home-portas`).
+
 **iOS (GitHub Actions, sem Mac local):**
 
 ```bash
@@ -59,6 +61,21 @@ npm run build:ios:ci
 ```
 
 Workflow: `.github/workflows/ios-capacitor-build.yml` (runner `macos-26`, Xcode 26). Guia completo: [docs/IOS_GITHUB_ACTIONS.md](docs/IOS_GITHUB_ACTIONS.md). Bundle ID: `com.minhapelada.app`. Secrets: `ENVIRONMENT_LOCAL_TS` (obrigatorio); `IOS_DISTRIBUTION_*` so para IPA.
+
+**TestFlight / `release-ipa` — build number (`CFBundleVersion`) obrigatorio antes do workflow**
+
+O upload usa `versionCode` de [`.app-release-state.json`](.app-release-state.json) (mesmo numero do Android). A Apple **rejeita** se for igual ou menor ao ultimo build ja enviado (`ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE`, ex.: *previousBundleVersion: 208*).
+
+Checklist **antes** de Actions → **iOS Capacitor Build** → `release-ipa` (e **depois** de push na `main`):
+
+1. **App Store Connect** → app → **TestFlight** → anote o **Build** mais recente (numero inteiro, ex. 208).
+2. **Local:** confira `versionCode` em `.app-release-state.json`. Tem de ser **estritamente maior** que o ultimo build no TestFlight.
+3. Se precisar subir: `node scripts/bump-app-release.js` (ou `npm run build`, que roda o bump no `prebuild`) **ate** `versionCode` > ultimo build Apple. Isso atualiza tambem `src/app/core/constants/app-release.ts` e `android/app/build.gradle`.
+4. **Commit + push** na `main` dos tres arquivos acima (o CI le o JSON do GitHub, nao o disco local).
+5. No log do job, confira a linha `iOS version … (NNN)` — `NNN` deve ser > ultimo build TestFlight.
+6. **Nao** use *Re-run* de um workflow antigo sem novo commit de bump; o Re-run reenvia o **mesmo** `versionCode` e falha de novo.
+
+Detalhes e outros erros: [docs/IOS_GITHUB_ACTIONS.md](docs/IOS_GITHUB_ACTIONS.md) (secao Troubleshooting).
 
 ---
 
@@ -165,6 +182,7 @@ Inscreva no construtor, recarregue em `ionViewWillEnter`, `unsubscribe` em `ngOn
 | `01b-comment-discipline.js` | Filtro de palavroes em comentarios |
 | `01c-integrity-helpers.js` | Anti auto-voto / quorum / midia TOP |
 | `01d-mail-helpers.js` | SMTP Zoho (`nodemailer`) via classe `MailSettings` |
+| `01e-voter-reliability.js` | Peso de confiabilidade do avaliador no agregado do mural app |
 | `02-core.js` | Conta, login, reset de senha (`requestPasswordResetEmail`, `confirmPasswordReset`), exclusao (`deleteMyAccount`) |
 | `02b-contact-messages.js` | Criticas/sugestoes e relato de problema (`sendContactMessage`) |
 | `03-push-notifications.js` | Push |

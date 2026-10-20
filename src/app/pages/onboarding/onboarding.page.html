@@ -11,7 +11,12 @@
         <ion-button (click)="skipToRegister()">Pular</ion-button>
       }
     </ion-buttons>
-    <ion-title>Controle de Bola</ion-title>
+    <ion-title>
+      <div class="onboarding-title-block">
+        <span>Controle de Bola</span>
+        <span class="onboarding-version">{{ appVersion }}</span>
+      </div>
+    </ion-title>
   </ion-toolbar>
 </ion-header>
 

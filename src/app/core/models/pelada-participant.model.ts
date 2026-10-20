@@ -16,6 +16,8 @@ export interface PeladaParticipant {
   profileLabel?: string;
   favoriteProTeam?: string;
   favoriteAmateurTeam?: string;
+  /** AthleteProfile.height (cm), quando disponivel. */
+  heightCm?: number;
 }
 
 export function registrationRolesForMuralRole(role: MuralTargetRole): ProfileRole[] {

@@ -5,7 +5,12 @@ export const SCREEN_HELP_ROUTES: Array<{ pattern: RegExp; key: string }> = [
   { pattern: /^\/register$/, key: 'screen.help.register' },
   { pattern: /^\/profile-setup$/, key: 'screen.help.profile-setup' },
 
-  { pattern: /^\/tabs(\/peladas)?$/, key: 'screen.help.peladas' },
+  { pattern: /^\/tabs\/home$/, key: 'screen.help.home' },
+  { pattern: /^\/tabs\/peladas\/lista$/, key: 'screen.help.peladas' },
+  { pattern: /^\/tabs\/peladas\/confrontos$/, key: 'screen.help.events' },
+  { pattern: /^\/tabs\/peladas\/times$/, key: 'screen.help.search' },
+  { pattern: /^\/tabs\/peladas\/usuarios(\/[^/]+)?$/, key: 'screen.help.search' },
+  { pattern: /^\/tabs\/peladas$/, key: 'screen.help.home' },
   { pattern: /^\/tabs\/events$/, key: 'screen.help.events' },
   { pattern: /^\/tabs\/search$/, key: 'screen.help.search' },
   { pattern: /^\/tabs\/mural$/, key: 'screen.help.mural' },

@@ -3,7 +3,7 @@
   {{ titleKey | t }}
 </ion-button>
 
-<ion-popover #helpPopover [trigger]="helpId" side="bottom" alignment="end">
+<ion-popover #helpPopover [trigger]="helpId" side="bottom" alignment="end" (didDismiss)="onDismiss()">
   <ng-template>
     <ion-content class="ion-padding help-popover-body">
       <div class="balloon-header">
@@ -14,6 +14,17 @@
       </div>
       <p>{{ bodyKey | t }}</p>
       <div class="balloon-actions">
+        @if (enableSpeech && bodyText) {
+          <ion-button size="small" fill="outline" color="medium" (click)="toggleSpeech()">
+            @if (speaking) {
+              <ion-icon slot="start" name="stop-circle-outline"></ion-icon>
+              {{ 'mural.rule.stop' | t }}
+            } @else {
+              <ion-icon slot="start" name="volume-high-outline"></ion-icon>
+              {{ 'mural.rule.listen' | t }}
+            }
+          </ion-button>
+        }
         <ion-button size="small" fill="solid" color="medium" (click)="helpPopover.dismiss()">
           <ion-icon slot="start" name="close-outline"></ion-icon>
           Fechar

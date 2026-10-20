@@ -198,6 +198,7 @@ function formatEventPushDate(startTime) {
   const date = startTime instanceof Date ? startTime : new Date(startTime);
   if (Number.isNaN(date.getTime())) return '';
   return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
     day: '2-digit',
     month: 'short',
     hour: '2-digit',

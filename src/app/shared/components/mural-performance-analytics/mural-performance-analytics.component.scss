@@ -99,3 +99,10 @@ h3 {
   color: var(--ion-color-medium);
   font-size: 0.85rem;
 }
+
+.stats-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}

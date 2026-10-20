@@ -3,7 +3,12 @@
     <ion-buttons slot="start">
       <ion-button (click)="goBack()">{{ 'register.back' | t }}</ion-button>
     </ion-buttons>
-    <ion-title>{{ 'register.title' | t }}</ion-title>
+    <ion-title>
+      <div class="register-title-block">
+        <span>{{ 'register.title' | t }}</span>
+        <span class="register-version">{{ appVersion }}</span>
+      </div>
+    </ion-title>
     <ion-buttons slot="end">
       <app-help-balloon textKey="screen.help.register"></app-help-balloon>
     </ion-buttons>
@@ -11,6 +16,7 @@
 </ion-header>
 
 <ion-content class="ion-padding">
+  <p class="register-subtitle">{{ 'register.subtitle' | t }}</p>
   <form [formGroup]="form" (ngSubmit)="submit()">
     <ion-item>
       <ion-input [label]="'register.name' | t" labelPlacement="stacked" formControlName="name"></ion-input>

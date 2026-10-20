@@ -5,7 +5,11 @@ import { AlertController, LoadingController } from '@ionic/angular';
 import Parse from 'parse';
 import { Subscription } from 'rxjs';
 import { Address } from '../../core/models/address.model';
-import { isEventPast, PeladaEventListItem } from '../../core/models/event.model';
+import {
+  getRegistrationStatus,
+  isEventPast,
+  PeladaEventListItem,
+} from '../../core/models/event.model';
 import {
   MURAL_TARGET_ROLE_LABELS,
   MuralTargetRole,
@@ -43,6 +47,7 @@ import {
   ProfilePresentationRequest,
   ProfilePresentationRequestService,
 } from '../../core/services/profile-presentation-request.service';
+import { WizardTourService } from '../../core/services/wizard-tour.service';
 
 type Segment = 'eventos' | 'socios' | 'cotinhas' | 'caixa' | 'mensalidades' | 'mural' | 'configuracoes';
 
@@ -68,6 +73,7 @@ export class PeladaDetailPage implements OnDestroy {
   peladaId = '';
   pelada: Pelada | null = null;
   segment: Segment = 'eventos';
+  wizardPeladaJoin = false;
   loading = true;
   errorMessage = '';
   isAdmin = false;
@@ -169,7 +175,8 @@ export class PeladaDetailPage implements OnDestroy {
     private readonly loadingCtrl: LoadingController,
     private readonly alertCtrl: AlertController,
     private readonly cdr: ChangeDetectorRef,
-    private readonly zone: NgZone
+    private readonly zone: NgZone,
+    private readonly wizardTour: WizardTourService
   ) {
     this.registrationsChangedSub = this.registrationService.onRegistrationsChanged.subscribe(() => {
       if (this.isAdmin && this.segment === 'configuracoes' && this.peladaId) {
@@ -184,11 +191,32 @@ export class PeladaDetailPage implements OnDestroy {
 
   ionViewWillEnter(): void {
     this.peladaId = this.route.snapshot.paramMap.get('id') ?? '';
+    this.wizardPeladaJoin = this.route.snapshot.queryParamMap.get('wizard') === 'peladaJoin';
     const segment = this.route.snapshot.queryParamMap.get('segment');
-    if (segment && this.isSegment(segment)) {
+    if (this.wizardPeladaJoin) {
+      this.segment = 'eventos';
+    } else if (segment && this.isSegment(segment)) {
       this.segment = segment;
     }
     void this.loadPelada();
+  }
+
+  get hasOpenRegistrationEvent(): boolean {
+    return this.events.some(
+      (event) =>
+        getRegistrationStatus(event.registrationOpensAt, event.registrationClosesAt) === 'open'
+    );
+  }
+
+  get openRegistrationEvents(): PeladaEventListItem[] {
+    return this.events.filter(
+      (event) =>
+        getRegistrationStatus(event.registrationOpensAt, event.registrationClosesAt) === 'open'
+    );
+  }
+
+  openPeladaListFromWizard(): void {
+    void this.router.navigate(['/tabs/peladas/lista'], { queryParams: { wizard: 'peladaJoin' } });
   }
 
   private isSegment(value: string): value is Segment {
@@ -353,6 +381,11 @@ export class PeladaDetailPage implements OnDestroy {
       this.loadingReviewProfile = false;
       this.cdr.markForCheck();
     }
+  }
+
+  openAthleteFullProfile(userId: string): void {
+    this.closeProfilePresentationReview();
+    void this.router.navigate(['/athlete', userId]);
   }
 
   closeProfilePresentationReview(): void {
@@ -861,8 +894,26 @@ export class PeladaDetailPage implements OnDestroy {
       this.errorMessage = error instanceof Error ? error.message : 'Erro ao carregar pelada.';
     } finally {
       this.loading = false;
+      this.maybeCompleteWizardPeladaJoinStep();
       this.cdr.markForCheck();
     }
+  }
+
+  private maybeCompleteWizardPeladaJoinStep(): void {
+    if (!this.wizardPeladaJoin || !this.pelada) return;
+    void this.dismissWizardPeladaJoinUi();
+  }
+
+  private async dismissWizardPeladaJoinUi(): Promise<void> {
+    await this.wizardTour.dismissJoinSearchStayOnPage();
+    this.wizardPeladaJoin = false;
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { wizard: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+    this.cdr.markForCheck();
   }
 
   private async loadMembership(): Promise<void> {

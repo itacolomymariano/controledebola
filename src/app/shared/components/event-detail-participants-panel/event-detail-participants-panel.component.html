@@ -16,6 +16,34 @@
     </div>
   </ion-card-header>
   <ion-card-content>
+    <ng-template #confirmedParticipantSummary let-participant="participant">
+      <div class="participant-confirmed-summary">
+        <app-user-avatar
+          [avatarUrl]="participant.avatarUrl"
+          [alt]="participant.apelido"
+          size="md"
+        ></app-user-avatar>
+        <div class="participant-confirmed-fields">
+          <h3>{{ participant.apelido }}</h3>
+          <p>{{ registrationService.formatRole(participant.role) }}</p>
+          @if (showAthletePosition(participant)) {
+            <p>
+              {{
+                'eventDetail.participants.positionLabel'
+                  | t: { position: participant.primaryPosition }
+              }}
+            </p>
+          }
+          @if (participant.age != null) {
+            <p>{{ 'eventDetail.participants.ageYears' | t: { age: participant.age } }}</p>
+          }
+          @if (formatCbAverageScore(participant); as cbScore) {
+            <p>{{ 'eventDetail.participants.cbAverage' | t: { score: cbScore } }}</p>
+          }
+        </div>
+      </div>
+    </ng-template>
+
     @if (registration) {
       @if (isContractHired(registration)) {
         <ion-note class="ion-margin-bottom contract-inbox-note" color="medium">
@@ -81,213 +109,252 @@
             }
             <ion-card class="participant-admin-card">
               <ion-card-content>
-                <div class="participant-admin-header">
-                  <app-user-avatar
-                    [avatarUrl]="participant.avatarUrl"
-                    [alt]="participant.apelido"
-                    size="md"
-                  ></app-user-avatar>
-                  <div class="participant-admin-summary">
-                    <h3>{{ participant.apelido }}</h3>
-                    <p>
-                      {{ participant.userName }} · {{ registrationService.formatRole(participant.role) }}
-                      @if (participant.isAnonymous) {
-                        · Anonimo
-                      }
-                      @if (participant.primaryPosition) {
-                        · {{ participant.primaryPosition }}
-                      }
-                    </p>
-                    <p>
-                      {{ participant.isEffectivelyConfirmed ? 'Confirmado' : 'Pendente' }}
-                      @if (hasPendingProfilePresentation(participant)) {
-                        · <ion-text color="warning">Apresentacao de perfil pendente</ion-text>
-                      }
-                      · {{ participantMembershipLabel(participant) }}
-                      @if (participant.paymentExempt) {
-                        · Isento
-                      } @else if (hasPositiveParticipationFee(event.participationFee)) {
-                        · Pagamento: {{ participant.paymentConfirmed ? 'Sim' : 'Nao' }}
-                      }
-                      @if (gateTicketControlEnabled && participant.isEffectivelyConfirmed) {
-                        ·
-                        <ion-text [color]="participant.gateTicketActive ? 'success' : 'warning'">
-                          Ingresso: {{ participant.gateTicketActive ? 'Enviado' : 'Nao enviado' }}
-                        </ion-text>
-                      }
-                      @if (participant.age != null) {
-                        · {{ participant.age }} anos
-                      }
-                      @if (participant.appAverageScore != null) {
-                        · Media CB: {{ participant.appAverageScore | number: '1.1-1' }}
-                      }
-                      @if (isTeamMatch && participant.role === 'athlete') {
-                        · Time: {{ participant.teamName || participantTeamSideLabel(participant) || 'Nao definido' }}
-                      }
-                      @if (participant.role === 'athlete' && supportsArrivalOrder && event.useArrivalOrderForTeams) {
+                @if (participant.isEffectivelyConfirmed) {
+                  <ng-container
+                    *ngTemplateOutlet="
+                      confirmedParticipantSummary;
+                      context: { participant: participant }
+                    "
+                  ></ng-container>
+                  <div class="participant-admin-operational">
+                    @if (
+                      participant.role === 'athlete' &&
+                      supportsArrivalOrder &&
+                      event.useArrivalOrderForTeams
+                    ) {
+                      <p class="participant-arrival-status">
                         @if (participant.arrivalOrder != null) {
-                          · Chegada: {{ participant.arrivalOrder }}º
+                          {{ 'eventDetail.arrival.orderLine' | t: { order: participant.arrivalOrder } }}
                           @if (participant.arrivedAt) {
                             ({{ registrationService.formatArrivedAt(participant.arrivedAt) }})
                           }
                         } @else {
-                          · Aguardando chegada
+                          {{ 'eventDetail.arrival.waiting' | t }}
                         }
-                      }
-                    </p>
-                  </div>
-                  @if (
-                    supportsArrivalOrder &&
-                    event.useArrivalOrderForTeams &&
-                    participant.role === 'athlete' &&
-                    !event.isReadOnly
-                  ) {
-                    <div class="participant-admin-actions">
-                      @if (hasArrived(participant)) {
-                        <ion-button
-                          fill="outline"
-                          color="medium"
-                          size="small"
-                          [disabled]="updatingPaymentId === participant.objectId"
-                          (click)="arrivalAction.emit({ participant, action: 'undo' })"
+                      </p>
+                    }
+                    @if (
+                      supportsArrivalOrder &&
+                      event.useArrivalOrderForTeams &&
+                      participant.role === 'athlete' &&
+                      !event.isReadOnly
+                    ) {
+                      <div class="participant-admin-actions ion-margin-bottom">
+                        @if (hasArrived(participant)) {
+                          <ion-button
+                            fill="outline"
+                            color="medium"
+                            size="small"
+                            [disabled]="updatingPaymentId === participant.objectId"
+                            (click)="arrivalAction.emit({ participant, action: 'undo' })"
+                          >
+                            {{ 'eventDetail.arrival.undo' | t }}
+                          </ion-button>
+                        } @else {
+                          <ion-button
+                            size="small"
+                            [disabled]="updatingPaymentId === participant.objectId"
+                            (click)="arrivalAction.emit({ participant, action: 'check_in' })"
+                          >
+                            {{ 'eventDetail.arrival.checkIn' | t }}
+                          </ion-button>
+                        }
+                      </div>
+                    }
+
+                    @if (isTeamMatch && participant.role === 'athlete' && !event.isReadOnly) {
+                      <ion-item lines="none">
+                        <ion-select
+                          label="Time"
+                          labelPlacement="stacked"
+                          [value]="participant.teamSide || ''"
+                          [disabled]="updatingTeamSideId === participant.objectId"
+                          (ionChange)="onTeamSideSelect(participant, $any($event.detail.value))"
                         >
-                          Desfazer chegada
-                        </ion-button>
-                      } @else {
-                        <ion-button
-                          size="small"
-                          [disabled]="updatingPaymentId === participant.objectId"
-                          (click)="arrivalAction.emit({ participant, action: 'check_in' })"
-                        >
-                          Chegou
-                        </ion-button>
-                      }
-                    </div>
-                  }
-                </div>
+                          <ion-select-option value="home">{{
+                            event.homeTeamName || 'Mandante'
+                          }}</ion-select-option>
+                          <ion-select-option value="away">{{
+                            event.awayTeamName || 'Visitante'
+                          }}</ion-select-option>
+                        </ion-select>
+                      </ion-item>
+                    }
 
-                @if (isAdminMode && isTeamMatch && participant.role === 'athlete' && !event.isReadOnly) {
-                  <ion-item class="ion-margin-top" lines="none">
-                    <ion-select
-                      label="Time"
-                      labelPlacement="stacked"
-                      [value]="participant.teamSide || ''"
-                      [disabled]="updatingTeamSideId === participant.objectId"
-                      (ionChange)="onTeamSideSelect(participant, $any($event.detail.value))"
-                    >
-                      <ion-select-option value="home">{{ event.homeTeamName || 'Mandante' }}</ion-select-option>
-                      <ion-select-option value="away">{{ event.awayTeamName || 'Visitante' }}</ion-select-option>
-                    </ion-select>
-                  </ion-item>
-                }
+                    @if (showPaymentAdminControlsFor(participant)) {
+                      <ion-list lines="full" class="participant-admin-controls">
+                        <ion-item>
+                          <ion-toggle
+                            [checked]="participant.paymentExempt"
+                            [disabled]="updatingPaymentId === participant.objectId"
+                            (ionChange)="paymentExemptToggle.emit({ participant, event: $event })"
+                          >
+                            Isento de pagamento
+                          </ion-toggle>
+                        </ion-item>
+                        <ion-item>
+                          <ion-toggle
+                            [checked]="participant.paymentConfirmed"
+                            [disabled]="
+                              updatingPaymentId === participant.objectId || participant.paymentExempt
+                            "
+                            (ionChange)="paymentToggle.emit({ participant, event: $event })"
+                          >
+                            Pagamento confirmado
+                          </ion-toggle>
+                        </ion-item>
+                      </ion-list>
+                    }
 
-                @if (hasPendingProfilePresentation(participant)) {
-                  <div class="participant-admin-profile-review ion-margin-top">
-                    <ion-note color="warning">
-                      Primeira participacao nesta pelada — avalie o perfil antes de confirmar.
-                    </ion-note>
-                    <div class="participant-admin-profile-actions">
-                      <ion-button
-                        fill="outline"
-                        size="small"
-                        (click)="viewProfilePresentation.emit(participant)"
-                      >
-                        Ver perfil
-                      </ion-button>
-                      <ion-button
-                        color="success"
-                        size="small"
-                        [disabled]="resolvingProfileId === participant.objectId"
-                        (click)="approveProfilePresentation.emit(participant)"
-                      >
-                        Aprovar
-                      </ion-button>
-                      <ion-button
-                        color="danger"
-                        fill="outline"
-                        size="small"
-                        [disabled]="resolvingProfileId === participant.objectId"
-                        (click)="rejectProfilePresentation.emit(participant)"
-                      >
-                        Recusar
-                      </ion-button>
-                    </div>
-                  </div>
-                }
-
-                @if (showPaymentAdminControlsFor(participant)) {
-                  <ion-list lines="full" class="participant-admin-controls">
-                    <ion-item>
-                      <ion-toggle
-                        [checked]="participant.paymentExempt"
-                        [disabled]="updatingPaymentId === participant.objectId"
-                        (ionChange)="paymentExemptToggle.emit({ participant, event: $event })"
-                      >
-                        Isento de pagamento
-                      </ion-toggle>
-                    </ion-item>
-                    <ion-item>
-                      <ion-toggle
-                        [checked]="participant.paymentConfirmed"
-                        [disabled]="updatingPaymentId === participant.objectId || participant.paymentExempt"
-                        (ionChange)="paymentToggle.emit({ participant, event: $event })"
-                      >
-                        Pagamento confirmado
-                      </ion-toggle>
-                    </ion-item>
-                  </ion-list>
-                } @else if (
-                  showPaymentAdminControls &&
-                  isContractHired(participant) &&
-                  (participant.contractOfferedAmount ?? 0) > 0
-                ) {
-                  <ion-note color="medium">
-                    Contratado — sem taxa de participacao. Pague o profissional apos confirmar a presenca.
-                  </ion-note>
-                } @else if (showPaymentAdminControls && isContractHired(participant)) {
-                  <ion-note color="medium">
-                    Convocado — sem taxa de participacao.
-                  </ion-note>
-                }
-
-                @if (gateTicketControlEnabled && participant.isEffectivelyConfirmed) {
-                  <div class="participant-admin-gate">
-                    @if (participant.gateTicketActive) {
-                      <ion-button
-                        expand="block"
-                        fill="outline"
-                        color="danger"
-                        [disabled]="cancellingTicketId === participant.objectId"
-                        (click)="cancelGateTicket.emit(participant)"
-                      >
-                        Cancelar ingresso
-                      </ion-button>
-                    } @else {
-                      <ion-button
-                        expand="block"
-                        fill="outline"
-                        [disabled]="issuingTicketId === participant.objectId"
-                        (click)="issueGateTicket.emit(participant)"
-                      >
-                        Enviar ingresso
-                      </ion-button>
+                    @if (gateTicketControlEnabled) {
+                      <div class="participant-admin-gate">
+                        @if (participant.gateTicketActive) {
+                          <ion-button
+                            expand="block"
+                            fill="outline"
+                            color="danger"
+                            [disabled]="cancellingTicketId === participant.objectId"
+                            (click)="cancelGateTicket.emit(participant)"
+                          >
+                            Cancelar ingresso
+                          </ion-button>
+                        } @else {
+                          <ion-button
+                            expand="block"
+                            fill="outline"
+                            [disabled]="issuingTicketId === participant.objectId"
+                            (click)="issueGateTicket.emit(participant)"
+                          >
+                            Enviar ingresso
+                          </ion-button>
+                        }
+                      </div>
                     }
                   </div>
+                } @else {
+                  <div class="participant-admin-header">
+                    <app-user-avatar
+                      [avatarUrl]="participant.avatarUrl"
+                      [alt]="participant.apelido"
+                      size="md"
+                    ></app-user-avatar>
+                    <div class="participant-admin-summary">
+                      <h3>{{ participant.apelido }}</h3>
+                      <p>
+                        {{ participant.userName }} · {{ registrationService.formatRole(participant.role) }}
+                        @if (participant.isAnonymous) {
+                          · Anonimo
+                        }
+                        @if (participant.primaryPosition) {
+                          · {{ participant.primaryPosition }}
+                        }
+                      </p>
+                      <p>
+                        Pendente
+                        @if (hasPendingProfilePresentation(participant)) {
+                          · <ion-text color="warning">Apresentacao de perfil pendente</ion-text>
+                        }
+                        · {{ participantMembershipLabel(participant) }}
+                        @if (participant.paymentExempt) {
+                          · Isento
+                        } @else if (hasPositiveParticipationFee(event.participationFee)) {
+                          · Pagamento: {{ participant.paymentConfirmed ? 'Sim' : 'Nao' }}
+                        }
+                        @if (participant.age != null) {
+                          · {{ participant.age }} anos
+                        }
+                        @if (participant.appAverageScore != null) {
+                          · Media CB: {{ participant.appAverageScore | number: '1.1-1' }}
+                        }
+                        @if (isTeamMatch && participant.role === 'athlete') {
+                          · Time:
+                          {{ participant.teamName || participantTeamSideLabel(participant) || 'Nao definido' }}
+                        }
+                      </p>
+                    </div>
+                  </div>
+
+                  @if (hasPendingProfilePresentation(participant)) {
+                    <div class="participant-admin-profile-review ion-margin-top">
+                      <ion-note color="warning">
+                        Primeira participacao nesta pelada — avalie o perfil antes de confirmar.
+                      </ion-note>
+                      <div class="participant-admin-profile-actions">
+                        <ion-button
+                          fill="outline"
+                          size="small"
+                          (click)="viewProfilePresentation.emit(participant)"
+                        >
+                          Ver perfil
+                        </ion-button>
+                        <ion-button
+                          color="success"
+                          size="small"
+                          [disabled]="resolvingProfileId === participant.objectId"
+                          (click)="approveProfilePresentation.emit(participant)"
+                        >
+                          Aprovar
+                        </ion-button>
+                        <ion-button
+                          color="danger"
+                          fill="outline"
+                          size="small"
+                          [disabled]="resolvingProfileId === participant.objectId"
+                          (click)="rejectProfilePresentation.emit(participant)"
+                        >
+                          Recusar
+                        </ion-button>
+                      </div>
+                    </div>
+                  }
+
+                  @if (showPaymentAdminControlsFor(participant)) {
+                    <ion-list lines="full" class="participant-admin-controls">
+                      <ion-item>
+                        <ion-toggle
+                          [checked]="participant.paymentExempt"
+                          [disabled]="updatingPaymentId === participant.objectId"
+                          (ionChange)="paymentExemptToggle.emit({ participant, event: $event })"
+                        >
+                          Isento de pagamento
+                        </ion-toggle>
+                      </ion-item>
+                      <ion-item>
+                        <ion-toggle
+                          [checked]="participant.paymentConfirmed"
+                          [disabled]="updatingPaymentId === participant.objectId || participant.paymentExempt"
+                          (ionChange)="paymentToggle.emit({ participant, event: $event })"
+                        >
+                          Pagamento confirmado
+                        </ion-toggle>
+                      </ion-item>
+                    </ion-list>
+                  } @else if (
+                    showPaymentAdminControls &&
+                    isContractHired(participant) &&
+                    (participant.contractOfferedAmount ?? 0) > 0
+                  ) {
+                    <ion-note color="medium">
+                      Contratado — sem taxa de participacao. Pague o profissional apos confirmar a presenca.
+                    </ion-note>
+                  } @else if (showPaymentAdminControls && isContractHired(participant)) {
+                    <ion-note color="medium">Convocado — sem taxa de participacao.</ion-note>
+                  }
                 }
               </ion-card-content>
             </ion-card>
           }
         </ion-list>
         @if (supportsArrivalOrder && event.useArrivalOrderForTeams) {
-          <ion-note color="medium" class="ion-padding-top">
-            Toque em <strong>Chegou</strong> quando o atleta chegar ao local. O administrador
-            sempre fica em 1º. Socios da pelada ficam na frente dos convidados e, entre si,
-            seguem a ordem de chegada (o administrador nao entra nessa fila de socios).
+          <ion-note color="medium" class="ion-padding-top arrival-order-footnote">
+            {{ 'eventDetail.arrival.footnote' | t }}
           </ion-note>
         }
       }
     } @else if (confirmedParticipantsCount > 0) {
-      <h3 class="participants-section-title">Participantes confirmados ({{ confirmedParticipantsCount }})</h3>
+      <h3 class="participants-section-title">
+        {{ 'eventDetail.participants.confirmedSection' | t: { count: confirmedParticipantsCount } }}
+      </h3>
       <ion-searchbar
         placeholder="Buscar participante"
         [value]="participantSearch"
@@ -302,29 +369,10 @@
           @if (showTeamGroupHeader(i, filteredConfirmedParticipants)) {
             <ion-list-header>{{ teamGroupTitle(participant) }}</ion-list-header>
           }
-          <ion-item>
-            <app-user-avatar
-              slot="start"
-              [avatarUrl]="participant.avatarUrl"
-              [alt]="participant.apelido"
-              size="md"
-            ></app-user-avatar>
-            <ion-label>
-              <h3>{{ participant.apelido }}</h3>
-              <p>{{ registrationService.formatRole(participant.role) }}</p>
-              @if (participant.primaryPosition) {
-                <p>Posicao: {{ participant.primaryPosition }}</p>
-              }
-              @if (participant.age != null) {
-                <p>Idade: {{ participant.age }} anos</p>
-              }
-              @if (participant.appAverageScore != null) {
-                <p>Media CB (Controle de Bola): {{ participant.appAverageScore | number: '1.1-1' }}</p>
-              }
-              @if (isTeamMatch && participant.role === 'athlete') {
-                <p>Time: {{ participant.teamName || participantTeamSideLabel(participant) || 'Nao definido' }}</p>
-              }
-            </ion-label>
+          <ion-item class="participant-confirmed-list-item">
+            <ng-container
+              *ngTemplateOutlet="confirmedParticipantSummary; context: { participant: participant }"
+            ></ng-container>
           </ion-item>
         }
       </ion-list>

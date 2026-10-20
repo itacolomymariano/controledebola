@@ -1,3 +1,11 @@
+.wizard-join-banner {
+  display: block;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  background: var(--ion-color-primary-tint, rgba(var(--ion-color-primary-rgb), 0.12));
+  border-bottom: 1px solid var(--ion-color-primary, #3880ff);
+}
+
 .pelada-tabs {
   display: flex;
   position: sticky;

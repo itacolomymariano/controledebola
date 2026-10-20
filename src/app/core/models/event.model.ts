@@ -332,3 +332,20 @@ export function isSumulaEditOpen(
   if (closesAt && now > closesAt) return false;
   return true;
 }
+
+/** Edicao de apontamento scout: faixa scoutApontamentoOpensAt/ClosesAt; bloqueia apos isFinished. */
+export function isScoutApontamentoEditOpen(
+  event: Pick<
+    PeladaEvent,
+    'scoutApontamentoOpensAt' | 'scoutApontamentoClosesAt' | 'isFinished'
+  >,
+  now = new Date()
+): boolean {
+  if (event.isFinished) return false;
+  const opensAt = event.scoutApontamentoOpensAt;
+  const closesAt = event.scoutApontamentoClosesAt;
+  if (!opensAt && !closesAt) return true;
+  if (opensAt && now < opensAt) return false;
+  if (closesAt && now > closesAt) return false;
+  return true;
+}

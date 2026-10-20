@@ -1,6 +1,11 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Montando seu perfil</ion-title>
+    <ion-title>
+      <div class="profile-setup-title-block">
+        <span>Montando seu perfil</span>
+        <span class="profile-setup-version">{{ appVersion }}</span>
+      </div>
+    </ion-title>
     <ion-buttons slot="end">
       <app-help-balloon textKey="screen.help.profile-setup"></app-help-balloon>
     </ion-buttons>
@@ -16,7 +21,7 @@
     <div class="setup-hero">
       <ion-icon name="football-outline"></ion-icon>
       <h2>Perfil de atleta</h2>
-      <p>Conte um pouco sobre como voce joga. Isso ajuda nas peladas e nos rankings.</p>
+      <p>{{ 'profileSetup.athleteIntro' | t }}</p>
     </div>
 
     <form [formGroup]="athleteForm" (ngSubmit)="saveAthleteProfile()">
@@ -62,9 +67,9 @@
     </div>
 
     <form [formGroup]="otherForm" (ngSubmit)="saveOtherProfile()">
-      <ion-list lines="full">
+      <div class="role-profile-form-stack">
         <app-role-profile-fields [form]="otherForm" [role]="professionalRole!"></app-role-profile-fields>
-      </ion-list>
+      </div>
       <ion-button expand="block" type="submit" class="ion-margin-top">Salvar e continuar</ion-button>
       <ion-button expand="block" fill="outline" (click)="backToRolePick()">Voltar</ion-button>
       <ion-button expand="block" fill="clear" (click)="skip()">Completar depois</ion-button>
@@ -123,10 +128,9 @@
             step="0.01"
           ></ion-input>
         </ion-item>
-        <ion-item>
-          <ion-toggle formControlName="acceptsPaidCommitments">
-            Aceito compromissos quando contratado e pago
-          </ion-toggle>
+        <ion-item lines="full" class="item-toggle-wrap">
+          <ion-label class="ion-text-wrap">Aceito compromissos quando contratado e pago</ion-label>
+          <ion-toggle slot="end" formControlName="acceptsPaidCommitments"></ion-toggle>
         </ion-item>
       </ion-list>
       <ion-button expand="block" type="submit" class="ion-margin-top">Salvar e continuar</ion-button>

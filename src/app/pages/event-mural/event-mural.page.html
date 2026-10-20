@@ -2,9 +2,20 @@
   <app-user-bar></app-user-bar>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button [defaultHref]="'/event/' + eventId"></ion-back-button>
+      @if (!isRoot) {
+        <ion-button fill="clear" (click)="popView()" aria-label="Voltar">
+          <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+        </ion-button>
+      } @else {
+        <ion-back-button [defaultHref]="'/event/' + eventId"></ion-back-button>
+      }
     </ion-buttons>
-    <ion-title>Mural do evento</ion-title>
+    <ion-title>{{ isRoot ? 'Mural do evento' : drillTitle }}</ion-title>
+    @if (!isRoot) {
+      <ion-buttons slot="end">
+        <ion-button fill="clear" (click)="closeDrillToRoot()">Fechar</ion-button>
+      </ion-buttons>
+    }
   </ion-toolbar>
 </ion-header>
 
@@ -30,178 +41,461 @@
   }
 
   @if (!loading && !loadFailed) {
-    @if (!voterQuorumMet) {
+    @if (isRoot && !voterQuorumMet) {
       <ion-note color="medium" class="ion-margin-bottom">
         Integridade: este evento ainda tem menos de {{ minVotersForHighlights }} votantes
         distintos. Os rankings continuam visiveis; a media fica mais confiavel com mais votos.
       </ion-note>
     }
 
-    <ion-card class="ion-margin-bottom media-hub-card">
-      <ion-card-header>
-        <app-mural-event-context [context]="shareContext"></app-mural-event-context>
-        <div class="mural-card-header-row">
-          <div (click)="openMediaHub()">
-            <ion-card-title>Imprensa / Midia</ion-card-title>
-            <ion-card-subtitle>Radio, jornal e video do evento</ion-card-subtitle>
-          </div>
-          <app-mural-share-button
-            [context]="shareContext"
-            cardTitle="Imprensa / Midia"
-            ruleKey="mural.rule.eventMedia"
-          ></app-mural-share-button>
-        </div>
-      </ion-card-header>
-      <ion-card-content>
-        @if (mediaHasJournal || mediaHasRadio || mediaHasVideo) {
-          <div class="media-preview-list">
-            @if (mediaHasJournal) {
-              <ion-item button detail="true" lines="full" (click)="openMediaJournal()">
-                <ion-icon name="newspaper-outline" slot="start"></ion-icon>
-                <ion-label>
-                  <h3>Jornal</h3>
-                  <p>{{ mediaJournalHeadline || 'Conteudo publicado' }}</p>
-                </ion-label>
-              </ion-item>
-            }
-            @if (mediaHasRadio) {
-              <ion-item button detail="true" lines="full" (click)="openMediaRadio()">
-                <ion-icon name="radio-outline" slot="start"></ion-icon>
-                <ion-label>
-                  <h3>Radio</h3>
-                  <p>{{ mediaRadioTitle || 'Conteudo publicado' }}</p>
-                </ion-label>
-              </ion-item>
-            }
-            @if (mediaHasVideo) {
-              <ion-item button detail="true" lines="full" (click)="openMediaVideo()">
-                <ion-icon name="videocam-outline" slot="start"></ion-icon>
-                <ion-label>
-                  <h3>Video</h3>
-                  <p>{{ mediaVideoTitle || 'Melhores momentos' }}</p>
-                </ion-label>
-              </ion-item>
-            }
-          </div>
-        } @else {
-          <ion-note color="medium">Nenhuma cobertura publicada ainda.</ion-note>
-        }
-        <ion-button fill="clear" size="small" class="ion-margin-top" (click)="openMediaHub()">
-          <ion-icon slot="start" name="megaphone-outline"></ion-icon>
-          Abrir cobertura
-        </ion-button>
-      </ion-card-content>
-    </ion-card>
+    @switch (currentView.id) {
+      @case ('root') {
+        <app-mural-highlights-panel
+          [highlights]="muralHighlights"
+          scope="event"
+          layout="eventOrdered"
+          [shareContext]="shareContext"
+        ></app-mural-highlights-panel>
 
-    <app-mural-participant-stats
-      [stats]="participantStats"
-      scope="event"
-      [shareContext]="shareContext"
-    ></app-mural-participant-stats>
-
-    <app-mural-highlights-panel
-      [highlights]="muralHighlights"
-      scope="event"
-      [shareContext]="shareContext"
-    ></app-mural-highlights-panel>
-
-    <app-mural-support-ops-card
-      [eventId]="eventId"
-      [shareContext]="shareContext"
-    ></app-mural-support-ops-card>
-
-    <ion-button
-      expand="block"
-      fill="outline"
-      class="ion-margin-bottom"
-      (click)="togglePredictionRankings()"
-    >
-      {{ showPredictionRankings ? 'Ocultar melhores palpites' : 'Ver melhores palpites' }}
-    </ion-button>
-    @if (showPredictionRankings) {
-      <app-mural-prediction-rankings
-        scope="event"
-        [scopeId]="eventId"
-        [shareContext]="shareContext"
-      ></app-mural-prediction-rankings>
-    }
-
-    <app-mural-fan-highlights
-      scope="event"
-      [scopeId]="eventId"
-      [shareContext]="shareContext"
-    ></app-mural-fan-highlights>
-
-    <app-mural-performance-analytics
-      scope="event"
-      [scopeId]="eventId"
-      [shareContext]="shareContext"
-    ></app-mural-performance-analytics>
-
-    @for (section of primaryRankingSections; track section.role) {
-      <ion-card>
-        <ion-card-header>
-          <app-mural-event-context [context]="shareContext"></app-mural-event-context>
-          <div class="mural-card-header-row">
-            <ion-card-title>Top 10 — {{ section.title }}</ion-card-title>
-            <app-mural-share-button
-              [context]="shareContext"
-              [cardTitle]="'Top 10 — ' + section.title"
-              ruleKey="mural.rule.top10"
-            ></app-mural-share-button>
-          </div>
-        </ion-card-header>
-        <ion-card-content>
-          @if (!section.entries.length) {
-            <ion-note>Sem dados ainda.</ion-note>
-          }
-          @for (entry of section.entries; track entry.userId; let i = $index) {
-            <div class="rank-row ion-margin-bottom">
-              <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="sm"></app-user-avatar>
-              <span>{{ i + 1 }}. {{ entry.userName }}</span>
-              <ion-badge>{{ entry.badgeLabel }}</ion-badge>
+        <ion-card button class="hub-card ion-margin-bottom" (click)="pushView('top10')">
+          <ion-card-header>
+            <app-mural-event-context [context]="shareContext"></app-mural-event-context>
+            <div class="mural-card-header-row">
+              <div>
+                <ion-card-title>Top 10</ion-card-title>
+                <ion-card-subtitle>Atletas, goleiros e demais perfis</ion-card-subtitle>
+              </div>
+              <app-mural-share-button
+                [context]="shareContext"
+                cardTitle="Top 10"
+                ruleKey="mural.rule.top10Hub"
+              ></app-mural-share-button>
             </div>
-          }
-        </ion-card-content>
-      </ion-card>
-    }
+          </ion-card-header>
+        </ion-card>
 
-    <ion-button
-      expand="block"
-      fill="outline"
-      class="ion-margin-bottom"
-      (click)="toggleOtherTop10()"
-    >
-      {{ showOtherTop10 ? 'Ocultar outros TOP 10' : 'Outros TOP 10...' }}
-    </ion-button>
-    @if (showOtherTop10) {
-      @for (section of otherRankingSections; track section.role) {
+        <ion-card button class="hub-card ion-margin-bottom" (click)="pushView('scout')">
+          <ion-card-header>
+            <app-mural-event-context [context]="shareContext"></app-mural-event-context>
+            <div class="mural-card-header-row">
+              <div>
+                <ion-card-title>Apontamentos do Scout</ion-card-title>
+                <ion-card-subtitle>Desempenho, graficos e tipos de gol</ion-card-subtitle>
+              </div>
+              <app-mural-share-button
+                [context]="shareContext"
+                cardTitle="Apontamentos do Scout"
+                ruleKey="mural.rule.scoutHub"
+              ></app-mural-share-button>
+            </div>
+          </ion-card-header>
+        </ion-card>
+
+        <ion-card button class="hub-card ion-margin-bottom" (click)="pushView('notas')">
+          <ion-card-header>
+            <app-mural-event-context [context]="shareContext"></app-mural-event-context>
+            <div class="mural-card-header-row">
+              <div>
+                <ion-card-title>Notas individuais</ion-card-title>
+                <ion-card-subtitle>Scout, massagista e ropeiro</ion-card-subtitle>
+              </div>
+              <app-mural-share-button
+                [context]="shareContext"
+                cardTitle="Notas individuais"
+                ruleKey="mural.rule.notasIndividuais"
+              ></app-mural-share-button>
+            </div>
+          </ion-card-header>
+        </ion-card>
+
+        <ion-card button class="hub-card ion-margin-bottom" (click)="pushView('curiosities')">
+          <ion-card-header>
+            <app-mural-event-context [context]="shareContext"></app-mural-event-context>
+            <div class="mural-card-header-row">
+              <div>
+                <ion-card-title>Curiosidades do evento</ion-card-title>
+                <ion-card-subtitle>Localizacao, times, altura e torcida</ion-card-subtitle>
+              </div>
+              <app-mural-share-button
+                [context]="shareContext"
+                cardTitle="Curiosidades do evento"
+                ruleKey="mural.rule.curiosidades"
+              ></app-mural-share-button>
+            </div>
+          </ion-card-header>
+        </ion-card>
+
+        <ion-card class="ion-margin-bottom">
+          <ion-card-header>
+            <div class="mural-card-header-row">
+              <ion-card-title>Imprensa / Midia</ion-card-title>
+              <ion-button fill="clear" size="small" (click)="toggleExtrasMedia(); $event.stopPropagation()">
+                {{ showExtrasMedia ? 'Ocultar' : 'Expandir' }}
+              </ion-button>
+            </div>
+          </ion-card-header>
+          @if (showExtrasMedia) {
+            <ion-card-content>
+              <div class="mural-card-header-row ion-margin-bottom">
+                <ion-card-subtitle>Radio, jornal e video do evento</ion-card-subtitle>
+                <app-mural-share-button
+                  [context]="shareContext"
+                  cardTitle="Imprensa / Midia"
+                  ruleKey="mural.rule.eventMedia"
+                ></app-mural-share-button>
+              </div>
+              @if (mediaHasJournal || mediaHasRadio || mediaHasVideo) {
+                <div class="media-preview-list">
+                  @if (mediaHasJournal) {
+                    <ion-item button detail="true" lines="full" (click)="openMediaJournal()">
+                      <ion-icon name="newspaper-outline" slot="start"></ion-icon>
+                      <ion-label>
+                        <h3>Jornal</h3>
+                        <p>{{ mediaJournalHeadline || 'Conteudo publicado' }}</p>
+                      </ion-label>
+                    </ion-item>
+                  }
+                  @if (mediaHasRadio) {
+                    <ion-item button detail="true" lines="full" (click)="openMediaRadio()">
+                      <ion-icon name="radio-outline" slot="start"></ion-icon>
+                      <ion-label>
+                        <h3>Radio</h3>
+                        <p>{{ mediaRadioTitle || 'Conteudo publicado' }}</p>
+                      </ion-label>
+                    </ion-item>
+                  }
+                  @if (mediaHasVideo) {
+                    <ion-item button detail="true" lines="full" (click)="openMediaVideo()">
+                      <ion-icon name="videocam-outline" slot="start"></ion-icon>
+                      <ion-label>
+                        <h3>Video</h3>
+                        <p>{{ mediaVideoTitle || 'Melhores momentos' }}</p>
+                      </ion-label>
+                    </ion-item>
+                  }
+                </div>
+              } @else {
+                <ion-note color="medium">Nenhuma cobertura publicada ainda.</ion-note>
+              }
+              <ion-button fill="clear" size="small" class="ion-margin-top" (click)="openMediaHub()">
+                Abrir cobertura
+              </ion-button>
+            </ion-card-content>
+          }
+        </ion-card>
+
+        <ion-card class="ion-margin-bottom">
+          <ion-card-header>
+            <div class="mural-card-header-row">
+              <ion-card-title>Melhores palpites</ion-card-title>
+              <ion-button fill="clear" size="small" (click)="toggleExtrasPredictions(); $event.stopPropagation()">
+                {{ showExtrasPredictions ? 'Ocultar' : 'Expandir' }}
+              </ion-button>
+            </div>
+          </ion-card-header>
+          @if (showExtrasPredictions) {
+            <ion-card-content>
+              <app-mural-prediction-rankings
+                scope="event"
+                [scopeId]="eventId"
+                [shareContext]="shareContext"
+              ></app-mural-prediction-rankings>
+            </ion-card-content>
+          }
+        </ion-card>
+      }
+
+      @case ('top10') {
+        <ion-card button class="hub-card ion-margin-bottom" (click)="pushView('top10-athlete')">
+          <ion-card-header>
+            <ion-card-title>Top 10 — Atleta</ion-card-title>
+          </ion-card-header>
+        </ion-card>
+        <ion-card button class="hub-card ion-margin-bottom" (click)="pushView('top10-goalkeeper')">
+          <ion-card-header>
+            <ion-card-title>Top 10 — Goleiro</ion-card-title>
+          </ion-card-header>
+        </ion-card>
+        <ion-card button class="hub-card ion-margin-bottom" (click)="pushView('top10-other')">
+          <ion-card-header>
+            <ion-card-title>Outros Top 10...</ion-card-title>
+            <ion-card-subtitle>Juizes, imprensa e apoio de campo</ion-card-subtitle>
+          </ion-card-header>
+        </ion-card>
+      }
+
+      @case ('top10-athlete') {
+        @if (rankingSectionForRole('athlete'); as section) {
+          <ng-container *ngTemplateOutlet="rankingCard; context: { section: section }"></ng-container>
+        }
+      }
+
+      @case ('top10-goalkeeper') {
+        @if (rankingSectionForRole('goalkeeper'); as section) {
+          <ng-container *ngTemplateOutlet="rankingCard; context: { section: section }"></ng-container>
+        }
+      }
+
+      @case ('top10-other') {
+        @for (section of otherRankingSections; track section.role) {
+          <ion-card button class="hub-card ion-margin-bottom" (click)="pushView('top10-role', section.role)">
+            <ion-card-header>
+              <ion-card-title>Top 10 — {{ section.title }}</ion-card-title>
+            </ion-card-header>
+          </ion-card>
+        }
+      }
+
+      @case ('top10-role') {
+        @if (currentView.role && rankingSectionForRole(currentView.role); as section) {
+          <ng-container *ngTemplateOutlet="rankingCard; context: { section: section }"></ng-container>
+        }
+      }
+
+      @case ('scout') {
+        <ion-card button class="hub-card ion-margin-bottom" (click)="pushView('scout-qualitative')">
+          <ion-card-header><ion-card-title>Desempenho qualitativo</ion-card-title></ion-card-header>
+        </ion-card>
+        <ion-card button class="hub-card ion-margin-bottom" (click)="pushView('scout-quantitative')">
+          <ion-card-header><ion-card-title>Desempenho quantitativo</ion-card-title></ion-card-header>
+        </ion-card>
+        <ion-card button class="hub-card ion-margin-bottom" (click)="pushView('scout-charts')">
+          <ion-card-header><ion-card-title>Gráficos de desempenho</ion-card-title></ion-card-header>
+        </ion-card>
+        <ion-card button class="hub-card ion-margin-bottom" (click)="pushView('scout-goal-types')">
+          <ion-card-header><ion-card-title>Tipos de gols</ion-card-title></ion-card-header>
+        </ion-card>
+      }
+
+      @case ('scout-qualitative') {
+        <app-mural-performance-analytics
+          scope="event"
+          [scopeId]="eventId"
+          [analytics]="performanceAnalytics"
+          [preloadAnalytics]="true"
+          panel="qualitative"
+          [shareContext]="shareContext"
+        ></app-mural-performance-analytics>
+      }
+
+      @case ('scout-quantitative') {
+        <app-mural-performance-analytics
+          scope="event"
+          [scopeId]="eventId"
+          [analytics]="performanceAnalytics"
+          [preloadAnalytics]="true"
+          panel="quantitative"
+          [shareContext]="shareContext"
+        ></app-mural-performance-analytics>
+      }
+
+      @case ('scout-charts') {
+        <app-mural-performance-analytics
+          scope="event"
+          [scopeId]="eventId"
+          [analytics]="performanceAnalytics"
+          [preloadAnalytics]="true"
+          panel="charts"
+          [shareContext]="shareContext"
+        ></app-mural-performance-analytics>
+      }
+
+      @case ('scout-goal-types') {
+        <app-mural-performance-analytics
+          scope="event"
+          [scopeId]="eventId"
+          [analytics]="performanceAnalytics"
+          [preloadAnalytics]="true"
+          panel="goalTypes"
+          [shareContext]="shareContext"
+        ></app-mural-performance-analytics>
+      }
+
+      @case ('notas') {
+        @for (role of ['scout', 'masseur', 'kitman']; track role) {
+          <ion-card
+            button
+            class="hub-card ion-margin-bottom"
+            (click)="pushView('notas-role', $any(role))"
+          >
+            <ion-card-header>
+              <ion-card-title>Notas — {{ rankingSectionForRole($any(role))?.title }}</ion-card-title>
+            </ion-card-header>
+          </ion-card>
+        }
+      }
+
+      @case ('notas-role') {
+        @if (currentView.role && notasSectionForRole(currentView.role); as section) {
+          <ng-container *ngTemplateOutlet="rankingCard; context: { section: section }"></ng-container>
+        }
+      }
+
+      @case ('curiosities') {
+        <ion-card button class="hub-card ion-margin-bottom" (click)="pushView('curiosities-location')">
+          <ion-card-header>
+            <ion-card-title>Participantes por localizacao</ion-card-title>
+          </ion-card-header>
+        </ion-card>
+        <ion-card button class="hub-card ion-margin-bottom" (click)="pushView('curiosities-pro-team')">
+          <ion-card-header>
+            <ion-card-title>Time profissional mais amado</ion-card-title>
+          </ion-card-header>
+        </ion-card>
+        <ion-card button class="hub-card ion-margin-bottom" (click)="pushView('curiosities-amateur-team')">
+          <ion-card-header>
+            <ion-card-title>Time amador mais amado</ion-card-title>
+          </ion-card-header>
+        </ion-card>
+        <ion-card button class="hub-card ion-margin-bottom" (click)="pushView('curiosities-height')">
+          <ion-card-header>
+            <ion-card-title>Atleta mais alto e mais baixo</ion-card-title>
+          </ion-card-header>
+        </ion-card>
+        <ion-card button class="hub-card ion-margin-bottom" (click)="pushView('curiosities-fan-checkins')">
+          <ion-card-header>
+            <ion-card-title>Torcedores com check-in</ion-card-title>
+          </ion-card-header>
+        </ion-card>
+      }
+
+      @case ('curiosities-location') {
+        <app-mural-participant-stats
+          [stats]="participantStats"
+          scope="event"
+          [shareContext]="shareContext"
+        ></app-mural-participant-stats>
+      }
+
+      @case ('curiosities-pro-team') {
         <ion-card>
           <ion-card-header>
             <app-mural-event-context [context]="shareContext"></app-mural-event-context>
             <div class="mural-card-header-row">
-              <ion-card-title>Top 10 — {{ section.title }}</ion-card-title>
+              <ion-card-title>Time profissional mais amado</ion-card-title>
               <app-mural-share-button
                 [context]="shareContext"
-                [cardTitle]="'Top 10 — ' + section.title"
-                ruleKey="mural.rule.top10"
+                cardTitle="Time profissional mais amado"
+                ruleKey="mural.rule.timeAmado"
               ></app-mural-share-button>
             </div>
           </ion-card-header>
           <ion-card-content>
-            @if (!section.entries.length) {
-              <ion-note>Sem dados ainda.</ion-note>
+            @if (muralHighlights?.timeMaisAmado; as team) {
+              <p>
+                <app-team-shield [teamName]="team.teamName" size="sm"></app-team-shield>
+                {{ team.teamName }} — {{ team.count }}
+                {{ team.count === 1 ? 'torcedor' : 'torcedores' }}
+              </p>
+            } @else {
+              <ion-note>Sem times de coracao registrados.</ion-note>
             }
-            @for (entry of section.entries; track entry.userId; let i = $index) {
-              <div class="rank-row ion-margin-bottom">
-                <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="sm"></app-user-avatar>
-                <span>{{ i + 1 }}. {{ entry.userName }}</span>
-                <ion-badge>{{ entry.badgeLabel }}</ion-badge>
-              </div>
+          </ion-card-content>
+        </ion-card>
+      }
+
+      @case ('curiosities-amateur-team') {
+        <ion-card>
+          <ion-card-header>
+            <app-mural-event-context [context]="shareContext"></app-mural-event-context>
+            <div class="mural-card-header-row">
+              <ion-card-title>Time amador mais amado</ion-card-title>
+              <app-mural-share-button
+                [context]="shareContext"
+                cardTitle="Time amador mais amado"
+                ruleKey="mural.rule.timeAmador"
+              ></app-mural-share-button>
+            </div>
+          </ion-card-header>
+          <ion-card-content>
+            @if (muralHighlights?.timeAmadorMaisAmado; as team) {
+              <p>{{ team.teamName }} — {{ team.count }} {{ team.count === 1 ? 'atleta' : 'atletas' }}</p>
+            } @else {
+              <ion-note>Sem times amadores registrados.</ion-note>
             }
+          </ion-card-content>
+        </ion-card>
+      }
+
+      @case ('curiosities-height') {
+        <ion-card>
+          <ion-card-header>
+            <app-mural-event-context [context]="shareContext"></app-mural-event-context>
+            <div class="mural-card-header-row">
+              <ion-card-title>Altura dos atletas</ion-card-title>
+              <app-mural-share-button
+                [context]="shareContext"
+                cardTitle="Altura dos atletas"
+                ruleKey="mural.rule.altura"
+              ></app-mural-share-button>
+            </div>
+          </ion-card-header>
+          <ion-card-content>
+            <h3>Mais alto</h3>
+            @if (muralHighlights?.atletaMaisAlto; as entry) {
+              <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
+            } @else {
+              <ion-note>Sem altura cadastrada.</ion-note>
+            }
+            <h3 class="ion-margin-top">Mais baixo</h3>
+            @if (muralHighlights?.atletaMaisBaixo; as entry) {
+              <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
+            } @else {
+              <ion-note>Sem altura cadastrada.</ion-note>
+            }
+          </ion-card-content>
+        </ion-card>
+      }
+
+      @case ('curiosities-fan-checkins') {
+        <ion-card>
+          <ion-card-header>
+            <app-mural-event-context [context]="shareContext"></app-mural-event-context>
+            <div class="mural-card-header-row">
+              <ion-card-title>Check-ins da torcida</ion-card-title>
+              <app-mural-share-button
+                [context]="shareContext"
+                cardTitle="Check-ins da torcida"
+                ruleKey="mural.rule.torcidaCheckins"
+              ></app-mural-share-button>
+            </div>
+          </ion-card-header>
+          <ion-card-content>
+            <p>
+              <strong>{{ fanCheckInCount }}</strong>
+              {{ fanCheckInCount === 1 ? 'torcedor fez' : 'torcedores fizeram' }} check-in neste evento.
+            </p>
           </ion-card-content>
         </ion-card>
       }
     }
   }
 </ion-content>
+
+<ng-template #rankingCard let-section="section">
+  <ion-card>
+    <ion-card-header>
+      <app-mural-event-context [context]="shareContext"></app-mural-event-context>
+      <div class="mural-card-header-row">
+        <ion-card-title>Top 10 — {{ section.title }}</ion-card-title>
+        <app-mural-share-button
+          [context]="shareContext"
+          [cardTitle]="'Top 10 — ' + section.title"
+          ruleKey="mural.rule.top10"
+        ></app-mural-share-button>
+      </div>
+    </ion-card-header>
+    <ion-card-content>
+      @if (!section.entries.length) {
+        <ion-note>Sem dados ainda.</ion-note>
+      }
+      @for (entry of section.entries; track entry.userId; let i = $index) {
+        <div class="rank-row ion-margin-bottom">
+          <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="sm"></app-user-avatar>
+          <span>{{ i + 1 }}. {{ entry.userName }}</span>
+          <ion-badge>{{ entry.badgeLabel }}</ion-badge>
+        </div>
+      }
+    </ion-card-content>
+  </ion-card>
+</ng-template>

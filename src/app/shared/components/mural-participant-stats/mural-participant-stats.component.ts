@@ -36,7 +36,8 @@ export class MuralParticipantStatsComponent {
   neighborhoodsExpanded = false;
 
   get useDrilldown(): boolean {
-    return this.scope === 'app';
+    if (this.scope === 'app') return true;
+    return this.scope === 'event' && !!(this.stats?.byState?.length);
   }
 
   get showState(): boolean {

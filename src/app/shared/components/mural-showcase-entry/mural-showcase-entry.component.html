@@ -24,6 +24,9 @@
     @if (entry.score !== undefined) {
       <p><strong>{{ entry.scoreLabel || 'Pontuacao' }}:</strong> {{ formatScore(entry.score) }}</p>
     }
+    @if (entry.evaluatorCountLabel) {
+      <p class="showcase-meta">{{ entry.evaluatorCountLabel }}</p>
+    }
     @if (entry.age !== undefined) {
       <p><strong>Idade:</strong> {{ entry.age }} anos</p>
     }

@@ -44,6 +44,7 @@ interface TeamRow {
   id: string;
   name: string;
   presidentName: string;
+  imageUrl?: string;
   place: string;
   address: Address;
 }
@@ -144,8 +145,10 @@ export class HomeDirectoryPage implements OnDestroy {
     return this.userRows.filter((row) =>
       directoryTextMatches(this.search, [
         row.user.fullName,
+        row.user.listFullName,
         row.user.apelido,
         row.user.displayName,
+        row.user.profileUserName,
         row.rolesLabel,
         row.user.roles.flatMap((role) => PROFILE_ROLE_SEARCH_ALIASES[role]).join(' '),
         positionSearchTokens(row.user.positions).join(' '),
@@ -172,7 +175,7 @@ export class HomeDirectoryPage implements OnDestroy {
   }
 
   goHub(): void {
-    void this.router.navigateByUrl('/tabs/peladas');
+    void this.router.navigateByUrl('/tabs/home');
   }
 
   openMatch(row: MatchRow): void {
@@ -180,11 +183,12 @@ export class HomeDirectoryPage implements OnDestroy {
   }
 
   openTeam(row: TeamRow): void {
-    void this.router.navigate(['/team', row.id]);
+    const queryParams = this.wizardTeamJoin ? { wizard: 'teamJoin' } : undefined;
+    void this.router.navigate(['/team', row.id], queryParams ? { queryParams } : undefined);
   }
 
   createTeam(): void {
-    void this.router.navigateByUrl('/team-form');
+    void this.router.navigate(['/team/form'], { queryParams: { new: '1' } });
   }
 
   openUser(row: UserRow): void {
@@ -290,6 +294,7 @@ export class HomeDirectoryPage implements OnDestroy {
       id: team.objectId,
       name: team.name,
       presidentName: team.presidentName,
+      imageUrl: team.imageUrl,
       place: formatPlaceLine(team.address.state, team.address.city, team.address.neighborhood),
       address: team.address,
     }));

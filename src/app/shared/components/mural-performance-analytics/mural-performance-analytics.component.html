@@ -3,6 +3,7 @@
     <ion-spinner name="crescent"></ion-spinner>
   </div>
 } @else if (loadedAnalytics) {
+  @if (showPanel('qualitative')) {
   <ion-card>
     <ion-card-header>
       @if (scope === 'event') {
@@ -82,7 +83,9 @@
       }
     </ion-card-content>
   </ion-card>
+  }
 
+  @if (showPanel('quantitative')) {
   <ion-card>
     <ion-card-header>
       @if (scope === 'event') {
@@ -202,7 +205,9 @@
       }
     </ion-card-content>
   </ion-card>
+  }
 
+  @if (showPanel('charts')) {
   <ion-card>
     <ion-card-header>
       @if (scope === 'event') {
@@ -316,4 +321,34 @@
       </div>
     </ion-card-content>
   </ion-card>
+  }
+
+  @if (showPanel('goalTypes')) {
+  <ion-card>
+    <ion-card-header>
+      @if (scope === 'event') {
+        <app-mural-event-context [context]="shareContext"></app-mural-event-context>
+      }
+      <div class="mural-card-header-row">
+        <ion-card-title>Tipos de gols</ion-card-title>
+        <app-mural-share-button
+          [context]="shareContext"
+          cardTitle="Tipos de gols"
+          ruleKey="mural.rule.goalTypes"
+        ></app-mural-share-button>
+      </div>
+      @if (filterCaption) {
+        <p class="mural-filter-line">{{ filterCaption }}</p>
+      }
+    </ion-card-header>
+    <ion-card-content>
+      @for (opt of goalMethodOptions; track opt.field) {
+        <div class="stats-row ion-margin-bottom">
+          <span>{{ opt.label }}</span>
+          <ion-badge color="primary">{{ goalTypeCount(opt.field) }}</ion-badge>
+        </div>
+      }
+    </ion-card-content>
+  </ion-card>
+  }
 }

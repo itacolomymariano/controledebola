@@ -72,11 +72,24 @@ export class WizardTourService {
   isPausedOnRoute(url: string): boolean {
     const pending = this.pendingCompletionStepId;
     if (!pending) return false;
-    const step = this.flowSteps.find((row) => row.id === pending);
-    if (!step?.route) return false;
-    const stepPath = step.route.split('?')[0];
     const path = url.split('?')[0];
-    return path === stepPath || path.startsWith(`${stepPath}/`);
+    const step = this.flowSteps.find((row) => row.id === pending);
+    if (step?.route) {
+      const stepPath = step.route.split('?')[0];
+      if (path === stepPath || path.startsWith(`${stepPath}/`)) return true;
+    }
+    if (pending === 'team-player-search' && /^\/team\/[^/]+$/.test(path)) return true;
+    if (pending === 'pelada-player-search' && /^\/pelada\/[^/]+$/.test(path)) return true;
+    return false;
+  }
+
+  /** Passos em que fechar o tour exige confirmacao (participacao ainda pendente). */
+  pendingJoinSearchStepId(): string | null {
+    const pending = this.pendingCompletionStepId;
+    if (pending === 'team-player-search' || pending === 'pelada-player-search') {
+      return pending;
+    }
+    return null;
   }
 
   startFromMenu(): void {
@@ -91,11 +104,15 @@ export class WizardTourService {
   async close(): Promise<void> {
     this.clearPendingCompletion();
     this.active$.next(false);
-    const userId = this.auth.getCurrentUser()?.id;
-    if (userId) {
-      await this.storage.setWizardTourDismissed(userId);
-    }
+    await this.markDismissedForCurrentUser();
     await this.router.navigateByUrl('/tabs/peladas');
+  }
+
+  /** First-access search: user opened a pelada/time — end tour without leaving the current page. */
+  async dismissJoinSearchStayOnPage(): Promise<void> {
+    this.clearPendingCompletion();
+    this.active$.next(false);
+    await this.markDismissedForCurrentUser();
   }
 
   back(): void {
@@ -234,6 +251,13 @@ export class WizardTourService {
 
   private bumpFlowRevision(): void {
     this.flowRevision$.next(this.flowRevision$.value + 1);
+  }
+
+  private async markDismissedForCurrentUser(): Promise<void> {
+    const userId = this.auth.getCurrentUser()?.id;
+    if (userId) {
+      await this.storage.setWizardTourDismissed(userId);
+    }
   }
 
   private clearPendingCompletion(): void {

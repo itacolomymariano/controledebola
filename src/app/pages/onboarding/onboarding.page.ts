@@ -1,5 +1,6 @@
 ﻿import { Component } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { formatAppReleaseFullLabel } from '../../core/constants/app-release-display.util';
 import { ParticipationChoice } from '../../core/models/wizard.model';
 import { AppStorageService } from '../../core/services/app-storage.service';
 
@@ -13,6 +14,7 @@ type OnboardingStep = 'welcome' | 'about' | 'participation';
 })
 export class OnboardingPage {
   step: OnboardingStep = 'welcome';
+  readonly appVersion = formatAppReleaseFullLabel();
 
   constructor(
     private readonly router: Router,

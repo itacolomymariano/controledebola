@@ -3,7 +3,7 @@ import { FormBuilder, Validators } from '@angular/forms';
 import { NavigationEnd, Router } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
 import { AuthService } from '../../core/services/auth.service';
-import { APP_RELEASE } from '../../core/constants/app-release';
+import { formatAppReleaseFullLabel } from '../../core/constants/app-release-display.util';
 import { MIN_PASSWORD_LENGTH } from '../../core/constants/auth.constants';
 import { AppStorageService } from '../../core/services/app-storage.service';
 import { BiometricUnlockService } from '../../core/services/biometric-unlock.service';
@@ -20,12 +20,14 @@ import { Subscription, filter } from 'rxjs';
 })
 export class LoginPage implements OnInit, OnDestroy {
   readonly passwordResetEnabled = environment.passwordResetEnabled;
-  readonly appVersion = APP_RELEASE.label;
+  readonly appVersion = formatAppReleaseFullLabel();
 
   showPassword = false;
   showNewPassword = false;
   forgotPasswordMode = false;
   resetStep: 'email' | 'code' = 'email';
+  /** Exibido na tela de codigo apos envio bem-sucedido. */
+  resetCodeSentNotice = false;
   biometricEnabled = false;
   showBiometricUnlock = false;
 
@@ -96,12 +98,23 @@ export class LoginPage implements OnInit, OnDestroy {
   openForgotPassword(): void {
     this.forgotPasswordMode = true;
     this.resetStep = 'email';
+    this.resetCodeSentNotice = false;
   }
 
   backToLogin(): void {
     this.forgotPasswordMode = false;
     this.resetStep = 'email';
+    this.resetCodeSentNotice = false;
     this.confirmResetForm.reset();
+  }
+
+  get resetEmailMasked(): string {
+    const email = String(this.resetForm.getRawValue().email || '').trim();
+    if (!email.includes('@')) return email;
+    const [local, domain] = email.split('@');
+    if (!local || !domain) return email;
+    const visible = local.length <= 2 ? local[0] || '*' : `${local.slice(0, 2)}***`;
+    return `${visible}@${domain}`;
   }
 
   backToResetEmail(): void {
@@ -203,16 +216,9 @@ export class LoginPage implements OnInit, OnDestroy {
       const email = this.resetForm.getRawValue().email!;
       await this.auth.requestPasswordReset(email);
       this.resetStep = 'code';
+      this.resetCodeSentNotice = true;
       this.confirmResetForm.reset();
-      await loading.dismiss();
-
-      const alert = await this.alertCtrl.create({
-        header: this.i18n.t('login.resetSentTitle'),
-        message: this.i18n.t('login.resetSentBody'),
-        buttons: [this.i18n.t('ok')],
-      });
-      await alert.present();
-      return;
+      this.cdr.markForCheck();
     } catch (error: unknown) {
       await this.showError(
         this.i18n.translateError(error) || this.i18n.t('login.resetFailed')

@@ -407,6 +407,8 @@ export class MuralService {
         averageScore: Number(entry['averageScore']) || 0,
         performanceScore: Number(entry['performanceScore']) || 0,
         combinedScore: Number(entry['combinedScore']) || 0,
+        distinctVoterCount:
+          entry['distinctVoterCount'] != null ? Number(entry['distinctVoterCount']) : undefined,
       };
     });
   }

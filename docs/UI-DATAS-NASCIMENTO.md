@@ -34,6 +34,8 @@ O picker expoe **Dia / Mes / Ano** (`ion-select`), com action-sheet no mobile.
 
 - `account-edit` (Meus dados) — **ja regressou uma vez** para `type="date"`; nao repetir
 - `register` (Criar conta)
+- `pelada-form` (data de fundacao da pelada)
+- `team-form` (data de fundacao do time)
 - Formularios de lendas (`legend-*-form`) quando pedirem nascimento/fundacao
 
 ## Checklist do agente

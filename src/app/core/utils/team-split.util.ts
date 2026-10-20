@@ -1,4 +1,13 @@
-import { TeamSplitAthlete, TeamSplitRandomStrategy } from '../models/team-split.model';
+import {
+  TeamSplitAthlete,
+  TeamSplitPreset,
+  TeamSplitRandomStrategy,
+} from '../models/team-split.model';
+
+export interface PresetBinarySplitResult {
+  teams: TeamSplitAthlete[][];
+  pool: TeamSplitAthlete[];
+}
 
 function shuffle<T>(items: T[]): T[] {
   const list = [...items];
@@ -172,6 +181,132 @@ function placeSnake(
     }
     if (!placed) break;
   }
+}
+
+function placeOnTeamOrPool(
+  teams: TeamSplitAthlete[][],
+  pool: TeamSplitAthlete[],
+  teamIndex: number,
+  athlete: TeamSplitAthlete,
+  athletesPerTeam: number
+): void {
+  if (
+    teamIndex >= 0 &&
+    teamIndex < teams.length &&
+    teams[teamIndex].length < athletesPerTeam
+  ) {
+    teams[teamIndex].push(athlete);
+  } else {
+    pool.push(athlete);
+  }
+}
+
+function splitMaritalPreset(
+  athletes: TeamSplitAthlete[],
+  teams: TeamSplitAthlete[][],
+  pool: TeamSplitAthlete[],
+  athletesPerTeam: number
+): void {
+  for (const athlete of athletes) {
+    if (athlete.maritalStatus === 'solteiro') {
+      placeOnTeamOrPool(teams, pool, 0, athlete, athletesPerTeam);
+    } else if (athlete.maritalStatus === 'casado') {
+      placeOnTeamOrPool(teams, pool, 1, athlete, athletesPerTeam);
+    } else {
+      pool.push(athlete);
+    }
+  }
+}
+
+function splitAgePreset(
+  athletes: TeamSplitAthlete[],
+  teams: TeamSplitAthlete[][],
+  pool: TeamSplitAthlete[],
+  athletesPerTeam: number,
+  ageThreshold: number
+): void {
+  const threshold = Math.max(1, Math.min(99, ageThreshold));
+  for (const athlete of athletes) {
+    if (athlete.age == null || Number.isNaN(Number(athlete.age))) {
+      pool.push(athlete);
+      continue;
+    }
+    const teamIndex = Number(athlete.age) < threshold ? 0 : 1;
+    placeOnTeamOrPool(teams, pool, teamIndex, athlete, athletesPerTeam);
+  }
+}
+
+function splitFavoriteTeamPreset(
+  athletes: TeamSplitAthlete[],
+  teams: TeamSplitAthlete[][],
+  pool: TeamSplitAthlete[],
+  athletesPerTeam: number
+): void {
+  const unassigned: TeamSplitAthlete[] = [];
+  const byTeam = new Map<string, TeamSplitAthlete[]>();
+
+  for (const athlete of athletes) {
+    const key = (athlete.favoriteProTeam || '').trim();
+    if (!key) {
+      unassigned.push(athlete);
+      continue;
+    }
+    if (!byTeam.has(key)) byTeam.set(key, []);
+    byTeam.get(key)!.push(athlete);
+  }
+
+  const groups = Array.from(byTeam.values()).sort((a, b) => b.length - a.length);
+  for (const group of groups) {
+    const space0 = athletesPerTeam - teams[0].length;
+    const space1 = athletesPerTeam - teams[1].length;
+    const can0 = group.length <= space0;
+    const can1 = group.length <= space1;
+
+    if (can0 && (!can1 || teams[0].length <= teams[1].length)) {
+      teams[0].push(...group);
+    } else if (can1) {
+      teams[1].push(...group);
+    } else {
+      pool.push(...group);
+    }
+  }
+
+  for (const athlete of unassigned) {
+    pool.push(athlete);
+  }
+}
+
+/** Separa em exatamente 2 times por criterio de perfil; excedente ou dado ausente vai para reserva. */
+export function presetBinarySplit(
+  athletes: TeamSplitAthlete[],
+  athletesPerTeam: number,
+  preset: TeamSplitPreset,
+  options?: { ageThreshold?: number }
+): PresetBinarySplitResult {
+  const teams = createEmptyTeams(2);
+  const pool: TeamSplitAthlete[] = [];
+  const cap = Math.max(1, Math.min(20, athletesPerTeam || 1));
+
+  if (!athletes.length) {
+    return { teams, pool };
+  }
+
+  switch (preset) {
+    case 'marital':
+      splitMaritalPreset(athletes, teams, pool, cap);
+      break;
+    case 'age':
+      splitAgePreset(athletes, teams, pool, cap, options?.ageThreshold ?? 30);
+      break;
+    case 'favoriteTeam':
+      splitFavoriteTeamPreset(athletes, teams, pool, cap);
+      break;
+    default:
+      pool.push(...athletes);
+      break;
+  }
+
+  return { teams, pool };
 }
 
 export function randomTeamSplit(

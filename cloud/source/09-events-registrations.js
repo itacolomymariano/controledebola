@@ -986,14 +986,28 @@ Parse.Cloud.define('listEventAthletesForTeamSplit', async (request) => {
   return athletes;
 });
 
+const VALID_TEAM_SPLIT_MODES = [
+  'manual',
+  'random',
+  'maritalSides',
+  'favoriteTeamSides',
+  'ageSides',
+];
+
+function normalizeTeamSplitMode(value) {
+  const mode = String(value || 'manual');
+  return VALID_TEAM_SPLIT_MODES.includes(mode) ? mode : 'manual';
+}
+
 function normalizeEventTeamSplitState(raw) {
   if (!raw || typeof raw !== 'object') return null;
 
   const athletesPerTeam = Number(raw.athletesPerTeam);
   const teamCount = Number(raw.teamCount);
-  const splitMode = String(raw.splitMode || 'manual');
+  const splitMode = normalizeTeamSplitMode(raw.splitMode);
   const randomStrategy = String(raw.randomStrategy || 'default');
   const teamsRaw = raw.teams;
+  const ageThresholdRaw = Number(raw.ageThreshold);
 
   if (!Array.isArray(teamsRaw) || !athletesPerTeam || !teamCount) {
     return null;
@@ -1005,16 +1019,22 @@ function normalizeEventTeamSplitState(raw) {
     )
     .slice(0, 8);
 
-  return {
+  const result = {
     athletesPerTeam: Math.max(1, Math.min(20, athletesPerTeam)),
     teamCount: Math.max(1, Math.min(8, teamCount)),
-    splitMode: splitMode === 'random' ? 'random' : 'manual',
+    splitMode,
     randomStrategy: ['default', 'marital', 'favoriteTeam', 'neighborhood'].includes(randomStrategy)
       ? randomStrategy
       : 'default',
     teams,
     savedAt: raw.savedAt ? String(raw.savedAt) : undefined,
   };
+
+  if (splitMode === 'ageSides' && ageThresholdRaw >= 1 && ageThresholdRaw <= 99) {
+    result.ageThreshold = ageThresholdRaw;
+  }
+
+  return result;
 }
 
 async function assertEventAdmin(event, user) {
@@ -1136,10 +1156,13 @@ Parse.Cloud.define('saveEventTeamSplit', async (request) => {
     )
     .slice(0, 8);
 
+  const normalizedMode = normalizeTeamSplitMode(splitMode);
+  const ageThreshold = Number(request.params.ageThreshold);
+
   const payload = {
     athletesPerTeam: Math.max(1, Math.min(20, athletesPerTeam || 1)),
     teamCount: Math.max(1, Math.min(8, teamCount || 1)),
-    splitMode: splitMode === 'random' ? 'random' : 'manual',
+    splitMode: normalizedMode,
     randomStrategy: ['default', 'marital', 'favoriteTeam', 'neighborhood'].includes(randomStrategy)
       ? randomStrategy
       : 'default',
@@ -1147,10 +1170,46 @@ Parse.Cloud.define('saveEventTeamSplit', async (request) => {
     savedAt: new Date().toISOString(),
   };
 
+  if (normalizedMode === 'ageSides' && ageThreshold >= 1 && ageThreshold <= 99) {
+    payload.ageThreshold = ageThreshold;
+  }
+
   event.set('teamSplit', payload);
   await event.save(null, { useMasterKey: true });
 
   return normalizeEventTeamSplitState(payload);
+});
+
+Parse.Cloud.define('clearEventTeamSplit', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+
+  const eventId = request.params.eventId ? String(request.params.eventId) : '';
+  if (!eventId) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'eventId obrigatorio.');
+  }
+
+  const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
+  await assertCanManageTeamSplit(event, user);
+
+  const readOnlyAt = event.get('readOnlyAt');
+  if (readOnlyAt && new Date() >= readOnlyAt) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Evento encerrado.');
+  }
+
+  if (!hasSavedTeamSplit(event)) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'Nao ha separacao de times salva para este evento.'
+    );
+  }
+
+  event.unset('teamSplit');
+  await event.save(null, { useMasterKey: true });
+
+  return { ok: true };
 });
 
 // Pagamento e inscricao anonima

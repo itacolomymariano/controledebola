@@ -11,6 +11,9 @@
       @if (filterCaption) {
         <p class="mural-filter-line">{{ filterCaption }}</p>
       }
+      @if (scope === 'app') {
+        <p class="mural-filter-line">{{ 'mural.app.confidenceHint' | t }}</p>
+      }
     </ion-card-header>
     <ion-card-content>
       @if (scope === 'app' && appBucketTab) {
@@ -237,6 +240,7 @@
     </ion-card-content>
   </ion-card>
 
+  @if (!isEventOrdered) {
   <ion-card>
     <ion-card-header>
       @if (scope === 'event') {
@@ -274,6 +278,7 @@
       }
     </ion-card-content>
   </ion-card>
+  }
 
   <ion-card>
     <ion-card-header>

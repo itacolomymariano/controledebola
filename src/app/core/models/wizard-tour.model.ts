@@ -63,6 +63,16 @@ export const PELADA_ADMIN_CREATE_STEP: WizardTourStep = {
   pauseUntilComplete: true,
 };
 
+export const PELADA_ADMIN_FIRST_EVENT_STEP: WizardTourStep = {
+  id: 'pelada-admin-first-event',
+  kind: 'route',
+  titleKey: 'coach.wizard.peladaFirstEventTitle',
+  bodyKey: 'coach.wizard.peladaFirstEventBody',
+  ctaKey: 'coach.wizard.peladaFirstEventCta',
+  route: '/event-create',
+  pauseUntilComplete: true,
+};
+
 export const PELADA_PLAYER_SEARCH_STEP: WizardTourStep = {
   id: 'pelada-player-search',
   kind: 'route',
@@ -71,6 +81,7 @@ export const PELADA_PLAYER_SEARCH_STEP: WizardTourStep = {
   ctaKey: 'coach.wizard.openPeladaSearch',
   secondaryCtaKey: 'coach.wizard.continueWithoutJoin',
   route: '/tabs/peladas/lista?wizard=peladaJoin',
+  pauseUntilComplete: true,
 };
 
 const TEAM_ROLE_STEP: WizardTourStep = {
@@ -102,6 +113,7 @@ export const TEAM_PLAYER_SEARCH_STEP: WizardTourStep = {
   ctaKey: 'coach.wizard.openTeamSearch',
   secondaryCtaKey: 'coach.wizard.continueWithoutJoin',
   route: '/tabs/peladas/times?wizard=teamJoin',
+  pauseUntilComplete: true,
 };
 
 export const INVITE_FINISH_STEP: WizardTourStep = {
@@ -121,7 +133,7 @@ const OTHER_WELCOME_STEP: WizardTourStep = {
   titleKey: 'coach.wizard.otherWelcomeTitle',
   bodyKey: 'coach.wizard.otherWelcomeBody',
   ctaKey: 'coach.wizard.otherWelcomeCta',
-  route: '/tabs/peladas',
+  route: '/tabs/home',
 };
 
 const MURAL_STEP: WizardTourStep = {
@@ -135,7 +147,7 @@ const MURAL_STEP: WizardTourStep = {
 
 export function peladaBranchTail(choiceId: string): WizardTourStep[] {
   if (choiceId === 'admin') {
-    return [PELADA_ADMIN_CREATE_STEP, INVITE_FINISH_STEP];
+    return [PELADA_ADMIN_CREATE_STEP, PELADA_ADMIN_FIRST_EVENT_STEP, INVITE_FINISH_STEP];
   }
   return [PELADA_PLAYER_SEARCH_STEP, INVITE_FINISH_STEP];
 }
@@ -162,7 +174,7 @@ export function buildTeamWizardFlow(includeAthlete: boolean): WizardTourStep[] {
 }
 
 export function buildOtherWizardFlow(includeRoleHint: WizardTourStep | null): WizardTourStep[] {
-  const steps: WizardTourStep[] = [OTHER_WELCOME_STEP];
+  const steps: WizardTourStep[] = [PELADA_PLAYER_SEARCH_STEP];
   if (includeRoleHint) steps.push(includeRoleHint);
   steps.push(MURAL_STEP, INVITE_FINISH_STEP);
   return steps;
@@ -172,21 +184,19 @@ export function roleHintStepForPrimaryRole(role: string | null | undefined): Wiz
   if (role === 'referee') {
     return {
       id: 'role-hint-referee',
-      kind: 'route',
+      kind: 'choices',
       titleKey: 'coach.sumulaTitle',
       bodyKey: 'coach.sumulaBody',
-      ctaKey: 'coach.sumulaCta',
-      route: '/tabs/peladas/lista',
+      choices: [{ id: 'continue', labelKey: 'coach.wizard.continueAfterPelada' }],
     };
   }
   if (role === 'scout') {
     return {
       id: 'role-hint-scout',
-      kind: 'route',
+      kind: 'choices',
       titleKey: 'coach.scoutTitle',
       bodyKey: 'coach.scoutBody',
-      ctaKey: 'coach.scoutCta',
-      route: '/tabs/peladas/lista',
+      choices: [{ id: 'continue', labelKey: 'coach.wizard.continueAfterPelada' }],
     };
   }
   return null;

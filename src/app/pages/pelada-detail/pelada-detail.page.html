@@ -5,11 +5,16 @@
       <ion-back-button defaultHref="/tabs/peladas"></ion-back-button>
     </ion-buttons>
     <ion-title>{{ pelada?.name ?? 'Pelada' }}</ion-title>
-    @if (isAdmin) {
-      <ion-buttons slot="end">
+    <ion-buttons slot="end">
+      <app-screen-help
+        helpId="pelada-detail-help"
+        bodyKey="screen.help.pelada-detail"
+        [enableSpeech]="true"
+      ></app-screen-help>
+      @if (isAdmin) {
         <ion-button (click)="editPelada()">Editar</ion-button>
-      </ion-buttons>
-    }
+      }
+    </ion-buttons>
     </ion-toolbar>
 </ion-header>
 
@@ -19,6 +24,10 @@
     titleKey="coach.hint.inviteTitle"
     bodyKey="coach.hint.inviteBody"
   />
+  @if (wizardPeladaJoin) {
+    <ion-note class="ion-padding wizard-join-banner">{{ 'coach.wizard.peladaJoinDetailBanner' | t }}</ion-note>
+  }
+
   @if (loading) {
     <div class="ion-text-center ion-padding">
       <ion-spinner name="crescent"></ion-spinner>
@@ -70,6 +79,35 @@
 
     <div class="segment-content ion-padding">
       @if (segment === 'eventos') {
+        @if (wizardPeladaJoin) {
+          <ion-card class="ion-margin-bottom">
+            <ion-card-header>
+              <ion-card-title>{{ pelada.name }}</ion-card-title>
+              <ion-card-subtitle>{{ 'coach.wizard.peladaJoinWizardSubtitle' | t }}</ion-card-subtitle>
+            </ion-card-header>
+            <ion-card-content>
+              @if (!hasOpenRegistrationEvent) {
+                <p>{{ 'coach.wizard.peladaNoOpenEventsBody' | t }}</p>
+                <ion-button expand="block" fill="outline" class="ion-margin-top" (click)="openPeladaListFromWizard()">
+                  {{ 'coach.wizard.peladaNoOpenEventsCta' | t }}
+                </ion-button>
+              } @else {
+                <p>{{ 'coach.wizard.peladaOpenEventsHint' | t }}</p>
+                <ion-list lines="none">
+                  @for (event of openRegistrationEvents; track event.objectId) {
+                    <ion-item button (click)="openEvent(event)">
+                      <ion-label class="ion-text-wrap">
+                        <h3>{{ event.name }}</h3>
+                        <p>{{ formatDate(event.startTime) }}</p>
+                        <ion-chip color="success" outline="true">{{ event.registrationStatusLabel }}</ion-chip>
+                      </ion-label>
+                    </ion-item>
+                  }
+                </ion-list>
+              }
+            </ion-card-content>
+          </ion-card>
+        }
         @if (isAdmin) {
           <ion-button expand="block" (click)="createEvent()">Novo evento</ion-button>
         } @else {
@@ -770,6 +808,9 @@
         } @else {
           <p class="ion-margin-top">Nenhuma observacao de sumula registrada no App.</p>
         }
+        <ion-button expand="block" class="ion-margin-top" (click)="openAthleteFullProfile(reviewProfile.userId)">
+          {{ 'profile.openFullAthlete' | t }}
+        </ion-button>
       }
     </ion-content>
   </ng-template>

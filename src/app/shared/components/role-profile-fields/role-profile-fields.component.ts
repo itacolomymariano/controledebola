@@ -9,6 +9,7 @@ import {
 @Component({
   selector: 'app-role-profile-fields',
   templateUrl: './role-profile-fields.component.html',
+  styleUrls: ['./role-profile-fields.component.scss'],
   standalone: false,
 })
 export class RoleProfileFieldsComponent {

@@ -18,6 +18,8 @@ import { ParseService } from '../../core/services/parse.service';
 
 import { TeamService } from '../../core/services/team.service';
 
+import { WizardTourService } from '../../core/services/wizard-tour.service';
+
 
 
 @Component({
@@ -116,7 +118,9 @@ export class EventCreatePage implements OnInit, OnDestroy {
 
     private readonly alertCtrl: AlertController,
 
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+
+    private readonly wizardTour: WizardTourService
 
   ) {}
 
@@ -313,6 +317,7 @@ export class EventCreatePage implements OnInit, OnDestroy {
 
       await loading.dismiss();
       await this.showPushResult(created.push);
+      this.wizardTour.completeStepById('pelada-admin-first-event');
       await this.router.navigate(['/pelada', this.peladaId], { replaceUrl: true });
       return;
 

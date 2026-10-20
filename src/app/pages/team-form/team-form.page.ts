@@ -256,6 +256,10 @@ export class TeamFormPage {
           headquartersImage: this.headquartersImageFile,
         });
         this.wizardTour.completeStepById('team-president-create');
+        if (this.wizardTour.active && this.wizardTour.current?.id === 'invite-finish') {
+          await this.router.navigateByUrl('/tabs/peladas', { replaceUrl: true });
+          return;
+        }
       }
       const returnUrl = this.readReturnUrl();
       if (returnUrl !== '/tabs/profile' && returnUrl !== '/team/form') {

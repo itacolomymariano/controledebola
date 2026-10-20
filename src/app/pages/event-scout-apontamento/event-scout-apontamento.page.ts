@@ -199,7 +199,7 @@ export class EventScoutApontamentoPage implements ViewWillLeave {
   }
 
   async promptRegisterGoal(athlete: ScoutApontamentoAthlete): Promise<void> {
-    if (this.isLocked) return;
+    if (this.isLocked || !this.canClassifyMoreGoals(athlete)) return;
 
     const sheet = await this.actionSheetCtrl.create({
       header: 'Como foi o gol?',
@@ -252,9 +252,26 @@ export class EventScoutApontamentoPage implements ViewWillLeave {
 
   statValue(athlete: ScoutApontamentoAthlete, field: ScoutStatField): number {
     if (field === 'goals') {
-      return computeScoutGoalsTotal(athlete.stats);
+      const typed = computeScoutGoalsTotal(athlete.stats);
+      const fromReferee = athlete.refereeGoals ?? 0;
+      return Math.max(fromReferee, typed);
     }
     return athlete.stats[field];
+  }
+
+  scoutGoalsClassified(athlete: ScoutApontamentoAthlete): number {
+    return computeScoutGoalsTotal(athlete.stats);
+  }
+
+  canClassifyMoreGoals(athlete: ScoutApontamentoAthlete): boolean {
+    const cap = athlete.refereeGoals ?? 0;
+    if (cap <= 0) return false;
+    return this.scoutGoalsClassified(athlete) < cap;
+  }
+
+  showRemoveGoalAction(athlete: ScoutApontamentoAthlete): boolean {
+    if ((athlete.refereeGoals ?? 0) > 0) return false;
+    return this.scoutGoalsClassified(athlete) > 0;
   }
 
   async adjustStat(field: ScoutStatField, delta: 1 | -1): Promise<void> {

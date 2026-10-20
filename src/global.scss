@@ -45,7 +45,7 @@ ion-item:has(ion-toggle) {
   padding-bottom: 10px;
 }
 
-ion-item ion-toggle {
+ion-item ion-toggle:not([slot='end']) {
   width: 100%;
   max-width: 100%;
   overflow: visible;
@@ -56,6 +56,13 @@ ion-item ion-toggle {
     text-overflow: unset;
     line-height: 1.4;
   }
+}
+
+ion-item ion-toggle[slot='end'] {
+  width: auto;
+  max-width: none;
+  flex: 0 0 auto;
+  align-self: center;
 }
 
 ion-toggle[labelPlacement='end']::part(label),
@@ -162,7 +169,10 @@ ion-popover .balloon-actions {
  * Sem este inset, "Salvar perfil", "Participar" e a tab bar ficam atras da barra do sistema.
  */
 html.native-android {
-  --app-bottom-inset: max(56px, env(safe-area-inset-bottom, 0px));
+  --app-bottom-inset: max(
+    56px,
+    env(safe-area-inset-bottom, var(--safe-area-inset-bottom, 0px))
+  );
 }
 
 html.native-android ion-content {

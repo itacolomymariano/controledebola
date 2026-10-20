@@ -84,7 +84,7 @@ export class UserBarComponent implements OnInit, OnDestroy {
   }
 
   openHome(): void {
-    void this.router.navigateByUrl('/tabs/peladas');
+    void this.router.navigateByUrl('/tabs/home');
   }
 
   openInbox(): void {

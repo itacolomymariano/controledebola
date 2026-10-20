@@ -454,6 +454,7 @@
         [votesSubmitted]="votesSubmitted"
         [voteScores]="voteScores"
         [voteScoreOptions]="voteScoreOptions"
+        [scoreTenRemaining]="muralScoreTenRemaining"
         [savingVotes]="savingVotes"
         [isTeamMatch]="event.type === 'team_match'"
         [homeTeamName]="event.homeTeamName"
@@ -559,6 +560,9 @@
         } @else {
           <p class="ion-margin-top">Nenhuma observacao de sumula registrada no App.</p>
         }
+        <ion-button expand="block" class="ion-margin-top" (click)="openAthleteFullProfile(reviewProfile.userId)">
+          {{ 'profile.openFullAthlete' | t }}
+        </ion-button>
       }
     </ion-content>
   </ng-template>

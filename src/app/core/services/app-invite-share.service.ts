@@ -4,25 +4,32 @@ import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { ToastController } from '@ionic/angular';
 
+import {
+  APP_INSTALL_ANDROID_URL,
+  APP_INSTALL_IOS_URL,
+  APP_INVITE_LANDING_URL,
+  formatAppInviteShareText,
+} from '../config/app-install-links.config';
+
 /** Site institucional (Sobre, marketing). */
 export const APP_SITE_URL = 'https://controledebola.com';
 
-/**
- * Link de instalacao (legenda editavel do share).
- * Enquanto nao ha listagem publica na Play Store, usa o teste interno.
- */
-export const APP_INSTALL_URL =
-  'https://play.google.com/apps/internaltest/4700271103655863991';
+/** @deprecated Use APP_INSTALL_ANDROID_URL */
+export const APP_INSTALL_URL = APP_INSTALL_ANDROID_URL;
 
-export const APP_INVITE_LANDING_URL = 'https://controledebola.com/app';
+export { APP_INVITE_LANDING_URL, APP_INSTALL_ANDROID_URL, APP_INSTALL_IOS_URL };
 
 const INVITE_TITLE = 'Controle de Bola App';
 const INVITE_DIALOG = 'Convidar amigos';
 const BRAND_LOGO_PATH = 'assets/icon/logo_controle_de_bola.png';
+const GOOGLE_PLAY_BADGE_PATH = 'assets/invite/google-play-badge.svg';
+const APP_STORE_BADGE_PATH = 'assets/invite/app-store-badge.svg';
 const TESTER_EMAIL = 'contato@controledebola.com';
+const STORE_BADGE_HEIGHT = 64;
+const STORE_BADGE_GAP = 16;
 
-/** So o link na area editavel — instrucoes ficam na imagem (nao apagaveis). */
-const SHARE_CAPTION = APP_INSTALL_URL;
+/** Links Android + iOS na legenda editavel do share. */
+const SHARE_CAPTION = formatAppInviteShareText();
 
 @Injectable({ providedIn: 'root' })
 export class AppInviteShareService {
@@ -43,7 +50,7 @@ export class AppInviteShareService {
         await Share.share({
           title: INVITE_TITLE,
           text: SHARE_CAPTION,
-          url: APP_INSTALL_URL,
+          url: APP_INVITE_LANDING_URL,
           files: [saved.uri],
           dialogTitle: INVITE_DIALOG,
         });
@@ -56,7 +63,7 @@ export class AppInviteShareService {
         const withFile = {
           title: INVITE_TITLE,
           text: SHARE_CAPTION,
-          url: APP_INSTALL_URL,
+          url: APP_INVITE_LANDING_URL,
           files: [file],
         };
         if (navigator.canShare?.(withFile)) {
@@ -66,7 +73,7 @@ export class AppInviteShareService {
         await navigator.share({
           title: INVITE_TITLE,
           text: SHARE_CAPTION,
-          url: APP_INSTALL_URL,
+          url: APP_INVITE_LANDING_URL,
         });
         return;
       }
@@ -82,7 +89,7 @@ export class AppInviteShareService {
           await Share.share({
             title: INVITE_TITLE,
             text: SHARE_CAPTION,
-            url: APP_INSTALL_URL,
+            url: APP_INVITE_LANDING_URL,
             dialogTitle: INVITE_DIALOG,
           });
           return;
@@ -91,7 +98,7 @@ export class AppInviteShareService {
           await navigator.share({
             title: INVITE_TITLE,
             text: SHARE_CAPTION,
-            url: APP_INSTALL_URL,
+            url: APP_INVITE_LANDING_URL,
           });
           return;
         }
@@ -115,25 +122,25 @@ export class AppInviteShareService {
   }
 
   /**
-   * Imagem: icone + nome + instrucoes de download/teste (fixos fixos).
-   * Link da Play vai so na legenda editavel do share.
+   * Imagem para redes: marca, instrucoes e badges Google Play / App Store.
+   * Links clicaveis ficam na legenda do share (text + url landing).
    */
   private async composeInviteImage(): Promise<string> {
     const logo = await this.loadImage(BRAND_LOGO_PATH).catch(() => null);
+    const playBadge = await this.loadImage(GOOGLE_PLAY_BADGE_PATH).catch(() => null);
+    const appStoreBadge = await this.loadImage(APP_STORE_BADGE_PATH).catch(() => null);
     const captionLines = [
       'Venha para o Controle de Bola App',
       'a rede social do futebol amador!',
       '',
-      'Para baixar o app (teste interno Google Play):',
-      '',
-      '1. Envie um e-mail valido usado na',
-      'Google Play Store para:',
+      'Android (Google Play — teste interno):',
+      '1. Envie um e-mail da Play Store para:',
       TESTER_EMAIL,
+      '2. Solicite cadastro nos testes.',
+      '3. Use o link Android abaixo.',
       '',
-      '2. Solicite o cadastro para os testes.',
-      '',
-      '3. Em seguida use o link de download',
-      'apresentado abaixo.',
+      'iPhone (App Store):',
+      'Use o link da App Store abaixo.',
     ];
 
     const padding = 32;
@@ -158,10 +165,13 @@ export class AppInviteShareService {
       return this.wrapText(measureCtx, line, width);
     });
     const captionHeight = wrapped.length * captionLineHeight;
+    const storeRowHeight = STORE_BADGE_HEIGHT + gap;
 
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(width + padding * 2);
-    canvas.height = Math.round(brandRowHeight + gap + captionHeight + padding * 2);
+    canvas.height = Math.round(
+      brandRowHeight + gap + captionHeight + storeRowHeight + padding * 2
+    );
     const ctx = canvas.getContext('2d');
     if (!ctx) {
       throw new Error('Canvas 2D indisponivel');
@@ -201,7 +211,69 @@ export class AppInviteShareService {
       textY += captionLineHeight;
     }
 
+    const badgeY = textY + gap;
+    this.drawStoreBadges(ctx, padding, badgeY, width, playBadge, appStoreBadge);
+
     return canvas.toDataURL('image/png');
+  }
+
+  private drawStoreBadges(
+    ctx: CanvasRenderingContext2D,
+    left: number,
+    top: number,
+    contentWidth: number,
+    playBadge: HTMLImageElement | null,
+    appStoreBadge: HTMLImageElement | null
+  ): void {
+    const badgeWidth = Math.floor((contentWidth - STORE_BADGE_GAP) / 2);
+    const badgeHeight = STORE_BADGE_HEIGHT;
+    const playX = left;
+    const iosX = left + badgeWidth + STORE_BADGE_GAP;
+
+    if (playBadge && appStoreBadge) {
+      ctx.drawImage(playBadge, playX, top, badgeWidth, badgeHeight);
+      ctx.drawImage(appStoreBadge, iosX, top, badgeWidth, badgeHeight);
+      return;
+    }
+
+    this.drawStoreBadgeFallback(ctx, playX, top, badgeWidth, badgeHeight, 'Google Play', 'play');
+    this.drawStoreBadgeFallback(ctx, iosX, top, badgeWidth, badgeHeight, 'App Store', 'apple');
+  }
+
+  private drawStoreBadgeFallback(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    label: string,
+    kind: 'play' | 'apple'
+  ): void {
+    const radius = 10;
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + w - radius, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+    ctx.lineTo(x + w, y + h - radius);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+    ctx.lineTo(x + radius, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '600 14px Arial, Helvetica, sans-serif';
+    ctx.textBaseline = 'middle';
+    const icon = kind === 'play' ? '▶' : '';
+    if (icon) {
+      ctx.font = '700 22px Arial, Helvetica, sans-serif';
+      ctx.fillText(icon, x + 18, y + h / 2);
+    }
+    ctx.font = '700 20px Arial, Helvetica, sans-serif';
+    ctx.fillText(label, x + 52, y + h / 2, w - 60);
   }
 
   private wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
@@ -236,9 +308,9 @@ export class AppInviteShareService {
     if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
       throw new Error('Clipboard indisponivel');
     }
-    await navigator.clipboard.writeText(APP_INSTALL_URL);
+    await navigator.clipboard.writeText(SHARE_CAPTION);
     const toast = await this.toastCtrl.create({
-      message: 'Link de teste interno (Play) copiado.',
+      message: 'Links Android e iOS copiados.',
       duration: 2800,
       color: 'success',
     });

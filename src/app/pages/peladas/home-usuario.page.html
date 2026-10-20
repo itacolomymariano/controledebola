@@ -5,7 +5,7 @@
         <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
-    <ion-title>{{ user?.displayName || ('peladas.userTitle' | t) }}</ion-title>
+    <ion-title>{{ headerDisplayName || ('peladas.userTitle' | t) }}</ion-title>
     <ion-buttons slot="end">
       <app-screen-help helpId="peladas-user-help" bodyKey="peladas.userHelp"></app-screen-help>
     </ion-buttons>
@@ -40,7 +40,7 @@
         size="lg"
       ></app-user-avatar>
       <div>
-        <h1>{{ user.displayName || ('peladas.userTitle' | t) }}</h1>
+        <h1>{{ headerDisplayName || ('peladas.userTitle' | t) }}</h1>
         @if (user.fullName && user.fullName !== user.displayName) {
           <p>{{ user.fullName }}</p>
         }

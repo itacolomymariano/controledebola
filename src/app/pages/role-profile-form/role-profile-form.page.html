@@ -29,12 +29,12 @@
     }
 
     <form id="roleProfileForm" [formGroup]="form" (ngSubmit)="submit()">
-      <ion-list lines="full">
+      <div class="role-profile-form-stack">
         <app-role-profile-fields [form]="form" [role]="role"></app-role-profile-fields>
         <ion-note color="medium">
           Times do coracao, idolos e data de nascimento sao editados em Meus dados.
         </ion-note>
-      </ion-list>
+      </div>
 
       @if (showsPeladaHistory) {
         <ion-card>

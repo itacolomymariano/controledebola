@@ -67,6 +67,7 @@ export interface MuralPerformanceAnalytics {
     foulsCommitted: number;
     athleteCount: number;
   };
+  goalTypes?: Record<string, number>;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -207,6 +208,7 @@ export class AthletePerformanceService {
         foulsCommitted: Number(data.charts?.foulsCommitted) || 0,
         athleteCount: Number(data.charts?.athleteCount) || 0,
       },
+      goalTypes: data.goalTypes ? { ...data.goalTypes } : undefined,
     };
   }
 }

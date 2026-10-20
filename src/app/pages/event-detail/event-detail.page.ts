@@ -18,6 +18,7 @@ import {
   getRegistrationStatus,
   isEventEnded,
   isSumulaEditOpen,
+  isScoutApontamentoEditOpen,
 } from '../../core/models/event.model';
 import { isGoalkeeperPosition } from '../../core/models/athlete-performance.model';
 
@@ -45,6 +46,7 @@ import { EVENT_REGISTRATION_ROLES, PROFILE_ROLE_LABELS, ProfileRole } from '../.
 import { MuralService } from '../../core/services/mural.service';
 import { eventRegistrationVoteMuralRole } from '../../core/utils/mural-role.util';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
+import { I18nService } from '../../core/services/i18n.service';
 import { normalizeSearchText } from '../../core/utils/search-text.util';
 import {
   compareArrivalParticipants,
@@ -278,6 +280,7 @@ export class EventDetailPage implements OnDestroy {
   participantSearch = '';
 
   voteScoreOptions = Array.from({ length: 11 }, (_, index) => index);
+  readonly muralMaxScoreTenPerEvent = 2;
   savingVotes = false;
   votesSubmitted = false;
   loadingVotes = false;
@@ -370,11 +373,16 @@ export class EventDetailPage implements OnDestroy {
     private readonly userParticipationProfileService: UserParticipationProfileService,
     private readonly loadingCtrl: LoadingController,
     private readonly alertCtrl: AlertController,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly i18n: I18nService
   ) {
     this.registrationsChangedSub = this.registrationService.onRegistrationsChanged.subscribe(() => {
       void this.refreshRegistrationState();
     });
+  }
+
+  private t(key: string, params?: Record<string, string | number>): string {
+    return this.i18n.t(key, params);
   }
 
   ngOnDestroy(): void {
@@ -569,7 +577,7 @@ export class EventDetailPage implements OnDestroy {
       },
       {
         id: 'scout',
-        label: this.canEditScoutApontamento ? 'Apontamento scout' : 'Consultar apontamento scout',
+        label: this.scoutApontamentoActionLabel,
         icon: 'clipboard-outline',
         visible: this.canViewScoutApontamento,
       },
@@ -918,17 +926,18 @@ export class EventDetailPage implements OnDestroy {
       this.registration.role === 'scout' &&
       this.registration.isEffectivelyConfirmed &&
       this.event &&
-      !this.event.isFinished
+      isScoutApontamentoEditOpen(this.event)
     );
   }
 
   get canViewScoutApontamento(): boolean {
-    return !!(
-      this.registration &&
-      this.registration.isEffectivelyConfirmed &&
-      this.event &&
-      (this.canEditScoutApontamento || this.hasScoutApontamento)
-    );
+    return !!this.event;
+  }
+
+  get scoutApontamentoActionLabel(): string {
+    if (!this.event) return 'Apontamento scout';
+    if (this.canEditScoutApontamento) return 'Apontamento scout';
+    return 'Consultar apontamento scout';
   }
 
   /** @deprecated use canEditScoutApontamento */
@@ -946,13 +955,8 @@ export class EventDetailPage implements OnDestroy {
   }
 
   get canViewRefereeSumula(): boolean {
-    if (!this.event) return false;
-    // Confronto: consulta para qualquer usuario logado; edicao so o arbitro (Cloud).
-    if (this.event.type === 'team_match') return true;
-    if (this.isAdmin) return true;
-    if (!this.registration?.isEffectivelyConfirmed) return false;
-    if (this.isEventFinished) return true;
-    return this.registration.role === 'referee';
+    // Consulta para qualquer usuario logado; edicao so o arbitro na janela (Cloud).
+    return !!this.event;
   }
 
   get sumulaActionLabel(): string {
@@ -978,6 +982,11 @@ export class EventDetailPage implements OnDestroy {
       isVotingOpen(this.event) &&
       !this.votesSubmitted
     );
+  }
+
+  get muralScoreTenRemaining(): number {
+    const tens = Object.values(this.voteScores).filter((score) => Number(score) === 10).length;
+    return Math.max(0, this.muralMaxScoreTenPerEvent - tens);
   }
 
   get votingStatusLabel(): string {
@@ -1185,18 +1194,18 @@ export class EventDetailPage implements OnDestroy {
     }
     if (hasOther) {
       const choice = await this.alertCtrl.create({
-        header: 'Solicitar participacao',
-        message: 'So o atleta escolhe o time. Os outros perfis se inscrevem sem escolher time.',
+        header: this.t('eventDetail.teamMatch.requestHeader'),
+        message: this.t('eventDetail.teamMatch.requestProfileMessage'),
         buttons: [
-          { text: 'Cancelar', role: 'cancel' },
+          { text: this.t('eventDetail.alert.cancel'), role: 'cancel' },
           {
-            text: 'Outro perfil',
+            text: this.t('eventDetail.teamMatch.otherProfile'),
             handler: () => {
               void this.router.navigate(['/event', this.event!.objectId, 'register']);
             },
           },
           {
-            text: 'Como atleta',
+            text: this.t('eventDetail.teamMatch.asAthlete'),
             handler: () => {
               void this.promptAthleteTeamSide();
             },
@@ -1216,17 +1225,17 @@ export class EventDetailPage implements OnDestroy {
     if (this.event.homeAcceptsUninvitedAthletes) {
       options.push({
         side: 'home',
-        name: this.event.homeTeamName || 'Mandante',
+        name: this.event.homeTeamName || this.t('eventDetail.teamMatch.sideHomeFallback'),
       });
     }
     if (this.event.awayAcceptsUninvitedAthletes) {
       options.push({
         side: 'away',
-        name: this.event.awayTeamName || 'Visitante',
+        name: this.event.awayTeamName || this.t('eventDetail.teamMatch.sideAwayFallback'),
       });
     }
     if (!options.length) {
-      await this.showError('Nenhum time esta aceitando atletas nao convocados neste confronto.');
+      await this.showError(this.t('eventDetail.teamMatch.noOpenTeams'));
       return;
     }
 
@@ -1236,8 +1245,8 @@ export class EventDetailPage implements OnDestroy {
     }
 
     const alert = await this.alertCtrl.create({
-      header: 'Solicitar participacao',
-      message: 'Escolha o time para o qual deseja solicitar.',
+      header: this.t('eventDetail.teamMatch.requestHeader'),
+      message: this.t('eventDetail.teamMatch.chooseTeamMessage'),
       inputs: options.map((opt, index) => ({
         type: 'radio' as const,
         label: opt.name,
@@ -1245,9 +1254,9 @@ export class EventDetailPage implements OnDestroy {
         checked: index === 0,
       })),
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.t('eventDetail.alert.cancel'), role: 'cancel' },
         {
-          text: 'Solicitar',
+          text: this.t('eventDetail.teamMatch.request'),
           handler: (side: TeamSide) => {
             void this.requestTeamMatchParticipation(side);
           },
@@ -1260,16 +1269,14 @@ export class EventDetailPage implements OnDestroy {
   private async requestTeamMatchParticipation(teamSide: TeamSide): Promise<void> {
     if (!this.event) return;
     this.teamMatchJoinBusy = true;
-    const loading = await this.loadingCtrl.create({ message: 'Enviando solicitacao...' });
+    const loading = await this.loadingCtrl.create({ message: this.t('eventDetail.teamMatch.sendingRequest') });
     await loading.present();
     try {
       await this.teamMatchJoinRequestService.request(this.event.objectId, teamSide);
       this.myPendingJoinRequest = true;
-      await this.showSuccess(
-        'Solicitacao enviada ao presidente do time. Acompanhe na caixa de saida.'
-      );
+      await this.showSuccess(this.t('eventDetail.teamMatch.requestSent'));
     } catch (error: unknown) {
-      await this.showError(parseErrorMessage(error) || 'Nao foi possivel solicitar.');
+      await this.showError(parseErrorMessage(error) || this.t('eventDetail.teamMatch.requestFailed'));
     } finally {
       this.teamMatchJoinBusy = false;
       await loading.dismiss();
@@ -1933,20 +1940,19 @@ export class EventDetailPage implements OnDestroy {
   async promptCancelTeamMatch(): Promise<void> {
     if (!this.event || !this.canManageTeamMatchSchedule || this.teamMatchScheduleBusy) return;
     const alert = await this.alertCtrl.create({
-      header: 'Cancelar confronto',
-      message:
-        'O elenco dos dois times e quem ja confirmou participacao recebera push com o motivo informado.',
+      header: this.t('eventDetail.teamMatch.cancelHeader'),
+      message: this.t('eventDetail.teamMatch.cancelMessage'),
       inputs: [
         {
           name: 'reason',
           type: 'textarea',
-          placeholder: 'Motivo do cancelamento (minimo 8 caracteres)',
+          placeholder: this.t('eventDetail.teamMatch.cancelReasonPlaceholder'),
         },
       ],
       buttons: [
-        { text: 'Voltar', role: 'cancel' },
+        { text: this.t('eventDetail.alert.back'), role: 'cancel' },
         {
-          text: 'Cancelar confronto',
+          text: this.t('eventDetail.teamMatch.cancelConfirm'),
           role: 'destructive',
           handler: (data) => {
             void this.confirmCancelTeamMatch(String(data?.reason || ''));
@@ -1961,13 +1967,12 @@ export class EventDetailPage implements OnDestroy {
   async promptRescheduleTeamMatch(): Promise<void> {
     if (!this.event || !this.canManageTeamMatchSchedule || this.teamMatchScheduleBusy) return;
     if (this.pendingReschedule) {
-      await this.showError('Ja existe uma proposta de remarcacao pendente.');
+      await this.showError(this.t('eventDetail.teamMatch.reschedulePending'));
       return;
     }
     const alert = await this.alertCtrl.create({
-      header: 'Remarcar confronto',
-      message:
-        'Informe nova data/hora e o motivo. O presidente adversario precisa aceitar na caixa de entrada (exceto se nao houver outro presidente).',
+      header: this.t('eventDetail.teamMatch.rescheduleHeader'),
+      message: this.t('eventDetail.teamMatch.rescheduleMessage'),
       inputs: [
         {
           name: 'startDate',
@@ -1992,13 +1997,13 @@ export class EventDetailPage implements OnDestroy {
         {
           name: 'reason',
           type: 'textarea',
-          placeholder: 'Motivo da remarcacao (minimo 8 caracteres)',
+          placeholder: this.t('eventDetail.teamMatch.rescheduleReasonPlaceholder'),
         },
       ],
       buttons: [
-        { text: 'Voltar', role: 'cancel' },
+        { text: this.t('eventDetail.alert.back'), role: 'cancel' },
         {
-          text: 'Enviar proposta',
+          text: this.t('eventDetail.teamMatch.sendProposal'),
           handler: (data) => {
             void this.confirmRescheduleTeamMatch(data);
             return false;
@@ -2013,11 +2018,11 @@ export class EventDetailPage implements OnDestroy {
     if (!this.event) return;
     const trimmed = reason.trim();
     if (trimmed.length < 8) {
-      await this.showError('Informe o motivo com pelo menos 8 caracteres.');
+      await this.showError(this.t('eventDetail.teamMatch.reasonMinLength'));
       return;
     }
     this.teamMatchScheduleBusy = true;
-    const loading = await this.loadingCtrl.create({ message: 'Cancelando...' });
+    const loading = await this.loadingCtrl.create({ message: this.t('eventDetail.teamMatch.cancelling') });
     await loading.present();
     try {
       await this.eventService.cancelTeamMatch(this.event.objectId, trimmed);
@@ -2028,9 +2033,9 @@ export class EventDetailPage implements OnDestroy {
       }
       this.refreshUiState();
       await this.refreshTeamMatchScheduleAccess();
-      await this.showSuccess('Confronto cancelado. Participantes serao avisados.');
+      await this.showSuccess(this.t('eventDetail.teamMatch.cancelSuccess'));
     } catch (error: unknown) {
-      await this.showError(parseErrorMessage(error) || 'Nao foi possivel cancelar.');
+      await this.showError(parseErrorMessage(error) || this.t('eventDetail.teamMatch.cancelFailed'));
     } finally {
       this.teamMatchScheduleBusy = false;
       await loading.dismiss();
@@ -2042,17 +2047,17 @@ export class EventDetailPage implements OnDestroy {
     if (!this.event) return;
     const reason = String(data['reason'] || '').trim();
     if (reason.length < 8) {
-      await this.showError('Informe o motivo com pelo menos 8 caracteres.');
+      await this.showError(this.t('eventDetail.teamMatch.reasonMinLength'));
       return;
     }
     const startTime = this.combineDateTime(data['startDate'], data['startTime']);
     const endTime = this.combineDateTime(data['endDate'], data['endTime']);
     if (endTime <= startTime) {
-      await this.showError('O termino deve ser apos o inicio.');
+      await this.showError(this.t('eventDetail.teamMatch.endAfterStart'));
       return;
     }
     this.teamMatchScheduleBusy = true;
-    const loading = await this.loadingCtrl.create({ message: 'Enviando proposta...' });
+    const loading = await this.loadingCtrl.create({ message: this.t('eventDetail.teamMatch.sendingProposal') });
     await loading.present();
     try {
       const result = await this.eventService.rescheduleTeamMatch(this.event.objectId, {
@@ -2069,11 +2074,11 @@ export class EventDetailPage implements OnDestroy {
       await this.refreshTeamMatchScheduleAccess();
       await this.showSuccess(
         result.pending
-          ? 'Proposta enviada. O presidente adversario precisa aceitar na caixa de entrada.'
-          : 'Confronto remarcado. Participantes serao avisados.'
+          ? this.t('eventDetail.teamMatch.reschedulePendingSuccess')
+          : this.t('eventDetail.teamMatch.rescheduleAppliedSuccess')
       );
     } catch (error: unknown) {
-      await this.showError(parseErrorMessage(error) || 'Nao foi possivel remarcar.');
+      await this.showError(parseErrorMessage(error) || this.t('eventDetail.teamMatch.rescheduleFailed'));
     } finally {
       this.teamMatchScheduleBusy = false;
       await loading.dismiss();
@@ -2084,7 +2089,7 @@ export class EventDetailPage implements OnDestroy {
   async acceptPendingReschedule(): Promise<void> {
     if (!this.event || !this.canRespondPendingReschedule || this.teamMatchScheduleBusy) return;
     this.teamMatchScheduleBusy = true;
-    const loading = await this.loadingCtrl.create({ message: 'Aceitando remarcacao...' });
+    const loading = await this.loadingCtrl.create({ message: this.t('eventDetail.teamMatch.acceptingReschedule') });
     await loading.present();
     try {
       await this.eventService.respondTeamMatchReschedule(this.event.objectId, 'accepted');
@@ -2095,9 +2100,9 @@ export class EventDetailPage implements OnDestroy {
       }
       this.refreshUiState();
       await this.refreshTeamMatchScheduleAccess();
-      await this.showSuccess('Remarcacao aceita. Participantes serao avisados.');
+      await this.showSuccess(this.t('eventDetail.teamMatch.acceptRescheduleSuccess'));
     } catch (error: unknown) {
-      await this.showError(parseErrorMessage(error) || 'Nao foi possivel aceitar.');
+      await this.showError(parseErrorMessage(error) || this.t('eventDetail.teamMatch.acceptRescheduleFailed'));
     } finally {
       this.teamMatchScheduleBusy = false;
       await loading.dismiss();
@@ -2108,12 +2113,18 @@ export class EventDetailPage implements OnDestroy {
   async declinePendingReschedule(): Promise<void> {
     if (!this.event || !this.canRespondPendingReschedule || this.teamMatchScheduleBusy) return;
     const alert = await this.alertCtrl.create({
-      header: 'Recusar remarcacao',
-      inputs: [{ name: 'reason', type: 'textarea', placeholder: 'Motivo (opcional)' }],
-      buttons: [
-        { text: 'Voltar', role: 'cancel' },
+      header: this.t('eventDetail.teamMatch.declineRescheduleHeader'),
+      inputs: [
         {
-          text: 'Recusar',
+          name: 'reason',
+          type: 'textarea',
+          placeholder: this.t('eventDetail.teamMatch.declineReasonOptional'),
+        },
+      ],
+      buttons: [
+        { text: this.t('eventDetail.alert.back'), role: 'cancel' },
+        {
+          text: this.t('eventDetail.teamMatch.decline'),
           role: 'destructive',
           handler: (data) => {
             void this.confirmDeclinePendingReschedule(String(data?.reason || ''));
@@ -2128,7 +2139,7 @@ export class EventDetailPage implements OnDestroy {
   private async confirmDeclinePendingReschedule(reason: string): Promise<void> {
     if (!this.event) return;
     this.teamMatchScheduleBusy = true;
-    const loading = await this.loadingCtrl.create({ message: 'Recusando...' });
+    const loading = await this.loadingCtrl.create({ message: this.t('eventDetail.teamMatch.declining') });
     await loading.present();
     try {
       await this.eventService.respondTeamMatchReschedule(
@@ -2137,9 +2148,9 @@ export class EventDetailPage implements OnDestroy {
         reason.trim()
       );
       await this.refreshTeamMatchScheduleAccess();
-      await this.showSuccess('Remarcacao recusada.');
+      await this.showSuccess(this.t('eventDetail.teamMatch.declineRescheduleSuccess'));
     } catch (error: unknown) {
-      await this.showError(parseErrorMessage(error) || 'Nao foi possivel recusar.');
+      await this.showError(parseErrorMessage(error) || this.t('eventDetail.teamMatch.declineRescheduleFailed'));
     } finally {
       this.teamMatchScheduleBusy = false;
       await loading.dismiss();
@@ -2505,7 +2516,9 @@ export class EventDetailPage implements OnDestroy {
     if (!this.event) return;
 
     if (this.votesSubmitted) {
-      await this.showError('Sua votacao ja foi registrada e nao pode ser alterada.');
+      await this.showError(
+        this.i18n.t('eventDetail.voting.oneVotePerAccountDone')
+      );
       return;
     }
 
@@ -2520,6 +2533,16 @@ export class EventDetailPage implements OnDestroy {
 
     if (!entries.length) {
       await this.showError('Atribua nota de 0 a 10 para ao menos um participante.');
+      return;
+    }
+
+    const tensCount = entries.filter(
+      (participant) => Number(this.voteScores[participant.objectId]) === 10
+    ).length;
+    if (tensCount > this.muralMaxScoreTenPerEvent) {
+      await this.showError(
+        this.i18n.t('eventDetail.voting.maxTenExceeded', { max: this.muralMaxScoreTenPerEvent })
+      );
       return;
     }
 
@@ -2935,6 +2958,11 @@ export class EventDetailPage implements OnDestroy {
     this.reviewProfile = null;
   }
 
+  openAthleteFullProfile(userId: string): void {
+    this.closeProfilePresentationReview();
+    void this.router.navigate(['/athlete', userId]);
+  }
+
   formatReviewLocation(profile: ParticipationReviewProfile): string {
     return [profile.neighborhood, profile.city, profile.state].filter(Boolean).join(' · ');
   }
@@ -3235,12 +3263,12 @@ export class EventDetailPage implements OnDestroy {
 
   async onRejectProfilePresentation(participant: EventRegistrationListItem): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Recusar solicitacao',
-      message: `Recusar a participacao de ${participant.apelido} neste evento?`,
+      header: this.t('eventDetail.participation.rejectHeader'),
+      message: this.t('eventDetail.participation.rejectMessage', { name: participant.apelido }),
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.t('eventDetail.alert.cancel'), role: 'cancel' },
         {
-          text: 'Recusar',
+          text: this.t('eventDetail.teamMatch.decline'),
           role: 'destructive',
           handler: () => {
             void this.resolveProfilePresentation(participant, 'reject');
@@ -3267,9 +3295,12 @@ export class EventDetailPage implements OnDestroy {
       );
       await this.refreshParticipantsList();
       const alert = await this.alertCtrl.create({
-        header: 'OK',
-        message: action === 'approve' ? 'Participacao aprovada.' : 'Solicitacao recusada.',
-        buttons: ['OK'],
+        header: this.t('eventDetail.alert.ok'),
+        message:
+          action === 'approve'
+            ? this.t('eventDetail.participation.approved')
+            : this.t('eventDetail.participation.rejected'),
+        buttons: [this.t('eventDetail.alert.ok')],
       });
       await alert.present();
     } catch (error: unknown) {
@@ -3288,17 +3319,17 @@ export class EventDetailPage implements OnDestroy {
 
     const alert = await this.alertCtrl.create({
 
-      header: 'Cancelar inscricao',
+      header: this.t('eventDetail.registration.cancelHeader'),
 
-      message: 'Tem certeza que deseja cancelar sua inscricao neste evento?',
+      message: this.t('eventDetail.registration.cancelMessage'),
 
       buttons: [
 
-        { text: 'Nao', role: 'cancel' },
+        { text: this.t('eventDetail.alert.no'), role: 'cancel' },
 
         {
 
-          text: 'Sim, cancelar',
+          text: this.t('eventDetail.registration.cancelConfirm'),
 
           role: 'destructive',
 
@@ -3864,7 +3895,11 @@ export class EventDetailPage implements OnDestroy {
 
   private async showError(message: string): Promise<void> {
 
-    const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.t('eventDetail.alert.error'),
+      message,
+      buttons: [this.t('eventDetail.alert.ok')],
+    });
 
     await alert.present();
 
@@ -3872,14 +3907,22 @@ export class EventDetailPage implements OnDestroy {
 
   private async showSuccess(message: string): Promise<void> {
 
-    const alert = await this.alertCtrl.create({ header: 'Sucesso', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.t('eventDetail.alert.success'),
+      message,
+      buttons: [this.t('eventDetail.alert.ok')],
+    });
 
     await alert.present();
 
   }
 
   private async showInfo(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Aviso', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.t('eventDetail.alert.info'),
+      message,
+      buttons: [this.t('eventDetail.alert.ok')],
+    });
     await alert.present();
   }
 

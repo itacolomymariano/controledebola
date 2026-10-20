@@ -143,6 +143,10 @@ export class ScoutApontamentoService {
       userName: String(athlete.userName || athlete.apelido || 'Atleta'),
       avatarUrl: athlete.avatarUrl ? String(athlete.avatarUrl) : undefined,
       primaryPosition: athlete.primaryPosition ? String(athlete.primaryPosition) : undefined,
+      refereeGoals:
+        athlete.refereeGoals != null && !Number.isNaN(Number(athlete.refereeGoals))
+          ? Math.max(0, Number(athlete.refereeGoals))
+          : undefined,
       stats: this.normalizeStats(athlete.stats),
     };
   }

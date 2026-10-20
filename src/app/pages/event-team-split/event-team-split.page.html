@@ -6,7 +6,7 @@
         <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
       </ion-button>
     </ion-buttons>
-    <ion-title>{{ readOnly ? 'Separacao de times (historico)' : 'Separacao de times' }}</ion-title>
+    <ion-title>{{ (readOnly ? 'teamSplit.titleHistory' : 'teamSplit.title') | t }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -25,21 +25,21 @@
   @if (!loading && event) {
     <h1>{{ event.name }}</h1>
     @if (readOnly) {
-      <p>Separacao registrada no encerramento do evento — apenas consulta.</p>
+      <p>{{ 'teamSplit.readOnlyIntro' | t }}</p>
     } @else {
-      <p>Organize os atletas confirmados nos times do evento.</p>
+      <p>{{ 'teamSplit.intro' | t }}</p>
     }
 
     @if (!readOnly) {
     <ion-card>
       <ion-card-header>
-        <ion-card-title>Configuracao</ion-card-title>
+        <ion-card-title>{{ 'teamSplit.configTitle' | t }}</ion-card-title>
       </ion-card-header>
       <ion-card-content>
         <ion-item>
           <ion-input
             type="number"
-            label="Atletas por time"
+            [label]="'teamSplit.athletesPerTeam' | t"
             labelPlacement="stacked"
             min="1"
             max="20"
@@ -50,23 +50,30 @@
         <ion-item>
           <ion-input
             type="number"
-            label="Quantidade de times"
+            [label]="'teamSplit.teamCount' | t"
             labelPlacement="stacked"
             min="1"
             max="8"
+            [disabled]="lockTeamCount"
             [(ngModel)]="teamCount"
             (ionChange)="onTeamCountChange()"
           ></ion-input>
         </ion-item>
+        @if (lockTeamCount) {
+          <ion-note class="ion-padding-horizontal">{{ 'teamSplit.twoTeamsLocked' | t }}</ion-note>
+        }
         <ion-item>
           <ion-select
-            label="Modo de separacao"
+            [label]="'teamSplit.splitMode' | t"
             labelPlacement="stacked"
             [(ngModel)]="splitMode"
             (ionChange)="onSplitModeChange()"
           >
-            <ion-select-option value="manual">Manual (toque ou arrastar)</ion-select-option>
-            <ion-select-option value="random">Aleatoria</ion-select-option>
+            <ion-select-option value="manual">{{ 'teamSplit.modeManual' | t }}</ion-select-option>
+            <ion-select-option value="random">{{ 'teamSplit.modeRandom' | t }}</ion-select-option>
+            <ion-select-option value="maritalSides">{{ 'teamSplit.modeMaritalSides' | t }}</ion-select-option>
+            <ion-select-option value="favoriteTeamSides">{{ 'teamSplit.modeFavoriteTeamSides' | t }}</ion-select-option>
+            <ion-select-option value="ageSides">{{ 'teamSplit.modeAgeSides' | t }}</ion-select-option>
           </ion-select>
         </ion-item>
         @if (splitMode === 'manual') {
@@ -76,18 +83,40 @@
         @if (splitMode === 'random') {
           <ion-item>
             <ion-select
-              label="Criterio da separacao aleatoria"
+              [label]="'teamSplit.randomCriteria' | t"
               labelPlacement="stacked"
               [(ngModel)]="randomStrategy"
             >
-              <ion-select-option value="default">Prioridade de socios</ion-select-option>
-              <ion-select-option value="marital">Equilibrar casados e solteiros</ion-select-option>
-              <ion-select-option value="favoriteTeam">Diversificar time do coracao</ion-select-option>
-              <ion-select-option value="neighborhood">Diversificar bairros</ion-select-option>
+              <ion-select-option value="default">{{ 'teamSplit.randomDefault' | t }}</ion-select-option>
+              <ion-select-option value="marital">{{ 'teamSplit.randomMaritalMix' | t }}</ion-select-option>
+              <ion-select-option value="favoriteTeam">{{ 'teamSplit.randomFavoriteMix' | t }}</ion-select-option>
+              <ion-select-option value="neighborhood">{{ 'teamSplit.randomNeighborhood' | t }}</ion-select-option>
             </ion-select>
           </ion-item>
           <ion-button expand="block" class="ion-margin-top" (click)="applyRandomSplit()">
-            Separar aleatoriamente
+            {{ 'teamSplit.applyRandom' | t }}
+          </ion-button>
+        }
+
+        @if (splitMode === 'ageSides') {
+          <ion-item>
+            <ion-input
+              type="number"
+              [label]="'teamSplit.ageThreshold' | t"
+              labelPlacement="stacked"
+              min="1"
+              max="99"
+              [(ngModel)]="ageThreshold"
+              (ionChange)="onAgeThresholdChange()"
+            ></ion-input>
+          </ion-item>
+          <ion-note class="ion-padding-horizontal">{{ 'teamSplit.ageHint' | t }}</ion-note>
+        }
+
+        @if (splitMode === 'maritalSides' || splitMode === 'favoriteTeamSides' || splitMode === 'ageSides') {
+          <ion-note class="ion-padding-horizontal">{{ 'teamSplit.presetPoolHint' | t }}</ion-note>
+          <ion-button expand="block" class="ion-margin-top" (click)="applyPresetSplit()">
+            {{ 'teamSplit.applyPreset' | t }}
           </ion-button>
         }
       </ion-card-content>
@@ -95,13 +124,13 @@
     }
 
   @if (pool.length === 0 && hasNoAssignedAthletes()) {
-      <ion-note color="medium">Nenhum atleta confirmado disponivel para separacao.</ion-note>
+      <ion-note color="medium">{{ 'teamSplit.noAthletes' | t }}</ion-note>
     } @else {
       <ion-list-header>
-        <ion-label>Lista de atletas (ordem de chegada · mesma posicao lado a lado)</ion-label>
+        <ion-label>{{ 'teamSplit.poolHeader' | t }}</ion-label>
       </ion-list-header>
       <ion-note class="ion-padding-horizontal ion-margin-bottom">
-        Media CB = media de votos na pelada (soma dos votos nos eventos da pelada ÷ quantidade de eventos confirmados do atleta).
+        {{ 'teamSplit.mediaCbHint' | t }}
       </ion-note>
 
       <div
@@ -129,7 +158,7 @@
                     size="md"
                   ></app-user-avatar>
                   <strong>{{ athlete.apelido }}</strong>
-                  <small>{{ athlete.primaryPosition || 'Sem posicao' }}</small>
+                  <small>{{ athlete.primaryPosition || ('teamSplit.noPosition' | t) }}</small>
                   @if (footLabel(athlete.footPreference)) {
                     <small>{{ footLabel(athlete.footPreference) }}</small>
                   }
@@ -137,9 +166,9 @@
                     <small>{{ arrivalLabel }}</small>
                   }
                   @if (athlete.age != null) {
-                    <small>{{ athlete.age }} anos</small>
+                    <small>{{ ageLabel(athlete.age) }}</small>
                   }
-                  <small>Media CB: {{ formatAthletePoints(athlete.accumulatedPoints) }}</small>
+                  <small>{{ 'teamSplit.mediaCb' | t }}: {{ formatAthletePoints(athlete.accumulatedPoints) }}</small>
                   <small>{{ membershipLabel(athlete) }}</small>
                 </button>
               }
@@ -149,7 +178,7 @@
       </div>
 
       <ion-list-header>
-        <ion-label>Times</ion-label>
+        <ion-label>{{ 'teamSplit.teamsHeader' | t }}</ion-label>
       </ion-list-header>
 
       <div class="teams-grid">
@@ -159,9 +188,9 @@
             [class.team-over-capacity]="overCapacityTeamIndexes.includes(teamIndex)"
           >
             <ion-card-header>
-              <ion-card-title>Time {{ teamIndex + 1 }}</ion-card-title>
+              <ion-card-title>{{ 'teamSplit.teamName' | t: { number: teamIndex + 1 } }}</ion-card-title>
               <ion-card-subtitle>
-                {{ team.length }}/{{ athletesPerTeam }} atletas
+                {{ 'teamSplit.teamAthleteCount' | t: { current: team.length, max: athletesPerTeam } }}
               </ion-card-subtitle>
             </ion-card-header>
             <ion-card-content
@@ -169,7 +198,7 @@
               (drop)="onDropTeam(teamIndex); $event.preventDefault()"
             >
               @if (!team.length) {
-                <ion-note color="medium">Arraste atletas para este time.</ion-note>
+                <ion-note color="medium">{{ 'teamSplit.emptyTeamHint' | t }}</ion-note>
               }
               <div class="team-athletes">
                 @for (athlete of team; track athlete.userId) {
@@ -192,14 +221,14 @@
                       <small>{{ arrivalLabel }}</small>
                     }
                     @if (athlete.age != null) {
-                      <small>{{ athlete.age }} anos</small>
+                      <small>{{ ageLabel(athlete.age) }}</small>
                     }
-                    <small>Media CB: {{ formatAthletePoints(athlete.accumulatedPoints) }}</small>
+                    <small>{{ 'teamSplit.mediaCb' | t }}: {{ formatAthletePoints(athlete.accumulatedPoints) }}</small>
                     <small>{{ membershipLabel(athlete) }}</small>
                   </button>
                 }
               </div>
-              <p class="team-media-cb">Media CB: {{ teamMediaCbLabel(team) }}</p>
+              <p class="team-media-cb">{{ 'teamSplit.teamMediaCb' | t }}: {{ teamMediaCbLabel(team) }}</p>
             </ion-card-content>
           </ion-card>
         }
@@ -209,22 +238,39 @@
       <ion-button
         expand="block"
         class="ion-margin-top"
-        [disabled]="saving || hasNoAssignedAthletes()"
+        [disabled]="saving || clearing || !splitDirty || hasNoAssignedAthletes()"
         (click)="saveSplit()"
       >
-        Salvar separacao
+        {{ 'teamSplit.save' | t }}
       </ion-button>
+      @if (!splitDirty && savedAt) {
+        <ion-note color="medium" class="ion-padding-horizontal ion-text-center">
+          {{ 'teamSplit.saveAlreadyApplied' | t }}
+        </ion-note>
+      }
+      @if (hasSavedSplitOnServer) {
+        <ion-button
+          expand="block"
+          fill="outline"
+          color="medium"
+          class="ion-margin-top"
+          [disabled]="saving || clearing"
+          (click)="confirmClearSavedSplit()"
+        >
+          {{ 'teamSplit.clearSaved' | t }}
+        </ion-button>
+      }
       }
       @if (formatSavedAt(); as savedLabel) {
         <ion-note color="success" class="ion-padding-horizontal">
-          Ultima separacao salva: {{ savedLabel }}
+          {{ 'teamSplit.lastSaved' | t: { when: savedLabel } }}
         </ion-note>
       }
     }
   }
 
   @if (showTeamAssignmentDock && assignmentAthlete) {
-    <div class="team-assignment-dock" role="dialog" aria-label="Escolher time">
+    <div class="team-assignment-dock" role="dialog" [attr.aria-label]="'teamSplit.pickTeamAria' | t">
       <div class="team-assignment-dock-header">
         <div class="team-assignment-dock-athlete">
           <app-user-avatar
@@ -235,10 +281,10 @@
           <strong>{{ assignmentAthlete.apelido }}</strong>
         </div>
         <ion-button fill="clear" size="small" (click)="cancelAssignment()">
-          Cancelar
+          {{ 'teamSplit.cancel' | t }}
         </ion-button>
       </div>
-      <p class="team-assignment-dock-hint">Escolha o time de destino:</p>
+      <p class="team-assignment-dock-hint">{{ 'teamSplit.pickTeamHint' | t }}</p>
       <div class="team-assignment-dock-teams">
         @for (team of teams; track $index; let teamIndex = $index) {
           <button
@@ -247,14 +293,14 @@
             [class.team-pick-over-capacity]="overCapacityTeamIndexes.includes(teamIndex)"
             (click)="assignActiveAthleteToTeam(teamIndex)"
           >
-            <span>Time {{ teamIndex + 1 }}</span>
+            <span>{{ 'teamSplit.teamName' | t: { number: teamIndex + 1 } }}</span>
             <small>{{ team.length }}/{{ athletesPerTeam }}</small>
           </button>
         }
         @if (assignmentFromTeamIndex !== null) {
           <button type="button" class="team-pick-card team-pick-pool" (click)="assignActiveAthleteToPool()">
-            <span>Lista</span>
-            <small>Remover do time</small>
+            <span>{{ 'teamSplit.poolShort' | t }}</span>
+            <small>{{ 'teamSplit.removeFromTeam' | t }}</small>
           </button>
         }
       </div>

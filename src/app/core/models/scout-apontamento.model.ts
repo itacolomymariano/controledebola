@@ -25,6 +25,8 @@ export interface ScoutApontamentoAthlete {
   userName: string;
   avatarUrl?: string;
   primaryPosition?: string;
+  /** Gols marcados na sumula do juiz (quantidade fixa para o scout). */
+  refereeGoals?: number;
   stats: import('./athlete-performance.model').AthletePerformanceStats;
 }
 

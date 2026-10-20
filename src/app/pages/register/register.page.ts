@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
 import { emptyAddress } from '../../core/models/address.model';
 import { MIN_PASSWORD_LENGTH } from '../../core/constants/auth.constants';
+import { formatAppReleaseFullLabel } from '../../core/constants/app-release-display.util';
 import { Subscription, merge } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { AppStorageService } from '../../core/services/app-storage.service';
@@ -48,6 +49,7 @@ const SIGNUP_MIN_DURATION_MS = 8000;
   standalone: false,
 })
 export class RegisterPage implements OnInit, OnDestroy {
+  readonly appVersion = formatAppReleaseFullLabel();
   canSubmit = false;
   showPassword = false;
   showConfirmPassword = false;

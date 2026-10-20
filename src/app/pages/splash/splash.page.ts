@@ -1,5 +1,6 @@
 ﻿import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { formatAppReleaseFullLabel } from '../../core/constants/app-release-display.util';
 import { AuthService } from '../../core/services/auth.service';
 import { AppStorageService } from '../../core/services/app-storage.service';
 import { PostAuthNavigationService } from '../../core/services/post-auth-navigation.service';
@@ -13,6 +14,8 @@ const MIN_SPLASH_MS = 400;
   standalone: false,
 })
 export class SplashPage implements OnInit {
+  readonly appVersion = formatAppReleaseFullLabel();
+
   constructor(
     private readonly router: Router,
     private readonly auth: AuthService,
@@ -34,7 +37,7 @@ export class SplashPage implements OnInit {
       if (sessionValid) {
         if (await this.storage.isProfileWizardComplete()) {
           await minSplash;
-          await this.router.navigateByUrl('/tabs/peladas', { replaceUrl: true });
+          await this.router.navigateByUrl('/tabs/home', { replaceUrl: true });
           void this.postAuthNav.syncProfileWizardForCurrentUser();
           return;
         }
@@ -43,7 +46,7 @@ export class SplashPage implements OnInit {
         if (!wizardPath) {
           await minSplash;
           void this.postAuthNav.syncProfileWizardForCurrentUser();
-          await this.router.navigateByUrl('/tabs/peladas', { replaceUrl: true });
+          await this.router.navigateByUrl('/tabs/home', { replaceUrl: true });
           return;
         }
 
@@ -55,7 +58,7 @@ export class SplashPage implements OnInit {
           return;
         }
 
-        await this.router.navigateByUrl('/tabs/peladas', { replaceUrl: true });
+        await this.router.navigateByUrl('/tabs/home', { replaceUrl: true });
         return;
       }
     } catch {

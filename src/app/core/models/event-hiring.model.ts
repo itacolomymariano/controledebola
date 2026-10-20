@@ -32,6 +32,7 @@ export interface EventInviteCandidate {
   peladaRemoteRate?: number;
   matchPresentialRate?: number;
   matchRemoteRate?: number;
+  primaryPosition?: string;
 }
 
 export function hireableRoleLabel(role: HireableRole): string {

@@ -16,6 +16,12 @@
   --padding-bottom: 24px;
 }
 
+.role-profile-form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .role-profile-footer ion-toolbar {
   --padding-top: 8px;
   --padding-bottom: calc(8px + env(safe-area-inset-bottom));

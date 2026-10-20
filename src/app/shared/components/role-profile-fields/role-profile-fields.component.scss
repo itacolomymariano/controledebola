@@ -1,0 +1,32 @@
+.role-profile-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.role-profile-toggle-item {
+  --padding-start: 0;
+  --inner-padding-end: 0;
+  margin: 0;
+}
+
+.role-profile-control {
+  width: 100%;
+}
+
+.role-profile-pix-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+
+.role-profile-pix-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.role-profile-pix-copy {
+  flex-shrink: 0;
+  margin-bottom: 4px;
+}

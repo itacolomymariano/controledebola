@@ -1,3 +1,18 @@
+.profile-setup-title-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+}
+
+.profile-setup-version {
+  margin-top: 2px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  opacity: 0.85;
+}
+
 .setup-hero {
   text-align: center;
   margin-bottom: 16px;
@@ -14,4 +29,10 @@
 
 .role-card.selected {
   border: 2px solid var(--ion-color-primary);
+}
+
+.role-profile-form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }

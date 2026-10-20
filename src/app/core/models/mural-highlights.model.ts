@@ -20,6 +20,8 @@ export interface MuralShowcaseEntry {
   age?: number;
   /** Ex.: "Há: 3 dia(s)" — mural App por aba. */
   tenureLabel?: string;
+  /** Ex.: "12 pessoas avaliaram" — mural geral. */
+  evaluatorCountLabel?: string;
 }
 
 export interface MuralBirthdayEntry extends MuralShowcaseEntry {
@@ -57,6 +59,9 @@ export interface MuralHighlights {
   melhorGoleiroPelada?: MuralShowcaseEntry | null;
   melhorGoleiroConfronto?: MuralShowcaseEntry | null;
   timeMaisAmado?: MuralFavoriteTeamEntry | null;
+  timeAmadorMaisAmado?: MuralFavoriteTeamEntry | null;
+  atletaMaisAlto?: MuralShowcaseEntry | null;
+  atletaMaisBaixo?: MuralShowcaseEntry | null;
   promessa: MuralShowcaseEntry | null;
   master: MuralShowcaseEntry | null;
   birthdays: MuralBirthdayEntry[];

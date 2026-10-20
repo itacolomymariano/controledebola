@@ -1,6 +1,6 @@
 /**
  * Cloud Code — gerado por npm run build:cloud
- * Gerado em: 2026-10-08T18:02:57.124Z
+ * Gerado em: 2026-10-19T11:20:25.877Z
  * Copie o conteudo deste arquivo no Back4App (Server Settings > Cloud Code).
  * Fontes modulares em cloud/source/
  * NAO edite este arquivo direto — edite cloud/source/ e rode npm run build:cloud
@@ -469,6 +469,67 @@ Parse.Cloud.define('configureMailSettingsClassPermissions', async (request) => {
 
   return { ok: true, className: MAIL_SETTINGS_CLASS };
 });
+
+// --- 01e-voter-reliability.js ---
+
+/** Confiabilidade do avaliador (mural) — peso 0..1 por historico de notas. */
+
+const VOTER_RELIABILITY_MIN_SCORES = 4;
+const VOTER_RELIABILITY_TARGET_MEAN = 7.5;
+
+/**
+ * @param {number[]} scores notas 0–10 dadas pelo mesmo votante (deduplicadas)
+ * @returns {number} multiplicador de peso (min 0.35, max 1)
+ */
+function computeVoterReliabilityScore(scores) {
+  const list = (scores || []).map((value) => Number(value)).filter((value) => !Number.isNaN(value));
+  if (list.length < VOTER_RELIABILITY_MIN_SCORES) return 1;
+
+  const mean = list.reduce((sum, value) => sum + value, 0) / list.length;
+  const variance = list.reduce((sum, value) => sum + (value - mean) ** 2, 0) / list.length;
+  const std = Math.sqrt(variance);
+
+  const differentiation = Math.min(1, std / 2.2);
+  const extremismPenalty = Math.min(1, Math.abs(mean - VOTER_RELIABILITY_TARGET_MEAN) / 2.5);
+  const moderation = 1 - extremismPenalty * 0.5;
+
+  const raw = 0.35 + 0.4 * differentiation + 0.25 * moderation;
+  return Math.max(0.35, Math.min(1, raw));
+}
+
+/**
+ * Ajusta scoreWeight / weightedScore com confiabilidade por voterId (in-place).
+ * @param {Array<{ voterId?: string, score?: number, scoreWeight?: number, weightedScore?: number }>} voteRows
+ */
+function attachVoterReliabilityWeightsFromRows(voteRows) {
+  if (!Array.isArray(voteRows) || !voteRows.length) return voteRows;
+
+  const scoresByVoter = new Map();
+  for (const vote of voteRows) {
+    const voterId = vote.voterId ? String(vote.voterId) : '';
+    if (!voterId) continue;
+    const list = scoresByVoter.get(voterId) || [];
+    list.push(Number(vote.score || 0));
+    scoresByVoter.set(voterId, list);
+  }
+
+  const reliabilityByVoter = new Map();
+  for (const [voterId, scores] of scoresByVoter) {
+    reliabilityByVoter.set(voterId, computeVoterReliabilityScore(scores));
+  }
+
+  for (const vote of voteRows) {
+    const voterId = vote.voterId ? String(vote.voterId) : '';
+    if (!voterId) continue;
+    const reliability = reliabilityByVoter.get(voterId) ?? 1;
+    const eventWeight = Number(vote.scoreWeight || 1) || 1;
+    vote.voterReliability = reliability;
+    vote.scoreWeight = eventWeight * reliability;
+    vote.weightedScore = Number(vote.score || 0) * vote.scoreWeight;
+  }
+
+  return voteRows;
+}
 
 // --- 02-core.js ---
 
@@ -1486,6 +1547,7 @@ function formatEventPushDate(startTime) {
   const date = startTime instanceof Date ? startTime : new Date(startTime);
   if (Number.isNaN(date.getTime())) return '';
   return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
     day: '2-digit',
     month: 'short',
     hour: '2-digit',
@@ -4183,6 +4245,79 @@ function dedupeMuralVoteRowsByVoter(voteRows) {
 /** Confrontos (team_match) pesam 3x em votacao/pontuacao agregada do mural. */
 const TEAM_MATCH_MURAL_WEIGHT = 3;
 
+/** Mural do app: ranking de craque/goleiro com confianca estatistica (fase anticorrupcao). */
+const APP_MURAL_RANKING_PRIOR_WEIGHT = 5;
+const APP_MURAL_RANKING_PRIOR_MEAN = 7.5;
+const APP_MURAL_MIN_DISTINCT_VOTERS_FOR_FULL_WEIGHT = 3;
+const EVENT_MURAL_MAX_SCORE_TEN_COUNT = 2;
+
+function distinctVoterCountByTargetKey(voteRows) {
+  const map = new Map();
+  for (const vote of dedupeMuralVoteRowsByVoter(voteRows)) {
+    if (!vote.targetUserId || !vote.voterId) continue;
+    const key = `${vote.targetUserId}:${vote.targetRole || 'athlete'}`;
+    const set = map.get(key) || new Set();
+    set.add(String(vote.voterId));
+    map.set(key, set);
+  }
+  const out = new Map();
+  for (const [key, set] of map) out.set(key, set.size);
+  return out;
+}
+
+function athleteAppConfidenceRankingScore(entry, distinctVoters) {
+  const voteCount = Number(entry.voteCount || 0);
+  const avg = Number(entry.averageScore || 0);
+  if (voteCount <= 0) {
+    return Number(entry.rankingScore ?? entry.combinedScore ?? entry.totalScore ?? 0);
+  }
+  const shrunk =
+    (voteCount * avg + APP_MURAL_RANKING_PRIOR_WEIGHT * APP_MURAL_RANKING_PRIOR_MEAN) /
+    (voteCount + APP_MURAL_RANKING_PRIOR_WEIGHT);
+  const diversity =
+    distinctVoters >= APP_MURAL_MIN_DISTINCT_VOTERS_FOR_FULL_WEIGHT
+      ? 1
+      : distinctVoters / APP_MURAL_MIN_DISTINCT_VOTERS_FOR_FULL_WEIGHT;
+  return shrunk * diversity;
+}
+
+function applyAppMuralRankingConfidence(rankings, voteRowsForScope, topN = 10) {
+  const distinctByKey = distinctVoterCountByTargetKey(voteRowsForScope);
+  const result = { ...rankings };
+  for (const role of ['athlete', 'goalkeeper']) {
+    const list = [...(rankings[role] || [])];
+    list.sort((a, b) => {
+      const keyA = `${a.userId}:${role}`;
+      const keyB = `${b.userId}:${role}`;
+      const scoreA = athleteAppConfidenceRankingScore(a, distinctByKey.get(keyA) || 0);
+      const scoreB = athleteAppConfidenceRankingScore(b, distinctByKey.get(keyB) || 0);
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      const voteDiff = (b.voteCount || 0) - (a.voteCount || 0);
+      if (voteDiff !== 0) return voteDiff;
+      return (b.averageScore || 0) - (a.averageScore || 0);
+    });
+    result[role] = list.slice(0, topN).map((entry) => {
+      const distinctVoterCount = distinctByKey.get(`${entry.userId}:${role}`) || 0;
+      return {
+        ...entry,
+        distinctVoterCount,
+        confidenceRankingScore: athleteAppConfidenceRankingScore(entry, distinctVoterCount),
+      };
+    });
+  }
+  return result;
+}
+
+function assertEventMuralBallotScoreTenLimit(entries) {
+  const tens = entries.filter((entry) => Number(entry.score) === 10).length;
+  if (tens > EVENT_MURAL_MAX_SCORE_TEN_COUNT) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      `Voce so pode dar nota 10 para no maximo ${EVENT_MURAL_MAX_SCORE_TEN_COUNT} jogadores neste evento.`
+    );
+  }
+}
+
 async function attachTeamMatchVoteWeights(voteRows) {
   const eventIds = [
     ...new Set(
@@ -5055,6 +5190,7 @@ function buildMuralLocationTopRankingsFromUsers(users, fullRankings, includeStat
 
 async function loadEventMuralParticipantRows(eventId) {
   const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
+  const participationFee = Number(event.get('participationFee') || 0);
   const registrations = await new Parse.Query('EventRegistration')
     .equalTo('event', event)
     .include('user')
@@ -5065,6 +5201,7 @@ async function loadEventMuralParticipantRows(eventId) {
   const toSave = [];
 
   for (const registration of registrations) {
+    if (!computeRegistrationEffectiveConfirmation(registration, participationFee)) continue;
     const resolved = await resolveRegistrationParticipantUserId(registration);
     if (!resolved.userId) continue;
     if (resolved.shouldSave) toSave.push(registration);
@@ -5082,6 +5219,14 @@ async function loadEventMuralParticipantRows(eventId) {
     const birthDate = user && user.get ? user.get('birthDate') : undefined;
     const address = user && user.get ? user.get('address') : undefined;
     const avatarUrl = resolveStoredAvatarUrl(user, registration);
+    const favoriteProTeam =
+      user && user.get
+        ? readUserFavoriteProTeam(user)
+        : undefined;
+    const favoriteAmateurTeam =
+      user && user.get
+        ? readUserFavoriteAmateurTeam(user)
+        : undefined;
 
     if (!byUser[resolved.userId]) {
       byUser[resolved.userId] = {
@@ -5096,6 +5241,8 @@ async function loadEventMuralParticipantRows(eventId) {
         avatarUrl,
         birthDate: birthDate ? birthDate.toISOString() : undefined,
         address: address || undefined,
+        favoriteProTeam: favoriteProTeam || undefined,
+        favoriteAmateurTeam: favoriteAmateurTeam || undefined,
         proFootballIdol:
           user && user.get ? (user.get('proFootballIdol') || '').trim() || undefined : undefined,
         amateurFootballIdol:
@@ -5116,6 +5263,24 @@ async function loadEventMuralParticipantRows(eventId) {
 
   if (toSave.length) {
     await Parse.Object.saveAll(toSave, { useMasterKey: true });
+  }
+
+  const userIdList = Object.keys(byUser);
+  if (userIdList.length) {
+    const users = userIdList.map((id) => Parse.User.createWithoutData(id));
+    const athleteQuery = new Parse.Query('AthleteProfile');
+    athleteQuery.containedIn('user', users);
+    athleteQuery.limit(Math.min(userIdList.length, 500));
+    const athleteProfiles = await athleteQuery.find({ useMasterKey: true });
+    for (const athleteProfile of athleteProfiles) {
+      const userPtr = athleteProfile.get('user');
+      const uid = userPtr && userPtr.id ? String(userPtr.id) : '';
+      if (!uid || !byUser[uid]) continue;
+      const height = Number(athleteProfile.get('height') || 0);
+      if (height > 0) {
+        byUser[uid].heightCm = height;
+      }
+    }
   }
 
   return Object.values(byUser).sort((a, b) => a.userName.localeCompare(b.userName, 'pt-BR'));
@@ -5373,6 +5538,10 @@ function buildMuralParticipantProfile(user, athleteProfile, amateurTeam, fanProf
     birthDate: birthDate ? birthDate.toISOString() : undefined,
     age,
     ageBand: getAgeBandFromAge(age),
+    heightCm:
+      athleteProfile && Number(athleteProfile.get('height') || 0) > 0
+        ? Number(athleteProfile.get('height'))
+        : undefined,
   };
 }
 
@@ -6697,6 +6866,7 @@ async function buildAppMuralBucketPayload(
   rankings = await enrichMuralRankingNames(scope, undefined, rankings);
   rankings = await finalizeEventGoalkeeperRankings(rankings);
   rankings = await finalizeMuralRankingsAgeTiebreak(rankings);
+  rankings = applyAppMuralRankingConfidence(rankings, votes, 10);
 
   let voteAggregates = buildMuralVoteAggregatesFromRows(votes);
 
@@ -6963,7 +7133,32 @@ async function loadRecentAppParticipantRows(limit, locationFilter) {
   return Object.values(byUser).sort((a, b) => a.userName.localeCompare(b.userName, 'pt-BR'));
 }
 
+function buildSyntheticPerformancesForScoutAnalytics(performances) {
+  const scoutPerfs = (performances || []).filter(hasScoutApontamentoSaved);
+  const source = scoutPerfs.length ? scoutPerfs : performances || [];
+  if (typeof buildMergedScoutStatsByParticipantId !== 'function' || !source.length) {
+    return source;
+  }
+  const merged = buildMergedScoutStatsByParticipantId(source);
+  if (!merged.size) {
+    return source;
+  }
+  const rows = [];
+  for (const [userId, stats] of merged.entries()) {
+    const perf = new Parse.Object('EventPerformance');
+    perf.set('participantUserId', userId);
+    for (const field of SCOUT_APONTAMENTO_FIELDS) {
+      if (field === 'goals') continue;
+      perf.set(field, Number(stats[field] || 0));
+    }
+    perf.set('goals', Number(stats.goals || 0));
+    rows.push(perf);
+  }
+  return rows.length ? rows : source;
+}
+
 async function buildMuralPerformanceAnalyticsPayload(scope, scopeId, performances) {
+  performances = buildSyntheticPerformancesForScoutAnalytics(performances);
   let totalShotsOn = 0;
   let totalShotsOff = 0;
   let totalGoals = 0;
@@ -6971,6 +7166,10 @@ async function buildMuralPerformanceAnalyticsPayload(scope, scopeId, performance
   let totalPassesMiss = 0;
   let totalFouls = 0;
   const athleteIds = new Set();
+  const goalTypes = {};
+  for (const field of SCOUT_GOAL_TYPE_FIELDS) {
+    goalTypes[field] = 0;
+  }
 
   for (const perf of performances) {
     const userId = getPerformanceParticipantId(perf);
@@ -6982,6 +7181,9 @@ async function buildMuralPerformanceAnalyticsPayload(scope, scopeId, performance
     totalPassesOk += Number(stats.passesCompleted || 0);
     totalPassesMiss += Number(stats.passesMissed || 0);
     totalFouls += Number(stats.foulsCommitted || 0);
+    for (const field of SCOUT_GOAL_TYPE_FIELDS) {
+      goalTypes[field] += Number(stats[field] || 0);
+    }
   }
 
   const totalShots = totalShotsOn + totalShotsOff;
@@ -7013,6 +7215,7 @@ async function buildMuralPerformanceAnalyticsPayload(scope, scopeId, performance
       foulsCommitted: totalFouls,
       athleteCount: athleteIds.size,
     },
+    goalTypes,
   };
 
   return enrichMuralPerformanceAnalytics(scope, scopeId, analytics);
@@ -7106,11 +7309,16 @@ Parse.Cloud.define('getMuralAppDashboard', async (request) => {
   const scope = 'app';
   const locationFilter = normalizeMuralLocationFilter(request.params);
 
-  const [participants, performanceRaw, voteRows] = await Promise.all([
+  const [participants, performanceRaw, voteRowsRaw] = await Promise.all([
     loadRecentAppParticipantRows(participantLimit, locationFilter),
     loadMuralPerformanceRows(scope, undefined, locationFilter),
     mapMuralVoteRowsForScope(scope, undefined, locationFilter),
   ]);
+
+  const voteRows =
+    typeof attachVoterReliabilityWeightsFromRows === 'function'
+      ? attachVoterReliabilityWeightsFromRows(voteRowsRaw)
+      : voteRowsRaw;
 
   const performanceRows = await mapPerformanceRowsForMural(scope, undefined, performanceRaw);
 
@@ -7339,6 +7547,96 @@ Parse.Cloud.define('getEventMuralVoteSummary', async (request) => {
   };
 });
 
+function muralParticipantHeightEligible(row) {
+  const roles = row.roles || [];
+  return roles.includes('athlete') || roles.includes('goalkeeper');
+}
+
+function buildMuralShowcaseFromParticipantRow(row, score, scoreLabel) {
+  if (!row || !row.userId) return null;
+  return {
+    userId: String(row.userId),
+    displayName: (row.apelido || row.userName || 'Participante').trim(),
+    avatarUrl: row.avatarUrl || undefined,
+    profileLabel: 'Atleta',
+    favoriteProTeam: row.favoriteProTeam || undefined,
+    favoriteAmateurTeam: row.favoriteAmateurTeam || undefined,
+    proFootballIdol: row.proFootballIdol || undefined,
+    amateurFootballIdol: row.amateurFootballIdol || undefined,
+    score,
+    scoreLabel,
+  };
+}
+
+function buildEventMuralCuriositiesFromRows(rows) {
+  const counts = new Map();
+  for (const row of rows || []) {
+    const teamName = String(row.favoriteAmateurTeam || '').trim();
+    if (!teamName || teamName.toLowerCase() === 'sem time') continue;
+    counts.set(teamName, (counts.get(teamName) || 0) + 1);
+  }
+  let favoriteAmateurTeam = null;
+  const sortedTeams = [...counts.entries()].sort((a, b) => {
+    if (b[1] !== a[1]) return b[1] - a[1];
+    return a[0].localeCompare(b[0], 'pt-BR');
+  });
+  if (sortedTeams.length) {
+    favoriteAmateurTeam = { teamName: sortedTeams[0][0], count: sortedTeams[0][1] };
+  }
+
+  const heightRows = [];
+  for (const row of rows || []) {
+    if (!muralParticipantHeightEligible(row)) continue;
+    const heightCm = Number(row.heightCm || 0);
+    if (heightCm > 0) {
+      heightRows.push({ row, heightCm });
+    }
+  }
+  heightRows.sort((a, b) => {
+    const diff = a.heightCm - b.heightCm;
+    if (diff !== 0) return diff;
+    const nameA = (a.row.apelido || a.row.userName || '').trim();
+    const nameB = (b.row.apelido || b.row.userName || '').trim();
+    return nameA.localeCompare(nameB, 'pt-BR');
+  });
+
+  const shortest = heightRows.length
+    ? buildMuralShowcaseFromParticipantRow(
+        heightRows[0].row,
+        heightRows[0].heightCm,
+        'Altura (cm)'
+      )
+    : null;
+  const tallest = heightRows.length
+    ? buildMuralShowcaseFromParticipantRow(
+        heightRows[heightRows.length - 1].row,
+        heightRows[heightRows.length - 1].heightCm,
+        'Altura (cm)'
+      )
+    : null;
+
+  return {
+    participants: rows,
+    favoriteAmateurTeam,
+    tallest,
+    shortest,
+  };
+}
+
+Parse.Cloud.define('getEventMuralCuriosities', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+
+  const eventId = request.params.eventId ? String(request.params.eventId) : '';
+  if (!eventId) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'eventId obrigatorio.');
+  }
+
+  const rows = await loadEventMuralParticipantRows(eventId);
+  return buildEventMuralCuriositiesFromRows(rows);
+});
+
 Parse.Cloud.define('listEventMuralParticipants', async (request) => {
   if (!request.user) {
     throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
@@ -7352,6 +7650,7 @@ Parse.Cloud.define('listEventMuralParticipants', async (request) => {
   return loadEventMuralParticipantRows(eventId);
 });
 
+/** Uma cedula por conta Parse (voter), independente de quantas inscricoes/perfis no evento. */
 async function assertConfirmedEventVoter(user, event) {
   const ownRegistration = await new Parse.Query('EventRegistration')
     .equalTo('event', event)
@@ -7388,6 +7687,14 @@ async function voterHasEventMuralVotes(eventId, voterId, period) {
 }
 
 async function createEventMuralVoteForTarget(user, event, eventId, period, entry) {
+  const partOfBallot = entry._ballotBatch === true;
+  if (!partOfBallot && (await voterHasEventMuralVotes(eventId, user.id, period))) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Um voto por conta; trocar de perfil no app nao permite votar de novo neste evento.'
+    );
+  }
+
   const registrationId = entry.registrationId ? String(entry.registrationId) : '';
   const targetRole = entry.targetRole ? String(entry.targetRole) : '';
   const score = Number(entry.score);
@@ -7544,10 +7851,15 @@ Parse.Cloud.define('submitEventMuralBallot', async (request) => {
     );
   }
 
+  assertEventMuralBallotScoreTenLimit(entries);
+
   const created = [];
   const seenTargets = new Set();
   for (const entry of entries.slice(0, 200)) {
-    const result = await createEventMuralVoteForTarget(user, event, eventId, period, entry);
+    const result = await createEventMuralVoteForTarget(user, event, eventId, period, {
+      ...entry,
+      _ballotBatch: true,
+    });
     const dedupeKey = result.targetUserId + ':' + result.targetRole;
     if (seenTargets.has(dedupeKey)) continue;
     seenTargets.add(dedupeKey);
@@ -8023,59 +8335,7 @@ Parse.Cloud.define('getMuralPerformanceAnalytics', async (request) => {
   const scope = String(request.params.scope || 'app');
   const scopeId = request.params.scopeId ? String(request.params.scopeId) : undefined;
   const performances = await loadMuralPerformanceRows(scope, scopeId);
-
-  let totalShotsOn = 0;
-  let totalShotsOff = 0;
-  let totalGoals = 0;
-  let totalPassesOk = 0;
-  let totalPassesMiss = 0;
-  let totalFouls = 0;
-  const athleteIds = new Set();
-
-  for (const perf of performances) {
-    const userId = getPerformanceParticipantId(perf);
-    if (userId) athleteIds.add(userId);
-    const stats = mapPerformanceToScoutStats(perf);
-    totalShotsOn += Number(stats.shotsOnTarget || 0);
-    totalShotsOff += Number(stats.shotsOffTarget || 0);
-    totalGoals += Number(stats.goals || 0);
-    totalPassesOk += Number(stats.passesCompleted || 0);
-    totalPassesMiss += Number(stats.passesMissed || 0);
-    totalFouls += Number(stats.foulsCommitted || 0);
-  }
-
-  const totalShots = totalShotsOn + totalShotsOff;
-  const totalPasses = totalPassesOk + totalPassesMiss;
-
-  const analytics = {
-    qualitative: {
-      shotsOnTarget: buildPerformanceTopEntries(performances, 'shotsOnTarget'),
-      totalShots: buildPerformanceTopEntries(performances, 'totalShots'),
-      assists: buildPerformanceTopEntries(performances, 'assists'),
-    },
-    quantitative: {
-      totalShots: buildPerformanceTopEntries(performances, 'totalShots'),
-      passesCompleted: buildPerformanceTopEntries(performances, 'passesCompleted'),
-      foulsSuffered: buildPerformanceTopEntries(performances, 'foulsSuffered'),
-      foulsCommitted: buildPerformanceTopEntries(performances, 'foulsCommitted'),
-      passesMissed: buildPerformanceTopEntries(performances, 'passesMissed'),
-    },
-    charts: {
-      shotsOnTarget: totalShotsOn,
-      shotsOffTarget: totalShotsOff,
-      goals: totalGoals,
-      totalShots,
-      totalPasses,
-      passesCompleted: totalPassesOk,
-      shotAccuracyPct: totalShots ? Math.round((totalShotsOn / totalShots) * 100) : 0,
-      goalConversionPct: totalShotsOn ? Math.round((totalGoals / totalShotsOn) * 100) : 0,
-      passAccuracyPct: totalPasses ? Math.round((totalPassesOk / totalPasses) * 100) : 0,
-      foulsCommitted: totalFouls,
-      athleteCount: athleteIds.size,
-    },
-  };
-
-  return enrichMuralPerformanceAnalytics(scope, scopeId, analytics);
+  return buildMuralPerformanceAnalyticsPayload(scope, scopeId, performances);
 });
 
 // --- 07b-mural-highlight-tenure.js ---
@@ -8898,36 +9158,26 @@ async function assertConfirmedAthleteInEvent(event, athleteUserId) {
 }
 
 async function assertCanAccessScoutApontamento(user, eventId) {
-  try {
-    const result = await assertConfirmedScoutForEvent(user, eventId, true);
-    return { ...result, viewOnly: false };
-  } catch (scoutError) {
-    const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
-    const participationFee = Number(event.get('participationFee') || 0);
+  const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
+  const participationFee = Number(event.get('participationFee') || 0);
 
-    const registration = await new Parse.Query('EventRegistration')
-      .equalTo('event', event)
-      .equalTo('user', user)
-      .first({ useMasterKey: true });
+  const scoutRegistration = await new Parse.Query('EventRegistration')
+    .equalTo('event', event)
+    .equalTo('user', user)
+    .equalTo('role', 'scout')
+    .first({ useMasterKey: true });
 
-    if (!registration || !computeRegistrationEffectiveConfirmation(registration, participationFee)) {
-      throw scoutError;
-    }
+  const isConfirmedScout =
+    scoutRegistration &&
+    computeRegistrationEffectiveConfirmation(scoutRegistration, participationFee);
 
-    const savedPerf = await new Parse.Query('EventPerformance')
-      .equalTo('event', event)
-      .equalTo('scoutApontamentoSaved', true)
-      .first({ useMasterKey: true });
-
-    if (!savedPerf) {
-      throw new Parse.Error(
-        Parse.Error.OPERATION_FORBIDDEN,
-        'Apontamento scout ainda nao disponivel para consulta.'
-      );
-    }
-
-    return { event, scoutRegistration: null, viewOnly: true };
+  if (isConfirmedScout) {
+    const inWindow = isWithinApontamentoWindow(event, 'scoutApontamento');
+    const viewOnly = !!event.get('isFinished') || !inWindow;
+    return { event, scoutRegistration, viewOnly };
   }
+
+  return { event, scoutRegistration: null, viewOnly: true };
 }
 
 Parse.Cloud.define('eventHasScoutApontamento', async (request) => {
@@ -8984,6 +9234,7 @@ Parse.Cloud.define('getScoutApontamentoBoard', async (request) => {
     .find({ useMasterKey: true });
 
   const perfStatsByParticipantId = buildMergedScoutStatsByParticipantId(performances);
+  const refereeStatsByParticipantId = buildMergedRefereeStatsByParticipantId(performances);
 
   const assignedScouts = await new Parse.Query('EventRegistration')
     .equalTo('event', event)
@@ -9007,6 +9258,8 @@ Parse.Cloud.define('getScoutApontamentoBoard', async (request) => {
     const row = mapRegistrationForEventListItem(registration, eventId, participationFee);
     const stats =
       perfStatsByParticipantId.get(resolved.userId) || emptyScoutApontamentoStats();
+    const refereeRow = refereeStatsByParticipantId.get(resolved.userId);
+    const refereeGoals = refereeRow ? Math.max(0, Number(refereeRow.goals || 0)) : 0;
 
     athletes.push({
       userId: resolved.userId,
@@ -9017,6 +9270,7 @@ Parse.Cloud.define('getScoutApontamentoBoard', async (request) => {
       primaryPosition: row.primaryPosition || undefined,
       isAssignedToAnotherScout:
         assignedAthleteIds.has(resolved.userId) && resolved.userId !== assignedAthleteUserId,
+      refereeGoals,
       stats,
     });
   }
@@ -9149,6 +9403,28 @@ Parse.Cloud.define('incrementScoutApontamento', async (request) => {
 
   const pelada = event.get('pelada');
   let perf = await findEventPerformanceForParticipant(event, athleteUserId, pelada);
+
+  if (SCOUT_GOAL_TYPE_FIELDS.includes(field)) {
+    const refereeGoals = readRefereeOverlapStat(perf, 'goals');
+    let typedNow = 0;
+    for (const goalField of SCOUT_GOAL_TYPE_FIELDS) {
+      typedNow += Number(perf.get(goalField) || 0);
+    }
+    if (delta > 0) {
+      if (refereeGoals <= 0) {
+        throw new Parse.Error(
+          Parse.Error.VALIDATION_ERROR,
+          'Gols a favor vem da sumula do juiz. Aguarde o arbitro registrar o gol.'
+        );
+      }
+      if (typedNow + delta > refereeGoals) {
+        throw new Parse.Error(
+          Parse.Error.VALIDATION_ERROR,
+          `Classifique no maximo ${refereeGoals} gol(s) conforme a sumula do juiz.`
+        );
+      }
+    }
+  }
 
   const storageField = SCOUT_OVERLAP_STORAGE_FIELDS[field] || field;
   let current = Number(perf.get(storageField));
@@ -9572,6 +9848,51 @@ function mapPerformanceToRefereeSumula(perf) {
   };
 }
 
+function performanceMatchesAthleteUserId(perf, userId) {
+  const wanted = String(userId || '').trim();
+  if (!wanted) return false;
+  if (typeof historyPerformanceMatchesUser === 'function') {
+    return historyPerformanceMatchesUser(perf, wanted);
+  }
+  return collectPerformanceParticipantKeys(perf).some((key) => String(key) === wanted);
+}
+
+async function loadEventPerformancesForAthleteUserId(userId, limit) {
+  const cap = Math.min(Math.max(Number(limit) || 2000, 1), 2000);
+  const byUser = new Parse.Query('EventPerformance');
+  byUser.equalTo('user', Parse.User.createWithoutData(userId));
+  const byParticipant = new Parse.Query('EventPerformance');
+  byParticipant.equalTo('participantUserId', userId);
+  const rows = await Parse.Query.or(byUser, byParticipant).limit(cap).find({ useMasterKey: true });
+  const seen = new Set();
+  const out = [];
+  for (const perf of rows) {
+    if (!perf.id || seen.has(perf.id)) continue;
+    seen.add(perf.id);
+    out.push(perf);
+  }
+  return out;
+}
+
+/** Totais de carreira a partir da sumula do arbitro (nao scout). */
+function aggregateRefereeSumulaCareerStats(performances, userId) {
+  let goals = 0;
+  let yellowCards = 0;
+  let redCards = 0;
+  const seen = new Set();
+  for (const perf of performances || []) {
+    if (!perf || !perf.id || seen.has(perf.id)) continue;
+    seen.add(perf.id);
+    if (!performanceHasRefereeSumulaData(perf)) continue;
+    if (!performanceMatchesAthleteUserId(perf, userId)) continue;
+    const stats = mapPerformanceToRefereeSumula(perf);
+    goals += Number(stats.goals || 0);
+    yellowCards += Number(stats.yellowCards || 0);
+    redCards += Number(stats.redCards || 0);
+  }
+  return { goals, yellowCards, redCards };
+}
+
 async function assertCanViewRefereeSumula(user, eventId) {
   const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
   const participationFee = Number(event.get('participationFee') || 0);
@@ -9594,39 +9915,7 @@ async function assertCanViewRefereeSumula(user, eventId) {
 
   const canEdit = isReferee && !finished && withinSumulaWindow;
 
-  // Confronto: qualquer usuario logado consulta; so o arbitro edita na janela.
-  if (isTeamMatch) {
-    return { event, locked, canEdit };
-  }
-
-  const eventAdmin = event.get('admin');
-  if (eventAdmin && eventAdmin.id === user.id) {
-    return { event, locked, canEdit: false };
-  }
-
-  const pelada = event.get('pelada');
-  if (pelada && pelada.id) {
-    const peladaObj = await new Parse.Query('Pelada').get(pelada.id, { useMasterKey: true });
-    const peladaAdmin = peladaObj.get('admin');
-    if (peladaAdmin && peladaAdmin.id === user.id) {
-      return { event, locked, canEdit: false };
-    }
-  }
-
-  if (!registration || !computeRegistrationEffectiveConfirmation(registration, participationFee)) {
-    throw new Parse.Error(
-      Parse.Error.OPERATION_FORBIDDEN,
-      'Voce nao tem permissao para consultar a sumula deste evento.'
-    );
-  }
-
-  if (!finished && !isReferee) {
-    throw new Parse.Error(
-      Parse.Error.OPERATION_FORBIDDEN,
-      'A sumula fica disponivel para consulta apos o encerramento do evento.'
-    );
-  }
-
+  // Pelada e confronto: qualquer usuario logado consulta; so o arbitro edita na janela.
   return { event, locked, canEdit };
 }
 
@@ -11095,14 +11384,28 @@ Parse.Cloud.define('listEventAthletesForTeamSplit', async (request) => {
   return athletes;
 });
 
+const VALID_TEAM_SPLIT_MODES = [
+  'manual',
+  'random',
+  'maritalSides',
+  'favoriteTeamSides',
+  'ageSides',
+];
+
+function normalizeTeamSplitMode(value) {
+  const mode = String(value || 'manual');
+  return VALID_TEAM_SPLIT_MODES.includes(mode) ? mode : 'manual';
+}
+
 function normalizeEventTeamSplitState(raw) {
   if (!raw || typeof raw !== 'object') return null;
 
   const athletesPerTeam = Number(raw.athletesPerTeam);
   const teamCount = Number(raw.teamCount);
-  const splitMode = String(raw.splitMode || 'manual');
+  const splitMode = normalizeTeamSplitMode(raw.splitMode);
   const randomStrategy = String(raw.randomStrategy || 'default');
   const teamsRaw = raw.teams;
+  const ageThresholdRaw = Number(raw.ageThreshold);
 
   if (!Array.isArray(teamsRaw) || !athletesPerTeam || !teamCount) {
     return null;
@@ -11114,16 +11417,22 @@ function normalizeEventTeamSplitState(raw) {
     )
     .slice(0, 8);
 
-  return {
+  const result = {
     athletesPerTeam: Math.max(1, Math.min(20, athletesPerTeam)),
     teamCount: Math.max(1, Math.min(8, teamCount)),
-    splitMode: splitMode === 'random' ? 'random' : 'manual',
+    splitMode,
     randomStrategy: ['default', 'marital', 'favoriteTeam', 'neighborhood'].includes(randomStrategy)
       ? randomStrategy
       : 'default',
     teams,
     savedAt: raw.savedAt ? String(raw.savedAt) : undefined,
   };
+
+  if (splitMode === 'ageSides' && ageThresholdRaw >= 1 && ageThresholdRaw <= 99) {
+    result.ageThreshold = ageThresholdRaw;
+  }
+
+  return result;
 }
 
 async function assertEventAdmin(event, user) {
@@ -11245,10 +11554,13 @@ Parse.Cloud.define('saveEventTeamSplit', async (request) => {
     )
     .slice(0, 8);
 
+  const normalizedMode = normalizeTeamSplitMode(splitMode);
+  const ageThreshold = Number(request.params.ageThreshold);
+
   const payload = {
     athletesPerTeam: Math.max(1, Math.min(20, athletesPerTeam || 1)),
     teamCount: Math.max(1, Math.min(8, teamCount || 1)),
-    splitMode: splitMode === 'random' ? 'random' : 'manual',
+    splitMode: normalizedMode,
     randomStrategy: ['default', 'marital', 'favoriteTeam', 'neighborhood'].includes(randomStrategy)
       ? randomStrategy
       : 'default',
@@ -11256,10 +11568,46 @@ Parse.Cloud.define('saveEventTeamSplit', async (request) => {
     savedAt: new Date().toISOString(),
   };
 
+  if (normalizedMode === 'ageSides' && ageThreshold >= 1 && ageThreshold <= 99) {
+    payload.ageThreshold = ageThreshold;
+  }
+
   event.set('teamSplit', payload);
   await event.save(null, { useMasterKey: true });
 
   return normalizeEventTeamSplitState(payload);
+});
+
+Parse.Cloud.define('clearEventTeamSplit', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+
+  const eventId = request.params.eventId ? String(request.params.eventId) : '';
+  if (!eventId) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'eventId obrigatorio.');
+  }
+
+  const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
+  await assertCanManageTeamSplit(event, user);
+
+  const readOnlyAt = event.get('readOnlyAt');
+  if (readOnlyAt && new Date() >= readOnlyAt) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Evento encerrado.');
+  }
+
+  if (!hasSavedTeamSplit(event)) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'Nao ha separacao de times salva para este evento.'
+    );
+  }
+
+  event.unset('teamSplit');
+  await event.save(null, { useMasterKey: true });
+
+  return { ok: true };
 });
 
 // Pagamento e inscricao anonima
@@ -13846,6 +14194,7 @@ function mapAthleteProfileToHiringCandidate(profile, user) {
     state: profile.get('userState') || address.state || undefined,
     peladaRate: profile.get('peladaRate') ?? undefined,
     matchRate: profile.get('teamMatchRate') ?? undefined,
+    primaryPosition: profile.get('primaryPosition') || undefined,
   };
 }
 
@@ -13881,7 +14230,12 @@ Parse.Cloud.define('listAthleteHiringCandidates', async (request) => {
     }
 
     const candidate = mapAthleteProfileToHiringCandidate(profile, user);
-    if (!matchesAthleteHiringSearch([candidate.apelido, candidate.userName, candidate.city, candidate.state], search)) {
+    if (
+      !matchesAthleteHiringSearch(
+        [candidate.apelido, candidate.userName, candidate.primaryPosition, candidate.city, candidate.state],
+        search
+      )
+    ) {
       continue;
     }
     byUserId.set(candidate.userId, candidate);
@@ -13937,6 +14291,7 @@ Parse.Cloud.define('listAthleteHiringCandidates', async (request) => {
       state: registration.get('userState') || address.state || undefined,
       peladaRate: athlete && athlete.get ? athlete.get('peladaRate') ?? undefined : undefined,
       matchRate: athlete && athlete.get ? athlete.get('teamMatchRate') ?? undefined : undefined,
+      primaryPosition: athlete && athlete.get ? athlete.get('primaryPosition') || undefined : undefined,
     });
   }
 
@@ -14023,9 +14378,13 @@ Parse.Cloud.define('getAthletePublicProfile', async (request) => {
   teamQuery.equalTo('president', user);
   const amateurTeams = await teamQuery.find({ useMasterKey: true });
 
-  const regQuery = new Parse.Query('EventRegistration');
-  regQuery.equalTo('user', user);
-  regQuery.equalTo('role', 'athlete');
+  const regByUser = new Parse.Query('EventRegistration');
+  regByUser.equalTo('user', user);
+  regByUser.containedIn('role', ['athlete', 'goalkeeper']);
+  const regByParticipant = new Parse.Query('EventRegistration');
+  regByParticipant.equalTo('participantUserId', userId);
+  regByParticipant.containedIn('role', ['athlete', 'goalkeeper']);
+  const regQuery = Parse.Query.or(regByUser, regByParticipant);
   regQuery.include('event');
   regQuery.include('event.pelada');
   regQuery.limit(2000);
@@ -14068,19 +14427,20 @@ Parse.Cloud.define('getAthletePublicProfile', async (request) => {
     }
   }
 
-  const perfQuery = new Parse.Query('EventPerformance');
-  perfQuery.equalTo('user', user);
-  perfQuery.limit(2000);
-  const performances = await perfQuery.find({ useMasterKey: true });
-
-  let goals = 0;
-  let yellowCards = 0;
-  let redCards = 0;
-  for (const perf of performances) {
-    goals += Number(perf.get('goals') ?? 0);
-    yellowCards += Number(perf.get('yellowCards') ?? 0);
-    redCards += Number(perf.get('redCards') ?? 0);
-  }
+  const performances =
+    typeof loadEventPerformancesForAthleteUserId === 'function'
+      ? await loadEventPerformancesForAthleteUserId(userId, 2000)
+      : await new Parse.Query('EventPerformance')
+          .equalTo('user', user)
+          .limit(2000)
+          .find({ useMasterKey: true });
+  const sumulaTotals =
+    typeof aggregateRefereeSumulaCareerStats === 'function'
+      ? aggregateRefereeSumulaCareerStats(performances, userId)
+      : { goals: 0, yellowCards: 0, redCards: 0 };
+  const goals = sumulaTotals.goals;
+  const yellowCards = sumulaTotals.yellowCards;
+  const redCards = sumulaTotals.redCards;
 
   const craquePeladas = [];
   for (const peladaId of peladaIds) {
@@ -14096,6 +14456,11 @@ Parse.Cloud.define('getAthletePublicProfile', async (request) => {
     user,
     amateurTeams[0] ? amateurTeams[0].get('name') : undefined
   );
+
+  const sumulaObservations =
+    typeof collectRefereeObservationsForUser === 'function'
+      ? await collectRefereeObservationsForUser(userId)
+      : [];
 
   return {
     userId,
@@ -14127,6 +14492,7 @@ Parse.Cloud.define('getAthletePublicProfile', async (request) => {
     peladaRate: athleteProfile.get('peladaRate') ?? undefined,
     teamMatchRate: athleteProfile.get('teamMatchRate') ?? undefined,
     primaryPosition: athleteProfile.get('primaryPosition') || '',
+    sumulaObservations: sumulaObservations.slice(0, 10),
   };
 });
 
@@ -14144,9 +14510,13 @@ Parse.Cloud.define('getAthleteActivityIndicators', async (request) => {
   windowStart.setMonth(windowStart.getMonth() - months);
 
   const user = Parse.User.createWithoutData(userId);
-  const registrations = await new Parse.Query('EventRegistration')
-    .equalTo('user', user)
-    .containedIn('role', ['athlete', 'goalkeeper'])
+  const regByUser = new Parse.Query('EventRegistration');
+  regByUser.equalTo('user', user);
+  regByUser.containedIn('role', ['athlete', 'goalkeeper']);
+  const regByParticipant = new Parse.Query('EventRegistration');
+  regByParticipant.equalTo('participantUserId', userId);
+  regByParticipant.containedIn('role', ['athlete', 'goalkeeper']);
+  const registrations = await Parse.Query.or(regByUser, regByParticipant)
     .include('event')
     .limit(2000)
     .find({ useMasterKey: true });
@@ -18925,6 +19295,62 @@ function mapAmateurTeamListRow(team) {
   };
 }
 
+function serializeHomeVenueAddress(value) {
+  if (!value || typeof value !== 'object') {
+    return {
+      street: '',
+      neighborhood: '',
+      city: '',
+      state: '',
+      zipCode: '',
+    };
+  }
+  return {
+    street: String(value.street || ''),
+    neighborhood: String(value.neighborhood || ''),
+    city: String(value.city || ''),
+    state: String(value.state || ''),
+    zipCode: String(value.zipCode || ''),
+    latitude: typeof value.latitude === 'number' ? value.latitude : undefined,
+    longitude: typeof value.longitude === 'number' ? value.longitude : undefined,
+  };
+}
+
+function mapHomeDirectoryTeamRow(team) {
+  const base = mapAmateurTeamListRow(team);
+  const president = team.get('president');
+  const imageUrl = base.shieldImageUrl || base.imageUrl || undefined;
+  return {
+    objectId: base.objectId,
+    name: base.name,
+    presidentName: personDisplayFromUser(president).name,
+    imageUrl,
+    homeVenueAddress: serializeHomeVenueAddress(team.get('homeVenueAddress')),
+  };
+}
+
+Parse.Cloud.define('listHomeDirectoryTeams', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const limit = Math.min(Math.max(Number(request.params.limit) || 400, 1), 400);
+  const rawIds = request.params.objectIds;
+  const objectIds = Array.isArray(rawIds)
+    ? rawIds.map((id) => String(id || '').trim()).filter(Boolean)
+    : [];
+
+  const query = new Parse.Query('AmateurTeam');
+  if (objectIds.length) {
+    query.containedIn('objectId', objectIds.slice(0, limit));
+  }
+  query.include('president');
+  query.ascending('name');
+  query.limit(objectIds.length ? Math.min(objectIds.length, limit) : limit);
+  const rows = await query.find({ useMasterKey: true });
+  return rows.map(mapHomeDirectoryTeamRow);
+});
+
 Parse.Cloud.define('listMyAmateurTeams', async (request) => {
   const user = request.user;
   if (!user) {
@@ -21980,11 +22406,16 @@ async function resolveCoachTeamSideForStats(event, userId, reg) {
 
 async function computeUserTeamMatchRecord(userId, roleContext) {
   const userPtr = Parse.User.createWithoutData(userId);
-  const regQuery = new Parse.Query('EventRegistration')
-    .equalTo('user', userPtr)
-    .containedIn('role', roleContext === 'coach' ? ['coach'] : ['athlete', 'goalkeeper'])
-    .limit(500);
-  const registrations = await regQuery.find({ useMasterKey: true });
+  const roles = roleContext === 'coach' ? ['coach'] : ['athlete', 'goalkeeper'];
+  const regByUser = new Parse.Query('EventRegistration');
+  regByUser.equalTo('user', userPtr);
+  regByUser.containedIn('role', roles);
+  const regByParticipant = new Parse.Query('EventRegistration');
+  regByParticipant.equalTo('participantUserId', userId);
+  regByParticipant.containedIn('role', roles);
+  const registrations = await Parse.Query.or(regByUser, regByParticipant)
+    .limit(500)
+    .find({ useMasterKey: true });
   if (!registrations.length) {
     return { matchesPlayed: 0, wins: 0, losses: 0, draws: 0, winRatePercent: 0 };
   }

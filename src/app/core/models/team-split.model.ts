@@ -19,7 +19,33 @@ export interface TeamSplitAthlete {
   arrivedAt?: string;
 }
 
-export type TeamSplitMode = 'manual' | 'random';
+export type TeamSplitMode =
+  | 'manual'
+  | 'random'
+  | 'maritalSides'
+  | 'favoriteTeamSides'
+  | 'ageSides';
+
+export type TeamSplitPreset = 'marital' | 'favoriteTeam' | 'age';
+
+export const TEAM_SPLIT_MODES: TeamSplitMode[] = [
+  'manual',
+  'random',
+  'maritalSides',
+  'favoriteTeamSides',
+  'ageSides',
+];
+
+export function isBinaryPresetSplitMode(mode: TeamSplitMode): boolean {
+  return mode === 'maritalSides' || mode === 'favoriteTeamSides' || mode === 'ageSides';
+}
+
+export function presetFromSplitMode(mode: TeamSplitMode): TeamSplitPreset | null {
+  if (mode === 'maritalSides') return 'marital';
+  if (mode === 'favoriteTeamSides') return 'favoriteTeam';
+  if (mode === 'ageSides') return 'age';
+  return null;
+}
 
 export type TeamSplitRandomStrategy =
   | 'default'
@@ -37,6 +63,7 @@ export interface EventTeamSplitState {
   teamCount: number;
   splitMode: TeamSplitMode;
   randomStrategy?: TeamSplitRandomStrategy;
+  ageThreshold?: number;
   teams: string[][];
   savedAt?: string;
 }
@@ -47,5 +74,6 @@ export interface SaveEventTeamSplitPayload {
   teamCount: number;
   splitMode: TeamSplitMode;
   randomStrategy?: TeamSplitRandomStrategy;
+  ageThreshold?: number;
   teams: string[][];
 }

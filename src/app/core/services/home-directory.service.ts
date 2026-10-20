@@ -7,7 +7,6 @@ import { normalizeSearchText } from '../utils/search-text.util';
 import { getUserAvatarUrl } from '../utils/user-avatar.util';
 import { ParseFileService } from './parse-file.service';
 import { ParseService } from './parse.service';
-import { TeamService } from './team.service';
 
 const PAGE_SIZE = 100;
 const MAX_ROWS = 400;
@@ -16,6 +15,7 @@ export interface HomeTeamBrief {
   objectId: string;
   name: string;
   presidentName: string;
+  imageUrl?: string;
   address: Address;
 }
 
@@ -23,6 +23,10 @@ export interface HomeDirectoryUser {
   userId: string;
   apelido: string;
   fullName: string;
+  /** Nome denormalizado em perfis (userName), quando apelido/nome completo faltam no cliente. */
+  profileUserName?: string;
+  /** Nome completo para a lista (User.name, perfil ou userName). */
+  listFullName: string;
   displayName: string;
   roles: ProfileRole[];
   positions: string[];
@@ -42,6 +46,7 @@ interface UserDraft {
   userId: string;
   apelido: string;
   fullName: string;
+  profileUserName: string;
   city: string;
   neighborhood: string;
   state: string;
@@ -58,59 +63,34 @@ const ROLE_SET = new Set<string>(SEARCHABLE_PROFILE_ROLES);
 export class HomeDirectoryService {
   constructor(
     private readonly parseService: ParseService,
-    private readonly parseFileService: ParseFileService,
-    private readonly teamService: TeamService
+    private readonly parseFileService: ParseFileService
   ) {
     this.parseService.init();
   }
 
   async listTeams(): Promise<HomeTeamBrief[]> {
-    try {
-      const rows = await this.findPages('AmateurTeam', (query) => {
-        query.include('president');
-        query.ascending('name');
-      });
-      const drafts = rows
-        .map((row) => this.toTeamDraft(row))
-        .filter((team) => team.objectId && team.name);
-      await this.fillPresidentNames(drafts);
-      return drafts.map((team) => this.publishTeam(team));
-    } catch (clientError) {
-      try {
-        const picker = await this.teamService.listForPicker('');
-        return picker.map((row) => ({
-          objectId: row.id,
-          name: row.name,
-          presidentName: '',
-          address: emptyAddress(),
-        }));
-      } catch {
-        throw clientError;
-      }
-    }
+    const rows = await Parse.Cloud.run('listHomeDirectoryTeams', { limit: MAX_ROWS });
+    if (!Array.isArray(rows)) return [];
+    return rows
+      .map((row) => this.cloudRowToTeamBrief(row as Record<string, unknown>))
+      .filter((team) => team.objectId && team.name);
   }
 
   async teamsByIds(ids: string[]): Promise<Map<string, HomeTeamBrief>> {
     const unique = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
-    const drafts: TeamDraft[] = [];
-    for (let index = 0; index < unique.length; index += PAGE_SIZE) {
-      const slice = unique.slice(index, index + PAGE_SIZE);
-      try {
-        const query = new Parse.Query('AmateurTeam');
-        query.containedIn('objectId', slice);
-        query.include('president');
-        query.limit(slice.length);
-        const rows = await query.find();
-        for (const row of rows) {
-          const draft = this.toTeamDraft(row);
-          if (draft.objectId) drafts.push(draft);
-        }
-      } catch {
-        /* leitura do time pode estar fechada para o cliente */
-      }
+    if (!unique.length) return new Map();
+    try {
+      const rows = await Parse.Cloud.run('listHomeDirectoryTeams', { objectIds: unique });
+      if (!Array.isArray(rows)) return new Map();
+      return new Map(
+        rows
+          .map((row) => this.cloudRowToTeamBrief(row as Record<string, unknown>))
+          .filter((team) => team.objectId)
+          .map((team) => [team.objectId, team])
+      );
+    } catch {
+      return new Map();
     }
-    await this.fillPresidentNames(drafts);
-    return new Map(drafts.map((team) => [team.objectId, this.publishTeam(team)]));
   }
 
   async listUsers(): Promise<HomeDirectoryUser[]> {
@@ -248,6 +228,7 @@ export class HomeDirectoryService {
 
     const userName = String(row.get('userName') || '').trim();
     if (userName && !userName.includes('@') && !isPlaceholderName(userName)) {
+      if (!draft.profileUserName) draft.profileUserName = userName;
       if (!draft.fullName && userName !== draft.apelido) this.fillText(draft, 'fullName', userName);
       if (!draft.apelido && !draft.fullName) this.fillText(draft, 'apelido', userName);
     }
@@ -292,6 +273,7 @@ export class HomeDirectoryService {
       userId,
       apelido: '',
       fullName: '',
+      profileUserName: '',
       city: '',
       neighborhood: '',
       state: '',
@@ -310,11 +292,16 @@ export class HomeDirectoryService {
   private freeze(draft: UserDraft): HomeDirectoryUser {
     const apelido = draft.apelido.trim();
     const fullName = draft.fullName.trim();
+    const profileUserName = draft.profileUserName.trim();
+    const listFullName =
+      fullName || (profileUserName && profileUserName !== apelido ? profileUserName : '');
     return {
       userId: draft.userId,
       apelido,
       fullName,
-      displayName: apelido || fullName,
+      profileUserName: profileUserName || undefined,
+      listFullName,
+      displayName: apelido || fullName || profileUserName,
       roles: SEARCHABLE_PROFILE_ROLES.filter((role) => draft.roles.includes(role)),
       positions: [...draft.positions],
       state: draft.state,
@@ -345,6 +332,17 @@ export class HomeDirectoryService {
       name: team.name,
       presidentName: team.presidentName,
       address: team.address,
+    };
+  }
+
+  private cloudRowToTeamBrief(row: Record<string, unknown>): HomeTeamBrief {
+    const imageUrl = String(row['imageUrl'] || '').trim();
+    return {
+      objectId: String(row['objectId'] || ''),
+      name: String(row['name'] || '').trim(),
+      presidentName: String(row['presidentName'] || '').trim(),
+      imageUrl: imageUrl || undefined,
+      address: this.asAddress(row['homeVenueAddress']),
     };
   }
 
