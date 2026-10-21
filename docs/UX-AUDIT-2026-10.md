@@ -12,6 +12,13 @@ Escopo inicial (Xaiana Beliza): login, cadastro, mural, votacao, textos longos.
 
 Build minimo: **2026.10.19.0256+** + Cloud mural publicado.
 
+## Quick wins — 3º sprint (2026-10-20, Primeiro Coordenador)
+
+- **Home `/tabs/home`:** quatro portas; rodapé sem aba destacada na Home; ícone casa volta ao hub; rodapé **Peladas** → lista (`/tabs/peladas/lista`)
+- **Participantes (admin):** confirmados em card compacto (6 campos) + controles abaixo
+- **Ajuda ?:** `screen.help.home` mapeado; balão na Home
+- Validar: smoke #1 e #3 em [SMOKE-TEST-PRE-INSTALL.md](SMOKE-TEST-PRE-INSTALL.md)
+
 ## Quick wins — 2º sprint (2026-10-19, Primeiro Coordenador + Xaiana)
 
 - **Register:** subtitulo curto; hints de apelido e CPF enxutos (`register.subtitle`, `register.cpfHint`)

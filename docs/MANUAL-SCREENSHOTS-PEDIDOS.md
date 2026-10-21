@@ -39,4 +39,26 @@ Onde a tela mudou, a foto antiga foi tirada do MDX. O capítulo ficou com `{/* p
 | `p-mural-top-peladas.jpeg` | Mural, aba Peladas: **Top 10 — Peladas** abaixo de Top 10 — Atletas das Peladas | 06 |
 | `p-mural-geral-top-peladas.jpeg` | Mural, aba Geral: **Top 10 — Peladas** abaixo de Top 10 — Times | 06 |
 
+### Pós-vistoria UX (out/2026) — prioridade alta
+
+| Arquivo sugerido | O que mostrar | Capítulo |
+|------------------|---------------|----------|
+| `p-login-reset-enviado.jpeg` | Após **Enviar código**: card com e-mail mascarado + hint para digitar o código de 6 dígitos no app | 01 |
+| `p-evento-votacao-contador-10.jpeg` | Painel de votação com hint **Notas 10 restantes** | 05, 06 |
+| `p-mural-confianca.jpeg` | Mural aba **Geral**: hint de confiança + Craque com **X pessoas avaliaram** | 06 |
+| `p-evento-participantes-confirmado.jpeg` | Admin: inscrito confirmado, card compacto + **Chegou** abaixo | 05 |
+| `p-home-ajuda-balao.jpeg` | Home com balão **?** aberto (opcional se `p24-balao-ajuda.jpeg` bastar) | 01 |
+
+### Obsoleto na pasta local `imagens\Manual\Novas`
+
+Não usar no manual atualizado:
+
+- **`23-Lista de peladas com as 5 abas.jpeg`** — layout antigo. Substituir por **`p23-home-portas.jpeg`** + **`p-lista-peladas.jpeg`** (rodapé Peladas destacado na lista).
+
+### Novas vs `MANUAL-SCREENSHOTS` (checklist rápido)
+
+Arquivos da tabela principal **ainda ausentes** em `Novas` (precisa fotografar ou renomear ao copiar para `public/guia`): `p39`, `p46`, `p57`, `p58`, `p60`, `p23-home-portas`, `p-lista-peladas` e demais linhas 29–40 acima.
+
+JPEGs em `Novas` que **não** batem com o formato novo do site (refazer no layout atual antes de publicar): `56-1-Caixa de entrada - Contratações confirmadas.jpeg` → usar layout **`p56-caixa-card`**; `62-Desafio recebido na caixa de entrada.jpeg` → **`p62-desafio-card`**.
+
 Fotos que **não** servem mais, mesmo que o JPEG ainda esteja em `public/guia`: `p23-peladas-abas.jpeg`, `p50-mural-confrontos-top-times.jpeg`, `p56-contratacoes-confirmadas.jpeg`, `p62-desafio-recebido.jpeg` e `10-times.jpeg`.

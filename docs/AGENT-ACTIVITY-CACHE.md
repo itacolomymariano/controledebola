@@ -2,9 +2,15 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-10-20 (iOS TestFlight build number)
+**Ultima atualizacao:** 2026-10-20 (UX Xaiana: docs, help i18n, guia site)
 
 ---
+
+### 2026-10-20 — UX Xaiana (2.1): WhatsApp, manual, ?, site
+
+- **App:** [WHATSAPP-UX-XAIANA-2026-10.md](WHATSAPP-UX-XAIANA-2026-10.md), [UX-AUDIT-2026-10.md](UX-AUDIT-2026-10.md) sprint 3; `screen.help.*` pt/en/es (login, mural, event-detail, pelada-detail); [MANUAL-SCREENSHOTS-PEDIDOS.md](MANUAL-SCREENSHOTS-PEDIDOS.md) prints UX
+- **Site:** `controledebolasite` MDX 01, 02, 05, 06, 10 — Home vs rodapé, reset código, 2×10, confiança mural, participantes compactos
+- **Pendencia:** fotos listadas no MANUAL-SCREENSHOTS (incl. substituir `23-5 abas`); deploy site após imagens
 
 ### 2026-10-20 — iOS TestFlight: trilha 1.0.6 fechada (90186 / 90062)
 
