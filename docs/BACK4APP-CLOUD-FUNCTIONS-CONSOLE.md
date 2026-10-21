@@ -21,7 +21,7 @@ Sem o passo 3, a API responde `Not Found` ou `Invalid function` (código 141).
 
 1. Back4App → app → **API** → **Console** → aba **REST**
 2. Método: **POST**
-3. Path (completo ou relativo ao host Parse):
+3. **Path** — no API Console do Back4App (host `parseapi.back4app.com` já implícito), use **só o path relativo**:
 
    ```
    /functions/NOME_DA_FUNCAO
@@ -33,7 +33,9 @@ Sem o passo 3, a API responde `Not Found` ou `Invalid function` (código 141).
    /functions/configureEventMediaClassPermissions
    ```
 
-   Host típico: `https://parseapi.back4app.com`
+   Purge (plano A go-live): `/functions/prodDataPurgeInventory` ou `/functions/prodDataPurge`.
+
+   **Não** cole `https://parseapi.back4app.com/functions/...` se o console já prefixa o host — URL duplicada → `Not Found` + `"error": {}`. Se usar `curl`/Postman, aí sim URL completa: `https://parseapi.back4app.com/functions/NOME`.
 
 4. Headers (App Settings → **Security & Keys**):
 
@@ -98,7 +100,8 @@ Nesses casos use a **Opção A (REST)** com Master Key.
 
 | Resposta | Causa | Ação |
 |----------|--------|------|
-| `Not Found` / `{}` | Função ausente no `main.js` publicado, path errado, ou chamada como Job | Republicar `main.js`; path `/functions/NomeExato`; não usar endpoint de Jobs |
+| `Not Found` / `{}` | Path errado (URL completa + host duplicado), função ausente no `main.js`, app Id de outro app, ou chamada como Job | Path relativo `/functions/NomeExato`; app **MinhaPelada**; republicar `main.js` se necessário |
+| JSON parse error | Body com lixo após `}`, secret com `"` sem escape, dois JSON colados | Body mínimo uma linha: `{"secret":"...","wipeAll":true}` |
 | `Invalid function` (141) | Nome digitado errado ou Cloud Code antigo | Conferir `Parse.Cloud.define` no Cloud Code online |
 | Login / Master Key obrigatórios | REST sem Master Key ou JS Console sem sessão | REST + `X-Parse-Master-Key` |
 | `Class X does not exist` (103) | CLP via `schema.update()` em classe nova | Função deve fazer `update` e, se falhar, `schema.save()` (já corrigido em `configureEventMediaClassPermissions`) |

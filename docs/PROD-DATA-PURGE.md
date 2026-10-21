@@ -15,7 +15,7 @@ Procedimento operacional. Cloud: [cloud/source/19-prod-data-purge.js](../cloud/s
 
 **Registro da escolha (preencher antes da Fase 3):**
 
-- [ ] **A** — purge no app `_________________` (App ID)
+- [X] **A** — purge no app `_________________` (App ID)
 - [ ] **B** — novo app criado em `_________________` (data)
 
 Responsável: _________________  Data: _________________
@@ -43,16 +43,15 @@ Recomendação do plano: volume grande de teste + família → **B** é mais seg
 
 Headers REST: ver [BACK4APP-CLOUD-FUNCTIONS-CONSOLE.md](BACK4APP-CLOUD-FUNCTIONS-CONSOLE.md) (`X-Parse-Master-Key`, `X-Parse-Application-Id`).
 
+**Back4App API Console (REST):** path **`/functions/prodDataPurgeInventory`** (relativo; host já vem do painel). URL completa duplicada → `Not Found`. Validado em produção out/2026 — inventário em [PROD-DATA-PURGE-INVENTORY.md](PROD-DATA-PURGE-INVENTORY.md).
+
 ### 1) Inventário (Fase 0 / dry-run)
 
 ```http
 POST /functions/prodDataPurgeInventory
 Content-Type: application/json
 
-{
-  "secret": "<PROD_PURGE_SECRET>",
-  "wipeAll": true
-}
+{"secret":"<PROD_PURGE_SECRET>","wipeAll":true}
 ```
 
 Guarde o JSON em [PROD-DATA-PURGE-INVENTORY.md](PROD-DATA-PURGE-INVENTORY.md) (coluna “count”).

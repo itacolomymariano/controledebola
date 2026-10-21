@@ -6,11 +6,15 @@ Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `do
 
 ---
 
-### 2026-10-21 — Go-live: limpeza de base (ferramenta, nao executada)
+### 2026-10-21 — Go-live purge (plano A): inventario OK, REST path
 
-- **Cloud:** [cloud/source/19-prod-data-purge.js](../cloud/source/19-prod-data-purge.js) — `prodDataPurgeInventory`, `prodDataPurge` (secret `PROD_PURGE_SECRET`, dry-run, `confirmPhrase`)
-- **Docs:** [PROD-DATA-PURGE.md](PROD-DATA-PURGE.md), [PROD-DATA-PURGE-INVENTORY.md](PROD-DATA-PURGE-INVENTORY.md); decisao A/B no doc
-- **Pendencia humana:** backup Back4App, env secret, publicar `cloud/main.js`, dry-run REST, execucao + `configure*`
+- **REST Back4App:** path relativo `/functions/prodDataPurgeInventory` (nao URL completa duplicada — [BACK4APP-CLOUD-FUNCTIONS-CONSOLE.md](BACK4APP-CLOUD-FUNCTIONS-CONSOLE.md))
+- **Inventario live:** 121 `_User`, 12 `Pelada`, 42 `Event`, 633 `MuralVote` — [PROD-DATA-PURGE-INVENTORY.md](PROD-DATA-PURGE-INVENTORY.md); `MailSettings` protected
+- **Pendente:** backup offline, dry-run `/functions/prodDataPurge`, execucao `confirmPhrase`, pos `configure*`
+
+### 2026-10-21 — Go-live: limpeza de base (ferramenta)
+
+- **Cloud:** [cloud/source/19-prod-data-purge.js](../cloud/source/19-prod-data-purge.js); commit `adafdfd`; [PROD-DATA-PURGE.md](PROD-DATA-PURGE.md)
 
 ### 2026-10-20 — UX Xaiana (2.1): WhatsApp, manual, ?, site
 
