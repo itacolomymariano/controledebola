@@ -240,6 +240,8 @@ Inscreva no construtor, recarregue em `ionViewWillEnter`, `unsubscribe` em `ngOn
 
 Apos deploy: rodar `configureMuralClassPermissions`, `configureMaterialClassPermissions`, `configureSupportRolesClassPermissions`, `configureEventMediaClassPermissions` e `configureAppMailboxClassPermissions` no Back4App (CLP de `MuralVote`, classes de midia e `AppMessage`: escrita so via Cloud).
 
+**Limpeza de dados de teste (go-live):** [docs/PROD-DATA-PURGE.md](docs/PROD-DATA-PURGE.md) — Cloud `prodDataPurge` / `prodDataPurgeInventory`; exige `PROD_PURGE_SECRET` no Back4App e Master Key (nunca no cliente).
+
 **Como rodar (API Console):** [docs/BACK4APP-CLOUD-FUNCTIONS-CONSOLE.md](docs/BACK4APP-CLOUD-FUNCTIONS-CONSOLE.md) — usar **REST POST** `/functions/NOME` com Master Key (o console nao tem opcao "Cloud Function"; Javascript sem Master Key falha nas `configure*`).
 
 ---

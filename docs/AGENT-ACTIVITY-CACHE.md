@@ -2,9 +2,15 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-10-20 (UX Xaiana: docs, help i18n, guia site)
+**Ultima atualizacao:** 2026-10-21 (prod data purge Cloud + docs)
 
 ---
+
+### 2026-10-21 — Go-live: limpeza de base (ferramenta, nao executada)
+
+- **Cloud:** [cloud/source/19-prod-data-purge.js](../cloud/source/19-prod-data-purge.js) — `prodDataPurgeInventory`, `prodDataPurge` (secret `PROD_PURGE_SECRET`, dry-run, `confirmPhrase`)
+- **Docs:** [PROD-DATA-PURGE.md](PROD-DATA-PURGE.md), [PROD-DATA-PURGE-INVENTORY.md](PROD-DATA-PURGE-INVENTORY.md); decisao A/B no doc
+- **Pendencia humana:** backup Back4App, env secret, publicar `cloud/main.js`, dry-run REST, execucao + `configure*`
 
 ### 2026-10-20 — UX Xaiana (2.1): WhatsApp, manual, ?, site
 
