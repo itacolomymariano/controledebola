@@ -1,0 +1,50 @@
+ENCRYPTION EXPORT SELF-CLASSIFICATION
+Controle de Bola (Minha Pelada)
+
+Date: ____________________
+Prepared by: ____________________ (legal name / company)
+
+App name: Controle de Bola
+Bundle ID: com.minhapelada.app
+Apple App ID: 6801505260
+Platform: iOS (Ionic + Capacitor hybrid application)
+
+1. PURPOSE
+This letter supports U.S. export compliance and App Store Connect encryption
+documentation for the Controle de Bola mobile application.
+
+2. ENCRYPTION USED
+The app communicates with its backend (Back4App / Parse Server) exclusively
+over HTTPS (TLS). Media and file URLs use standard HTTPS. The app does not
+implement proprietary or non-standard encryption algorithms. The app does not
+provide end-to-end encrypted messaging or custom cryptographic protocols.
+
+Optional device sign-in convenience stores credentials locally using the
+app's standard local storage (Ionic Storage). This is not additional
+non-exempt encryption; it does not replace or extend Apple's operating-system
+cryptography.
+
+Dependencies: no custom encryption libraries (no embedded crypto SDKs beyond
+what the iOS platform and standard HTTPS stacks provide).
+
+3. CLASSIFICATION
+Based on the above, the app qualifies for exemption from export documentation
+requirements under the standard App Store category for apps that use only
+encryption exempt from ERN/CCATS filing (HTTPS/TLS for authentication and
+data in transit, standard Apple APIs).
+
+We declare that the app does NOT use non-exempt encryption as defined by
+Apple's export compliance guidelines. Info.plist key ITSAppUsesNonExemptEncryption
+is set to false for builds produced by our CI pipeline.
+
+4. DOCUMENTATION
+We are not submitting CCATS or ERN for this app because it uses only exempt
+encryption. If Apple requires annual self-classification for exempt mass-market
+software, we will file as applicable under U.S. EAR Category 5 Part 2.
+
+5. DECLARATION
+I declare that the information above is accurate to the best of my knowledge.
+
+Signature: ____________________
+Title: ____________________
+Organization: ____________________

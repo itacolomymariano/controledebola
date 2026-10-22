@@ -97,7 +97,7 @@ Cole cada valor **em uma unica linha** no secret correspondente.
 
 ### Antes de `release-ipa` (evitar falha no TestFlight)
 
-Checklist completa em [AGENTS.md](../AGENTS.md) (secao iOS). Resumo:
+Checklist completa em [AGENTS.md](../AGENTS.md) (secao iOS). **Sequencia marketing/build (TestFlight):** [IOS-APP-STORE-VERSION-SEQUENCE.md](IOS-APP-STORE-VERSION-SEQUENCE.md). Resumo:
 
 | Verificacao | Onde |
 |-------------|------|
@@ -106,6 +106,7 @@ Checklist completa em [AGENTS.md](../AGENTS.md) (secao iOS). Resumo:
 | Secrets API | `APP_STORE_CONNECT_KEY_ID`, `ISSUER_ID`, `API_KEY` (`.p8` completo) |
 | Runner | Workflow em `macos-26` (Xcode 26 SDK) |
 | Git | Bump + **commit + push** antes do workflow; CI nao le arquivos so locais |
+| Export compliance | CI grava `ITSAppUsesNonExemptEncryption=false` no Info.plist; builds antigas ainda exigem questionario no TestFlight — [APP-STORE-EXPORT-COMPLIANCE.md](APP-STORE-EXPORT-COMPLIANCE.md) |
 
 Depois do run: expandir o log do step **Upload IPA to TestFlight** (mensagens apos `ContentDelivery.Uploader`). Se upload falhar, artefato **`ios-release-ipa`** pode estar OK mesmo assim.
 

@@ -45,6 +45,21 @@ function upsertPlistString(plist, key, value) {
   );
 }
 
+function upsertPlistBoolean(plist, key, value) {
+  const keyXml = `<key>${key}</key>`;
+  const valueXml = value ? '<true/>' : '<false/>';
+  if (plist.includes(keyXml)) {
+    return plist.replace(
+      new RegExp(`${keyXml}\\s*<(true|false)\\/>`),
+      `${keyXml}\n\t${valueXml}`
+    );
+  }
+  if (!plist.includes('</dict>')) {
+    throw new Error('Info.plist sem </dict>; nao foi possivel inserir chaves boolean.');
+  }
+  return plist.replace('</dict>', `\t${keyXml}\n\t${valueXml}\n</dict>`);
+}
+
 function main() {
   mustExist(iosAppDir, 'Pasta nativa iOS');
 
@@ -73,6 +88,8 @@ function main() {
   for (const [key, value] of Object.entries(privacy)) {
     plist = upsertPlistString(plist, key, value);
   }
+  // Export compliance (HTTPS-only): nao usa criptografia nao isenta. Ver docs/APP-STORE-EXPORT-COMPLIANCE.md
+  plist = upsertPlistBoolean(plist, 'ITSAppUsesNonExemptEncryption', false);
   fs.writeFileSync(plistPath, plist, 'utf8');
 
   // Universal (iPhone+iPad) obriga screenshot 13" no Connect. Sem Mac/iPad,
@@ -89,7 +106,9 @@ function main() {
   }
   fs.writeFileSync(pbxPath, pbx, 'utf8');
 
-  console.log('iOS review config aplicado: icone, entitlements, textos de camera/galeria, iPhone-only.');
+  console.log(
+    'iOS review config aplicado: icone, entitlements, camera/galeria, ITSAppUsesNonExemptEncryption=false, iPhone-only.'
+  );
 }
 
 main();

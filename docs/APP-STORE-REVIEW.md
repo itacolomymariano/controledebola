@@ -1,5 +1,11 @@
 # App Store Review — Controle de Bola
 
+## Criptografia / compilação bloqueada (export compliance)
+
+Se a versão em preparação mostra aviso de **documentação de criptografia** e **Compilação** vazia: conclua a conformidade de exportação no **TestFlight** (build em questão) antes de anexar o IPA. Passo a passo e carta PDF: **[APP-STORE-EXPORT-COMPLIANCE.md](APP-STORE-EXPORT-COMPLIANCE.md)**.
+
+---
+
 ## Status atual (01/09/2026) — **nao reenviar ainda**
 
 A Apple reviu a **1.0 (92)** e rejeitou so as screenshots (2.3.3): iPhone 6.5" e iPad 13" nao mostravam o app em uso.

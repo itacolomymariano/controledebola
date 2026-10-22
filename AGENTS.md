@@ -277,6 +277,8 @@ Apos deploy: rodar `configureMuralClassPermissions`, `configureMaterialClassPerm
 - [docs/back4app-fase1.md](docs/back4app-fase1.md) … [fase6](docs/back4app-fase6-referee-invitations.md)
 - [docs/IOS_GITHUB_ACTIONS.md](docs/IOS_GITHUB_ACTIONS.md) — build iOS na nuvem (GitHub Actions)
 - [docs/APP-STORE-REVIEW.md](docs/APP-STORE-REVIEW.md) — rejeicoes Apple e procedimentos no App Store Connect
+- [docs/APP-STORE-EXPORT-COMPLIANCE.md](docs/APP-STORE-EXPORT-COMPLIANCE.md) — criptografia / export compliance (TestFlight + carta PDF)
+- [docs/IOS-APP-STORE-VERSION-SEQUENCE.md](docs/IOS-APP-STORE-VERSION-SEQUENCE.md) — **marketing + build iOS** (TestFlight); ler antes de bump/`release-ipa`
 - [docs/FLUXO-TESTES-CICLO-DE-VIDA.md](docs/FLUXO-TESTES-CICLO-DE-VIDA.md) — roteiro sequencial de testes (cadastros e ciclo de vida)
 - [docs/SMOKE-TEST-PRE-INSTALL.md](docs/SMOKE-TEST-PRE-INSTALL.md) — smoke curto pre-instalacao
 - [docs/PLANO-TESTES-PERFIS.md](docs/PLANO-TESTES-PERFIS.md) — matriz por perfil

@@ -26,7 +26,7 @@ Recomendação do plano: volume grande de teste + família → **B** é mais seg
 
 ## Pré-requisitos
 
-1. Backup Back4App (Database → Export ou backup do plano).
+1. **Backup** (ver seção [Backup no Back4App](#backup-no-back4app) abaixo) e marcar em [PROD-DATA-PURGE-INVENTORY.md](PROD-DATA-PURGE-INVENTORY.md) (linha *Backup offline* + checkbox *Backup verificado*).
 2. Tag Git: `pre-prod-purge-YYYY-MM-DD`.
 3. Congelar testes (ninguém cria pelada/evento na janela).
 4. Back4App → App Settings → **Environment Variables** → `PROD_PURGE_SECRET` (string longa aleatória; só no painel).
@@ -120,9 +120,37 @@ Smoke: [SMOKE-TEST-PRE-INSTALL.md](SMOKE-TEST-PRE-INSTALL.md) + cadastro novo �
 
 ---
 
+## Backup no Back4App
+
+Não existe um menu óbvio **“Backup / Export database”** no dashboard atual. Use **uma ou mais** opções:
+
+| Opção | Onde no painel | Observação |
+|-------|----------------|------------|
+| **A — Clone App (recomendado se não achar export)** | **App Settings → General** → **Clone App** (ex.: `…/apps/<app-id>/settings/general`) | Marque **clone the database**. Cria **outro app** com cópia do banco **naquele instante**; original e clone **não sincronizam**. [Doc Clone App](https://www.back4app.com/docs/platform/app-settings#24---clone-app). |
+| **B — Snapshot / restore via suporte** | Chat Back4App | Planos pagos costumam ter snapshots diários (~7 dias). Peça **restore do app MinhaPelada** se o purge der errado — não depende de você achar botão no painel. |
+| **C — Export por classe** | **Database → Browser** → classe → **Edit** → **Export this data** | JSON (ZIP por e-mail) ou CSV. Trabalhoso, mas fica **offline** no seu PC. [FAQ export](https://help.back4app.com/hc/en-us/articles/115003457092). |
+| **D — Inventário JSON** | `prodDataPurgeInventory` | Só contagens; **não** restaura dados. |
+
+### Clone App serve para o purge (plano A)?
+
+**Sim, como rede de segurança**, desde que:
+
+1. **Nome claro** — ex. `MinhaPelada-backup-pre-purge-2026-10-21`.
+2. **Checkbox “clone the database”** marcada (senão só copia config, não os dados).
+3. **Custo** — é um **segundo app** na conta (mesma preocupação do app extra que você apagou). Depois do go-live estável, pode **apagar o clone** para não pagar dois apps para sempre.
+4. **Rollback no mesmo App ID** — o clone **não** desfaz o purge dentro do MinhaPelada original. Se algo der errado, caminhos são: (i) pedir **restore** ao suporte no app original; (ii) consultar/copiar dados do **clone** (Browser, export por classe); (iii) em último caso, trocar builds para o App ID do clone (vira cenário tipo **B**).
+5. **Arquivos** — fotos/arquivos Parse podem exigir checagem no clone (Browser / Files). Se forem críticos, exporte classes de mídia ou confirme no clone antes do purge.
+6. **Cloud Code / env** — o clone pode herdar código; confira **Environment Variables** (`MailSettings` no banco, `PROD_PURGE_SECRET` só no app que você for purgar).
+
+**MailSettings:** no app **MinhaPelada** (original), confira ≥ 1 linha no Browser antes do purge; o clone também deve mostrar a mesma linha se clonou o banco.
+
+Registre no repo: `docs/PROD-DATA-PURGE-INVENTORY.md` — linha *Backup offline* + checkbox *Backup verificado* (método: `clone` / `export` / `suporte`).
+
 ## Rollback
 
-Restaurar backup Back4App exportado na Fase 0. Não há “desfazer” purge sem backup.
+- **Clone:** app separado = cópia consultável; voltar o **MinhaPelada** exige suporte ou migração manual, não botão “reverter purge”.
+- **Export por classe / snapshot suporte:** restore conforme procedimento Back4App.
+- Sem nenhuma das opções acima, **não há** desfazer purge.
 
 ---
 

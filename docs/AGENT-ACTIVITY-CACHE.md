@@ -2,15 +2,33 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-10-21 (prod data purge Cloud + docs)
+**Ultima atualizacao:** 2026-10-22 (iOS 1.0.8 build 272 reservado)
 
 ---
 
+### 2026-10-22 — iOS loja: trilha 1.0.8 (272)
+
+- **268** 1.0.7 pronta distribuicao (nao reutilizar); **271** presa na trilha 1.0.7
+- Repo: `package.json` **1.0.8**, `versionCode` **272** — [IOS-APP-STORE-VERSION-SEQUENCE.md](IOS-APP-STORE-VERSION-SEQUENCE.md)
+- IPA: push `main` + workflow `release-ipa` (link no doc)
+
+### 2026-10-22 — App Store: export compliance (criptografia)
+
+- **Classificacao:** HTTPS-only / isento; `ITSAppUsesNonExemptEncryption=false` em [scripts/apply-ios-review-config.js](../scripts/apply-ios-review-config.js)
+- **Docs:** [APP-STORE-EXPORT-COMPLIANCE.md](APP-STORE-EXPORT-COMPLIANCE.md), carta EN [export-compliance/encryption-self-classification-en.txt](export-compliance/encryption-self-classification-en.txt)
+- **Operador:** TestFlight build 271 questionario + anexar compilacao na 1.0.7 (checklists no doc)
+
+### 2026-10-21 — Go-live purge (plano A): **executado**
+
+- **Backup:** clone `Clone_MinhaPelada`; SMTP `SMTP_*` intacto
+- **Execucao:** 1x `prodDataPurge` `dryRun:false`; todas classes em `PURGE_CLASS_ORDER` com `remaining:0` (121 `_User`, 12 `Pelada`, 42 `Event`, etc.)
+- **Feito pos-purge:** inventario zeros; 6x `configure*` (2026-10-21)
+- **Pendente:** smoke cadastro→pelada→evento; opcional apagar clone / rotacionar `PROD_PURGE_SECRET`
+
 ### 2026-10-21 — Go-live purge (plano A): inventario OK, REST path
 
-- **REST Back4App:** path relativo `/functions/prodDataPurgeInventory` (nao URL completa duplicada — [BACK4APP-CLOUD-FUNCTIONS-CONSOLE.md](BACK4APP-CLOUD-FUNCTIONS-CONSOLE.md))
-- **Inventario live:** 121 `_User`, 12 `Pelada`, 42 `Event`, 633 `MuralVote` — [PROD-DATA-PURGE-INVENTORY.md](PROD-DATA-PURGE-INVENTORY.md); `MailSettings` protected
-- **Pendente:** backup offline, dry-run `/functions/prodDataPurge`, execucao `confirmPhrase`, pos `configure*`
+- **REST Back4App:** path relativo `/functions/prodDataPurgeInventory` — [BACK4APP-CLOUD-FUNCTIONS-CONSOLE.md](BACK4APP-CLOUD-FUNCTIONS-CONSOLE.md)
+- **Inventario pre:** [PROD-DATA-PURGE-INVENTORY.md](PROD-DATA-PURGE-INVENTORY.md)
 
 ### 2026-10-21 — Go-live: limpeza de base (ferramenta)
 
