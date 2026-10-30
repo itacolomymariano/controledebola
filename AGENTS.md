@@ -2,6 +2,8 @@
 
 Leia este arquivo **antes** de alterar codigo, Cloud Code ou fluxos neste repositorio.
 
+**Dois ambientes Back4App (producao vs sandbox demo):** antes de APK/AAB/IPA ou bump de versao, leia [docs/BUILD-ENVIRONMENTS-AGENTS.md](docs/BUILD-ENVIRONMENTS-AGENTS.md) — evita pacote Android errado, chaves trocadas ou `versionCode` iOS duplicado.
+
 **Autoavaliacao (regra Cursor):** classifique a propria tarefa como **simples** ou **complexa** (`.cursor/rules/agent-documentation-gate.mdc`). Simples → este arquivo basta. Complexa → leia tambem o guia completo abaixo antes de editar.
 
 **Guia completo:** [docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md](docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md)
@@ -279,6 +281,8 @@ Apos deploy: rodar `configureMuralClassPermissions`, `configureMaterialClassPerm
 - [docs/APP-STORE-REVIEW.md](docs/APP-STORE-REVIEW.md) — rejeicoes Apple e procedimentos no App Store Connect
 - [docs/APP-STORE-EXPORT-COMPLIANCE.md](docs/APP-STORE-EXPORT-COMPLIANCE.md) — criptografia / export compliance (TestFlight + carta PDF)
 - [docs/IOS-APP-STORE-VERSION-SEQUENCE.md](docs/IOS-APP-STORE-VERSION-SEQUENCE.md) — **marketing + build iOS** (TestFlight); ler antes de bump/`release-ipa`
+- [docs/BUILD-ENVIRONMENTS-AGENTS.md](docs/BUILD-ENVIRONMENTS-AGENTS.md) — **producao vs sandbox**: APK, AAB, IPA, chaves, checklist agents
+- [docs/SANDBOX-CLONE-APK.md](docs/SANDBOX-CLONE-APK.md) — APK **Demo** (`Clone_MinhaPelada`, `com.minhapelada.app.sandbox`)
 - [docs/FLUXO-TESTES-CICLO-DE-VIDA.md](docs/FLUXO-TESTES-CICLO-DE-VIDA.md) — roteiro sequencial de testes (cadastros e ciclo de vida)
 - [docs/SMOKE-TEST-PRE-INSTALL.md](docs/SMOKE-TEST-PRE-INSTALL.md) — smoke curto pre-instalacao
 - [docs/PLANO-TESTES-PERFIS.md](docs/PLANO-TESTES-PERFIS.md) — matriz por perfil

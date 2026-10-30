@@ -51,7 +51,7 @@ flowchart TD
 Objetivo: validar o caminho ate as tabs.
 
 ```text
-splash → onboarding? → login/register → profile-setup? → tabs/peladas
+splash → onboarding? → login/register → profile-setup? → tabs/home (quatro portas)
 ```
 
 | ID | Passo | Conta | Esperado | OK |
@@ -59,8 +59,8 @@ splash → onboarding? → login/register → profile-setup? → tabs/peladas
 | A1 | Abrir app / `npm start` | — | Splash e depois onboarding ou login | [ ] |
 | A2 | Onboarding (3 passos), se 1a vez | nova | Completa sem travar; segue para login/register | [ ] |
 | A3 | **Criar conta** Admin | Admin | Captcha/anti-bot ok; conta criada; login automatico ou tela de login | [ ] |
-| A4 | Profile-setup / caminho wizard | Admin | Perfil criado (atleta ou caminho escolhido); chega em **Peladas** | [ ] |
-| A5 | Logout → Login | Admin | Sessao valida; tabs Peladas / Buscar / Mural / Perfil | [ ] |
+| A4 | Profile-setup / caminho wizard | Admin | Perfil criado (atleta ou caminho escolhido); chega em **Home** (quatro portas) | [ ] |
+| A5 | Logout → Login | Admin | Sessao valida; rodape: Peladas / Buscar / **Confrontos** / Mural / Perfil | [ ] |
 | A6 | Criar conta Atleta A | Atleta A | Mesmo fluxo A3–A4; perfil atleta utilizavel | [ ] |
 | A7 | Meus dados / data nascimento | qualquer | Picker dia/mes/ano (`app-birth-date-picker`), **nao** calendario nativo | [ ] |
 | A8 | Abrir app com sessao salva | Admin | Nao pede login de novo (splash → tabs) | [ ] |

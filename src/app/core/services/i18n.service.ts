@@ -78,7 +78,27 @@ export class I18nService {
       }
       return message;
     }
+    const key = this.errorMessageToKey(message);
+    if (key) return this.t(key);
+    if (error instanceof Error && message) return message;
     return message || this.t('error.generic');
+  }
+
+  /** Mensagens cruas do Parse/HTTP em ingles → chave i18n. */
+  private errorMessageToKey(message: string): string | null {
+    const trimmed = message.trim();
+    if (!trimmed) return null;
+    const lower = trimmed.toLowerCase();
+    if (lower === 'unauthorized' || lower.includes('not authorized') || lower.includes('needs to be authenticated')) {
+      return 'error.unauthorized';
+    }
+    if (/invalid\s+username|username\/password/i.test(trimmed)) {
+      return 'error.invalidCredentials';
+    }
+    if (/invalid session token/i.test(trimmed)) {
+      return 'error.sessionExpired';
+    }
+    return null;
   }
 
   private async loadFile(locale: AppLocale): Promise<Dict> {

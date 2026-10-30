@@ -31,6 +31,7 @@ export type UpdateAthleteProfilePayload = Partial<
     | 'personalStatsConflictSource'
     | 'peladaRate'
     | 'teamMatchRate'
+    | 'playedAmateurTeams'
   >
 >;
 
@@ -82,6 +83,12 @@ export class AthleteProfileService {
     } else profile.unset('personalStatsConflictSource');
     if (payload.peladaRate != null) profile.set('peladaRate', payload.peladaRate);
     if (payload.teamMatchRate != null) profile.set('teamMatchRate', payload.teamMatchRate);
+    if (payload.playedAmateurTeams != null) {
+      profile.set(
+        'playedAmateurTeams',
+        payload.playedAmateurTeams.map((name) => String(name).trim()).filter(Boolean)
+      );
+    }
     profile.set('attendanceScore', 100);
     profile.set('totalPresent', 0);
     profile.set('totalAbsent', 0);
@@ -140,6 +147,12 @@ export class AthleteProfileService {
     }
     if (payload.peladaRate !== undefined) profile.set('peladaRate', payload.peladaRate);
     if (payload.teamMatchRate !== undefined) profile.set('teamMatchRate', payload.teamMatchRate);
+    if (payload.playedAmateurTeams !== undefined) {
+      profile.set(
+        'playedAmateurTeams',
+        payload.playedAmateurTeams.map((name) => String(name).trim()).filter(Boolean)
+      );
+    }
     this.applyUserDisplayFields(profile, user);
 
     try {
@@ -204,6 +217,9 @@ export class AthleteProfileService {
         | undefined,
       peladaRate: obj.get('peladaRate') as number | undefined,
       teamMatchRate: obj.get('teamMatchRate') as number | undefined,
+      playedAmateurTeams: Array.isArray(obj.get('playedAmateurTeams'))
+        ? (obj.get('playedAmateurTeams') as string[]).map(String)
+        : undefined,
       attendanceScore: (obj.get('attendanceScore') as number) ?? 100,
     };
   }

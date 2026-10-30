@@ -64,9 +64,12 @@ export const SCREEN_HELP_ROUTES: Array<{ pattern: RegExp; key: string }> = [
 
   { pattern: /^\/legends$/, key: 'screen.help.legends-hub' },
   { pattern: /^\/legends\/athlete\/new$/, key: 'screen.help.legend-athlete-form' },
+  { pattern: /^\/legends\/athlete\/edit\/[^/]+$/, key: 'screen.help.legend-athlete-form-edit' },
   { pattern: /^\/legends\/pro-athlete\/new$/, key: 'screen.help.legend-pro-athlete-form' },
   { pattern: /^\/legends\/athlete\/[^/]+$/, key: 'screen.help.legend-athlete-view' },
   { pattern: /^\/legends\/team\/new$/, key: 'screen.help.legend-team-form' },
+  { pattern: /^\/legends\/team\/edit\/[^/]+$/, key: 'screen.help.legend-team-form-edit' },
+  { pattern: /^\/legends\/team\/[^/]+$/, key: 'screen.help.legend-team-view' },
 ];
 
 export function resolveScreenHelpKey(url: string): string {

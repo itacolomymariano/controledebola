@@ -888,10 +888,14 @@ export class PeladaDetailPage implements OnDestroy {
       this.refreshMuralShareContext();
       this.isAdmin = this.peladaService.isCurrentUserAdmin(this.pelada);
       this.patchSettingsForm();
-      await this.loadMembership();
+      try {
+        await this.loadMembership();
+      } catch {
+        this.isMember = this.isAdmin;
+      }
       await this.loadSegmentData();
     } catch (error: unknown) {
-      this.errorMessage = error instanceof Error ? error.message : 'Erro ao carregar pelada.';
+      this.errorMessage = parseErrorMessage(error);
     } finally {
       this.loading = false;
       this.maybeCompleteWizardPeladaJoinStep();

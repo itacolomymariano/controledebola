@@ -43,6 +43,31 @@
 
       <app-athlete-profile-fields [form]="form"></app-athlete-profile-fields>
 
+      <ion-list-header>
+        <ion-label>{{ 'athleteProfile.playedTeamsTitle' | t }}</ion-label>
+      </ion-list-header>
+      <ion-item lines="none">
+        <ion-label class="ion-text-wrap">
+          <p>{{ 'athleteProfile.playedTeamsHint' | t }}</p>
+        </ion-label>
+      </ion-item>
+      @if (playedAmateurTeams.length) {
+        <ion-item lines="none">
+          <div class="played-teams-chips">
+            @for (team of playedAmateurTeams; track team; let index = $index) {
+              <ion-chip (click)="removePlayedTeam(index)">
+                <ion-label>{{ team }}</ion-label>
+                <ion-icon name="close-circle"></ion-icon>
+              </ion-chip>
+            }
+          </div>
+        </ion-item>
+      }
+      <ion-item button (click)="openTeamPicker()" detail="false">
+        <ion-icon name="add-circle-outline" slot="start"></ion-icon>
+        <ion-label>{{ 'athleteProfile.addPlayedTeam' | t }}</ion-label>
+      </ion-item>
+
     </ion-list>
 
 
@@ -56,3 +81,10 @@
   </form>
 
 </ion-content>
+
+<app-amateur-team-search-modal
+  [isOpen]="teamPickerOpen"
+  titleKey="athleteProfile.addPlayedTeam"
+  (picked)="onTeamPicked($event)"
+  (dismissed)="closeTeamPicker()"
+></app-amateur-team-search-modal>

@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { AmateurLegendAthlete, AmateurLegendTeam } from '../../core/models/amateur-legend.model';
+import { AuthService } from '../../core/services/auth.service';
 import { AmateurLegendService } from '../../core/services/amateur-legend.service';
 
 @Component({
@@ -17,8 +18,14 @@ export class LegendsHubPage {
 
   constructor(
     private readonly legendService: AmateurLegendService,
+    private readonly auth: AuthService,
     private readonly router: Router
   ) {}
+
+  canEditLegend(registeredByUserId: string | undefined): boolean {
+    const userId = this.auth.getCurrentUser()?.id;
+    return !!userId && !!registeredByUserId && registeredByUserId === userId;
+  }
 
   ionViewWillEnter(): void {
     void this.load();
@@ -69,6 +76,23 @@ export class LegendsHubPage {
   openAthlete(athlete: AmateurLegendAthlete): void {
     if (!athlete.id?.trim()) return;
     void this.router.navigate(['/legends/athlete', athlete.id]);
+  }
+
+  openTeam(team: AmateurLegendTeam): void {
+    if (!team.id?.trim()) return;
+    void this.router.navigate(['/legends/team', team.id]);
+  }
+
+  editAthlete(event: Event, athlete: AmateurLegendAthlete): void {
+    event.stopPropagation();
+    if (!athlete.id?.trim() || !this.canEditLegend(athlete.registeredByUserId)) return;
+    void this.router.navigate(['/legends/athlete/edit', athlete.id]);
+  }
+
+  editTeam(event: Event, team: AmateurLegendTeam): void {
+    event.stopPropagation();
+    if (!team.id?.trim() || !this.canEditLegend(team.registeredByUserId)) return;
+    void this.router.navigate(['/legends/team/edit', team.id]);
   }
 
   back(): void {

@@ -95,6 +95,10 @@ export function parseErrorMessage(error: unknown): string {
     return 'E-mail/celular ou senha incorretos.';
   }
 
+  if (/^unauthorized$/i.test(message.trim()) || /\bnot authorized\b/i.test(message)) {
+    return 'Não autorizado. E-mail/celular ou senha incorretos, ou sua conta não existe neste ambiente.';
+  }
+
   if (/permission denied|needs to be authenticated/i.test(message)) {
     return (
       'Cadastro indisponível no servidor. Publique o Cloud Code (cloud/main.js) no Back4App ' +

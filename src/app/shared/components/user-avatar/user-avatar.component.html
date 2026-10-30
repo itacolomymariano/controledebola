@@ -1,6 +1,6 @@
 <ion-avatar [class]="'avatar-' + size">
-  @if (avatarUrl) {
-    <img [src]="avatarUrl" [alt]="alt" />
+  @if (showImage) {
+    <img [src]="avatarUrl!" [alt]="alt" (error)="onImageError()" />
   } @else {
     <div class="avatar-placeholder">
       <ion-icon name="person"></ion-icon>

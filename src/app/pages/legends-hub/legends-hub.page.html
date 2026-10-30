@@ -66,6 +66,11 @@
                 <ion-note color="medium">In memoriam</ion-note>
               }
             </ion-label>
+            @if (canEditLegend(athlete.registeredByUserId)) {
+              <ion-button slot="end" fill="clear" (click)="editAthlete($event, athlete)">
+                {{ 'legends.editLegend' | t }}
+              </ion-button>
+            }
           </ion-item>
         }
       </ion-list>
@@ -77,7 +82,7 @@
     } @else {
       <ion-list>
         @for (team of teams; track team.id) {
-          <ion-item>
+          <ion-item button (click)="openTeam(team)">
             @if (team.imageUrl) {
               <ion-avatar slot="start">
                 <img [src]="team.imageUrl" [alt]="team.apelido" />
@@ -87,6 +92,11 @@
               <h2>{{ team.apelido || team.name }}</h2>
               <p>{{ team.name }}</p>
             </ion-label>
+            @if (canEditLegend(team.registeredByUserId)) {
+              <ion-button slot="end" fill="clear" (click)="editTeam($event, team)">
+                {{ 'legends.editLegend' | t }}
+              </ion-button>
+            }
           </ion-item>
         }
       </ion-list>

@@ -31,6 +31,7 @@ export interface AthleteProfile {
   personalStatsConflictSource?: AthletePersonalStatsConflictSource;
   peladaRate?: number;
   teamMatchRate?: number;
+  playedAmateurTeams?: string[];
   attendanceScore: number;
 }
 
@@ -48,6 +49,7 @@ export interface CreateAthleteProfilePayload {
   personalStatsConflictSource?: AthletePersonalStatsConflictSource;
   peladaRate?: number;
   teamMatchRate?: number;
+  playedAmateurTeams?: string[];
 }
 
 export const FOOTBALL_POSITIONS = [

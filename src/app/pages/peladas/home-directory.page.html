@@ -21,6 +21,17 @@
     <ion-note class="ion-padding wizard-join-banner">{{ 'coach.wizard.teamJoinBanner' | t }}</ion-note>
   }
 
+  @if (!loading && !errorMessage && door === 'times') {
+    <ion-segment [value]="teamKind" (ionChange)="onTeamKindChange($any($event.detail.value))">
+      <ion-segment-button value="active">
+        <ion-label>{{ 'peladas.teamKindActive' | t }}</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="legend">
+        <ion-label>{{ 'peladas.teamKindLegend' | t }}</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  }
+
   @if (!loading && !errorMessage) {
     <ion-searchbar
       [placeholder]="(door === 'usuarios' ? 'peladas.usersSearchPlaceholder' : 'peladas.searchPlaceholder') | t"
@@ -85,7 +96,14 @@
           ></app-user-avatar>
           <ion-label class="ion-text-wrap">
             <h2>{{ row.name }}</h2>
-            <p>{{ 'peladas.president' | t }}: {{ row.presidentName || '—' }}</p>
+            @if (row.kind === 'legend') {
+              @if (row.subtitle) {
+                <p>{{ row.subtitle }}</p>
+              }
+              <p>{{ 'peladas.teamKindLegend' | t }}</p>
+            } @else {
+              <p>{{ 'peladas.president' | t }}: {{ row.presidentName || '—' }}</p>
+            }
             <p>{{ row.place || ('peladas.localMissing' | t) }}</p>
           </ion-label>
         </ion-item>
@@ -93,7 +111,7 @@
     </ion-list>
   }
 
-  @if (!loading && !errorMessage && door === 'times') {
+  @if (!loading && !errorMessage && door === 'times' && teamKind === 'active') {
     <ion-fab slot="fixed" vertical="bottom" horizontal="end">
       <ion-fab-button (click)="createTeam()" [attr.aria-label]="'peladas.createTeam' | t">
         <ion-icon name="add"></ion-icon>
@@ -116,7 +134,12 @@
             <p>{{ 'peladas.fullName' | t }}: {{ row.user.listFullName || '—' }}</p>
             <p>{{ 'peladas.nickname' | t }}: {{ row.user.apelido || '—' }}</p>
             <p>{{ row.rolesLabel || ('peladas.noProfiles' | t) }}</p>
-            @if (row.user.positions.length) {
+            @if (isPrimaryAthlete(row.user)) {
+              @if (row.user.primaryPosition) {
+                <p>{{ row.user.primaryPosition }}</p>
+              }
+              <p>{{ 'peladas.age' | t }}: {{ athleteAgeLabel(row.user) }}</p>
+            } @else if (row.user.positions.length) {
               <p>{{ row.user.positions.join(' · ') }}</p>
             }
             <p>{{ row.place || ('peladas.localMissing' | t) }}</p>

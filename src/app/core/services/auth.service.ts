@@ -18,6 +18,7 @@ import { RoleProfileService } from './role-profile.service';
 import { AthleteProfileService } from './athlete-profile.service';
 import { PushNotificationService } from './push-notification.service';
 import { AppStorageService } from './app-storage.service';
+import { getUserAvatarUrl } from '../utils/user-avatar.util';
 
 export interface RegisterPayload {
   name: string;
@@ -150,6 +151,9 @@ export class AuthService {
         await this.clearLocalSession();
         return null;
       }
+      if (isNetworkError(error)) {
+        return user;
+      }
       throw error;
     }
   }
@@ -157,12 +161,7 @@ export class AuthService {
   getAvatarUrl(): string | null {
     const user = this.getCurrentUser();
     if (!user) return null;
-
-    const directUrl = user.get('avatarUrl') as string | undefined;
-    if (directUrl?.trim()) return directUrl.trim();
-
-    const avatar = user.get('avatar') as Parse.File | { url?: string } | string | undefined;
-    return this.parseFileService.getFileUrl(avatar);
+    return getUserAvatarUrl(user, this.parseFileService);
   }
 
   async updateAvatar(file: File): Promise<void> {

@@ -239,6 +239,12 @@ const routes: Routes = [
       ),
   },
   {
+    path: 'legends/athlete/edit/:id',
+    canMatch: [AuthGuard],
+    loadChildren: () =>
+      import('./pages/legend-athlete-form/legend-athlete-form.module').then(m => m.LegendAthleteFormPageModule),
+  },
+  {
     path: 'legends/athlete/:id',
     canMatch: [AuthGuard],
     loadChildren: () =>
@@ -249,6 +255,18 @@ const routes: Routes = [
     canMatch: [AuthGuard],
     loadChildren: () =>
       import('./pages/legend-team-form/legend-team-form.module').then(m => m.LegendTeamFormPageModule),
+  },
+  {
+    path: 'legends/team/edit/:id',
+    canMatch: [AuthGuard],
+    loadChildren: () =>
+      import('./pages/legend-team-form/legend-team-form.module').then(m => m.LegendTeamFormPageModule),
+  },
+  {
+    path: 'legends/team/:id',
+    canMatch: [AuthGuard],
+    loadChildren: () =>
+      import('./pages/legend-team-view/legend-team-view.module').then(m => m.LegendTeamViewPageModule),
   },
   {
     path: 'account/edit',

@@ -79,6 +79,7 @@ Thumbs.db
 
 # Back4App keys (local only)
 src/environments/environment.local.ts
+src/environments/environment.sandbox.local.ts
 
 # Android signing (local only)
 android/keystore.properties

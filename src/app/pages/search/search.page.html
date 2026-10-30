@@ -144,6 +144,14 @@
   }
 
   @if (segment === 'times') {
+    <ion-segment [value]="teamKind" (ionChange)="onTeamKindChange($any($event.detail.value))">
+      <ion-segment-button value="active">
+        <ion-label>{{ 'peladas.teamKindActive' | t }}</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="legend">
+        <ion-label>{{ 'peladas.teamKindLegend' | t }}</ion-label>
+      </ion-segment-button>
+    </ion-segment>
     <ion-searchbar
       placeholder="Buscar time amador por nome..."
       [(ngModel)]="teamQuery"
@@ -251,7 +259,7 @@
   @if (!loading && segment === 'times' && teamRows.length > 0) {
     <ion-list>
       @for (row of teamRows; track row.team.id) {
-        <ion-item button (click)="openTeamProfile(row.team.id)">
+        <ion-item button (click)="openTeamProfile(row.team)">
           <app-user-avatar
             slot="start"
             [avatarUrl]="row.team.imageUrl"
@@ -260,17 +268,22 @@
           ></app-user-avatar>
           <ion-label>
             <h2>{{ row.team.name }}</h2>
+            @if (row.team.subtitle) {
+              <p>{{ row.team.subtitle }}</p>
+            }
             @if (row.team.averageAge != null) {
               <p>Media de idade: {{ row.team.averageAge }} anos</p>
             }
           </ion-label>
-          <ion-button
-            fill="clear"
-            slot="end"
-            (click)="$event.stopPropagation(); toggleTeamHistory(row)"
-          >
-            {{ row.expanded ? 'Ocultar' : 'Historico' }}
-          </ion-button>
+          @if (row.team.kind !== 'legend') {
+            <ion-button
+              fill="clear"
+              slot="end"
+              (click)="$event.stopPropagation(); toggleTeamHistory(row)"
+            >
+              {{ row.expanded ? 'Ocultar' : 'Historico' }}
+            </ion-button>
+          }
         </ion-item>
         @if (row.expanded) {
           @if (row.loadingHistory) {

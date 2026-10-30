@@ -1,9 +1,10 @@
 import { Component } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   AmateurLegendAthlete,
   LEGEND_ATHLETE_RELATIONSHIP_OPTIONS,
 } from '../../core/models/amateur-legend.model';
+import { AuthService } from '../../core/services/auth.service';
 import { AmateurLegendService } from '../../core/services/amateur-legend.service';
 
 @Component({
@@ -19,8 +20,20 @@ export class LegendAthleteViewPage {
 
   constructor(
     private readonly route: ActivatedRoute,
+    private readonly router: Router,
+    private readonly auth: AuthService,
     private readonly legendService: AmateurLegendService
   ) {}
+
+  get canEditLegend(): boolean {
+    const userId = this.auth.getCurrentUser()?.id;
+    return !!userId && !!this.athlete?.registeredByUserId && this.athlete.registeredByUserId === userId;
+  }
+
+  editLegend(): void {
+    if (!this.athlete?.id || !this.canEditLegend) return;
+    void this.router.navigate(['/legends/athlete/edit', this.athlete.id]);
+  }
 
   ionViewWillEnter(): void {
     const id = this.route.snapshot.paramMap.get('id') ?? '';

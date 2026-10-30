@@ -2,6 +2,8 @@
 
 Documento para **humanos e agents**: evita dois IPA com o mesmo **build number** ou marketing version inconsistente com o TestFlight.
 
+**Ambientes:** IPA/TestFlight é sempre **produção** (MinhaPelada). Não há IPA sandbox — ver [BUILD-ENVIRONMENTS-AGENTS.md](BUILD-ENVIRONMENTS-AGENTS.md).
+
 **Atualize este arquivo** sempre que subir build à Apple ou reservar o próximo número.
 
 ---

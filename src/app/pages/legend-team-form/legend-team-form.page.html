@@ -4,12 +4,17 @@
     <ion-buttons slot="start">
       <ion-button (click)="cancel()">Voltar</ion-button>
     </ion-buttons>
-    <ion-title>Lenda — Time</ion-title>
+    <ion-title>{{ isEditMode ? ('legends.editTeamTitle' | t) : ('legends.createTeamTitle' | t) }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding legend-form-content">
-  <form id="legendTeamForm" [formGroup]="form" (ngSubmit)="submit()">
+  @if (loadingEdit) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+  <form id="legendTeamForm" [formGroup]="form" (ngSubmit)="submit()" [class.ion-hide]="loadingEdit">
     <app-image-picker
       label="Imagem do time"
       hint="Escudo ou foto do time lenda."
@@ -94,7 +99,11 @@
       form="legendTeamForm"
       [disabled]="saving"
     >
-      {{ saving ? 'Salvando time lenda...' : 'Salvar time lenda' }}
+      {{
+        saving
+          ? (isEditMode ? ('legends.savingChanges' | t) : ('legends.savingTeam' | t))
+          : (isEditMode ? ('legends.saveChanges' | t) : ('legends.saveTeam' | t))
+      }}
     </ion-button>
   </ion-toolbar>
 </ion-footer>
@@ -109,22 +118,44 @@
         </ion-buttons>
       </ion-toolbar>
       <ion-toolbar>
+        <ion-segment
+          [value]="athleteRefKind"
+          (ionChange)="onAthleteRefKindChange($any($event.detail.value))"
+        >
+          <ion-segment-button value="active">
+            <ion-label>{{ 'peladas.teamKindActive' | t }}</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="legend">
+            <ion-label>{{ 'legends.athleteKindLegend' | t }}</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </ion-toolbar>
+      <ion-toolbar>
         <ion-searchbar
           [value]="athleteSearch"
           (ionInput)="onAthleteSearch($any($event.target).value)"
           debounce="250"
-          placeholder="Buscar atleta lenda ou do app"
+          [placeholder]="'legends.searchAthleteRefPlaceholder' | t"
         ></ion-searchbar>
       </ion-toolbar>
     </ion-header>
     <ion-content class="ion-padding">
       @if (loadingAthletes) {
         <ion-spinner name="crescent"></ion-spinner>
-      } @else if (!athleteSuggestions.length) {
-        <ion-note>Nenhum atleta encontrado.</ion-note>
+      } @else if (showCreateLegendAthletePrompt) {
+        <ion-card>
+          <ion-card-content>
+            <p>{{ 'legends.noLegendAthleteForSearch' | t: { term: athleteSearch.trim() } }}</p>
+            <ion-button expand="block" (click)="goCreateLegendAthlete()">
+              {{ 'legends.createLegendAthleteButton' | t: { term: athleteSearch.trim() } }}
+            </ion-button>
+          </ion-card-content>
+        </ion-card>
+      } @else if (!filteredAthleteSuggestions.length) {
+        <ion-note>{{ 'legends.noAthleteRefFound' | t }}</ion-note>
       } @else {
         <ion-list>
-          @for (item of athleteSuggestions; track item.id + item.source) {
+          @for (item of filteredAthleteSuggestions; track item.id + item.source) {
             <ion-item button (click)="addAthleteRef(item)">
               <ion-label>
                 <h2>{{ item.label }}</h2>

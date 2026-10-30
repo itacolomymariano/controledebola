@@ -5,6 +5,9 @@
     </ion-buttons>
     <ion-title>Atleta lenda</ion-title>
     <ion-buttons slot="end">
+      @if (canEditLegend) {
+        <ion-button (click)="editLegend()">{{ 'legends.editLegend' | t }}</ion-button>
+      }
       <app-help-balloon textKey="screen.help.legend-athlete-view"></app-help-balloon>
     </ion-buttons>
   </ion-toolbar>

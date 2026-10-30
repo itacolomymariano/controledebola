@@ -466,6 +466,14 @@ Parse.Cloud.define('getAthletePublicProfile', async (request) => {
     if (name) teamNames.add(name);
   }
 
+  const playedManual = athleteProfile.get('playedAmateurTeams');
+  if (Array.isArray(playedManual)) {
+    for (const entry of playedManual) {
+      const name = String(entry || '').trim();
+      if (name) teamNames.add(name);
+    }
+  }
+
   for (const registration of registrations) {
     const event = registration.get('event');
     if (!event) continue;
@@ -906,6 +914,329 @@ Parse.Cloud.beforeSave('RoleProfile', (request) => {
     if (user.id) profile.set('userId', user.id);
   }
   applyRoleProfileHiringAcl(profile);
+});
+
+const HOME_DIRECTORY_ROLES = [
+  'athlete',
+  'referee',
+  'scout',
+  'journalist',
+  'cameraman',
+  'narrator',
+  'coach',
+  'physical_trainer',
+  'masseur',
+  'kitman',
+  'gandula',
+  'gatekeeper',
+  'fan',
+];
+
+const HOME_DIRECTORY_PROFILE_SOURCES = [
+  { className: 'RoleProfile' },
+  { className: 'AthleteProfile', fallbackRole: 'athlete' },
+  { className: 'FanProfile', fallbackRole: 'fan' },
+];
+
+const HOME_DIRECTORY_PAGE = 100;
+const HOME_DIRECTORY_MAX = 400;
+
+function homeDirectoryRoleSet() {
+  return new Set(HOME_DIRECTORY_ROLES);
+}
+
+function isHomeDirectoryRole(value) {
+  return typeof value === 'string' && homeDirectoryRoleSet().has(value);
+}
+
+function homeDirectoryBlankUser(userId) {
+  return {
+    userId,
+    apelido: '',
+    fullName: '',
+    profileUserName: '',
+    city: '',
+    neighborhood: '',
+    state: '',
+    latitude: undefined,
+    longitude: undefined,
+    avatarUrl: '',
+    roles: [],
+    positions: [],
+  };
+}
+
+function homeDirectoryFillText(draft, key, value) {
+  const trimmed = String(value || '').trim();
+  if (!trimmed || draft[key]) return;
+  draft[key] = trimmed;
+}
+
+function homeDirectoryParseCoord(value) {
+  if (typeof value === 'number' && !Number.isNaN(value)) return value;
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value.trim().replace(',', '.'));
+    return Number.isNaN(parsed) ? undefined : parsed;
+  }
+  return undefined;
+}
+
+function homeDirectoryNormalizeUf(value) {
+  const raw = String(value || '').trim().toUpperCase();
+  if (raw === 'FE') return 'DF';
+  return raw.length === 2 ? raw : '';
+}
+
+function homeDirectoryIsPlaceholderName(value) {
+  const normalized = normalizeSearchText(value);
+  return new Set(['usuario', 'atleta', 'torcedor']).has(normalized);
+}
+
+function homeDirectoryApplyUser(draft, user) {
+  if (!user || !user.get) return;
+  homeDirectoryFillText(draft, 'apelido', user.get('apelido'));
+  homeDirectoryFillText(draft, 'fullName', user.get('name'));
+  const address = user.get('address') || {};
+  homeDirectoryFillText(draft, 'city', address.city);
+  homeDirectoryFillText(draft, 'neighborhood', address.neighborhood);
+  if (!draft.state) draft.state = homeDirectoryNormalizeUf(address.state);
+  if (draft.latitude == null && typeof address.latitude === 'number') {
+    draft.latitude = address.latitude;
+  }
+  if (draft.longitude == null && typeof address.longitude === 'number') {
+    draft.longitude = address.longitude;
+  }
+  if (!draft.avatarUrl) {
+    const url = String(user.get('avatarUrl') || '').trim();
+    if (url) draft.avatarUrl = url;
+  }
+}
+
+function homeDirectoryCollectPositions(draft, row) {
+  for (const key of ['primaryPosition', 'secondaryPosition', 'thirdPosition']) {
+    const value = String(row.get(key) || '').trim();
+    if (value && !draft.positions.includes(value)) draft.positions.push(value);
+  }
+}
+
+function homeDirectoryAbsorbRow(draft, row, fallbackRole, user) {
+  if (user) homeDirectoryApplyUser(draft, user);
+
+  const role = fallbackRole || row.get('role');
+  if (isHomeDirectoryRole(role) && !draft.roles.includes(role)) draft.roles.push(role);
+
+  homeDirectoryCollectPositions(draft, row);
+
+  homeDirectoryFillText(draft, 'apelido', row.get('userApelido'));
+  homeDirectoryFillText(draft, 'fullName', row.get('userFullName'));
+  homeDirectoryFillText(draft, 'city', row.get('userCity'));
+  homeDirectoryFillText(draft, 'neighborhood', row.get('userNeighborhood'));
+  if (!draft.state) draft.state = homeDirectoryNormalizeUf(row.get('userState'));
+  if (draft.latitude == null) draft.latitude = homeDirectoryParseCoord(row.get('userLatitude'));
+  if (draft.longitude == null) draft.longitude = homeDirectoryParseCoord(row.get('userLongitude'));
+  if (!draft.avatarUrl) {
+    const url = String(row.get('userAvatarUrl') || '').trim();
+    if (url) draft.avatarUrl = url;
+  }
+
+  const userName = String(row.get('userName') || '').trim();
+  if (userName && !userName.includes('@') && !homeDirectoryIsPlaceholderName(userName)) {
+    if (!draft.profileUserName) draft.profileUserName = userName;
+    if (!draft.fullName && userName !== draft.apelido) {
+      homeDirectoryFillText(draft, 'fullName', userName);
+    }
+    if (!draft.apelido && !draft.fullName) homeDirectoryFillText(draft, 'apelido', userName);
+  }
+}
+
+async function loadUsersForHomeDirectory(userIds) {
+  const map = new Map();
+  const unique = [...new Set(userIds.filter(Boolean))];
+  for (let index = 0; index < unique.length; index += HOME_DIRECTORY_PAGE) {
+    const slice = unique.slice(index, index + HOME_DIRECTORY_PAGE);
+    const query = new Parse.Query(Parse.User);
+    query.containedIn('objectId', slice);
+    query.limit(slice.length);
+    const users = await query.find({ useMasterKey: true });
+    for (const user of users) {
+      if (user.id) map.set(user.id, user);
+    }
+  }
+  return map;
+}
+
+async function buildHomeDirectoryUserMap() {
+  const map = new Map();
+
+  for (const source of HOME_DIRECTORY_PROFILE_SOURCES) {
+    for (let skip = 0; skip < HOME_DIRECTORY_MAX; skip += HOME_DIRECTORY_PAGE) {
+      const query = new Parse.Query(source.className);
+      query.limit(HOME_DIRECTORY_PAGE);
+      query.skip(skip);
+      const rows = await query.find({ useMasterKey: true });
+      if (!rows.length) break;
+
+      const userIds = [];
+      for (const row of rows) {
+        const user = row.get('user');
+        const userId = (user && user.id) || String(row.get('userId') || '').trim();
+        if (userId) userIds.push(userId);
+      }
+      const usersById = await loadUsersForHomeDirectory(userIds);
+
+      for (const row of rows) {
+        const userPtr = row.get('user');
+        const userId = (userPtr && userPtr.id) || String(row.get('userId') || '').trim();
+        if (!userId) continue;
+        const user = usersById.get(userId) || userPtr;
+        const draft = map.get(userId) || homeDirectoryBlankUser(userId);
+        homeDirectoryAbsorbRow(draft, row, source.fallbackRole, user);
+        map.set(userId, draft);
+      }
+
+      if (rows.length < HOME_DIRECTORY_PAGE) break;
+    }
+  }
+
+  await mergeHomeDirectoryUsersFromAccounts(map);
+
+  return map;
+}
+
+async function mergeHomeDirectoryUsersFromAccounts(map) {
+  const byApelido = new Parse.Query(Parse.User);
+  byApelido.exists('apelido');
+  const byName = new Parse.Query(Parse.User);
+  byName.exists('name');
+  const byPrimaryRole = new Parse.Query(Parse.User);
+  byPrimaryRole.exists('primaryRole');
+  const query = Parse.Query.or(byApelido, byName, byPrimaryRole);
+  query.limit(HOME_DIRECTORY_MAX);
+
+  const users = await query.find({ useMasterKey: true });
+  for (const user of users) {
+    if (!user.id) continue;
+    const draft = map.get(user.id) || homeDirectoryBlankUser(user.id);
+    homeDirectoryApplyUser(draft, user);
+    const primary = user.get('primaryRole');
+    if (isHomeDirectoryRole(primary) && !draft.roles.includes(primary)) {
+      draft.roles.push(primary);
+    }
+    if (shouldIncludeHomeDirectoryUser(draft)) {
+      map.set(user.id, draft);
+    }
+  }
+}
+
+function shouldIncludeHomeDirectoryUser(draft) {
+  const apelido = String(draft.apelido || '').trim();
+  const fullName = String(draft.fullName || '').trim();
+  const profileUserName = String(draft.profileUserName || '').trim();
+  return !!(apelido || fullName || profileUserName || draft.roles.length);
+}
+
+function serializeHomeDirectoryUser(draft, user) {
+  const apelido = String(draft.apelido || '').trim();
+  const fullName = String(draft.fullName || '').trim();
+  const profileUserName = String(draft.profileUserName || '').trim();
+  const listFullName =
+    fullName || (profileUserName && profileUserName !== apelido ? profileUserName : '');
+  const primaryRoleRaw = user && user.get ? user.get('primaryRole') : undefined;
+  const primaryRole = isHomeDirectoryRole(primaryRoleRaw) ? primaryRoleRaw : undefined;
+  const roles = HOME_DIRECTORY_ROLES.filter((role) => draft.roles.includes(role));
+  const primaryPosition = String(draft.positions[0] || '').trim() || undefined;
+  const birthDate = user && user.get ? user.get('birthDate') : undefined;
+  const age = calcAgeFromBirthDate(birthDate);
+
+  return {
+    userId: draft.userId,
+    apelido,
+    fullName,
+    profileUserName: profileUserName || undefined,
+    listFullName,
+    displayName: apelido || fullName || profileUserName,
+    roles,
+    primaryRole,
+    primaryPosition,
+    positions: [...draft.positions],
+    state: draft.state || '',
+    city: draft.city || '',
+    neighborhood: draft.neighborhood || '',
+    latitude: draft.latitude,
+    longitude: draft.longitude,
+    avatarUrl: draft.avatarUrl || undefined,
+    age: age != null ? age : undefined,
+  };
+}
+
+async function homeDirectoryUsersFromMap(map, filterUserId) {
+  const userIds = filterUserId ? [filterUserId] : [...map.keys()];
+  const usersById = await loadUsersForHomeDirectory(userIds);
+  const rows = [];
+  for (const userId of userIds) {
+    const draft = map.get(userId);
+    if (!draft) continue;
+    const user = usersById.get(userId);
+    rows.push(serializeHomeDirectoryUser(draft, user));
+  }
+  return rows;
+}
+
+Parse.Cloud.define('listHomeDirectoryUsers', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const map = await buildHomeDirectoryUserMap();
+  const rows = await homeDirectoryUsersFromMap(map);
+  rows.sort((a, b) =>
+    (a.displayName || a.listFullName || a.apelido || '').localeCompare(
+      b.displayName || b.listFullName || b.apelido || '',
+      'pt-BR'
+    )
+  );
+  return rows.slice(0, HOME_DIRECTORY_MAX);
+});
+
+async function buildHomeDirectoryUserForId(userId) {
+  const draft = homeDirectoryBlankUser(userId);
+  let found = false;
+  const usersById = await loadUsersForHomeDirectory([userId]);
+  const user = usersById.get(userId);
+  if (user) {
+    found = true;
+    homeDirectoryApplyUser(draft, user);
+    const primary = user.get('primaryRole');
+    if (isHomeDirectoryRole(primary) && !draft.roles.includes(primary)) {
+      draft.roles.push(primary);
+    }
+  }
+
+  for (const source of HOME_DIRECTORY_PROFILE_SOURCES) {
+    const userPtr = Parse.User.createWithoutData(userId);
+    const byPointer = new Parse.Query(source.className);
+    byPointer.equalTo('user', userPtr);
+    const byField = new Parse.Query(source.className);
+    byField.equalTo('userId', userId);
+    const rows = await Parse.Query.or(byPointer, byField).limit(40).find({ useMasterKey: true });
+    if (rows.length) found = true;
+    for (const row of rows) {
+      homeDirectoryAbsorbRow(draft, row, source.fallbackRole, user);
+    }
+  }
+
+  if (!found) return null;
+  return serializeHomeDirectoryUser(draft, user);
+}
+
+Parse.Cloud.define('getHomeDirectoryUser', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const userId = String(request.params.userId || '').trim();
+  if (!userId) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'userId obrigatorio.');
+  }
+  return buildHomeDirectoryUserForId(userId);
 });
 
 function toProfileSearchResultFromUser(user, role) {

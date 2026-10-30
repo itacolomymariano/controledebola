@@ -151,3 +151,9 @@ export interface CreateLegendTeamPayload {
   relationship: LegendTeamRelationship;
   athleteRefs: LegendAthleteRef[];
 }
+
+export type UpdateLegendAthletePayload = CreateLegendAthletePayload;
+
+export type UpdateLegendTeamPayload = CreateLegendTeamPayload;
+
+export type LegendAthleteRefKind = 'active' | 'legend';

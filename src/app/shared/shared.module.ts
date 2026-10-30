@@ -22,6 +22,7 @@ import { UniformPickerComponent } from './components/uniform-picker/uniform-pick
 import { UserAvatarComponent } from './components/user-avatar/user-avatar.component';
 import { UserBarComponent } from './components/user-bar/user-bar.component';
 import { LegendSuggestInputComponent } from './components/legend-suggest-input/legend-suggest-input.component';
+import { AmateurTeamSearchModalComponent } from './components/amateur-team-search-modal/amateur-team-search-modal.component';
 import { MuralHighlightsPanelComponent } from './components/mural-highlights-panel/mural-highlights-panel.component';
 import { MuralShowcaseEntryComponent } from './components/mural-showcase-entry/mural-showcase-entry.component';
 import { EventRoleHiringPanelComponent } from './components/event-role-hiring-panel/event-role-hiring-panel.component';
@@ -72,6 +73,7 @@ import { HelpBalloonComponent } from './components/help-balloon/help-balloon.com
     UserAvatarComponent,
     UserBarComponent,
     LegendSuggestInputComponent,
+    AmateurTeamSearchModalComponent,
     MuralHighlightsPanelComponent,
     MuralShowcaseEntryComponent,
     EventRoleHiringPanelComponent,
@@ -122,6 +124,7 @@ import { HelpBalloonComponent } from './components/help-balloon/help-balloon.com
     UserAvatarComponent,
     UserBarComponent,
     LegendSuggestInputComponent,
+    AmateurTeamSearchModalComponent,
     MuralHighlightsPanelComponent,
     MuralShowcaseEntryComponent,
     EventRoleHiringPanelComponent,

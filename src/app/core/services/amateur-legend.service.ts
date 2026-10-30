@@ -1,11 +1,15 @@
 import { Injectable } from '@angular/core';
 import Parse from 'parse';
+import { Address } from '../models/address.model';
+import { DirectoryTeamPickerRow, TeamDirectoryKind } from '../models/team.model';
 import {
   AmateurLegendAthlete,
   AmateurLegendTeam,
   CreateLegendAthletePayload,
   CreateLegendTeamPayload,
   CreateProLegendAthletePayload,
+  UpdateLegendAthletePayload,
+  UpdateLegendTeamPayload,
   LegendSuggestion,
   ProLegendAthlete,
 } from '../models/amateur-legend.model';
@@ -52,6 +56,33 @@ export class AmateurLegendService {
     }
 
     const result = await Parse.Cloud.run('createAmateurLegendAthlete', {
+      name: payload.name,
+      apelido: payload.apelido,
+      address: payload.address,
+      birthDate: payload.birthDate,
+      careerEndYear: payload.careerEndYear,
+      amateurTeams: payload.amateurTeams,
+      position: payload.position,
+      inMemoriam: payload.inMemoriam,
+      memorialDate: payload.memorialDate,
+      relationship: payload.relationship,
+      imageUrl,
+    });
+    return this.mapAthlete(result);
+  }
+
+  async updateAthlete(id: string, payload: UpdateLegendAthletePayload): Promise<AmateurLegendAthlete> {
+    let imageUrl: string | undefined;
+    if (payload.imageFile) {
+      const file = await this.parseFileService.uploadImage(
+        payload.imageFile,
+        `legend-athlete-${Date.now()}`
+      );
+      imageUrl = this.parseFileService.getFileUrl(file) ?? undefined;
+    }
+
+    const result = await Parse.Cloud.run('updateAmateurLegendAthlete', {
+      id,
       name: payload.name,
       apelido: payload.apelido,
       address: payload.address,
@@ -117,6 +148,31 @@ export class AmateurLegendService {
     return this.mapTeam(result);
   }
 
+  async updateTeam(id: string, payload: UpdateLegendTeamPayload): Promise<AmateurLegendTeam> {
+    let imageUrl: string | undefined;
+    if (payload.imageFile) {
+      const file = await this.parseFileService.uploadImage(
+        payload.imageFile,
+        `legend-team-${Date.now()}`
+      );
+      imageUrl = this.parseFileService.getFileUrl(file) ?? undefined;
+    }
+
+    const result = await Parse.Cloud.run('updateAmateurLegendTeam', {
+      id,
+      name: payload.name,
+      apelido: payload.apelido,
+      location: payload.location,
+      foundedDate: payload.foundedDate,
+      endedDate: payload.endedDate,
+      description: payload.description,
+      relationship: payload.relationship,
+      athleteRefs: payload.athleteRefs,
+      imageUrl,
+    });
+    return this.mapTeam(result);
+  }
+
   async suggestAmateurIdols(search = '', limit = 20): Promise<LegendSuggestion[]> {
     const rows = await Parse.Cloud.run('suggestAmateurFootballIdols', {
       search: search.trim(),
@@ -147,6 +203,32 @@ export class AmateurLegendService {
       limit,
     });
     return Array.isArray(rows) ? rows.map((row) => this.mapSuggestion(row)) : [];
+  }
+
+  async searchDirectoryTeamsForPicker(
+    kind: TeamDirectoryKind,
+    search = '',
+    address?: Address,
+    limit = 50
+  ): Promise<DirectoryTeamPickerRow[]> {
+    const rows = await Parse.Cloud.run('searchDirectoryTeamsForPicker', {
+      kind,
+      search: search.trim(),
+      address: address ?? {},
+      limit,
+    });
+    if (!Array.isArray(rows)) return [];
+    return rows.map((row) => ({
+      id: String(row['id'] || ''),
+      name: String(row['name'] || ''),
+      kind: row['kind'] === 'legend' ? 'legend' : 'active',
+      imageUrl: row['imageUrl'] ? String(row['imageUrl']) : undefined,
+      subtitle: row['subtitle'] ? String(row['subtitle']) : undefined,
+      averageAge:
+        typeof row['averageAge'] === 'number' && !Number.isNaN(row['averageAge'])
+          ? row['averageAge']
+          : undefined,
+    }));
   }
 
   async listAmateurTeamsForLegend(

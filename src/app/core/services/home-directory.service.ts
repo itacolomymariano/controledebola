@@ -15,8 +15,10 @@ export interface HomeTeamBrief {
   objectId: string;
   name: string;
   presidentName: string;
+  subtitle?: string;
   imageUrl?: string;
   address: Address;
+  kind?: 'active' | 'legend';
 }
 
 export interface HomeDirectoryUser {
@@ -29,6 +31,9 @@ export interface HomeDirectoryUser {
   listFullName: string;
   displayName: string;
   roles: ProfileRole[];
+  primaryRole?: ProfileRole;
+  primaryPosition?: string;
+  age?: number;
   positions: string[];
   state: string;
   city: string;
@@ -72,7 +77,15 @@ export class HomeDirectoryService {
     const rows = await Parse.Cloud.run('listHomeDirectoryTeams', { limit: MAX_ROWS });
     if (!Array.isArray(rows)) return [];
     return rows
-      .map((row) => this.cloudRowToTeamBrief(row as Record<string, unknown>))
+      .map((row) => this.cloudRowToTeamBrief(row as Record<string, unknown>, 'active'))
+      .filter((team) => team.objectId && team.name);
+  }
+
+  async listLegendTeams(): Promise<HomeTeamBrief[]> {
+    const rows = await Parse.Cloud.run('listHomeDirectoryLegendTeams', { limit: MAX_ROWS });
+    if (!Array.isArray(rows)) return [];
+    return rows
+      .map((row) => this.cloudRowToTeamBrief(row as Record<string, unknown>, 'legend'))
       .filter((team) => team.objectId && team.name);
   }
 
@@ -94,75 +107,57 @@ export class HomeDirectoryService {
   }
 
   async listUsers(): Promise<HomeDirectoryUser[]> {
-    const map = new Map<string, UserDraft>();
-    const sources: Array<{ className: string; role?: ProfileRole }> = [
-      { className: 'RoleProfile' },
-      { className: 'AthleteProfile', role: 'athlete' },
-      { className: 'FanProfile', role: 'fan' },
-    ];
-    const settled = await Promise.allSettled(
-      sources.map((source) =>
-        this.findPages(source.className, (query) => {
-          query.include('user');
-        }).then((rows) => ({ source, rows }))
-      )
-    );
-
-    let loaded = 0;
-    let firstError: unknown;
-    for (const result of settled) {
-      if (result.status === 'rejected') {
-        firstError = firstError ?? result.reason;
-        continue;
-      }
-      loaded += 1;
-      for (const row of result.value.rows) {
-        this.absorbListRow(map, row, result.value.source.role);
-      }
-    }
-
-    if (!loaded) {
-      throw firstError instanceof Error
-        ? firstError
-        : new Error('Não foi possível carregar os usuários.');
-    }
-
-    return [...map.values()].map((draft) => this.freeze(draft));
+    const rows = await Parse.Cloud.run('listHomeDirectoryUsers');
+    if (!Array.isArray(rows)) return [];
+    return rows
+      .map((row) => this.cloudRowToDirectoryUser(row as Record<string, unknown>))
+      .filter((user) => user.userId);
   }
 
   async getPublicUser(userId: string): Promise<HomeDirectoryUser | null> {
     const id = userId.trim();
     if (!id) return null;
-
-    const draft = this.blankUser(id);
-    let found = false;
-
     try {
-      const user = await new Parse.Query(Parse.User).get(id);
-      found = true;
-      this.applyUser(draft, user);
+      const row = await Parse.Cloud.run('getHomeDirectoryUser', { userId: id });
+      if (!row || typeof row !== 'object') return null;
+      return this.cloudRowToDirectoryUser(row as Record<string, unknown>);
     } catch {
-      /* o ponteiro do usuario pode nao ser legivel */
+      return null;
     }
+  }
 
-    const sources: Array<{ className: string; role?: ProfileRole }> = [
-      { className: 'RoleProfile' },
-      { className: 'AthleteProfile', role: 'athlete' },
-      { className: 'FanProfile', role: 'fan' },
-    ];
+  private cloudRowToDirectoryUser(row: Record<string, unknown>): HomeDirectoryUser {
+    const rolesRaw = Array.isArray(row['roles']) ? row['roles'] : [];
+    const roles = SEARCHABLE_PROFILE_ROLES.filter((role) => rolesRaw.includes(role));
+    const primaryRoleRaw = row['primaryRole'];
+    const primaryRole =
+      typeof primaryRoleRaw === 'string' && ROLE_SET.has(primaryRoleRaw)
+        ? (primaryRoleRaw as ProfileRole)
+        : undefined;
+    const ageRaw = row['age'];
+    const age = typeof ageRaw === 'number' && !Number.isNaN(ageRaw) ? ageRaw : undefined;
+    const positionsRaw = Array.isArray(row['positions']) ? row['positions'].map(String) : [];
+    const primaryPosition = String(row['primaryPosition'] || positionsRaw[0] || '').trim() || undefined;
 
-    for (const source of sources) {
-      try {
-        const rows = await this.profilesForUser(source.className, id);
-        if (rows.length) found = true;
-        for (const row of rows) this.absorbRow(draft, row, source.role);
-      } catch {
-        /* classe pode estar fechada */
-      }
-    }
-
-    if (!found) return null;
-    return this.freeze(draft);
+    return {
+      userId: String(row['userId'] || ''),
+      apelido: String(row['apelido'] || '').trim(),
+      fullName: String(row['fullName'] || '').trim(),
+      profileUserName: String(row['profileUserName'] || '').trim() || undefined,
+      listFullName: String(row['listFullName'] || '').trim(),
+      displayName: String(row['displayName'] || '').trim(),
+      roles,
+      primaryRole,
+      primaryPosition,
+      age,
+      positions: positionsRaw.filter(Boolean),
+      state: String(row['state'] || '').trim(),
+      city: String(row['city'] || '').trim(),
+      neighborhood: String(row['neighborhood'] || '').trim(),
+      latitude: typeof row['latitude'] === 'number' ? row['latitude'] : undefined,
+      longitude: typeof row['longitude'] === 'number' ? row['longitude'] : undefined,
+      avatarUrl: String(row['avatarUrl'] || '').trim() || undefined,
+    };
   }
 
   private async profilesForUser(className: string, userId: string): Promise<Parse.Object[]> {
@@ -335,14 +330,20 @@ export class HomeDirectoryService {
     };
   }
 
-  private cloudRowToTeamBrief(row: Record<string, unknown>): HomeTeamBrief {
+  private cloudRowToTeamBrief(
+    row: Record<string, unknown>,
+    kind: 'active' | 'legend' = 'active'
+  ): HomeTeamBrief {
     const imageUrl = String(row['imageUrl'] || '').trim();
+    const subtitle = String(row['subtitle'] || '').trim();
     return {
       objectId: String(row['objectId'] || ''),
       name: String(row['name'] || '').trim(),
-      presidentName: String(row['presidentName'] || '').trim(),
+      presidentName: kind === 'active' ? String(row['presidentName'] || '').trim() : '',
+      subtitle: subtitle || undefined,
       imageUrl: imageUrl || undefined,
       address: this.asAddress(row['homeVenueAddress']),
+      kind,
     };
   }
 

@@ -11,7 +11,7 @@ import {
   SearchProfileKind,
 } from '../../core/models/profile-search.model';
 import { AmateurLegendAthlete, AmateurLegendTeam } from '../../core/models/amateur-legend.model';
-import { TeamPickerRow } from '../../core/models/team.model';
+import { TeamDirectoryKind, TeamPickerRow } from '../../core/models/team.model';
 import { AuthService } from '../../core/services/auth.service';
 import { EventService } from '../../core/services/event.service';
 import { ProfileSearchService } from '../../core/services/profile-search.service';
@@ -67,6 +67,7 @@ export class SearchPage {
   eventNeighborhood = '';
   profileQuery = '';
   teamQuery = '';
+  teamKind: TeamDirectoryKind = 'active';
   selectedEventType: EventType | '' = '';
   selectedAthletePosition = '';
   selectedProfileKind: SearchProfileKind = 'athlete';
@@ -139,6 +140,7 @@ export class SearchPage {
     this.eventNeighborhood = '';
     this.profileQuery = '';
     this.teamQuery = '';
+    this.teamKind = 'active';
     this.selectedAthletePosition = '';
     this.errorMessage = '';
 
@@ -240,6 +242,16 @@ export class SearchPage {
     this.cdr.markForCheck();
   }
 
+  onTeamKindChange(kind: TeamDirectoryKind): void {
+    if (this.teamKind === kind) return;
+    this.teamKind = kind;
+    if (this.teamQuery.trim()) {
+      void this.runTeamSearch(this.teamQuery);
+    } else {
+      this.cdr.markForCheck();
+    }
+  }
+
   retrySearch(): void {
     this.errorMessage = '';
     if (this.segment === 'eventos') {
@@ -276,8 +288,12 @@ export class SearchPage {
     }
   }
 
-  openTeamProfile(teamId: string): void {
-    void this.router.navigate(['/team', teamId]);
+  openTeamProfile(team: TeamPickerRow): void {
+    if (team.kind === 'legend') {
+      void this.router.navigate(['/legends/team', team.id]);
+      return;
+    }
+    void this.router.navigate(['/team', team.id]);
   }
 
   openTeamMatch(eventId: string): void {
@@ -377,10 +393,17 @@ export class SearchPage {
     this.cdr.markForCheck();
 
     try {
-      const results = await this.teamService.listForPicker(trimmed);
+      const results = await this.legendService.searchDirectoryTeamsForPicker(this.teamKind, trimmed);
       if (seq !== this.teamSearchSeq) return;
-      this.teamRows = results.map((team) => ({
-        team,
+      this.teamRows = results.map((row) => ({
+        team: {
+          id: row.id,
+          name: row.name,
+          imageUrl: row.imageUrl,
+          averageAge: row.averageAge ?? null,
+          kind: row.kind,
+          subtitle: row.subtitle,
+        },
         expanded: false,
         loadingHistory: false,
         history: [],

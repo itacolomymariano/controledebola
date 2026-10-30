@@ -2,9 +2,60 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-10-22 (iOS 1.0.8 build 272 reservado)
+**Ultima atualizacao:** 2026-10-30 (editar lendas amador)
 
 ---
+
+### 2026-10-30 — Lendas amador: editar + elenco time
+
+- **Cloud:** `updateAmateurLegendAthlete` / `updateAmateurLegendTeam` + `assertLegendRegisteredBy` (`05-legends.js`)
+- **App:** rotas `/legends/athlete/edit/:id` e `/legends/team/edit/:id`; forms create/edit; `AmateurLegendService.update*`
+- **Views/hub:** botão Editar para `registeredByUserId`; hub — times clicáveis
+- **Time lenda:** modal atletas com segmento Em atividade / Atleta lenda + atalho cadastro lenda
+- **Deploy:** publicar `cloud/main.js` no Back4App **MinhaPelada**
+
+### 2026-10-30 — Busca times: Em atividade / Time Lenda
+
+- **Cloud:** `searchDirectoryTeamsForPicker` (`05-legends.js`); `listAmateurTeamsForLegend` delega `kind: active`
+- **Cliente:** `AmateurLegendService.searchDirectoryTeamsForPicker`; modal compartilhado `app-amateur-team-search-modal` (perfil atleta + lenda atleta)
+- **legend-suggest-input** (`pelada_team`): segmento 2 vias no modal e inline (Meus dados); filtro `app_team` vs `legend_team`
+- **Buscar → Times:** segmento + rota `/team/:id` vs `/legends/team/:id`; historico de confrontos so em atividade
+- **Deploy:** publicar `cloud/main.js` no Back4App **MinhaPelada** antes de testar picker/busca no APK
+
+### 2026-10-30 — Home: usuarios/times/atleta (Primeiro Coordenador)
+
+- **Regressao lista usuarios:** `HomeDirectoryService.listUsers` migrado para Cloud `listHomeDirectoryUsers` / `getHomeDirectoryUser` (`11-profiles-search.js`) — ACL owner-only em `AthleteProfile`/`FanProfile` impedia find client-side
+- **Times Home:** segmento Em atividade vs Time Lenda; Cloud `listHomeDirectoryLegendTeams` (`05-legends.js`); rota `/legends/team/:id` (`legend-team-view`)
+- **Card atleta na lista:** posicao principal + idade quando perfil principal e atleta
+- **Atleta:** campo `AthleteProfile.playedAmateurTeams` + UI em `athlete-profile-form`; merge em `getAthletePublicProfile`
+- **Deploy:** publicar `cloud/main.js` no Back4App producao antes de validar no APK
+
+### 2026-10-29 — Producao: auditoria operacional + manual/site
+
+- **Auditoria:** [PROD-OPERATIONAL-AUDIT-2026-10.md](PROD-OPERATIONAL-AUDIT-2026-10.md) — mapa rotas/Cloud, checklists smoke+FLUXO (marcar no device); pre-voo P1 doc only
+- **Screenshots:** [MANUAL-SCREENSHOT-MATRIX-2026-10.md](MANUAL-SCREENSHOT-MATRIX-2026-10.md), [MANUAL-CAPTURE-PRINTS-PRIORITY.md](MANUAL-CAPTURE-PRINTS-PRIORITY.md), [MANUAL-PROSE-REVIEW-2026-10.md](MANUAL-PROSE-REVIEW-2026-10.md)
+- **Site `controledebolasite`:** cap. 09 tabela MDX corrigida; cap. 15 Usuarios na Home; cap. 00/14 texto; removidos JPEG obsoletos em `public/guia/` (p23-peladas-abas, p50/p56/p62 velhos, 10-times)
+- **FLUXO-TESTES:** Fase A alinhada a `/tabs/home` + 5 abas rodape
+- **Site prosa (local):** cap. 01, 04, 06, 07, 08, 11, 13, 14, 15 + 00/09 ja editados; **deploy Cloudflare pendente**
+- **Pendente:** smoke/FLUXO APK producao; ~19 prints novos; ligar Figure nos MDX apos fotos
+
+### 2026-10-23 — Login unauthorized pt-BR + sandbox no Samsung
+
+- **i18n:** `error.unauthorized` + `I18nService.translateError` / `parse-error.util` mapeiam `unauthorized` (nao mais ingles cru no login)
+- **Build sandbox:** `build-android-sandbox-apk.js` patch temporario `google-services.json` para `com.minhapelada.app.sandbox` (FCM ideal: registrar app no Firebase)
+- **Device RXGL406LWRM:** `com.minhapelada.app` + `com.minhapelada.app.sandbox` (Demo) — APK `releases/ControleDeBola-sandbox-2026-10-23.apk`
+- **Gotcha:** credenciais antigas — **MinhaPelada** pos-purge pode nao ter usuario; **Demo/clone** tem backup pre-purge
+
+### 2026-10-23 — Docs: producao vs sandbox (agents)
+
+- **Guia:** [BUILD-ENVIRONMENTS-AGENTS.md](BUILD-ENVIRONMENTS-AGENTS.md) — MinhaPelada vs Clone_MinhaPelada; APK/AAB/IPA; checklist; link no topo de [AGENTS.md](../AGENTS.md)
+- **Script sandbox:** `build-android-sandbox-apk.js` patch `applicationId` `.sandbox` (side-by-side)
+
+### 2026-10-22 — Android APK demo → Clone_MinhaPelada
+
+- **Build:** `npm run build:android:sandbox-apk` — config Angular `sandbox`, `capacitor.config.sandbox.ts` (`com.minhapelada.app.sandbox`)
+- **Chaves:** `environment.sandbox.local.ts` (gitignore); example no repo — [SANDBOX-CLONE-APK.md](SANDBOX-CLONE-APK.md)
+- **Pos-build prod Android:** `npm run build` + `npx cap sync android`
 
 ### 2026-10-22 — iOS loja: trilha 1.0.8 (272)
 

@@ -1,0 +1,100 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/peladas/times"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Time lenda</ion-title>
+    <ion-buttons slot="end">
+      @if (canEditLegend) {
+        <ion-button (click)="editLegend()">{{ 'legends.editLegend' | t }}</ion-button>
+      }
+      <app-help-balloon textKey="screen.help.legend-team-view"></app-help-balloon>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  @if (!loading && errorMessage && !team) {
+    <ion-note color="danger">{{ errorMessage }}</ion-note>
+  }
+
+  @if (!loading && team) {
+    <div class="profile-header">
+      @if (team.imageUrl) {
+        <ion-avatar class="legend-avatar">
+          <img [src]="team.imageUrl" [alt]="team.apelido" />
+        </ion-avatar>
+      } @else {
+        <app-user-avatar [alt]="team.apelido" size="lg"></app-user-avatar>
+      }
+      <div>
+        <h1>{{ team.apelido }}</h1>
+        <p>{{ team.name }}</p>
+      </div>
+    </div>
+
+    <ion-list lines="full">
+      @if (team.description) {
+        <ion-item>
+          <ion-label class="ion-text-wrap">
+            <h3>Historia</h3>
+            <p>{{ team.description }}</p>
+          </ion-label>
+        </ion-item>
+      }
+      <ion-item>
+        <ion-label>
+          <h3>Fundacao</h3>
+          <p>{{ formatDate(team.foundedDate) }}</p>
+        </ion-label>
+      </ion-item>
+      <ion-item>
+        <ion-label>
+          <h3>Encerramento</h3>
+          <p>{{ formatDate(team.endedDate) }}</p>
+        </ion-label>
+      </ion-item>
+      <ion-item>
+        <ion-label class="ion-text-wrap">
+          <h3>Local</h3>
+          <p>
+            {{ team.location?.state || '—' }} · {{ team.location?.city || '—' }} ·
+            {{ team.location?.neighborhood || '—' }}
+          </p>
+        </ion-label>
+      </ion-item>
+      <ion-item>
+        <ion-label>
+          <h3>Relacao de quem cadastrou</h3>
+          <p>{{ relationshipLabel(team.relationship) }}</p>
+        </ion-label>
+      </ion-item>
+      @if (team.athleteRefs?.length) {
+        <ion-list-header>
+          <ion-label>Atletas vinculados</ion-label>
+        </ion-list-header>
+        @for (ref of team.athleteRefs; track ref.id) {
+          <ion-item>
+            <ion-label>
+              <h3>{{ ref.label }}</h3>
+            </ion-label>
+          </ion-item>
+        }
+      }
+      @if (team.registeredByName) {
+        <ion-item>
+          <ion-label>
+            <h3>Cadastrado por</h3>
+            <p>{{ team.registeredByName }}</p>
+          </ion-label>
+        </ion-item>
+      }
+    </ion-list>
+  }
+</ion-content>

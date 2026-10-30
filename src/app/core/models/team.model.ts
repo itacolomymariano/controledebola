@@ -56,9 +56,22 @@ export interface AmateurTeamMember {
   birthDate?: string | null;
 }
 
+export type TeamDirectoryKind = 'active' | 'legend';
+
+export interface DirectoryTeamPickerRow {
+  id: string;
+  name: string;
+  kind: TeamDirectoryKind;
+  imageUrl?: string;
+  subtitle?: string;
+  averageAge?: number | null;
+}
+
 export interface TeamPickerRow {
   id: string;
   name: string;
   imageUrl?: string;
   averageAge?: number | null;
+  kind?: TeamDirectoryKind;
+  subtitle?: string;
 }

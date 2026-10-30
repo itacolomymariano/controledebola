@@ -1,5 +1,7 @@
 # Screenshots para o manual ilustrado
 
+**Matriz atualizada (2026-10-29):** [MANUAL-SCREENSHOT-MATRIX-2026-10.md](MANUAL-SCREENSHOT-MATRIX-2026-10.md) · **Ordem de captura:** [MANUAL-CAPTURE-PRINTS-PRIORITY.md](MANUAL-CAPTURE-PRINTS-PRIORITY.md)
+
 Retrato no Samsung, tela real, **sem teclado**. PNG ou JPG.
 
 O texto do manual fica em `D:\Ita\git\controledebolasite\src\content\guia`. As fotos ficam em `D:\Ita\git\controledebolasite\public\guia`.

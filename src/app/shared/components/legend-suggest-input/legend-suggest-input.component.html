@@ -15,6 +15,20 @@
 
     @if (showInlinePanel) {
       <div class="legend-inline-panel" (mousedown)="$event.preventDefault()">
+        @if (isPeladaTeamSuggest) {
+          <ion-segment
+            class="legend-inline-segment"
+            [value]="peladaTeamFilter"
+            (ionChange)="onPeladaTeamFilterChange($any($event.detail.value))"
+          >
+            <ion-segment-button value="active">
+              <ion-label>{{ 'peladas.teamKindActive' | t }}</ion-label>
+            </ion-segment-button>
+            <ion-segment-button value="legend">
+              <ion-label>{{ 'peladas.teamKindLegend' | t }}</ion-label>
+            </ion-segment-button>
+          </ion-segment>
+        }
         @if (loading) {
           <div class="legend-inline-panel__loading">
             <ion-spinner name="crescent"></ion-spinner>
@@ -29,13 +43,13 @@
             </ion-card-content>
           </ion-card>
         } @else {
-          @if (search.trim().length >= 2) {
+          @if (search.trim().length >= 2 && filteredSuggestions.length > 0) {
             <ion-note class="legend-inline-hint">
               Ja existe cadastro para "{{ search.trim() }}". Use uma opcao abaixo.
             </ion-note>
           }
           <ion-list lines="full">
-            @for (item of suggestions; track item.id + item.source) {
+            @for (item of filteredSuggestions; track item.id + item.source) {
               <ion-item button (click)="selectSuggestion(item)">
                 @if (item.imageUrl) {
                   <ion-avatar slot="start">
@@ -88,19 +102,32 @@
             placeholder="Buscar..."
           ></ion-searchbar>
         </ion-toolbar>
-        <ion-toolbar>
-          <ion-segment scrollable="true" [value]="sourceFilter" (ionChange)="onFilterChange($any($event.detail.value))">
-            <ion-segment-button value="all">
-              <ion-label>Todos</ion-label>
-            </ion-segment-button>
-            <ion-segment-button value="legend">
-              <ion-label>{{ legendFilterLabel }}</ion-label>
-            </ion-segment-button>
-            <ion-segment-button value="app">
-              <ion-label>{{ appFilterLabel }}</ion-label>
-            </ion-segment-button>
-          </ion-segment>
-        </ion-toolbar>
+        @if (isPeladaTeamSuggest) {
+          <ion-toolbar>
+            <ion-segment scrollable="true" [value]="peladaTeamFilter" (ionChange)="onPeladaTeamFilterChange($any($event.detail.value))">
+              <ion-segment-button value="active">
+                <ion-label>{{ 'peladas.teamKindActive' | t }}</ion-label>
+              </ion-segment-button>
+              <ion-segment-button value="legend">
+                <ion-label>{{ 'peladas.teamKindLegend' | t }}</ion-label>
+              </ion-segment-button>
+            </ion-segment>
+          </ion-toolbar>
+        } @else {
+          <ion-toolbar>
+            <ion-segment scrollable="true" [value]="sourceFilter" (ionChange)="onFilterChange($any($event.detail.value))">
+              <ion-segment-button value="all">
+                <ion-label>Todos</ion-label>
+              </ion-segment-button>
+              <ion-segment-button value="legend">
+                <ion-label>{{ legendFilterLabel }}</ion-label>
+              </ion-segment-button>
+              <ion-segment-button value="app">
+                <ion-label>{{ appFilterLabel }}</ion-label>
+              </ion-segment-button>
+            </ion-segment>
+          </ion-toolbar>
+        }
       </ion-header>
       <ion-content class="ion-padding">
         @if (loading) {
@@ -109,7 +136,9 @@
           <ion-card>
             <ion-card-content>
               <p>
-                Nenhum cadastro em <strong>{{ legendFilterLabel }}</strong> para "{{ search.trim() }}".
+                Nenhum cadastro em
+                <strong>{{ isPeladaTeamSuggest ? ('peladas.teamKindLegend' | t) : legendFilterLabel }}</strong>
+                para "{{ search.trim() }}".
               </p>
               <ion-button expand="block" (click)="goCreateLegend()">
                 Cadastrar lenda "{{ search.trim() }}"

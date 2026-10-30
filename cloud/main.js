@@ -1,6 +1,6 @@
 /**
  * Cloud Code — gerado por npm run build:cloud
- * Gerado em: 2026-10-21T17:05:36.122Z
+ * Gerado em: 2026-10-30T13:57:40.617Z
  * Copie o conteudo deste arquivo no Back4App (Server Settings > Cloud Code).
  * Fontes modulares em cloud/source/
  * NAO edite este arquivo direto — edite cloud/source/ e rode npm run build:cloud
@@ -3197,6 +3197,37 @@ async function findExistingLegendByName(className, name, apelido) {
   );
 }
 
+async function findExistingLegendByNameExcluding(className, name, apelido, excludeId) {
+  const existing = await findExistingLegendByName(className, name, apelido);
+  if (!existing) return null;
+  if (excludeId && existing.id === excludeId) return null;
+  return existing;
+}
+
+function assertLegendRegisteredBy(row, user) {
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const registeredBy = row.get('registeredByUser');
+  if (!registeredBy || registeredBy.id !== user.id) {
+    throw new Parse.Error(
+      Parse.Error.OPERATION_FORBIDDEN,
+      'Somente quem cadastrou pode editar esta lenda.'
+    );
+  }
+}
+
+function normalizeAthleteRefs(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((ref) => ({
+      type: String(ref.type || '').trim(),
+      id: String(ref.id || '').trim(),
+      label: String(ref.label || '').trim(),
+    }))
+    .filter((ref) => ref.id.length && (ref.type === 'app_athlete' || ref.type === 'legend_athlete'));
+}
+
 Parse.Cloud.define('createAmateurLegendAthlete', async (request) => {
   const user = request.user;
   if (!user) {
@@ -3304,6 +3335,134 @@ Parse.Cloud.define('createAmateurLegendTeam', async (request) => {
   return mapLegendTeamRow(row);
 });
 
+Parse.Cloud.define('updateAmateurLegendAthlete', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+
+  const id = String(request.params.id || '').trim();
+  if (!id) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'id obrigatorio.');
+  }
+
+  const row = await new Parse.Query('AmateurLegendAthlete').get(id, { useMasterKey: true });
+  assertLegendRegisteredBy(row, user);
+
+  const name = String(request.params.name || '').trim();
+  const apelido = String(request.params.apelido || '').trim();
+  const relationship = String(request.params.relationship || '').trim();
+
+  if (name.length < 2) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o nome da lenda.');
+  }
+  if (apelido.length < 2) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o apelido da lenda.');
+  }
+  if (!LEGEND_ATHLETE_RELATIONSHIPS.includes(relationship)) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Relacao com a lenda invalida.');
+  }
+
+  const existingAthlete = await findExistingLegendByNameExcluding(
+    'AmateurLegendAthlete',
+    name,
+    apelido,
+    id
+  );
+  if (existingAthlete) {
+    const label = existingAthlete.get('apelido') || existingAthlete.get('name');
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      `Ja existe a lenda "${label}". Use o cadastro existente em Lendas.`
+    );
+  }
+
+  row.set('name', name);
+  row.set('apelido', apelido);
+  row.set('relationship', relationship);
+  row.set(
+    'amateurTeams',
+    Array.isArray(request.params.amateurTeams) ? request.params.amateurTeams.map(String) : []
+  );
+  row.set('inMemoriam', !!request.params.inMemoriam);
+
+  if (request.params.imageUrl) row.set('imageUrl', String(request.params.imageUrl));
+  if (request.params.address) row.set('address', request.params.address);
+  if (request.params.position) row.set('position', String(request.params.position).trim());
+  if (request.params.careerEndYear != null) row.set('careerEndYear', Number(request.params.careerEndYear));
+
+  const birthDate = parseOptionalDate(request.params.birthDate);
+  if (birthDate) row.set('birthDate', birthDate);
+
+  const memorialDate = parseOptionalDate(request.params.memorialDate);
+  if (memorialDate) row.set('memorialDate', memorialDate);
+
+  await row.save(null, { useMasterKey: true });
+  return mapLegendAthleteRow(row);
+});
+
+Parse.Cloud.define('updateAmateurLegendTeam', async (request) => {
+  const user = request.user;
+  if (!user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+
+  const id = String(request.params.id || '').trim();
+  if (!id) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'id obrigatorio.');
+  }
+
+  const row = await new Parse.Query('AmateurLegendTeam').get(id, { useMasterKey: true });
+  assertLegendRegisteredBy(row, user);
+
+  const name = String(request.params.name || '').trim();
+  const apelido = String(request.params.apelido || '').trim();
+  const relationship = String(request.params.relationship || '').trim();
+
+  if (name.length < 2) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o nome do time lenda.');
+  }
+  if (apelido.length < 2) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe o apelido do time lenda.');
+  }
+  if (!LEGEND_TEAM_RELATIONSHIPS.includes(relationship)) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Relacao com o time lenda invalida.');
+  }
+
+  const existingTeam = await findExistingLegendByNameExcluding(
+    'AmateurLegendTeam',
+    name,
+    apelido,
+    id
+  );
+  if (existingTeam) {
+    const label = existingTeam.get('apelido') || existingTeam.get('name');
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      `Ja existe o time lenda "${label}". Use o cadastro existente em Lendas.`
+    );
+  }
+
+  row.set('name', name);
+  row.set('apelido', apelido);
+  row.set('relationship', relationship);
+  row.set('athleteRefs', normalizeAthleteRefs(request.params.athleteRefs));
+
+  if (request.params.imageUrl) row.set('imageUrl', String(request.params.imageUrl));
+  if (request.params.location) row.set('location', request.params.location);
+  if (request.params.description !== undefined) {
+    row.set('description', String(request.params.description || '').trim());
+  }
+
+  const foundedDate = parseOptionalDate(request.params.foundedDate);
+  if (foundedDate) row.set('foundedDate', foundedDate);
+  const endedDate = parseOptionalDate(request.params.endedDate);
+  if (endedDate) row.set('endedDate', endedDate);
+
+  await row.save(null, { useMasterKey: true });
+  return mapLegendTeamRow(row);
+});
+
 Parse.Cloud.define('listAmateurLegendAthletes', async (request) => {
   if (!request.user) {
     throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
@@ -3336,6 +3495,39 @@ Parse.Cloud.define('listAmateurLegendTeams', async (request) => {
       if (!search) return true;
       return legendHaystack([row.name, row.apelido, row.description]).includes(search);
     });
+});
+
+function mapHomeDirectoryLegendTeamRow(row) {
+  const apelido = String(row.get('apelido') || '').trim();
+  const name = String(row.get('name') || '').trim();
+  const location = row.get('location') || {};
+  return {
+    objectId: row.id,
+    name: apelido || name,
+    subtitle: apelido && name && apelido !== name ? name : undefined,
+    imageUrl: row.get('imageUrl') || undefined,
+    homeVenueAddress: {
+      street: String(location.street || ''),
+      neighborhood: String(location.neighborhood || ''),
+      city: String(location.city || ''),
+      state: String(location.state || ''),
+      zipCode: String(location.zipCode || ''),
+      latitude: typeof location.latitude === 'number' ? location.latitude : undefined,
+      longitude: typeof location.longitude === 'number' ? location.longitude : undefined,
+    },
+  };
+}
+
+Parse.Cloud.define('listHomeDirectoryLegendTeams', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const limit = Math.min(Math.max(Number(request.params.limit) || 400, 1), 400);
+  const query = new Parse.Query('AmateurLegendTeam');
+  query.ascending('apelido');
+  query.limit(limit);
+  const rows = await query.find({ useMasterKey: true });
+  return rows.map(mapHomeDirectoryLegendTeamRow);
 });
 
 Parse.Cloud.define('getAmateurLegendAthlete', async (request) => {
@@ -3733,16 +3925,7 @@ function locationProximityScoreForLegend(addressA, addressB) {
   return score;
 }
 
-Parse.Cloud.define('listAmateurTeamsForLegend', async (request) => {
-  if (!request.user) {
-    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
-  }
-  const search = normalizeLegendSearch(request.params.search);
-  const address = request.params.address && typeof request.params.address === 'object'
-    ? request.params.address
-    : {};
-  const limit = Math.min(Math.max(Number(request.params.limit) || 50, 1), 100);
-
+async function searchActiveAmateurTeamsForPicker(search, address, limit) {
   const rows = await new Parse.Query('AmateurTeam').limit(200).find({ useMasterKey: true });
   const results = [];
 
@@ -3774,6 +3957,7 @@ Parse.Cloud.define('listAmateurTeamsForLegend', async (request) => {
     results.push({
       id: row.id,
       name,
+      kind: 'active',
       imageUrl: teamImage && teamImage.url ? teamImage.url() : undefined,
       averageAge,
       proximityScore: locationProximityScoreForLegend(address, presidentAddress),
@@ -3784,7 +3968,67 @@ Parse.Cloud.define('listAmateurTeamsForLegend', async (request) => {
     (a, b) =>
       b.proximityScore - a.proximityScore || a.name.localeCompare(b.name, 'pt-BR')
   );
-  return results.slice(0, limit).map(({ proximityScore, ...item }) => item);
+  return results.slice(0, limit).map(({ proximityScore, averageAge, ...item }) => ({
+    ...item,
+    averageAge: averageAge ?? undefined,
+  }));
+}
+
+async function searchLegendTeamsForPicker(search, limit) {
+  const rows = await new Parse.Query('AmateurLegendTeam').limit(200).find({ useMasterKey: true });
+  const results = [];
+
+  for (const row of rows) {
+    const apelido = String(row.get('apelido') || '').trim();
+    const fullName = String(row.get('name') || '').trim();
+    const label = apelido || fullName;
+    if (!label) continue;
+    if (search && !legendHaystack([fullName, apelido, row.get('description')]).includes(search)) {
+      continue;
+    }
+    results.push({
+      id: row.id,
+      name: label,
+      kind: 'legend',
+      imageUrl: row.get('imageUrl') || undefined,
+      subtitle: apelido && fullName && apelido !== fullName ? fullName : undefined,
+    });
+  }
+
+  results.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  return results.slice(0, limit);
+}
+
+Parse.Cloud.define('searchDirectoryTeamsForPicker', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const kind = String(request.params.kind || 'active').trim() === 'legend' ? 'legend' : 'active';
+  const search = normalizeLegendSearch(request.params.search);
+  const address =
+    request.params.address && typeof request.params.address === 'object'
+      ? request.params.address
+      : {};
+  const limit = Math.min(Math.max(Number(request.params.limit) || 50, 1), 100);
+
+  if (kind === 'legend') {
+    return searchLegendTeamsForPicker(search, limit);
+  }
+  return searchActiveAmateurTeamsForPicker(search, address, limit);
+});
+
+Parse.Cloud.define('listAmateurTeamsForLegend', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const search = normalizeLegendSearch(request.params.search);
+  const address = request.params.address && typeof request.params.address === 'object'
+    ? request.params.address
+    : {};
+  const limit = Math.min(Math.max(Number(request.params.limit) || 50, 1), 100);
+
+  const rows = await searchActiveAmateurTeamsForPicker(search, address, limit);
+  return rows.map(({ kind, subtitle, ...item }) => item);
 });
 
 // --- 06-gate-tickets.js ---
@@ -14399,6 +14643,14 @@ Parse.Cloud.define('getAthletePublicProfile', async (request) => {
     if (name) teamNames.add(name);
   }
 
+  const playedManual = athleteProfile.get('playedAmateurTeams');
+  if (Array.isArray(playedManual)) {
+    for (const entry of playedManual) {
+      const name = String(entry || '').trim();
+      if (name) teamNames.add(name);
+    }
+  }
+
   for (const registration of registrations) {
     const event = registration.get('event');
     if (!event) continue;
@@ -14839,6 +15091,329 @@ Parse.Cloud.beforeSave('RoleProfile', (request) => {
     if (user.id) profile.set('userId', user.id);
   }
   applyRoleProfileHiringAcl(profile);
+});
+
+const HOME_DIRECTORY_ROLES = [
+  'athlete',
+  'referee',
+  'scout',
+  'journalist',
+  'cameraman',
+  'narrator',
+  'coach',
+  'physical_trainer',
+  'masseur',
+  'kitman',
+  'gandula',
+  'gatekeeper',
+  'fan',
+];
+
+const HOME_DIRECTORY_PROFILE_SOURCES = [
+  { className: 'RoleProfile' },
+  { className: 'AthleteProfile', fallbackRole: 'athlete' },
+  { className: 'FanProfile', fallbackRole: 'fan' },
+];
+
+const HOME_DIRECTORY_PAGE = 100;
+const HOME_DIRECTORY_MAX = 400;
+
+function homeDirectoryRoleSet() {
+  return new Set(HOME_DIRECTORY_ROLES);
+}
+
+function isHomeDirectoryRole(value) {
+  return typeof value === 'string' && homeDirectoryRoleSet().has(value);
+}
+
+function homeDirectoryBlankUser(userId) {
+  return {
+    userId,
+    apelido: '',
+    fullName: '',
+    profileUserName: '',
+    city: '',
+    neighborhood: '',
+    state: '',
+    latitude: undefined,
+    longitude: undefined,
+    avatarUrl: '',
+    roles: [],
+    positions: [],
+  };
+}
+
+function homeDirectoryFillText(draft, key, value) {
+  const trimmed = String(value || '').trim();
+  if (!trimmed || draft[key]) return;
+  draft[key] = trimmed;
+}
+
+function homeDirectoryParseCoord(value) {
+  if (typeof value === 'number' && !Number.isNaN(value)) return value;
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value.trim().replace(',', '.'));
+    return Number.isNaN(parsed) ? undefined : parsed;
+  }
+  return undefined;
+}
+
+function homeDirectoryNormalizeUf(value) {
+  const raw = String(value || '').trim().toUpperCase();
+  if (raw === 'FE') return 'DF';
+  return raw.length === 2 ? raw : '';
+}
+
+function homeDirectoryIsPlaceholderName(value) {
+  const normalized = normalizeSearchText(value);
+  return new Set(['usuario', 'atleta', 'torcedor']).has(normalized);
+}
+
+function homeDirectoryApplyUser(draft, user) {
+  if (!user || !user.get) return;
+  homeDirectoryFillText(draft, 'apelido', user.get('apelido'));
+  homeDirectoryFillText(draft, 'fullName', user.get('name'));
+  const address = user.get('address') || {};
+  homeDirectoryFillText(draft, 'city', address.city);
+  homeDirectoryFillText(draft, 'neighborhood', address.neighborhood);
+  if (!draft.state) draft.state = homeDirectoryNormalizeUf(address.state);
+  if (draft.latitude == null && typeof address.latitude === 'number') {
+    draft.latitude = address.latitude;
+  }
+  if (draft.longitude == null && typeof address.longitude === 'number') {
+    draft.longitude = address.longitude;
+  }
+  if (!draft.avatarUrl) {
+    const url = String(user.get('avatarUrl') || '').trim();
+    if (url) draft.avatarUrl = url;
+  }
+}
+
+function homeDirectoryCollectPositions(draft, row) {
+  for (const key of ['primaryPosition', 'secondaryPosition', 'thirdPosition']) {
+    const value = String(row.get(key) || '').trim();
+    if (value && !draft.positions.includes(value)) draft.positions.push(value);
+  }
+}
+
+function homeDirectoryAbsorbRow(draft, row, fallbackRole, user) {
+  if (user) homeDirectoryApplyUser(draft, user);
+
+  const role = fallbackRole || row.get('role');
+  if (isHomeDirectoryRole(role) && !draft.roles.includes(role)) draft.roles.push(role);
+
+  homeDirectoryCollectPositions(draft, row);
+
+  homeDirectoryFillText(draft, 'apelido', row.get('userApelido'));
+  homeDirectoryFillText(draft, 'fullName', row.get('userFullName'));
+  homeDirectoryFillText(draft, 'city', row.get('userCity'));
+  homeDirectoryFillText(draft, 'neighborhood', row.get('userNeighborhood'));
+  if (!draft.state) draft.state = homeDirectoryNormalizeUf(row.get('userState'));
+  if (draft.latitude == null) draft.latitude = homeDirectoryParseCoord(row.get('userLatitude'));
+  if (draft.longitude == null) draft.longitude = homeDirectoryParseCoord(row.get('userLongitude'));
+  if (!draft.avatarUrl) {
+    const url = String(row.get('userAvatarUrl') || '').trim();
+    if (url) draft.avatarUrl = url;
+  }
+
+  const userName = String(row.get('userName') || '').trim();
+  if (userName && !userName.includes('@') && !homeDirectoryIsPlaceholderName(userName)) {
+    if (!draft.profileUserName) draft.profileUserName = userName;
+    if (!draft.fullName && userName !== draft.apelido) {
+      homeDirectoryFillText(draft, 'fullName', userName);
+    }
+    if (!draft.apelido && !draft.fullName) homeDirectoryFillText(draft, 'apelido', userName);
+  }
+}
+
+async function loadUsersForHomeDirectory(userIds) {
+  const map = new Map();
+  const unique = [...new Set(userIds.filter(Boolean))];
+  for (let index = 0; index < unique.length; index += HOME_DIRECTORY_PAGE) {
+    const slice = unique.slice(index, index + HOME_DIRECTORY_PAGE);
+    const query = new Parse.Query(Parse.User);
+    query.containedIn('objectId', slice);
+    query.limit(slice.length);
+    const users = await query.find({ useMasterKey: true });
+    for (const user of users) {
+      if (user.id) map.set(user.id, user);
+    }
+  }
+  return map;
+}
+
+async function buildHomeDirectoryUserMap() {
+  const map = new Map();
+
+  for (const source of HOME_DIRECTORY_PROFILE_SOURCES) {
+    for (let skip = 0; skip < HOME_DIRECTORY_MAX; skip += HOME_DIRECTORY_PAGE) {
+      const query = new Parse.Query(source.className);
+      query.limit(HOME_DIRECTORY_PAGE);
+      query.skip(skip);
+      const rows = await query.find({ useMasterKey: true });
+      if (!rows.length) break;
+
+      const userIds = [];
+      for (const row of rows) {
+        const user = row.get('user');
+        const userId = (user && user.id) || String(row.get('userId') || '').trim();
+        if (userId) userIds.push(userId);
+      }
+      const usersById = await loadUsersForHomeDirectory(userIds);
+
+      for (const row of rows) {
+        const userPtr = row.get('user');
+        const userId = (userPtr && userPtr.id) || String(row.get('userId') || '').trim();
+        if (!userId) continue;
+        const user = usersById.get(userId) || userPtr;
+        const draft = map.get(userId) || homeDirectoryBlankUser(userId);
+        homeDirectoryAbsorbRow(draft, row, source.fallbackRole, user);
+        map.set(userId, draft);
+      }
+
+      if (rows.length < HOME_DIRECTORY_PAGE) break;
+    }
+  }
+
+  await mergeHomeDirectoryUsersFromAccounts(map);
+
+  return map;
+}
+
+async function mergeHomeDirectoryUsersFromAccounts(map) {
+  const byApelido = new Parse.Query(Parse.User);
+  byApelido.exists('apelido');
+  const byName = new Parse.Query(Parse.User);
+  byName.exists('name');
+  const byPrimaryRole = new Parse.Query(Parse.User);
+  byPrimaryRole.exists('primaryRole');
+  const query = Parse.Query.or(byApelido, byName, byPrimaryRole);
+  query.limit(HOME_DIRECTORY_MAX);
+
+  const users = await query.find({ useMasterKey: true });
+  for (const user of users) {
+    if (!user.id) continue;
+    const draft = map.get(user.id) || homeDirectoryBlankUser(user.id);
+    homeDirectoryApplyUser(draft, user);
+    const primary = user.get('primaryRole');
+    if (isHomeDirectoryRole(primary) && !draft.roles.includes(primary)) {
+      draft.roles.push(primary);
+    }
+    if (shouldIncludeHomeDirectoryUser(draft)) {
+      map.set(user.id, draft);
+    }
+  }
+}
+
+function shouldIncludeHomeDirectoryUser(draft) {
+  const apelido = String(draft.apelido || '').trim();
+  const fullName = String(draft.fullName || '').trim();
+  const profileUserName = String(draft.profileUserName || '').trim();
+  return !!(apelido || fullName || profileUserName || draft.roles.length);
+}
+
+function serializeHomeDirectoryUser(draft, user) {
+  const apelido = String(draft.apelido || '').trim();
+  const fullName = String(draft.fullName || '').trim();
+  const profileUserName = String(draft.profileUserName || '').trim();
+  const listFullName =
+    fullName || (profileUserName && profileUserName !== apelido ? profileUserName : '');
+  const primaryRoleRaw = user && user.get ? user.get('primaryRole') : undefined;
+  const primaryRole = isHomeDirectoryRole(primaryRoleRaw) ? primaryRoleRaw : undefined;
+  const roles = HOME_DIRECTORY_ROLES.filter((role) => draft.roles.includes(role));
+  const primaryPosition = String(draft.positions[0] || '').trim() || undefined;
+  const birthDate = user && user.get ? user.get('birthDate') : undefined;
+  const age = calcAgeFromBirthDate(birthDate);
+
+  return {
+    userId: draft.userId,
+    apelido,
+    fullName,
+    profileUserName: profileUserName || undefined,
+    listFullName,
+    displayName: apelido || fullName || profileUserName,
+    roles,
+    primaryRole,
+    primaryPosition,
+    positions: [...draft.positions],
+    state: draft.state || '',
+    city: draft.city || '',
+    neighborhood: draft.neighborhood || '',
+    latitude: draft.latitude,
+    longitude: draft.longitude,
+    avatarUrl: draft.avatarUrl || undefined,
+    age: age != null ? age : undefined,
+  };
+}
+
+async function homeDirectoryUsersFromMap(map, filterUserId) {
+  const userIds = filterUserId ? [filterUserId] : [...map.keys()];
+  const usersById = await loadUsersForHomeDirectory(userIds);
+  const rows = [];
+  for (const userId of userIds) {
+    const draft = map.get(userId);
+    if (!draft) continue;
+    const user = usersById.get(userId);
+    rows.push(serializeHomeDirectoryUser(draft, user));
+  }
+  return rows;
+}
+
+Parse.Cloud.define('listHomeDirectoryUsers', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const map = await buildHomeDirectoryUserMap();
+  const rows = await homeDirectoryUsersFromMap(map);
+  rows.sort((a, b) =>
+    (a.displayName || a.listFullName || a.apelido || '').localeCompare(
+      b.displayName || b.listFullName || b.apelido || '',
+      'pt-BR'
+    )
+  );
+  return rows.slice(0, HOME_DIRECTORY_MAX);
+});
+
+async function buildHomeDirectoryUserForId(userId) {
+  const draft = homeDirectoryBlankUser(userId);
+  let found = false;
+  const usersById = await loadUsersForHomeDirectory([userId]);
+  const user = usersById.get(userId);
+  if (user) {
+    found = true;
+    homeDirectoryApplyUser(draft, user);
+    const primary = user.get('primaryRole');
+    if (isHomeDirectoryRole(primary) && !draft.roles.includes(primary)) {
+      draft.roles.push(primary);
+    }
+  }
+
+  for (const source of HOME_DIRECTORY_PROFILE_SOURCES) {
+    const userPtr = Parse.User.createWithoutData(userId);
+    const byPointer = new Parse.Query(source.className);
+    byPointer.equalTo('user', userPtr);
+    const byField = new Parse.Query(source.className);
+    byField.equalTo('userId', userId);
+    const rows = await Parse.Query.or(byPointer, byField).limit(40).find({ useMasterKey: true });
+    if (rows.length) found = true;
+    for (const row of rows) {
+      homeDirectoryAbsorbRow(draft, row, source.fallbackRole, user);
+    }
+  }
+
+  if (!found) return null;
+  return serializeHomeDirectoryUser(draft, user);
+}
+
+Parse.Cloud.define('getHomeDirectoryUser', async (request) => {
+  if (!request.user) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Faca login.');
+  }
+  const userId = String(request.params.userId || '').trim();
+  if (!userId) {
+    throw new Parse.Error(Parse.Error.INVALID_QUERY, 'userId obrigatorio.');
+  }
+  return buildHomeDirectoryUserForId(userId);
 });
 
 function toProfileSearchResultFromUser(user, role) {

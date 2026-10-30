@@ -98,7 +98,11 @@ export class UserBarComponent implements OnInit, OnDestroy {
 
   private async loadUserBar(): Promise<void> {
     if (this.auth.isLoggedIn()) {
-      await this.auth.fetchCurrentUser();
+      try {
+        await this.auth.fetchCurrentUser();
+      } catch {
+        // Mantém apelido/foto do usuário em cache se a rede falhar.
+      }
     }
     this.applyDisplayState();
     void this.loadPendingInvitations();

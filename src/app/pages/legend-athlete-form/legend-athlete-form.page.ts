@@ -8,6 +8,7 @@ import {
   LEGEND_ATHLETE_RELATIONSHIP_OPTIONS,
   LegendAthleteRelationship,
 } from '../../core/models/amateur-legend.model';
+import { AuthService } from '../../core/services/auth.service';
 import { AmateurLegendService } from '../../core/services/amateur-legend.service';
 import {
   cancelLegendFormNavigation,
@@ -18,12 +19,6 @@ import {
 import { collectLegendFormValidationMessages } from '../../core/utils/legend-form-validation.util';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
 
-interface LegendTeamOption {
-  id: string;
-  name: string;
-  imageUrl?: string;
-}
-
 @Component({
   selector: 'app-legend-athlete-form',
   templateUrl: './legend-athlete-form.page.html',
@@ -31,12 +26,11 @@ interface LegendTeamOption {
   standalone: false,
 })
 export class LegendAthleteFormPage {
+  editId: string | null = null;
+  loadingEdit = false;
   imageFile: File | null = null;
   imagePreview: string | null = null;
-  teamSearch = '';
-  teamOptions: LegendTeamOption[] = [];
   teamPickerOpen = false;
-  loadingTeams = false;
   saving = false;
   positions = FOOTBALL_POSITIONS;
   relationshipOptions = LEGEND_ATHLETE_RELATIONSHIP_OPTIONS;
@@ -57,13 +51,26 @@ export class LegendAthleteFormPage {
   constructor(
     private readonly fb: FormBuilder,
     private readonly legendService: AmateurLegendService,
+    private readonly auth: AuthService,
     private readonly router: Router,
     private readonly route: ActivatedRoute,
     private readonly loadingCtrl: LoadingController,
     private readonly alertCtrl: AlertController
   ) {}
 
+  get isEditMode(): boolean {
+    return !!this.editId;
+  }
+
   ionViewWillEnter(): void {
+    const routeId = String(this.route.snapshot.paramMap.get('id') || '').trim();
+    if (this.router.url.includes('/edit/') && routeId) {
+      this.editId = routeId;
+      void this.loadForEdit(routeId);
+      return;
+    }
+
+    this.editId = null;
     const name = String(this.route.snapshot.queryParamMap.get('name') || '').trim();
     const apelido = String(this.route.snapshot.queryParamMap.get('apelido') || '').trim();
     if (name || apelido) {
@@ -75,22 +82,15 @@ export class LegendAthleteFormPage {
     this.applyAmateurTeamReturn();
   }
 
-  get showCreateTeamPrompt(): boolean {
-    const term = this.teamSearch.trim();
-    return !this.loadingTeams && term.length >= 2 && !this.filteredTeamOptions.length;
-  }
-
   get amateurTeams(): string[] {
     return this.form.get('amateurTeams')?.value ?? [];
   }
 
-  get filteredTeamOptions(): LegendTeamOption[] {
-    const query = this.teamSearch.trim().toLowerCase();
-    if (!query) return this.teamOptions;
-    return this.teamOptions.filter((team) => team.name.toLowerCase().includes(query));
-  }
-
   cancel(): void {
+    if (this.editId) {
+      void this.router.navigate(['/legends/athlete', this.editId]);
+      return;
+    }
     cancelLegendFormNavigation(this.router, this.route);
   }
 
@@ -103,35 +103,25 @@ export class LegendAthleteFormPage {
     this.form.get('address')?.updateValueAndValidity({ emitEvent: true });
   }
 
-  async openTeamPicker(): Promise<void> {
+  openTeamPicker(): void {
     this.teamPickerOpen = true;
-    this.teamSearch = '';
-    await this.loadTeamOptions();
   }
 
   closeTeamPicker(): void {
     this.teamPickerOpen = false;
   }
 
-  onTeamSearchChange(): void {
-    void this.loadTeamOptions();
-  }
-
-  selectTeam(team: LegendTeamOption): void {
-    this.addAmateurTeamName(team.name);
+  onTeamPicked(name: string): void {
+    this.addAmateurTeamName(name);
     this.closeTeamPicker();
   }
 
-  useTypedTeamName(): void {
-    const term = this.teamSearch.trim();
-    if (!term) return;
-    this.addAmateurTeamName(term);
-    this.closeTeamPicker();
+  onCreateLegendTeam(term: string): void {
+    this.goCreateLegendTeam(term);
   }
 
-  goCreateLegendTeam(): void {
-    const term = this.teamSearch.trim();
-    if (!term) return;
+  goCreateLegendTeam(term: string): void {
+    if (!term.trim()) return;
 
     const returnUrl = this.router.url;
     persistLegendFormReturnState({
@@ -141,8 +131,8 @@ export class LegendAthleteFormPage {
 
     void this.router.navigate(['/legends/team/new'], {
       queryParams: {
-        name: term,
-        apelido: term,
+        name: term.trim(),
+        apelido: term.trim(),
         returnUrl,
         returnField: 'legendAthleteAmateurTeam',
       },
@@ -173,12 +163,13 @@ export class LegendAthleteFormPage {
     }
 
     this.saving = true;
-    const loading = await this.loadingCtrl.create({ message: 'Salvando lenda...' });
+    const loadingMessage = this.isEditMode ? 'Salvando alterações...' : 'Salvando lenda...';
+    const loading = await this.loadingCtrl.create({ message: loadingMessage });
     await loading.present();
 
     try {
       const v = this.form.getRawValue();
-      const created = await this.legendService.createAthlete({
+      const payload = {
         name: v.name!.trim(),
         apelido: v.apelido!.trim(),
         imageFile: this.imageFile ?? undefined,
@@ -190,7 +181,13 @@ export class LegendAthleteFormPage {
         inMemoriam: !!v.inMemoriam,
         memorialDate: v.memorialDate || undefined,
         relationship: v.relationship as LegendAthleteRelationship,
-      });
+      };
+      if (this.editId) {
+        await this.legendService.updateAthlete(this.editId, payload);
+        void this.router.navigate(['/legends/athlete', this.editId]);
+        return;
+      }
+      const created = await this.legendService.createAthlete(payload);
       finishLegendFormNavigation(this.router, this.route, created.apelido || created.name);
     } catch (error: unknown) {
       await this.showError(parseErrorMessage(error));
@@ -198,6 +195,49 @@ export class LegendAthleteFormPage {
       this.saving = false;
       await loading.dismiss();
     }
+  }
+
+  private async loadForEdit(id: string): Promise<void> {
+    this.loadingEdit = true;
+    try {
+      const athlete = await this.legendService.getAthlete(id);
+      if (!athlete) {
+        await this.showError('Atleta lenda nao encontrado.');
+        void this.router.navigateByUrl('/legends');
+        return;
+      }
+      const userId = this.auth.getCurrentUser()?.id;
+      if (!userId || athlete.registeredByUserId !== userId) {
+        await this.showError('Somente quem cadastrou pode editar esta lenda.');
+        void this.router.navigate(['/legends/athlete', id]);
+        return;
+      }
+      this.imagePreview = athlete.imageUrl ?? null;
+      this.form.patchValue({
+        name: athlete.name,
+        apelido: athlete.apelido,
+        birthDate: this.toBirthPickerValue(athlete.birthDate),
+        careerEndYear: athlete.careerEndYear != null ? String(athlete.careerEndYear) : '',
+        position: athlete.position || '',
+        inMemoriam: athlete.inMemoriam,
+        memorialDate: this.toBirthPickerValue(athlete.memorialDate),
+        relationship: athlete.relationship,
+        address: athlete.address ?? emptyAddress(),
+        amateurTeams: athlete.amateurTeams ?? [],
+      });
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error));
+      void this.router.navigateByUrl('/legends');
+    } finally {
+      this.loadingEdit = false;
+    }
+  }
+
+  private toBirthPickerValue(iso: string | undefined): string {
+    if (!iso?.trim()) return '';
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString().slice(0, 10);
   }
 
   private applyAmateurTeamReturn(): void {
@@ -216,18 +256,6 @@ export class LegendAthleteFormPage {
     if (!teams.includes(trimmed)) {
       teams.push(trimmed);
       this.form.patchValue({ amateurTeams: teams });
-    }
-  }
-
-  private async loadTeamOptions(): Promise<void> {
-    this.loadingTeams = true;
-    try {
-      this.teamOptions = await this.legendService.listAmateurTeamsForLegend(
-        this.form.get('address')?.value ?? undefined,
-        this.teamSearch
-      );
-    } finally {
-      this.loadingTeams = false;
     }
   }
 

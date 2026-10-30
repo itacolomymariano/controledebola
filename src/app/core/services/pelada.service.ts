@@ -10,7 +10,7 @@ import {
   UpdatePeladaPayload,
   UpdatePeladaSettingsPayload,
 } from '../models/pelada.model';
-import { parseErrorMessage } from '../utils/parse-error.util';
+import { isNetworkError, parseErrorMessage } from '../utils/parse-error.util';
 import { getUserAvatarUrl } from '../utils/user-avatar.util';
 import { applyMemberDisplayFields, membershipDisplayFromObject, MemberDisplayFields } from '../utils/membership-display.util';
 import { ParseFileService } from './parse-file.service';
@@ -38,9 +38,7 @@ export class PeladaService {
   }
 
   async getById(id: string): Promise<Pelada | null> {
-    const query = new Parse.Query(CLASS);
-    query.include('admin');
-    const obj = await query.get(id);
+    const obj = await this.fetchPeladaObjectById(id);
     let pelada = this.toPelada(obj);
 
     // Sempre reconciliar admin via Cloud (Master Key) para evitar nome/adminId desatualizados.
@@ -560,6 +558,20 @@ export class PeladaService {
       requireProfilePresentationOnFirstEvent: !!obj.get('requireProfilePresentationOnFirstEvent'),
       allowTeamSplitAfterEventEnd: !!obj.get('allowTeamSplitAfterEventEnd'),
     };
+  }
+
+  private async fetchPeladaObjectById(id: string, attempt = 0): Promise<Parse.Object> {
+    const query = new Parse.Query(CLASS);
+    query.include('admin');
+    try {
+      return await query.get(id);
+    } catch (error: unknown) {
+      if (attempt < 1 && isNetworkError(error)) {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        return this.fetchPeladaObjectById(id, attempt + 1);
+      }
+      throw new Error(parseErrorMessage(error));
+    }
   }
 
   private async fetchPeladaDisplayFromCloud(

@@ -40,13 +40,17 @@ interface MatchRow {
   sortName: string;
 }
 
+type HomeTeamKind = 'active' | 'legend';
+
 interface TeamRow {
   id: string;
   name: string;
   presidentName: string;
+  subtitle?: string;
   imageUrl?: string;
   place: string;
   address: Address;
+  kind: HomeTeamKind;
 }
 
 interface UserRow {
@@ -65,6 +69,7 @@ interface UserRow {
 })
 export class HomeDirectoryPage implements OnDestroy {
   door: HomeDoor = 'confrontos';
+  teamKind: HomeTeamKind = 'active';
   search = '';
   loading = true;
   errorMessage = '';
@@ -137,7 +142,13 @@ export class HomeDirectoryPage implements OnDestroy {
 
   get visibleTeams(): TeamRow[] {
     return this.teamRows.filter((row) =>
-      directoryTextMatches(this.search, [row.name, row.presidentName, row.place])
+      directoryTextMatches(this.search, [
+        row.name,
+        row.presidentName,
+        row.subtitle,
+        row.place,
+        row.kind === 'legend' ? 'time lenda' : 'em atividade',
+      ])
     );
   }
 
@@ -183,8 +194,30 @@ export class HomeDirectoryPage implements OnDestroy {
   }
 
   openTeam(row: TeamRow): void {
+    if (row.kind === 'legend') {
+      void this.router.navigate(['/legends/team', row.id]);
+      return;
+    }
     const queryParams = this.wizardTeamJoin ? { wizard: 'teamJoin' } : undefined;
     void this.router.navigate(['/team', row.id], queryParams ? { queryParams } : undefined);
+  }
+
+  onTeamKindChange(value: HomeTeamKind): void {
+    if (this.teamKind === value) return;
+    this.teamKind = value;
+    this.search = '';
+    void this.load();
+  }
+
+  isPrimaryAthlete(user: HomeDirectoryUser): boolean {
+    if (user.primaryRole === 'athlete') return true;
+    if (user.primaryRole) return false;
+    return user.roles[0] === 'athlete';
+  }
+
+  athleteAgeLabel(user: HomeDirectoryUser): string {
+    if (user.age == null) return '—';
+    return this.i18n.t('peladas.ageYears', { age: user.age });
   }
 
   createTeam(): void {
@@ -288,15 +321,20 @@ export class HomeDirectoryPage implements OnDestroy {
   }
 
   private async loadTeams(): Promise<void> {
-    const teams = await this.directory.listTeams();
+    const teams =
+      this.teamKind === 'legend'
+        ? await this.directory.listLegendTeams()
+        : await this.directory.listTeams();
     const userAddress = loggedUserAddress();
     const rows = teams.map((team) => ({
       id: team.objectId,
       name: team.name,
       presidentName: team.presidentName,
+      subtitle: team.subtitle,
       imageUrl: team.imageUrl,
       place: formatPlaceLine(team.address.state, team.address.city, team.address.neighborhood),
       address: team.address,
+      kind: team.kind ?? this.teamKind,
     }));
     rows.sort((a, b) => compareDirectoryProximity(userAddress, a.address, b.address, a.name, b.name));
     this.teamRows = rows;

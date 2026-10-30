@@ -10,6 +10,7 @@ import {
 } from '../../../core/utils/legend-form-navigation.util';
 
 type LegendSuggestFilter = 'all' | 'legend' | 'app';
+type PeladaTeamSuggestFilter = 'active' | 'legend';
 
 @Component({
   selector: 'app-legend-suggest-input',
@@ -35,6 +36,7 @@ export class LegendSuggestInputComponent implements OnInit, OnDestroy {
   search = '';
   loading = false;
   sourceFilter: LegendSuggestFilter = 'all';
+  peladaTeamFilter: PeladaTeamSuggestFilter = 'active';
   suggestions: LegendSuggestion[] = [];
   private readonly search$ = new Subject<string>();
   private searchSub?: Subscription;
@@ -65,27 +67,29 @@ export class LegendSuggestInputComponent implements OnInit, OnDestroy {
     if (this.blurTimer) clearTimeout(this.blurTimer);
   }
 
+  get isPeladaTeamSuggest(): boolean {
+    return this.suggestType === 'pelada_team';
+  }
+
   get filteredSuggestions(): LegendSuggestion[] {
+    if (this.isPeladaTeamSuggest) {
+      if (this.peladaTeamFilter === 'legend') {
+        return this.suggestions.filter((item) => item.source === 'legend_team');
+      }
+      return this.suggestions.filter((item) => item.source === 'app_team');
+    }
     if (this.sourceFilter === 'all') {
       return this.suggestions;
     }
     if (this.sourceFilter === 'legend') {
       return this.suggestions.filter((item) => {
-        if (this.suggestType === 'pelada_team') {
-          return item.source === 'legend_team';
-        }
         if (this.suggestType === 'pro_idol') {
           return item.source === 'legend_pro_athlete';
         }
         return item.source === 'legend_athlete';
       });
     }
-    return this.suggestions.filter((item) => {
-      if (this.suggestType === 'pelada_team') {
-        return item.source === 'app_team' || item.source === 'pelada_team_text';
-      }
-      return item.source === 'app_athlete';
-    });
+    return this.suggestions.filter((item) => item.source === 'app_athlete');
   }
 
   get legendFilterLabel(): string {
@@ -120,8 +124,11 @@ export class LegendSuggestInputComponent implements OnInit, OnDestroy {
     if (this.inlineSearch) {
       return this.showInlineCreatePrompt;
     }
+    const legendFilterActive = this.isPeladaTeamSuggest
+      ? this.peladaTeamFilter === 'legend'
+      : this.sourceFilter === 'legend';
     return (
-      this.sourceFilter === 'legend' &&
+      legendFilterActive &&
       !!this.search.trim() &&
       !this.loading &&
       this.filteredSuggestions.length === 0
@@ -133,7 +140,8 @@ export class LegendSuggestInputComponent implements OnInit, OnDestroy {
       this.inlineSearch &&
       this.search.trim().length >= 2 &&
       !this.loading &&
-      this.suggestions.length === 0
+      this.filteredSuggestions.length === 0 &&
+      (!this.isPeladaTeamSuggest || this.peladaTeamFilter === 'legend')
     );
   }
 
@@ -141,13 +149,14 @@ export class LegendSuggestInputComponent implements OnInit, OnDestroy {
     if (!this.inlineSearch || !this.inlinePanelOpen) return false;
     const term = this.search.trim();
     if (term.length < 2) return false;
-    return this.loading || this.suggestions.length > 0 || this.showInlineCreatePrompt;
+    return this.loading || this.filteredSuggestions.length > 0 || this.showInlineCreatePrompt;
   }
 
   openModal(): void {
     if (this.disabled) return;
     this.search = this.control.value || '';
     this.sourceFilter = 'all';
+    this.peladaTeamFilter = 'active';
     this.modalOpen = true;
     void this.loadSuggestions(this.search);
   }
@@ -158,6 +167,10 @@ export class LegendSuggestInputComponent implements OnInit, OnDestroy {
 
   onFilterChange(value: LegendSuggestFilter): void {
     this.sourceFilter = value;
+  }
+
+  onPeladaTeamFilterChange(value: PeladaTeamSuggestFilter): void {
+    this.peladaTeamFilter = value;
   }
 
   onSearchInput(value: string): void {
