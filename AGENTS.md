@@ -95,13 +95,15 @@ Conferir **antes** de cada `release-ipa` (Settings → Secrets → Actions):
 
 **C) Versao de marketing / trilha fechada (90186 / 90062)**
 
-Quando o altool mostra **`Invalid Pre-Release Train`** (`90186`) ou **`CFBundleShortVersionString … must contain a higher version than … previously approved`** (`90062`), a versao de loja em [`package.json`](package.json) (ex. `1.0.6`) **ja foi aprovada ou fechada** no App Store Connect — nao aceita mais builds nessa trilha.
+Quando o altool mostra **`Invalid Pre-Release Train`** (`90186`) ou **`CFBundleShortVersionString … must contain a higher version than … previously approved`** (`90062`), a versao de loja em [`package.json`](package.json) (ex. `1.0.8`) **ja foi aprovada ou fechada** no App Store Connect — nao aceita mais builds nessa trilha.
 
-1. App Store Connect → app → **TestFlight** / versao em preparacao: confirme a ultima **versao de marketing** aprovada ou fechada (ex. `1.0.6`).
-2. Suba **so** o marketing: edite `package.json` `"version"` para o proximo patch (ex. **`1.0.7`**). **Nao** confundir com `versionCode` / label `2026.*`.
+**Gotcha (2026-10-30):** AAB Play enviado com `1.0.8` + IPA no mesmo `package.json` falhou no upload iOS; correcao foi bump **so** marketing para **`1.0.9`**. Ver [docs/IOS-APP-STORE-VERSION-SEQUENCE.md](docs/IOS-APP-STORE-VERSION-SEQUENCE.md) secao *Armadilha AAB Play e IPA*.
+
+1. App Store Connect → app → **TestFlight** / versao em preparacao: confirme a ultima **versao de marketing** aprovada ou fechada (ex. `1.0.8`).
+2. Suba **so** o marketing: edite `package.json` `"version"` para o proximo patch (ex. **`1.0.9`**). **Nao** confundir com `versionCode` / label `2026.*`.
 3. **Commit + push** de `package.json` (e `package-lock.json` se alterado).
-4. **Run workflow** `release-ipa` na `main` nova; no log: `iOS version 1.0.7 (267)` (build pode continuar o `versionCode` atual se ainda for > ultimo build TestFlight).
-5. No Connect, crie ou selecione a versao **1.0.7** ao anexar o build (se o Connect pedir).
+4. **Run workflow** `release-ipa` na `main` nova (**nao** Re-run do job antigo); no log: `iOS version 1.0.9 (281)` (build pode continuar o `versionCode` atual se ainda for > ultimo build TestFlight).
+5. No Connect, crie ou selecione a versao **1.0.9** ao anexar o build (se o Connect pedir).
 
 Outros:
 

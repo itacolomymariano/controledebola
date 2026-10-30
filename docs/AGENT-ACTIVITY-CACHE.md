@@ -2,9 +2,16 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-10-30 (editar lendas amador)
+**Ultima atualizacao:** 2026-10-30 (iOS 90062/90186 + docs)
 
 ---
+
+### 2026-10-30 — TestFlight: trilha 1.0.8 fechada (90062 / 90186)
+
+- **Sintoma:** `altool --validate-app` — marketing `1.0.8` igual ou menor que versao **aprovada**; train **1.0.8** closed (`90186`).
+- **Contexto:** AAB Play **281** / marketing Android ok; IPA usou o mesmo `package.json` **1.0.8** → rejeicao Apple.
+- **Fix:** bump **so** `package.json` → **1.0.9** (`9cbdc83`); `versionCode` **281** mantido; novo `release-ipa`.
+- **Docs:** [IOS-APP-STORE-VERSION-SEQUENCE.md](IOS-APP-STORE-VERSION-SEQUENCE.md) (secao armadilha AAB+IPA), [AGENTS.md](../AGENTS.md) secao C, [BUILD-ENVIRONMENTS-AGENTS.md](BUILD-ENVIRONMENTS-AGENTS.md) pre-flight iOS.
 
 ### 2026-10-30 — Lendas amador: editar + elenco time
 

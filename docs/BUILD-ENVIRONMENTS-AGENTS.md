@@ -87,7 +87,7 @@ npm run build:android:aab
 
 ### iOS — IPA / TestFlight
 
-1. Conferir [IOS-APP-STORE-VERSION-SEQUENCE.md](IOS-APP-STORE-VERSION-SEQUENCE.md) (`package.json` + `versionCode` > último TestFlight).
+1. Conferir [IOS-APP-STORE-VERSION-SEQUENCE.md](IOS-APP-STORE-VERSION-SEQUENCE.md) — **duas** checagens: `versionCode` > último build TestFlight **e** `package.json` `"version"` > marketing **aprovada/fechada** no Connect (erros **90062** / **90186** se a trilha já fechou; comum após subir AAB Play no mesmo `1.0.x`).
 2. **Commit + push** na `main`.
 3. Workflow: [ios-capacitor-build.yml](../.github/workflows/ios-capacitor-build.yml) → **`release-ipa`**.
 4. Secret **`ENVIRONMENT_LOCAL_TS`** = produção (MinhaPelada).
