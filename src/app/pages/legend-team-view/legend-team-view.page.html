@@ -25,6 +25,7 @@
   }
 
   @if (!loading && team) {
+    <app-record-id-note [recordId]="team.id"></app-record-id-note>
     <div class="profile-header">
       @if (team.imageUrl) {
         <ion-avatar class="legend-avatar">
@@ -75,14 +76,29 @@
           <p>{{ relationshipLabel(team.relationship) }}</p>
         </ion-label>
       </ion-item>
-      @if (team.athleteRefs?.length) {
+      @if (team.presidentName) {
+        <ion-item>
+          <ion-label>
+            <h3>Presidente</h3>
+            <p>{{ team.presidentName }}</p>
+          </ion-label>
+        </ion-item>
+      }
+      @if (roster.length) {
         <ion-list-header>
           <ion-label>Atletas vinculados</ion-label>
         </ion-list-header>
-        @for (ref of team.athleteRefs; track ref.id) {
-          <ion-item>
+        @for (athlete of roster; track athlete.type + athlete.id) {
+          <ion-item button (click)="openAthlete(athlete)">
+            <app-user-avatar
+              slot="start"
+              [avatarUrl]="athlete.imageUrl"
+              [alt]="athlete.apelido"
+              size="sm"
+            ></app-user-avatar>
             <ion-label>
-              <h3>{{ ref.label }}</h3>
+              <h3>{{ athlete.apelido }}</h3>
+              <p>{{ ageLabel(athlete) }}</p>
             </ion-label>
           </ion-item>
         }
@@ -96,5 +112,16 @@
         </ion-item>
       }
     </ion-list>
+
+    @if (canRequestJoin || pendingJoin) {
+      <ion-button
+        expand="block"
+        class="ion-margin-top"
+        [disabled]="joinBusy || pendingJoin"
+        (click)="requestJoin()"
+      >
+        {{ pendingJoin ? 'Solicitacao pendente' : 'Solicitar participacao' }}
+      </ion-button>
+    }
   }
 </ion-content>

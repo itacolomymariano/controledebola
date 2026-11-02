@@ -1,0 +1,11 @@
+@if (recordId) {
+  <ion-item lines="none" class="record-id-note">
+    <ion-label class="ion-text-wrap">
+      <p class="record-id-label">{{ 'common.recordIdLabel' | t }}</p>
+      <p class="record-id-value">{{ recordId }}</p>
+    </ion-label>
+    <ion-button slot="end" fill="clear" size="small" (click)="copyId()">
+      {{ 'common.copy' | t }}
+    </ion-button>
+  </ion-item>
+}

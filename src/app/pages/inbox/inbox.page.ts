@@ -21,6 +21,10 @@ import {
   AmateurTeamJoinRequestService,
 } from '../../core/services/amateur-team-join-request.service';
 import {
+  LegendTeamJoinRequestItem,
+  LegendTeamJoinRequestService,
+} from '../../core/services/legend-team-join-request.service';
+import {
   TeamMatchJoinRequestItem,
   TeamMatchJoinRequestService,
 } from '../../core/services/team-match-join-request.service';
@@ -49,6 +53,8 @@ export class InboxPage implements OnDestroy {
   outboxJoinRequests: TeamMatchJoinRequestItem[] = [];
   incomingAmateurTeamJoinRequests: AmateurTeamJoinRequestItem[] = [];
   outboxAmateurTeamJoinRequests: AmateurTeamJoinRequestItem[] = [];
+  incomingLegendTeamJoinRequests: LegendTeamJoinRequestItem[] = [];
+  outboxLegendTeamJoinRequests: LegendTeamJoinRequestItem[] = [];
   mailbox: 'in' | 'out' = 'in';
   pendingReschedules: TeamMatchRescheduleProposal[] = [];
   incomingRefereeApprovals: TeamMatchRefereeHiringApprovalItem[] = [];
@@ -76,6 +82,7 @@ export class InboxPage implements OnDestroy {
     private readonly challengeService: MatchChallengeService,
     private readonly joinRequestService: TeamMatchJoinRequestService,
     private readonly amateurTeamJoinService: AmateurTeamJoinRequestService,
+    private readonly legendTeamJoinService: LegendTeamJoinRequestService,
     private readonly appMessageService: AppMessageService,
     private readonly router: Router,
     private readonly route: ActivatedRoute,
@@ -375,6 +382,22 @@ export class InboxPage implements OnDestroy {
         this.incomingAmateurTeamJoinRequests = [];
         this.outboxAmateurTeamJoinRequests = [];
       }
+      try {
+        const legendJoinRows = await this.legendTeamJoinService.listMine();
+        this.incomingLegendTeamJoinRequests = legendJoinRows.filter(
+          (row) => row.status === 'pending' && row.athleteUserId !== this.currentUserId
+        );
+        this.outboxLegendTeamJoinRequests = legendJoinRows
+          .filter((row) => row.athleteUserId === this.currentUserId)
+          .sort((a, b) => {
+            const ta = a.createdAt?.getTime() ?? 0;
+            const tb = b.createdAt?.getTime() ?? 0;
+            return tb - ta;
+          });
+      } catch {
+        this.incomingLegendTeamJoinRequests = [];
+        this.outboxLegendTeamJoinRequests = [];
+      }
       await this.loadMessages();
     } finally {
       this.loading = false;
@@ -547,6 +570,46 @@ export class InboxPage implements OnDestroy {
     }
   }
 
+  async acceptLegendTeamJoinRequest(request: LegendTeamJoinRequestItem): Promise<void> {
+    this.processingId = request.objectId;
+    try {
+      await this.legendTeamJoinService.respond(request.objectId, 'accepted');
+      await this.load();
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error));
+    } finally {
+      this.processingId = '';
+    }
+  }
+
+  async declineLegendTeamJoinRequest(request: LegendTeamJoinRequestItem): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: this.t('inbox.declineRosterHeader'),
+      inputs: [{ name: 'reason', type: 'textarea', placeholder: this.t('inbox.reasonOptional') }],
+      buttons: [
+        { text: this.t('inbox.cancel'), role: 'cancel' },
+        {
+          text: this.t('inbox.decline'),
+          role: 'destructive',
+          handler: (data) => {
+            void this.respondLegendTeamJoinDecline(request.objectId, String(data?.reason || ''));
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  openAthletePublicProfile(userId: string): void {
+    if (!userId) return;
+    void this.router.navigate(['/tabs/peladas/usuarios', userId]);
+  }
+
+  openLegendTeamProfile(teamId: string): void {
+    if (!teamId) return;
+    void this.router.navigate(['/legends/team', teamId]);
+  }
+
   async declineAmateurTeamJoinRequest(request: AmateurTeamJoinRequestItem): Promise<void> {
     const alert = await this.alertCtrl.create({
       header: this.t('inbox.declineRosterHeader'),
@@ -569,6 +632,18 @@ export class InboxPage implements OnDestroy {
     this.processingId = requestId;
     try {
       await this.amateurTeamJoinService.respond(requestId, 'declined', reason);
+      await this.load();
+    } catch (error: unknown) {
+      await this.showError(parseErrorMessage(error));
+    } finally {
+      this.processingId = '';
+    }
+  }
+
+  private async respondLegendTeamJoinDecline(requestId: string, reason: string): Promise<void> {
+    this.processingId = requestId;
+    try {
+      await this.legendTeamJoinService.respond(requestId, 'declined', reason);
       await this.load();
     } catch (error: unknown) {
       await this.showError(parseErrorMessage(error));

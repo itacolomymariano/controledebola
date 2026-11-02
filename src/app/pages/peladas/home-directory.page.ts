@@ -40,7 +40,7 @@ interface MatchRow {
   sortName: string;
 }
 
-type HomeTeamKind = 'active' | 'legend';
+type HomeTeamKind = 'active' | 'legend' | 'new';
 
 interface TeamRow {
   id: string;
@@ -114,6 +114,12 @@ export class HomeDirectoryPage implements OnDestroy {
     this.cdr.markForCheck();
   }
 
+  get searchPlaceholderKey(): string {
+    if (this.door === 'usuarios') return 'peladas.usersSearchPlaceholder';
+    if (this.door === 'times' && this.teamKind === 'new') return 'peladas.newLegendTeamSearchPlaceholder';
+    return 'peladas.searchPlaceholder';
+  }
+
   get titleKey(): string {
     if (this.door === 'times') return 'peladas.teamsTitle';
     if (this.door === 'usuarios') return 'peladas.usersTitle';
@@ -143,6 +149,7 @@ export class HomeDirectoryPage implements OnDestroy {
   get visibleTeams(): TeamRow[] {
     return this.teamRows.filter((row) =>
       directoryTextMatches(this.search, [
+        row.id,
         row.name,
         row.presidentName,
         row.subtitle,
@@ -155,6 +162,7 @@ export class HomeDirectoryPage implements OnDestroy {
   get visibleUsers(): UserRow[] {
     return this.userRows.filter((row) =>
       directoryTextMatches(this.search, [
+        row.user.userId,
         row.user.fullName,
         row.user.listFullName,
         row.user.apelido,
@@ -168,14 +176,24 @@ export class HomeDirectoryPage implements OnDestroy {
     );
   }
 
+  get showNewLegendTeamPanel(): boolean {
+    return this.door === 'times' && this.teamKind === 'new';
+  }
+
   get hasRows(): boolean {
-    if (this.door === 'times') return this.teamRows.length > 0;
+    if (this.door === 'times') {
+      if (this.teamKind === 'new') return false;
+      return this.teamRows.length > 0;
+    }
     if (this.door === 'usuarios') return this.userRows.length > 0;
     return this.matchRows.length > 0;
   }
 
   get hasVisible(): boolean {
-    if (this.door === 'times') return this.visibleTeams.length > 0;
+    if (this.door === 'times') {
+      if (this.teamKind === 'new') return false;
+      return this.visibleTeams.length > 0;
+    }
     if (this.door === 'usuarios') return this.visibleUsers.length > 0;
     return this.visibleMatches.length > 0;
   }
@@ -224,6 +242,13 @@ export class HomeDirectoryPage implements OnDestroy {
     void this.router.navigate(['/team/form'], { queryParams: { new: '1' } });
   }
 
+  createLegendTeam(): void {
+    const term = this.search.trim();
+    void this.router.navigate(['/legends/team/new'], {
+      queryParams: term ? { name: term, apelido: term } : {},
+    });
+  }
+
   openUser(row: UserRow): void {
     void this.router.navigate(['/tabs/peladas/usuarios', row.user.userId]);
   }
@@ -233,11 +258,11 @@ export class HomeDirectoryPage implements OnDestroy {
   }
 
   async refresh(event: RefresherCustomEvent): Promise<void> {
-    await this.load();
+    await this.load(true);
     event.target.complete();
   }
 
-  private async load(): Promise<void> {
+  private async load(forceRefresh = false): Promise<void> {
     const seq = ++this.loadSeq;
     const door = this.door;
 
@@ -255,8 +280,14 @@ export class HomeDirectoryPage implements OnDestroy {
     this.cdr.markForCheck();
 
     try {
-      if (door === 'times') await this.loadTeams();
-      else if (door === 'usuarios') await this.loadUsers();
+      if (door === 'times') {
+        if (this.teamKind === 'new') {
+          this.teamRows = [];
+        } else {
+          await this.loadTeams(forceRefresh);
+        }
+      }
+      else if (door === 'usuarios') await this.loadUsers(forceRefresh);
       else await this.loadMatches();
       if (seq !== this.loadSeq) return;
     } catch (error: unknown) {
@@ -320,11 +351,11 @@ export class HomeDirectoryPage implements OnDestroy {
     };
   }
 
-  private async loadTeams(): Promise<void> {
+  private async loadTeams(forceRefresh = false): Promise<void> {
     const teams =
       this.teamKind === 'legend'
-        ? await this.directory.listLegendTeams()
-        : await this.directory.listTeams();
+        ? await this.directory.listLegendTeams({ refresh: forceRefresh })
+        : await this.directory.listTeams({ refresh: forceRefresh });
     const userAddress = loggedUserAddress();
     const rows = teams.map((team) => ({
       id: team.objectId,
@@ -340,8 +371,8 @@ export class HomeDirectoryPage implements OnDestroy {
     this.teamRows = rows;
   }
 
-  private async loadUsers(): Promise<void> {
-    const users = await this.directory.listUsers();
+  private async loadUsers(forceRefresh = false): Promise<void> {
+    const users = await this.directory.listUsers({ refresh: forceRefresh });
     const userAddress = loggedUserAddress();
     const rows = users.map((user) => ({
       user,

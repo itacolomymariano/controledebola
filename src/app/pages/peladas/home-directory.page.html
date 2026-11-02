@@ -29,17 +29,29 @@
       <ion-segment-button value="legend">
         <ion-label>{{ 'peladas.teamKindLegend' | t }}</ion-label>
       </ion-segment-button>
+      <ion-segment-button value="new">
+        <ion-label>{{ 'peladas.teamKindNew' | t }}</ion-label>
+      </ion-segment-button>
     </ion-segment>
   }
 
   @if (!loading && !errorMessage) {
     <ion-searchbar
-      [placeholder]="(door === 'usuarios' ? 'peladas.usersSearchPlaceholder' : 'peladas.searchPlaceholder') | t"
+      [placeholder]="searchPlaceholderKey | t"
       [value]="search"
       [debounce]="200"
       (ionInput)="onSearchChange($any($event.detail.value))"
       (ionClear)="onSearchChange('')"
     ></ion-searchbar>
+  }
+
+  @if (!loading && !errorMessage && showNewLegendTeamPanel) {
+    <div class="ion-padding new-legend-team-panel">
+      <p>{{ 'peladas.newLegendTeamIntro' | t }}</p>
+      <ion-button expand="block" (click)="createLegendTeam()">
+        {{ 'peladas.createLegendTeam' | t }}
+      </ion-button>
+    </div>
   }
 
   @if (loading) {
@@ -57,7 +69,7 @@
     </ion-card>
   }
 
-  @if (!loading && !errorMessage && !hasRows) {
+  @if (!loading && !errorMessage && !hasRows && !showNewLegendTeamPanel) {
     <ion-note class="ion-padding">{{ emptyKey | t }}</ion-note>
   }
 
@@ -84,7 +96,7 @@
     </ion-list>
   }
 
-  @if (!loading && !errorMessage && door === 'times' && visibleTeams.length > 0) {
+  @if (!loading && !errorMessage && door === 'times' && !showNewLegendTeamPanel && visibleTeams.length > 0) {
     <ion-list>
       @for (row of visibleTeams; track row.id) {
         <ion-item button (click)="openTeam(row)">

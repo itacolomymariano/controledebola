@@ -19,7 +19,9 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
-    "build:cloud": "node scripts/build-cloud-code.js"
+    "build:cloud": "node scripts/build-cloud-code.js",
+    "check:cloud-parity": "node scripts/cloud-client-parity.js",
+    "probe:sandbox-cloud": "node scripts/probe-sandbox-cloud-functions.js"
   },
   "private": true,
   "dependencies": {

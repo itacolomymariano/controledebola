@@ -86,6 +86,8 @@ export interface EventMuralDashboard {
     address?: Address;
     proFootballIdol?: string;
     amateurFootballIdol?: string;
+    profileLabel?: string;
+    heightCm?: number;
   }>;
   locationStats?: {
     total: number;

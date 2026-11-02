@@ -11,6 +11,7 @@ import {
   UpdateLegendAthletePayload,
   UpdateLegendTeamPayload,
   LegendSuggestion,
+  LegendTeamAthleteDisplay,
   ProLegendAthlete,
 } from '../models/amateur-legend.model';
 import { ParseFileService } from './parse-file.service';
@@ -143,6 +144,7 @@ export class AmateurLegendService {
       description: payload.description,
       relationship: payload.relationship,
       athleteRefs: payload.athleteRefs,
+      presidentUserId: payload.presidentUserId ?? '',
       imageUrl,
     });
     return this.mapTeam(result);
@@ -168,6 +170,7 @@ export class AmateurLegendService {
       description: payload.description,
       relationship: payload.relationship,
       athleteRefs: payload.athleteRefs,
+      presidentUserId: payload.presidentUserId ?? '',
       imageUrl,
     });
     return this.mapTeam(result);
@@ -281,6 +284,11 @@ export class AmateurLegendService {
       description: row['description'] ? String(row['description']) : undefined,
       relationship: row['relationship'] as AmateurLegendTeam['relationship'],
       athleteRefs: Array.isArray(row['athleteRefs']) ? (row['athleteRefs'] as AmateurLegendTeam['athleteRefs']) : [],
+      athletes: Array.isArray(row['athletes'])
+        ? (row['athletes'] as Record<string, unknown>[]).map((item) => this.mapTeamAthlete(item))
+        : undefined,
+      presidentUserId: row['presidentUserId'] ? String(row['presidentUserId']) : undefined,
+      presidentName: row['presidentName'] ? String(row['presidentName']) : undefined,
       registeredByUserId: row['registeredByUserId'] ? String(row['registeredByUserId']) : undefined,
       registeredByName: row['registeredByName'] ? String(row['registeredByName']) : undefined,
       registeredAt: row['registeredAt'] ? String(row['registeredAt']) : undefined,
@@ -304,6 +312,18 @@ export class AmateurLegendService {
       registeredByUserId: row['registeredByUserId'] ? String(row['registeredByUserId']) : undefined,
       registeredByName: row['registeredByName'] ? String(row['registeredByName']) : undefined,
       registeredAt: row['registeredAt'] ? String(row['registeredAt']) : undefined,
+    };
+  }
+
+  private mapTeamAthlete(row: Record<string, unknown>): LegendTeamAthleteDisplay {
+    const ageRaw = row['age'];
+    return {
+      type: row['type'] === 'legend_athlete' ? 'legend_athlete' : 'app_athlete',
+      id: String(row['id'] || ''),
+      apelido: String(row['apelido'] || ''),
+      imageUrl: row['imageUrl'] ? String(row['imageUrl']) : undefined,
+      age: typeof ageRaw === 'number' && !Number.isNaN(ageRaw) ? ageRaw : null,
+      inMemoriam: !!row['inMemoriam'],
     };
   }
 

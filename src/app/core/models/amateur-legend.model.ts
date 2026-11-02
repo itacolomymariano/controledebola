@@ -23,6 +23,15 @@ export interface LegendAthleteRef {
   label: string;
 }
 
+export interface LegendTeamAthleteDisplay {
+  type: LegendAthleteRefType;
+  id: string;
+  apelido: string;
+  imageUrl?: string;
+  age: number | null;
+  inMemoriam: boolean;
+}
+
 export interface AmateurLegendAthlete {
   id: string;
   name: string;
@@ -52,6 +61,9 @@ export interface AmateurLegendTeam {
   description?: string;
   relationship: LegendTeamRelationship;
   athleteRefs: LegendAthleteRef[];
+  athletes?: LegendTeamAthleteDisplay[];
+  presidentUserId?: string;
+  presidentName?: string;
   registeredByUserId?: string;
   registeredByName?: string;
   registeredAt?: string;
@@ -150,6 +162,7 @@ export interface CreateLegendTeamPayload {
   description?: string;
   relationship: LegendTeamRelationship;
   athleteRefs: LegendAthleteRef[];
+  presidentUserId?: string;
 }
 
 export type UpdateLegendAthletePayload = CreateLegendAthletePayload;

@@ -55,6 +55,10 @@ export class TeamProfilePage {
     }
   }
 
+  get teamId(): string {
+    return this.route.snapshot.paramMap.get('id') || '';
+  }
+
   get canRequestJoin(): boolean {
     const userId = this.auth.getCurrentUser()?.id;
     if (!userId || !this.profile) return false;

@@ -37,6 +37,12 @@ export class LegendTeamFormPage {
   athleteRefKind: LegendAthleteRefKind = 'active';
   athletePickerOpen = false;
   loadingAthletes = false;
+  presidentUserId: string | null = null;
+  presidentLabel = '';
+  presidentPickerOpen = false;
+  presidentSearch = '';
+  presidentSuggestions: LegendSuggestion[] = [];
+  loadingPresident = false;
   saving = false;
 
   form = this.fb.group({
@@ -189,6 +195,7 @@ export class LegendTeamFormPage {
         description: v.description?.trim() || undefined,
         relationship: v.relationship as LegendTeamRelationship,
         athleteRefs: this.athleteRefs,
+        presidentUserId: this.presidentUserId ?? '',
       };
       if (this.editId) {
         await this.legendService.updateTeam(this.editId, payload);
@@ -222,6 +229,8 @@ export class LegendTeamFormPage {
       }
       this.imagePreview = team.imageUrl ?? null;
       this.athleteRefs = [...(team.athleteRefs ?? [])];
+      this.presidentUserId = team.presidentUserId ?? null;
+      this.presidentLabel = team.presidentName ?? '';
       this.form.patchValue({
         name: team.name,
         apelido: team.apelido,
@@ -246,12 +255,48 @@ export class LegendTeamFormPage {
     return date.toISOString().slice(0, 10);
   }
 
+  async openPresidentPicker(): Promise<void> {
+    this.presidentPickerOpen = true;
+    await this.loadPresidentSuggestions('');
+  }
+
+  closePresidentPicker(): void {
+    this.presidentPickerOpen = false;
+  }
+
+  async onPresidentSearch(value: string): Promise<void> {
+    this.presidentSearch = value;
+    await this.loadPresidentSuggestions(value);
+  }
+
+  selectPresident(item: LegendSuggestion): void {
+    if (item.source !== 'app_athlete') return;
+    this.presidentUserId = item.id;
+    this.presidentLabel = item.label;
+    this.closePresidentPicker();
+  }
+
+  clearPresident(): void {
+    this.presidentUserId = null;
+    this.presidentLabel = '';
+  }
+
   private async loadAthleteSuggestions(term: string): Promise<void> {
     this.loadingAthletes = true;
     try {
       this.athleteSuggestions = await this.legendService.searchAthleteRefs(term);
     } finally {
       this.loadingAthletes = false;
+    }
+  }
+
+  private async loadPresidentSuggestions(term: string): Promise<void> {
+    this.loadingPresident = true;
+    try {
+      const rows = await this.legendService.searchAthleteRefs(term);
+      this.presidentSuggestions = rows.filter((item) => item.source === 'app_athlete');
+    } finally {
+      this.loadingPresident = false;
     }
   }
 

@@ -14,6 +14,8 @@ import {
 } from '../models/role-profile.model';
 import { RoleParticipationHistory } from '../models/role-participation-history.model';
 import { searchMatchesRoleKeyword } from '../utils/role-search.util';
+import { isParseObjectId } from '../utils/parse-object-id.util';
+import { locationProximityScore } from '../utils/location-proximity.util';
 import { normalizeSearchText } from '../utils/search-text.util';
 import { getUserAvatarUrl } from '../utils/user-avatar.util';
 import {
@@ -55,15 +57,47 @@ export class ProfileSearchService {
   async search(
     role: ProfileRole,
     query: string,
-    options?: { primaryPosition?: string }
+    options?: { primaryPosition?: string; address?: Address }
   ): Promise<ProfileSearchResult[]> {
     const normalized = normalizeSearchText(query);
     const position = role === 'athlete' ? options?.primaryPosition?.trim() || '' : '';
     if (!normalized && !position) return [];
 
+    if (isParseObjectId(query) && !position) {
+      if (role === 'athlete') {
+        const athlete = await this.athleteSearchService.getPublicProfile(query.trim());
+        if (athlete) {
+          return [
+            {
+              userId: athlete.userId,
+              displayName: athlete.displayName,
+              apelido: athlete.apelido,
+              fullName: athlete.fullName,
+              role: 'athlete',
+              subtitle: athlete.primaryPosition || undefined,
+              city: athlete.city,
+              state: athlete.state,
+              avatarUrl: athlete.avatarUrl,
+              heightCm: athlete.heightCm,
+              weightKg: athlete.weightKg,
+            },
+          ];
+        }
+        return [];
+      }
+      const profile = await this.getPublicProfile(role, query.trim());
+      if (profile) {
+        return [this.fromRolePublicProfile(profile)];
+      }
+      return [];
+    }
+
     if (role === 'athlete') {
       const athletes = await this.athleteSearchService.search(query, position || undefined);
-      return athletes.map((entry) => this.fromAthleteResult(entry));
+      return this.sortByProximity(
+        athletes.map((entry) => this.fromAthleteResult(entry)),
+        options?.address
+      );
     }
 
     try {
@@ -71,11 +105,12 @@ export class ProfileSearchService {
         const cloudResults = await Parse.Cloud.run('searchProfiles', {
           role,
           query: query.trim(),
+          address: options?.address ?? {},
         });
         if (Array.isArray(cloudResults) && cloudResults.length) {
           const ranked = this.filterAndRank(cloudResults as ProfileSearchResult[], normalized, role);
           this.mergeIntoCatalog(role, cloudResults as ProfileSearchResult[]);
-          if (ranked.length) return ranked;
+          if (ranked.length) return this.sortByProximity(ranked, options?.address);
         }
       }
     } catch {
@@ -84,7 +119,7 @@ export class ProfileSearchService {
 
     const catalog = await this.loadCatalog(role);
     const localResults = this.filterAndRank(catalog, normalized, role);
-    if (localResults.length) return localResults;
+    if (localResults.length) return this.sortByProximity(localResults, options?.address);
 
     const serverResults = await this.searchOnServer(role, query.trim());
     this.mergeIntoCatalog(role, serverResults);
@@ -99,7 +134,10 @@ export class ProfileSearchService {
       merged.set(entry.userId, existing ? this.mergeEntries(existing, entry) : entry);
     }
 
-    return this.filterAndRank(Array.from(merged.values()), normalized, role);
+    return this.sortByProximity(
+      this.filterAndRank(Array.from(merged.values()), normalized, role),
+      options?.address
+    );
   }
 
   async getPublicProfile(role: ProfileRole, userId: string): Promise<RolePublicProfile | null> {
@@ -117,6 +155,7 @@ export class ProfileSearchService {
           userId: normalizedUserId,
         });
         if (result) return result as RolePublicProfile;
+        return this.getPublicProfileClient(role, normalizedUserId);
       } catch {
         this.cloudProfileFunctionsAvailable = false;
       }
@@ -139,16 +178,25 @@ export class ProfileSearchService {
 
     const registrations = await this.loadRegistrationsForUser(normalizedUserId, role);
     const catalogEntry = (await this.loadCatalog(role)).find((entry) => entry.userId === normalizedUserId);
-
-    if (!roleProfile && !registrations.length && !catalogEntry) {
-      return null;
-    }
+    const fanProfileRow = role === 'fan' ? await this.findFanProfileRow(normalizedUserId) : null;
 
     let user: Parse.User | null = null;
     try {
       user = await new Parse.Query(Parse.User).get(normalizedUserId);
     } catch {
       user = null;
+    }
+
+    const legacyFavoriteFromFan = fanProfileRow?.get('favoriteProTeam') as string | undefined;
+    const hasRoleEvidence =
+      !!roleProfile ||
+      registrations.length > 0 ||
+      !!catalogEntry ||
+      !!fanProfileRow ||
+      user?.get('primaryRole') === role;
+
+    if (!hasRoleEvidence) {
+      return null;
     }
 
     const registration = registrations[0];
@@ -189,10 +237,51 @@ export class ProfileSearchService {
       age: birthDate ? this.calcAge(birthDate) : undefined,
       proFootballIdol: readUserProFootballIdol(user),
       amateurFootballIdol: readUserAmateurFootballIdol(user),
-      favoriteProTeam: readUserFavoriteProTeam(user, legacyFavoriteProTeam),
+      favoriteProTeam: readUserFavoriteProTeam(
+        user,
+        legacyFavoriteProTeam ?? legacyFavoriteFromFan
+      ),
       roleProfile: roleProfile ?? undefined,
       history,
     };
+  }
+
+  private fromRolePublicProfile(profile: RolePublicProfile): ProfileSearchResult {
+    return {
+      userId: profile.userId,
+      displayName: profile.displayName,
+      apelido: profile.apelido,
+      fullName: profile.fullName,
+      role: profile.role,
+      city: profile.city,
+      state: profile.state,
+      avatarUrl: profile.avatarUrl,
+    };
+  }
+
+  private sortByProximity(
+    rows: ProfileSearchResult[],
+    viewerAddress?: Address
+  ): ProfileSearchResult[] {
+    if (!viewerAddress || !rows.length) return rows;
+    return [...rows].sort((a, b) => {
+      const scoreB = locationProximityScore(viewerAddress, {
+        street: '',
+        neighborhood: '',
+        city: b.city || '',
+        state: b.state || '',
+        zipCode: '',
+      });
+      const scoreA = locationProximityScore(viewerAddress, {
+        street: '',
+        neighborhood: '',
+        city: a.city || '',
+        state: a.state || '',
+        zipCode: '',
+      });
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      return a.displayName.localeCompare(b.displayName, 'pt-BR');
+    });
   }
 
   private fromAthleteResult(entry: AthleteSearchResult): ProfileSearchResult {
@@ -227,10 +316,12 @@ export class ProfileSearchService {
   private async loadCatalogFromServer(role: ProfileRole): Promise<ProfileSearchResult[]> {
     const byUserId = new Map<string, ProfileSearchResult>();
 
+    let cloudCatalogLoaded = false;
     if (this.cloudProfileFunctionsAvailable) {
       try {
         const cloudCatalog = await Parse.Cloud.run('searchProfiles', { role, query: '' });
         if (Array.isArray(cloudCatalog)) {
+          cloudCatalogLoaded = true;
           for (const entry of cloudCatalog as ProfileSearchResult[]) {
             if (!entry.userId) continue;
             const existing = byUserId.get(entry.userId);
@@ -240,6 +331,14 @@ export class ProfileSearchService {
       } catch {
         this.cloudProfileFunctionsAvailable = false;
       }
+    }
+
+    if (cloudCatalogLoaded) {
+      const catalog = Array.from(byUserId.values()).sort((a, b) =>
+        a.displayName.localeCompare(b.displayName, 'pt-BR')
+      );
+      this.catalogCache.set(role, catalog);
+      return catalog;
     }
 
     if (isProfessionalRole(role)) {
@@ -627,6 +726,15 @@ export class ProfileSearchService {
         getUserAvatarUrl(user, this.parseFileService) ||
         undefined,
     };
+  }
+
+  private async findFanProfileRow(userId: string): Promise<Parse.Object | null> {
+    const userPtr = Parse.User.createWithoutData(userId);
+    const byUser = new Parse.Query('FanProfile');
+    byUser.equalTo('user', userPtr);
+    const byUserId = new Parse.Query('FanProfile');
+    byUserId.equalTo('userId', userId);
+    return (await Parse.Query.or(byUser, byUserId).first()) ?? null;
   }
 
   private async findRoleProfile(

@@ -33,6 +33,7 @@
   }
 
   @if (!loading && user) {
+    <app-record-id-note [recordId]="userId"></app-record-id-note>
     <div class="user-header ion-padding">
       <app-user-avatar
         [avatarUrl]="user.avatarUrl"

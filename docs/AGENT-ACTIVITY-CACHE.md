@@ -2,9 +2,54 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-10-30 (iOS 90062/90186 + docs)
+**Ultima atualizacao:** 2026-11-02 (iOS 409 duplicate + push release 294)
 
 ---
+
+### 2026-11-02 — TestFlight 409: bundle version 282 duplicado
+
+- **Erro:** `altool` — build must be higher than **282**; `main` remota tinha `versionCode` **281** → CI prebuild → IPA **282** de novo.
+- **Fix:** commit/push `.app-release-state.json` **294** + docs; proximo IPA CI ≈ **295**.
+- **Agents:** [IOS-APP-STORE-VERSION-SEQUENCE.md](IOS-APP-STORE-VERSION-SEQUENCE.md) secao *main desatualizada*; [AGENTS.md](../AGENTS.md) TestFlight **A**.
+
+### 2026-11-01 — Auditoria sandbox: Invalid function Confrontos
+
+- **Causa:** APK sandbox atual vs Cloud **Clone_MinhaPelada** desatualizado — `probe:sandbox-cloud` falha em 6 funções P0 incl. `listTeamMatchesForFeed`
+- **Fix operacional:** publicar `cloud/main.js` no clone (nao so MinhaPelada)
+- **Scripts:** `npm run check:cloud-parity`, `npm run probe:sandbox-cloud`
+- **Doc:** [SANDBOX-OPERATIONAL-AUDIT-2026-11.md](SANDBOX-OPERATIONAL-AUDIT-2026-11.md), checklist em [SANDBOX-CLONE-APK.md](SANDBOX-CLONE-APK.md)
+
+### 2026-11-01 — Performance sandbox (clone com muito dado)
+
+- **Cloud [`11-profiles-search.js`](../cloud/source/11-profiles-search.js):** `buildHomeDirectoryUserMap` sem loop `skip` (limit 400/recentes); `searchProfiles` com `catalogBrowse` (query vazia → limit 120, cap 100)
+- **Cloud [`05-legends.js`](../cloud/source/05-legends.js):** elenco time lenda em batch (`containedIn`) — evita N+1 em `getAmateurLegendTeam`
+- **Cliente:** cache 3 min stale-while-revalidate em [`home-directory.service.ts`](../src/app/core/services/home-directory.service.ts); pull-to-refresh força rede; [`profile-search.service.ts`](../src/app/core/services/profile-search.service.ts) não repete RoleProfile 1000 + Registration 2000 se Cloud catálogo OK; Buscar não faz `preloadCatalog` ao trocar segmento/perfil
+- **Deploy obrigatorio:** publicar `cloud/main.js` no Back4App **Clone_MinhaPelada**; APK sandbox: `npm run build:android:sandbox-apk`
+
+### 2026-11-01 — Home Times: Novo Time, elenco lenda, pedido participacao, busca ID/proximidade
+
+- **Home:** segmento `Novo Time` → `/legends/team/new` ([`home-directory.page.ts`](../src/app/pages/peladas/home-directory.page.ts))
+- **Time lenda:** `presidentUser` opcional; elenco enriquecido em `getAmateurLegendTeam` ([`05-legends.js`](../cloud/source/05-legends.js)); UI [`legend-team-view`](../src/app/pages/legend-team-view/)
+- **Join lenda:** `LegendTeamJoinRequest` — `requestLegendTeamJoin` / `respondLegendTeamJoin` / `listMyLegendTeamJoinRequests`; inbox + [`legend-team-join-request.service.ts`](../src/app/core/services/legend-team-join-request.service.ts); botao **Ver perfil do atleta** tambem em pedidos time ativo
+- **Busca:** proximidade lendas (`searchLegendTeamsForPicker` + address) e perfis (`searchProfiles` + address); cliente passa `loggedUserAddress()`; `isParseObjectId` na Home/Buscar
+- **ID visual:** [`app-record-id-note`](../src/app/shared/components/record-id-note/)
+- **Deploy:** publicar `cloud/main.js` Back4App **MinhaPelada**; build app **0290**
+- **Escala:** varreduras limit 200–2000 permanecem — busca por ID O(1); geo-index/paginacao = roadmap
+
+### 2026-10-31 — AAB producao 0288 + pendencias
+
+- **AAB:** `npm run build:android:aab` OK — copia em `releases/app-release-2026.10.31.0288.aab` e `android/.../app-release.aab`
+- **APK device:** `gradlew installRelease` falhou — nenhum device `adb` (reconectar Samsung + depuracao USB)
+- **Cloud:** publicar `cloud/main.js` no Back4App MinhaPelada (agente sem login) — ver [PROD-READINESS-CHECKLIST-2026-10-31.md](PROD-READINESS-CHECKLIST-2026-10-31.md)
+- **Smoke #16 / FLUXO P0:** aguardam device + Cloud publicado
+
+### 2026-10-31 — Home Usuarios: perfil torcedor/profissional "nao encontrado"
+
+- **Sintoma:** Home lista torcedor (`FanProfile` / `primaryRole`) mas `/profile/fan/:id` mostrava "Perfil nao encontrado."
+- **Causa:** `getRolePublicProfile` (Cloud 11) exigia `RoleProfile` ou inscricao; ignorava `FanProfile` e `primaryRole` que o diretorio Home ja usa.
+- **Fix:** `userHasPublicRoleEvidence` + `loadDedicatedProfileRowForPublicRole` em [`11-profiles-search.js`](../cloud/source/11-profiles-search.js); cliente [`profile-search.service.ts`](../src/app/core/services/profile-search.service.ts) consulta `FanProfile` e fallback se Cloud retorna null.
+- **Deploy:** publicar `cloud/main.js` Back4App **MinhaPelada** antes de validar no APK.
+- **Smoke:** [`SMOKE-TEST-PRE-INSTALL.md`](SMOKE-TEST-PRE-INSTALL.md) item #16.
 
 ### 2026-10-30 — TestFlight: trilha 1.0.8 fechada (90062 / 90186)
 

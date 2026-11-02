@@ -25,6 +25,7 @@
   }
 
   @if (!loading && athlete) {
+    <app-record-id-note [recordId]="athlete.id"></app-record-id-note>
     <div class="profile-header">
       @if (athlete.imageUrl) {
         <ion-avatar class="legend-avatar">

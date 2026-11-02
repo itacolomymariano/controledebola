@@ -9,6 +9,33 @@ function normalizeSearchText(value) {
     .trim();
 }
 
+function looksLikeParseObjectId(value) {
+  return /^[a-f0-9]{24}$/i.test(String(value || '').trim());
+}
+
+function locationProximityScoreForSearch(addressA, addressB) {
+  const normalize = (value) => String(value || '').trim().toLowerCase();
+  const stateA = normalize(addressA && addressA.state);
+  const stateB = normalize(addressB && addressB.state);
+  const cityA = normalize(addressA && addressA.city);
+  const cityB = normalize(addressB && addressB.city);
+  const neighborhoodA = normalize(addressA && addressA.neighborhood);
+  const neighborhoodB = normalize(addressB && addressB.neighborhood);
+  let score = 0;
+  if (stateA && stateB && stateA === stateB) score += 1;
+  if (cityA && cityB && cityA === cityB) score += 3;
+  if (neighborhoodA && neighborhoodB && neighborhoodA === neighborhoodB) score += 5;
+  return score;
+}
+
+function profileEntryProximityScore(entry, viewerAddress) {
+  return locationProximityScoreForSearch(viewerAddress, {
+    state: entry.state,
+    city: entry.city,
+    neighborhood: entry.neighborhood,
+  });
+}
+
 function calcAgeFromBirthDate(birthDate) {
   if (!birthDate) return null;
   const date = birthDate instanceof Date ? birthDate : new Date(birthDate);
@@ -1069,32 +1096,30 @@ async function buildHomeDirectoryUserMap() {
   const map = new Map();
 
   for (const source of HOME_DIRECTORY_PROFILE_SOURCES) {
-    for (let skip = 0; skip < HOME_DIRECTORY_MAX; skip += HOME_DIRECTORY_PAGE) {
-      const query = new Parse.Query(source.className);
-      query.limit(HOME_DIRECTORY_PAGE);
-      query.skip(skip);
-      const rows = await query.find({ useMasterKey: true });
-      if (!rows.length) break;
+    if (map.size >= HOME_DIRECTORY_MAX) break;
+    const query = new Parse.Query(source.className);
+    query.descending('updatedAt');
+    query.limit(HOME_DIRECTORY_MAX);
+    const rows = await query.find({ useMasterKey: true });
+    if (!rows.length) continue;
 
-      const userIds = [];
-      for (const row of rows) {
-        const user = row.get('user');
-        const userId = (user && user.id) || String(row.get('userId') || '').trim();
-        if (userId) userIds.push(userId);
-      }
-      const usersById = await loadUsersForHomeDirectory(userIds);
+    const userIds = [];
+    for (const row of rows) {
+      const user = row.get('user');
+      const userId = (user && user.id) || String(row.get('userId') || '').trim();
+      if (userId) userIds.push(userId);
+    }
+    const usersById = await loadUsersForHomeDirectory(userIds);
 
-      for (const row of rows) {
-        const userPtr = row.get('user');
-        const userId = (userPtr && userPtr.id) || String(row.get('userId') || '').trim();
-        if (!userId) continue;
-        const user = usersById.get(userId) || userPtr;
-        const draft = map.get(userId) || homeDirectoryBlankUser(userId);
-        homeDirectoryAbsorbRow(draft, row, source.fallbackRole, user);
-        map.set(userId, draft);
-      }
-
-      if (rows.length < HOME_DIRECTORY_PAGE) break;
+    for (const row of rows) {
+      const userPtr = row.get('user');
+      const userId = (userPtr && userPtr.id) || String(row.get('userId') || '').trim();
+      if (!userId) continue;
+      const user = usersById.get(userId) || userPtr;
+      const draft = map.get(userId) || homeDirectoryBlankUser(userId);
+      homeDirectoryAbsorbRow(draft, row, source.fallbackRole, user);
+      map.set(userId, draft);
+      if (map.size >= HOME_DIRECTORY_MAX) break;
     }
   }
 
@@ -1111,7 +1136,8 @@ async function mergeHomeDirectoryUsersFromAccounts(map) {
   const byPrimaryRole = new Parse.Query(Parse.User);
   byPrimaryRole.exists('primaryRole');
   const query = Parse.Query.or(byApelido, byName, byPrimaryRole);
-  query.limit(HOME_DIRECTORY_MAX);
+  query.descending('updatedAt');
+  query.limit(Math.min(HOME_DIRECTORY_PAGE, HOME_DIRECTORY_MAX));
 
   const users = await query.find({ useMasterKey: true });
   for (const user of users) {
@@ -1636,14 +1662,72 @@ Parse.Cloud.define('searchProfiles', async (request) => {
     throw new Parse.Error(Parse.Error.INVALID_QUERY, 'Perfil invalido.');
   }
 
+  const rawQuery = String(request.params.query || '').trim();
   const search = normalizeSearchText(request.params.query);
+  const address =
+    request.params.address && typeof request.params.address === 'object'
+      ? request.params.address
+      : {};
   const byUserId = new Map();
+
+  if (looksLikeParseObjectId(rawQuery)) {
+    const user = await new Parse.Query(Parse.User)
+      .get(rawQuery, { useMasterKey: true })
+      .catch(() => null);
+    if (user && user.id) {
+      let entry = null;
+      if (isProfessionalProfileRole(role)) {
+        const userPtr = Parse.User.createWithoutData(user.id);
+        const roleProfile = await new Parse.Query('RoleProfile')
+          .equalTo('role', role)
+          .equalTo('user', userPtr)
+          .include('user')
+          .first({ useMasterKey: true });
+        if (roleProfile) {
+          await hydrateRoleProfilesMissingUser([roleProfile]);
+          entry = toProfileSearchResultFromRoleProfile(roleProfile, role);
+        }
+      }
+      if (!entry) {
+        const registration = await new Parse.Query('EventRegistration')
+          .equalTo('role', role)
+          .equalTo('participantUserId', user.id)
+          .descending('createdAt')
+          .first({ useMasterKey: true });
+        if (registration) {
+          entry = toProfileSearchResultFromRegistration(registration, role);
+        }
+      }
+      if (!entry) {
+        entry = {
+          userId: user.id,
+          displayName: user.get('apelido') || user.get('name') || user.getUsername() || 'Usuario',
+          apelido: user.get('apelido') || undefined,
+          fullName: user.get('name') || undefined,
+          role,
+          city: user.get('address')?.city || undefined,
+          state: user.get('address')?.state || undefined,
+          avatarUrl: user.get('avatarUrl') || undefined,
+        };
+      }
+      if (entry && entry.userId) {
+        return [entry];
+      }
+    }
+    return [];
+  }
+
+  const catalogBrowse = search.length === 0;
+  const profileScanLimit = catalogBrowse ? 120 : 1000;
+  const registrationScanLimit = catalogBrowse ? 120 : 2000;
+  const resultCap = catalogBrowse ? 100 : 100;
 
   if (isProfessionalProfileRole(role)) {
     const profiles = await new Parse.Query('RoleProfile')
       .equalTo('role', role)
       .include('user')
-      .limit(1000)
+      .descending('updatedAt')
+      .limit(profileScanLimit)
       .find({ useMasterKey: true });
     await hydrateRoleProfilesMissingUser(profiles);
 
@@ -1656,7 +1740,9 @@ Parse.Cloud.define('searchProfiles', async (request) => {
     }
   }
 
-  await appendUsersByPrimaryRole(byUserId, role, search);
+  if (!catalogBrowse) {
+    await appendUsersByPrimaryRole(byUserId, role, search);
+  }
 
   const roleKeywordSearch = searchMatchesRoleKeyword(search, role);
   // Busca por alias do papel (ex.: "prep") nao precisa varrer todas as inscricoes.
@@ -1664,7 +1750,7 @@ Parse.Cloud.define('searchProfiles', async (request) => {
     const regQuery = new Parse.Query('EventRegistration');
     regQuery.equalTo('role', role);
     regQuery.descending('createdAt');
-    regQuery.limit(2000);
+    regQuery.limit(registrationScanLimit);
     const registrations = await regQuery.find({ useMasterKey: true });
 
     for (const registration of registrations) {
@@ -1804,6 +1890,15 @@ Parse.Cloud.define('searchProfiles', async (request) => {
   }
 
   const ranked = Array.from(byUserId.values()).sort((a, b) => {
+    const hasViewerLocation = !!(
+      String(address.state || '').trim() ||
+      String(address.city || '').trim() ||
+      String(address.neighborhood || '').trim()
+    );
+    if (hasViewerLocation) {
+      const proxDiff = profileEntryProximityScore(b, address) - profileEntryProximityScore(a, address);
+      if (proxDiff !== 0) return proxDiff;
+    }
     if (search.length > 0) {
       const scoreDiff = profileRelevanceScore(b, search) - profileRelevanceScore(a, search);
       if (scoreDiff !== 0) return scoreDiff;
@@ -1811,8 +1906,27 @@ Parse.Cloud.define('searchProfiles', async (request) => {
     return a.displayName.localeCompare(b.displayName, 'pt-BR');
   });
 
-  return ranked.slice(0, 100);
+  return ranked.slice(0, resultCap);
 });
+
+async function loadDedicatedProfileRowForPublicRole(userId, role) {
+  if (role !== 'fan' && role !== 'athlete') return null;
+  const className = role === 'fan' ? 'FanProfile' : 'AthleteProfile';
+  const userPtr = Parse.User.createWithoutData(userId);
+  const byPointer = new Parse.Query(className);
+  byPointer.equalTo('user', userPtr);
+  const byField = new Parse.Query(className);
+  byField.equalTo('userId', userId);
+  return Parse.Query.or(byPointer, byField).first({ useMasterKey: true });
+}
+
+function userHasPublicRoleEvidence(role, user, evidence) {
+  if (evidence.roleProfileRow) return true;
+  if (evidence.registrations && evidence.registrations.length) return true;
+  if (evidence.dedicatedProfileRow) return true;
+  if (user && user.get('primaryRole') === role && isHomeDirectoryRole(role)) return true;
+  return false;
+}
 
 Parse.Cloud.define('getRolePublicProfile', async (request) => {
   if (!request.user) {
@@ -1839,10 +1953,7 @@ Parse.Cloud.define('getRolePublicProfile', async (request) => {
   }
 
   const registrations = await loadProfileRegistrationsForUser(userId, role);
-
-  if (!roleProfileRow && !registrations.length) {
-    return null;
-  }
+  const dedicatedProfileRow = await loadDedicatedProfileRowForPublicRole(userId, role);
 
   let user = null;
   try {
@@ -1851,6 +1962,16 @@ Parse.Cloud.define('getRolePublicProfile', async (request) => {
     if (!(error && error.code === Parse.Error.OBJECT_NOT_FOUND)) {
       throw error;
     }
+  }
+
+  if (
+    !userHasPublicRoleEvidence(role, user, {
+      roleProfileRow,
+      registrations,
+      dedicatedProfileRow,
+    })
+  ) {
+    return null;
   }
 
   const registration = registrations[0];
@@ -1892,7 +2013,11 @@ Parse.Cloud.define('getRolePublicProfile', async (request) => {
     amateurFootballIdol: readUserAmateurFootballIdol(user),
     favoriteProTeam: readUserFavoriteProTeam(
       user,
-      roleProfileRow ? roleProfileRow.get('favoriteProTeam') : undefined
+      roleProfileRow
+        ? roleProfileRow.get('favoriteProTeam')
+        : dedicatedProfileRow
+          ? dedicatedProfileRow.get('favoriteProTeam')
+          : undefined
     ),
     roleProfile: roleProfilePayload,
     history,

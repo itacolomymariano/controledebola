@@ -1134,6 +1134,10 @@ async function loadEventMuralParticipantRows(eventId) {
       if (height > 0) {
         byUser[uid].heightCm = height;
       }
+      const primaryPosition = (athleteProfile.get('primaryPosition') || '').trim();
+      if (primaryPosition) {
+        byUser[uid].profileLabel = primaryPosition;
+      }
     }
   }
 
@@ -3408,11 +3412,12 @@ function muralParticipantHeightEligible(row) {
 
 function buildMuralShowcaseFromParticipantRow(row, score, scoreLabel) {
   if (!row || !row.userId) return null;
+  const profileLabel = (row.profileLabel || '').trim() || 'Participante';
   return {
     userId: String(row.userId),
     displayName: (row.apelido || row.userName || 'Participante').trim(),
     avatarUrl: row.avatarUrl || undefined,
-    profileLabel: 'Atleta',
+    profileLabel,
     favoriteProTeam: row.favoriteProTeam || undefined,
     favoriteAmateurTeam: row.favoriteAmateurTeam || undefined,
     proFootballIdol: row.proFootballIdol || undefined,

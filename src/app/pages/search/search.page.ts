@@ -17,6 +17,8 @@ import { EventService } from '../../core/services/event.service';
 import { ProfileSearchService } from '../../core/services/profile-search.service';
 import { AmateurLegendService } from '../../core/services/amateur-legend.service';
 import { TeamService } from '../../core/services/team.service';
+import { isParseObjectId } from '../../core/utils/parse-object-id.util';
+import { loggedUserAddress } from '../peladas/home-directory.util';
 
 type SearchSegment = 'eventos' | 'perfis' | 'times';
 
@@ -144,9 +146,6 @@ export class SearchPage {
     this.selectedAthletePosition = '';
     this.errorMessage = '';
 
-    if (this.segment === 'perfis' && !this.isLegendSearch) {
-      void this.profileSearchService.preloadCatalog(this.selectedProfileKind as ProfileRole);
-    }
     this.cdr.markForCheck();
   }
 
@@ -193,9 +192,6 @@ export class SearchPage {
     this.profileQuery = '';
     this.selectedAthletePosition = '';
     this.errorMessage = '';
-    if (!this.isLegendSearch) {
-      void this.profileSearchService.preloadCatalog(this.selectedProfileKind as ProfileRole);
-    }
     this.cdr.markForCheck();
   }
 
@@ -393,7 +389,53 @@ export class SearchPage {
     this.cdr.markForCheck();
 
     try {
-      const results = await this.legendService.searchDirectoryTeamsForPicker(this.teamKind, trimmed);
+      if (isParseObjectId(trimmed)) {
+        if (this.teamKind === 'legend') {
+          const team = await this.legendService.getTeam(trimmed);
+          this.teamRows = team
+            ? [
+                {
+                  team: {
+                    id: team.id,
+                    name: team.apelido || team.name,
+                    imageUrl: team.imageUrl,
+                    averageAge: null,
+                    kind: 'legend' as const,
+                    subtitle: team.name,
+                  },
+                  expanded: false,
+                  loadingHistory: false,
+                  history: [],
+                },
+              ]
+            : [];
+        } else {
+          const profile = await this.teamService.getPublicProfile(trimmed);
+          this.teamRows = profile
+            ? [
+                {
+                  team: {
+                    id: trimmed,
+                    name: String(profile['name'] || 'Time'),
+                    imageUrl: profile['shieldImageUrl'] as string | undefined,
+                    averageAge: (profile['averageAge'] as number | null) ?? null,
+                    kind: 'active' as const,
+                  },
+                  expanded: false,
+                  loadingHistory: false,
+                  history: [],
+                },
+              ]
+            : [];
+        }
+        return;
+      }
+
+      const results = await this.legendService.searchDirectoryTeamsForPicker(
+        this.teamKind,
+        trimmed,
+        loggedUserAddress()
+      );
       if (seq !== this.teamSearchSeq) return;
       this.teamRows = results.map((row) => ({
         team: {
@@ -448,20 +490,33 @@ export class SearchPage {
 
     try {
       if (this.selectedProfileKind === 'legend_athlete') {
-        const results = await this.legendService.listAthletes(trimmed);
+        if (isParseObjectId(trimmed)) {
+          const one = await this.legendService.getAthlete(trimmed);
+          this.legendAthleteResults = one ? [one] : [];
+        } else {
+          const results = await this.legendService.listAthletes(trimmed);
+          if (seq !== this.profileSearchSeq) return;
+          this.legendAthleteResults = results;
+        }
         if (seq !== this.profileSearchSeq) return;
-        this.legendAthleteResults = results;
         this.legendTeamResults = [];
         this.profileResults = [];
       } else if (this.selectedProfileKind === 'legend_team') {
-        const results = await this.legendService.listTeams(trimmed);
+        if (isParseObjectId(trimmed)) {
+          const one = await this.legendService.getTeam(trimmed);
+          this.legendTeamResults = one ? [one] : [];
+        } else {
+          const results = await this.legendService.listTeams(trimmed);
+          if (seq !== this.profileSearchSeq) return;
+          this.legendTeamResults = results;
+        }
         if (seq !== this.profileSearchSeq) return;
-        this.legendTeamResults = results;
         this.legendAthleteResults = [];
         this.profileResults = [];
       } else {
         const results = await this.profileSearchService.search(this.selectedProfileKind, trimmed, {
           primaryPosition: position || undefined,
+          address: loggedUserAddress(),
         });
         if (seq !== this.profileSearchSeq) return;
         this.profileResults = results;

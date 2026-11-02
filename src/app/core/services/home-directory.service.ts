@@ -10,6 +10,12 @@ import { ParseService } from './parse.service';
 
 const PAGE_SIZE = 100;
 const MAX_ROWS = 400;
+const DIRECTORY_CACHE_TTL_MS = 3 * 60 * 1000;
+
+interface DirectoryCacheEntry<T> {
+  fetchedAt: number;
+  data: T;
+}
 
 export interface HomeTeamBrief {
   objectId: string;
@@ -66,6 +72,13 @@ const ROLE_SET = new Set<string>(SEARCHABLE_PROFILE_ROLES);
 
 @Injectable({ providedIn: 'root' })
 export class HomeDirectoryService {
+  private teamsCache?: DirectoryCacheEntry<HomeTeamBrief[]>;
+  private legendTeamsCache?: DirectoryCacheEntry<HomeTeamBrief[]>;
+  private usersCache?: DirectoryCacheEntry<HomeDirectoryUser[]>;
+  private teamsRefresh?: Promise<HomeTeamBrief[]>;
+  private legendTeamsRefresh?: Promise<HomeTeamBrief[]>;
+  private usersRefresh?: Promise<HomeDirectoryUser[]>;
+
   constructor(
     private readonly parseService: ParseService,
     private readonly parseFileService: ParseFileService
@@ -73,20 +86,34 @@ export class HomeDirectoryService {
     this.parseService.init();
   }
 
-  async listTeams(): Promise<HomeTeamBrief[]> {
-    const rows = await Parse.Cloud.run('listHomeDirectoryTeams', { limit: MAX_ROWS });
-    if (!Array.isArray(rows)) return [];
-    return rows
-      .map((row) => this.cloudRowToTeamBrief(row as Record<string, unknown>, 'active'))
-      .filter((team) => team.objectId && team.name);
+  async listTeams(options?: { refresh?: boolean }): Promise<HomeTeamBrief[]> {
+    return this.withDirectoryCache(
+      this.teamsCache,
+      () => this.fetchTeams(),
+      (entry) => {
+        this.teamsCache = entry;
+      },
+      (promise) => {
+        this.teamsRefresh = promise;
+      },
+      () => this.teamsRefresh,
+      !!options?.refresh
+    );
   }
 
-  async listLegendTeams(): Promise<HomeTeamBrief[]> {
-    const rows = await Parse.Cloud.run('listHomeDirectoryLegendTeams', { limit: MAX_ROWS });
-    if (!Array.isArray(rows)) return [];
-    return rows
-      .map((row) => this.cloudRowToTeamBrief(row as Record<string, unknown>, 'legend'))
-      .filter((team) => team.objectId && team.name);
+  async listLegendTeams(options?: { refresh?: boolean }): Promise<HomeTeamBrief[]> {
+    return this.withDirectoryCache(
+      this.legendTeamsCache,
+      () => this.fetchLegendTeams(),
+      (entry) => {
+        this.legendTeamsCache = entry;
+      },
+      (promise) => {
+        this.legendTeamsRefresh = promise;
+      },
+      () => this.legendTeamsRefresh,
+      !!options?.refresh
+    );
   }
 
   async teamsByIds(ids: string[]): Promise<Map<string, HomeTeamBrief>> {
@@ -106,12 +133,79 @@ export class HomeDirectoryService {
     }
   }
 
-  async listUsers(): Promise<HomeDirectoryUser[]> {
+  async listUsers(options?: { refresh?: boolean }): Promise<HomeDirectoryUser[]> {
+    return this.withDirectoryCache(
+      this.usersCache,
+      () => this.fetchUsers(),
+      (entry) => {
+        this.usersCache = entry;
+      },
+      (promise) => {
+        this.usersRefresh = promise;
+      },
+      () => this.usersRefresh,
+      !!options?.refresh
+    );
+  }
+
+  private async fetchTeams(): Promise<HomeTeamBrief[]> {
+    const rows = await Parse.Cloud.run('listHomeDirectoryTeams', { limit: MAX_ROWS });
+    if (!Array.isArray(rows)) return [];
+    return rows
+      .map((row) => this.cloudRowToTeamBrief(row as Record<string, unknown>, 'active'))
+      .filter((team) => team.objectId && team.name);
+  }
+
+  private async fetchLegendTeams(): Promise<HomeTeamBrief[]> {
+    const rows = await Parse.Cloud.run('listHomeDirectoryLegendTeams', { limit: MAX_ROWS });
+    if (!Array.isArray(rows)) return [];
+    return rows
+      .map((row) => this.cloudRowToTeamBrief(row as Record<string, unknown>, 'legend'))
+      .filter((team) => team.objectId && team.name);
+  }
+
+  private async fetchUsers(): Promise<HomeDirectoryUser[]> {
     const rows = await Parse.Cloud.run('listHomeDirectoryUsers');
     if (!Array.isArray(rows)) return [];
     return rows
       .map((row) => this.cloudRowToDirectoryUser(row as Record<string, unknown>))
       .filter((user) => user.userId);
+  }
+
+  private async withDirectoryCache<T>(
+    cache: DirectoryCacheEntry<T> | undefined,
+    fetch: () => Promise<T>,
+    setCache: (entry: DirectoryCacheEntry<T>) => void,
+    setRefresh: (promise: Promise<T> | undefined) => void,
+    getRefresh: () => Promise<T> | undefined,
+    refresh: boolean
+  ): Promise<T> {
+    const now = Date.now();
+    if (!refresh && cache && now - cache.fetchedAt < DIRECTORY_CACHE_TTL_MS) {
+      const inFlight = getRefresh();
+      if (inFlight) {
+        void inFlight.then((data) => setCache({ fetchedAt: Date.now(), data }));
+      } else {
+        void fetch()
+          .then((data) => setCache({ fetchedAt: Date.now(), data }))
+          .catch(() => undefined);
+      }
+      return cache.data;
+    }
+
+    let promise = getRefresh();
+    if (!promise || refresh) {
+      promise = fetch();
+      setRefresh(promise);
+    }
+
+    try {
+      const data = await promise;
+      setCache({ fetchedAt: Date.now(), data });
+      return data;
+    } finally {
+      setRefresh(undefined);
+    }
   }
 
   async getPublicUser(userId: string): Promise<HomeDirectoryUser | null> {

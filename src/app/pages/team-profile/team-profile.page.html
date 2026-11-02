@@ -23,6 +23,7 @@
     </ion-card>
   }
   @if (!loading && profile) {
+    <app-record-id-note [recordId]="teamId"></app-record-id-note>
     @if (wizardTeamJoin) {
       <ion-note class="ion-padding wizard-join-banner">{{ 'coach.wizard.teamJoinProfileBanner' | t }}</ion-note>
     }

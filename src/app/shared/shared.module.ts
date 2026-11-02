@@ -50,6 +50,7 @@ import { LocaleFlagsComponent } from './components/locale-flags/locale-flags.com
 import { ThemePickerComponent } from './components/theme-picker/theme-picker.component';
 import { WizardTourComponent } from './components/wizard-tour/wizard-tour.component';
 import { HelpBalloonComponent } from './components/help-balloon/help-balloon.component';
+import { RecordIdNoteComponent } from './components/record-id-note/record-id-note.component';
 
 @NgModule({
   declarations: [
@@ -100,6 +101,7 @@ import { HelpBalloonComponent } from './components/help-balloon/help-balloon.com
     ThemePickerComponent,
     WizardTourComponent,
     HelpBalloonComponent,
+    RecordIdNoteComponent,
     TranslatePipe,
   ],
   imports: [CommonModule, FormsModule, ReactiveFormsModule, IonicModule],
@@ -151,6 +153,7 @@ import { HelpBalloonComponent } from './components/help-balloon/help-balloon.com
     ThemePickerComponent,
     WizardTourComponent,
     HelpBalloonComponent,
+    RecordIdNoteComponent,
     TranslatePipe,
   ],
 })

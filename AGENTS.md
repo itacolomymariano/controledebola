@@ -77,11 +77,12 @@ O job usa runner **`macos-26`** (Xcode 26 / iOS 26 SDK). Upload: `xcrun altool` 
 
 **A) Build number (409 DUPLICATE / `previousBundleVersion`)**
 
-1. App Store Connect → **TestFlight** → anote o **Build** mais recente (ex. 208).
-2. Local: `versionCode` **>** esse numero.
+1. App Store Connect → **TestFlight** → anote o **Build** mais recente (ex. 282).
+2. Local: `versionCode` **>** esse numero (ex. 294 se 282 ja foi enviado).
 3. Subir: `node scripts/bump-app-release.js` ou `npm run build` (prebuild).
-4. **Commit + push** de `.app-release-state.json`, `app-release.ts`, `android/app/build.gradle`.
-5. No log: `iOS version … (NNN)` com `NNN` novo.
+4. **Commit + push** de `.app-release-state.json`, `app-release.ts`, `android/app/build.gradle` na **`main`** — **obrigatorio** antes do workflow; bump so local gera IPA duplicado (ex. `main` em 281 → CI sobe 282 de novo).
+5. **Run workflow** novo na `main` atualizada (nao Re-run). No log: `iOS version … (NNN)` com `NNN` = `versionCode` commitado **+ 1** (prebuild do `npm run build` no Actions).
+6. Ver [docs/IOS-APP-STORE-VERSION-SEQUENCE.md](docs/IOS-APP-STORE-VERSION-SEQUENCE.md) — armadilha **main desatualizada → 409**.
 
 **B) Chaves API App Store Connect (falha no step *Upload IPA to TestFlight*, log `ContentDelivery.Uploader` / autenticacao)**
 

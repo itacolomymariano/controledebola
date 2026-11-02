@@ -35,6 +35,19 @@ Edite `environment.sandbox.local.ts` com as chaves do **Clone_MinhaPelada** (nã
 
 ---
 
+## Checklist pré-apresentação (obrigatório)
+
+Ordem recomendada — **APK novo sem Cloud no clone quebra Confrontos, Home e Mural** (`Invalid function`).
+
+1. `npm run build:cloud`
+2. Publicar [`cloud/main.js`](../cloud/main.js) no Back4App **Clone_MinhaPelada** (Cloud Code → Deploy). **Não** publicar só em MinhaPelada se a demo usa o APK sandbox.
+3. `npm run check:cloud-parity` — paridade cliente ↔ bundle local
+4. `npm run probe:sandbox-cloud` — confirma funções no clone (ex.: `listTeamMatchesForFeed`)
+5. `npm run build:android:sandbox-apk` + `adb install -r releases\ControleDeBola-sandbox-YYYY-MM-DD.apk`
+6. Smoke rápido: Home → **Confrontos** + aba Confrontos + Mural (ver [SANDBOX-OPERATIONAL-AUDIT-2026-11.md](SANDBOX-OPERATIONAL-AUDIT-2026-11.md))
+
+---
+
 ## Gerar APK
 
 ```powershell

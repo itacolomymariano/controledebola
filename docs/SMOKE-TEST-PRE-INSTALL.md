@@ -30,6 +30,11 @@ Publicar `cloud/main.js` no Back4App quando houver alteração em `cloud/source/
 | 13 | Pelada ? (toolbar) | Ajuda com botao Ouvir (TTS) no popover |
 | 14 | Separação de times | Salvar desabilitado se nada mudou; desfazer separacao salva (admin) |
 | 15 | Scout + sumula | Gols do juiz aparecem no apontamento; scout so classifica tipo |
+| 16 | Home → Usuarios | Porta Usuarios → card → hub do usuario → abrir **cada perfil listado** (torcedor, atleta, profissionais); torcedor/profissionais **sem** "Perfil nao encontrado" (Cloud `getRolePublicProfile` alinhado ao diretorio) |
+| 17 | Home → Times → Novo Time | Aba **Novo Time** → cadastro time lenda (`/legends/team/new`); opcional `presidentUser` no form |
+| 18 | Time lenda | Elenco com foto, apelido, idade ou **in memoriam**; **Solicitar participacao**; inbox (2 responsaveis) aceitar + **Ver perfil do atleta**; segundo aceite sem duplicar atleta |
+| 19 | Busca | Resultados ordenados por proximidade (endereco do usuario); busca por **objectId** 24 hex (perfil/time lenda) |
+| 20 | ID cadastro | Telas de visualizacao exibem **ID do cadastro** copiavel (time ativo/lenda, atleta lenda, usuario Home) |
 
 ## Quando rodar
 

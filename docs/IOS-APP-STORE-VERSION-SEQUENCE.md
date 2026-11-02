@@ -51,6 +51,36 @@ Detalhes em [AGENTS.md](../AGENTS.md) (TestFlight, seção **C**) e [IOS_GITHUB_
 
 ---
 
+## Armadilha para agents: `main` desatualizada → build duplicado (409)
+
+**Cenário real (2026-11-02):** `release-ipa` falhou no `altool --validate-app`:
+
+- `The bundle version must be higher than the previously uploaded version: '282'`
+- `ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE` / `previousBundleVersion: 282`
+
+**Causa:** A **`main` no GitHub** ainda tinha `.app-release-state.json` com `versionCode: 281`. O workflow roda `npm run build` (com **prebuild** → +1) **antes** do archive. O IPA saiu com **282**, mas o **282 já estava no TestFlight**. Builds locais (ex. **294**) no laptop **não contam** até **commit + push**.
+
+**Número efetivo do IPA no CI:**
+
+```text
+CFBundleVersion = versionCode em .app-release-state.json na main (após push) + 1
+```
+
+(porque `npm run build` incrementa o JSON no runner antes do step que lê `IOS_BUILD`).
+
+**O que fazer (obrigatório antes de todo `release-ipa`):**
+
+1. App Store Connect → **TestFlight** → anote o último **Build** (inteiro), ex. **282**.
+2. Local: `.app-release-state.json` → `versionCode` **estritamente maior** que esse build (ex. **294** se 282 já foi enviado).
+3. Alinhar `src/app/core/constants/app-release.ts` e `android/app/build.gradle` (`versionCode` / `versionName`).
+4. **Commit + push na `main`** desses arquivos (e demais alterações do release).
+5. **Run workflow** novo (não Re-run). No log: `iOS version 1.0.9 (295)` se o repo tinha **294** antes do prebuild do CI.
+6. Play/AAB: pode usar o mesmo `versionCode` commitado; Android não soma +1 no CI da mesma forma, mas o label segue o bump local.
+
+**Agents:** nunca dispare `release-ipa` só com bump local ou só AAB gerado na máquina — a Apple e o Actions leem o **Git remoto**.
+
+---
+
 ## Histórico e próximo livre (App Store Connect)
 
 | Data | Marketing | Build (CFBundle) | Situação Connect | Notas |
@@ -58,13 +88,15 @@ Detalhes em [AGENTS.md](../AGENTS.md) (TestFlight, seção **C**) e [IOS_GITHUB_
 | 2026-10-20 | 1.0.7 | 268 | Pronto para distribuição | Não reutilizar |
 | 2026-10-21 | 1.0.7 | 271 | TestFlight | — |
 | 2026-10-22+ | 1.0.8 | 272+ | Trilha **1.0.8 fechada/aprovada** | Não enviar mais IPA `1.0.8` |
-| **2026-10-30** | **1.0.9** | **281** | **Próximo `release-ipa` após commit `9cbdc83`** | Falha 90062/90186 corrigida com bump marketing |
+| **2026-10-30** | **1.0.9** | **281** | Enviado / trilha 1.0.9 | Falha 90062/90186 corrigida com bump marketing |
+| **2026-11-02** | 1.0.9 | **282** | TestFlight | Upload OK; próximo IPA precisa **> 282** |
+| **2026-11-02** | 1.0.9 | **294** (repo) → **295** (CI) | **Próximo `release-ipa` após push** | Corrige 409 duplicate; ver armadilha `main` desatualizada |
 
 ### Próximo build iOS (agents: leia antes de bump)
 
 - **Marketing no repo:** `1.0.9` (`package.json`)
-- **Último `versionCode` no repo:** **281** (label `2026.10.30.0281`)
-- **Após enviar 281 com sucesso:** incrementar `versionCode` antes do próximo IPA (`node scripts/bump-app-release.js` ou editar `.app-release-state.json` + `app-release.ts` + Gradle)
+- **Último build TestFlight:** **282** (confirmar no Connect antes de cada IPA)
+- **`versionCode` commitado na main:** **294** (label `2026.11.02.0294`) — CI gera IPA **295**
 - **Se 90062/90186 de novo:** bump **só** `package.json` patch (ex. 1.0.9 → 1.0.10), push, novo workflow
 
 ---

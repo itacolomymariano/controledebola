@@ -767,6 +767,8 @@ export class MuralService {
       address: row.address,
       proFootballIdol: row.proFootballIdol ? String(row.proFootballIdol) : undefined,
       amateurFootballIdol: row.amateurFootballIdol ? String(row.amateurFootballIdol) : undefined,
+      profileLabel: row.profileLabel ? String(row.profileLabel) : undefined,
+      heightCm: row.heightCm != null ? Number(row.heightCm) : undefined,
     }));
   }
 

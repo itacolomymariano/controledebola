@@ -63,6 +63,8 @@ interface CloudMuralParticipantProfile {
 
 const AGE_BANDS: MuralAgeBand[] = ['sub30', 'sub60', 'plus60'];
 
+const GENERIC_MURAL_PROFILE_LABELS = new Set(['Atleta', 'Participante']);
+
 interface HighlightPerformanceRow {
   userId: string;
   eventId?: string;
@@ -538,7 +540,6 @@ export class MuralHighlightsService {
       if (!profile) return null;
       return {
         ...this.toShowcaseEntry(profile),
-        profileLabel: 'Atleta',
         score: row.heightCm,
         scoreLabel: 'Altura (cm)',
       };
@@ -893,10 +894,21 @@ export class MuralHighlightsService {
         athlete?.get('favoriteProTeam') as string | undefined,
         fan?.get('favoriteProTeam') as string | undefined
       );
+      const profileLabel = this.buildProfileLabelFromParseUser(user, athlete);
       const existing = profiles.get(user.id);
       if (existing) {
+        const patch: Partial<ParticipantProfile> = {};
         if (!existing.favoriteProTeam?.trim() && favoriteProTeam) {
-          profiles.set(user.id, { ...existing, favoriteProTeam });
+          patch.favoriteProTeam = favoriteProTeam;
+        }
+        if (
+          !this.isSpecificMuralProfileLabel(existing.profileLabel) &&
+          this.isSpecificMuralProfileLabel(profileLabel)
+        ) {
+          patch.profileLabel = profileLabel;
+        }
+        if (Object.keys(patch).length) {
+          profiles.set(user.id, { ...existing, ...patch });
         }
         continue;
       }
@@ -908,8 +920,8 @@ export class MuralHighlightsService {
           user.getUsername() ||
           'Participante',
         avatarUrl: getUserAvatarUrl(user, this.parseFileService) ?? undefined,
-        profileLabel: 'Atleta',
-        isAthlete: true,
+        profileLabel,
+        isAthlete: !!athlete,
         favoriteProTeam,
         favoriteAmateurTeam: readUserFavoriteAmateurTeam(user, undefined),
         proFootballIdol: readUserProFootballIdol(user),
@@ -944,6 +956,8 @@ export class MuralHighlightsService {
       ...collectIds(highlights.promessa),
       ...collectIds(highlights.master),
       ...collectIds(highlights.melhorJuiz),
+      ...collectIds(highlights.atletaMaisAlto),
+      ...collectIds(highlights.atletaMaisBaixo),
       ...(highlights.goleador.sub30 ?? []).flatMap((e) => collectIds(e)),
       ...(highlights.goleador.sub60 ?? []).flatMap((e) => collectIds(e)),
       ...(highlights.goleador.plus60 ?? []).flatMap((e) => collectIds(e)),
@@ -972,9 +986,20 @@ export class MuralHighlightsService {
     }
 
     const patch = (entry: MuralShowcaseEntry | null): MuralShowcaseEntry | null => {
-      if (!entry || entry.favoriteProTeam?.trim()) return entry;
-      const team = profiles.get(entry.userId)?.favoriteProTeam?.trim();
-      return team ? { ...entry, favoriteProTeam: team } : entry;
+      if (!entry) return entry;
+      const profile = profiles.get(entry.userId);
+      let next = entry;
+      const team = profile?.favoriteProTeam?.trim();
+      if (!entry.favoriteProTeam?.trim() && team) {
+        next = { ...next, favoriteProTeam: team };
+      }
+      const label = profile
+        ? this.pickMuralProfileLabel(profile.profileLabel, next.profileLabel)
+        : next.profileLabel;
+      if (label !== next.profileLabel) {
+        next = { ...next, profileLabel: label };
+      }
+      return next;
     };
     const patchList = (entries: MuralShowcaseEntry[]) =>
       entries.map((entry) => patch(entry) ?? entry);
@@ -1053,7 +1078,10 @@ export class MuralHighlightsService {
               birthDate: enriched.birthDate ?? base.birthDate,
               age: enriched.age ?? base.age,
               ageBand: enriched.ageBand ?? base.ageBand,
-              profileLabel: enriched.profileLabel || base.profileLabel,
+              profileLabel: this.pickMuralProfileLabel(
+                enriched.profileLabel,
+                base.profileLabel
+              ),
               avatarUrl: enriched.avatarUrl ?? base.avatarUrl,
               favoriteProTeam: enriched.favoriteProTeam ?? base.favoriteProTeam,
               favoriteAmateurTeam: enriched.favoriteAmateurTeam ?? base.favoriteAmateurTeam,
@@ -1193,7 +1221,7 @@ export class MuralHighlightsService {
         tied.push({
           userId,
           displayName: 'Participante',
-          profileLabel: 'Atleta',
+          profileLabel: 'Participante',
           score: displayScore,
           scoreLabel,
         });
@@ -1329,7 +1357,7 @@ export class MuralHighlightsService {
     return {
       userId: bestUserId,
       displayName: 'Participante',
-      profileLabel: 'Atleta',
+      profileLabel: 'Participante',
       score: bestScore,
     };
   }
@@ -1346,7 +1374,7 @@ export class MuralHighlightsService {
       return a.displayName.localeCompare(b.displayName, 'pt-BR');
     });
     const profile = mode === 'min' ? sorted[0] : sorted[sorted.length - 1];
-    return { ...this.toShowcaseEntry(profile), profileLabel: 'Atleta' };
+    return this.toShowcaseEntry(profile);
   }
 
   private buildBirthdayList(profiles: Map<string, ParticipantProfile>): MuralBirthdayEntry[] {
@@ -1450,6 +1478,10 @@ export class MuralHighlightsService {
         amateurFootballIdol:
           existing.amateurFootballIdol || fromParticipant.amateurFootballIdol,
         isAthlete: existing.isAthlete || fromParticipant.isAthlete,
+        profileLabel: this.pickMuralProfileLabel(
+          existing.profileLabel,
+          fromParticipant.profileLabel
+        ),
       });
     }
   }
@@ -1462,11 +1494,10 @@ export class MuralHighlightsService {
       userId: participant.userId,
       displayName: participant.apelido || participant.userName || 'Participante',
       avatarUrl: participant.avatarUrl,
-      profileLabel:
-        participant.profileLabel ||
-        (participant.roles.includes('athlete') ? 'Atleta' : undefined) ||
-        (primaryRole ? PROFILE_ROLE_LABELS[primaryRole] : undefined) ||
-        'Participante',
+      profileLabel: this.pickMuralProfileLabel(
+        participant.profileLabel,
+        primaryRole ? PROFILE_ROLE_LABELS[primaryRole] : undefined
+      ),
       isAthlete: this.participantRoleCountsForHeight(participant.roles),
       favoriteProTeam: participant.favoriteProTeam,
       favoriteAmateurTeam: participant.favoriteAmateurTeam,
@@ -1492,11 +1523,10 @@ export class MuralHighlightsService {
         userId: participant.userId,
         displayName: participant.apelido || participant.userName || 'Participante',
         avatarUrl: participant.avatarUrl,
-        profileLabel:
-          participant.profileLabel ||
-          (participant.roles.includes('athlete') ? 'Atleta' : undefined) ||
-          (primaryRole ? PROFILE_ROLE_LABELS[primaryRole] : undefined) ||
-          'Participante',
+        profileLabel: this.pickMuralProfileLabel(
+          participant.profileLabel,
+          primaryRole ? PROFILE_ROLE_LABELS[primaryRole] : undefined
+        ),
         isAthlete: this.participantRoleCountsForHeight(participant.roles),
         favoriteProTeam: participant.favoriteProTeam,
         favoriteAmateurTeam: participant.favoriteAmateurTeam,
@@ -1574,12 +1604,7 @@ export class MuralHighlightsService {
       const birthDate = user.get('birthDate') as Date | undefined;
       const age = birthDate ? this.calcAge(birthDate) : null;
 
-      const primaryRole = user.get('primaryRole') as ProfileRole | undefined;
-      const athletePosition = athlete?.get('primaryPosition') as string | undefined;
-      const profileLabel =
-        athletePosition ||
-        (primaryRole ? PROFILE_ROLE_LABELS[primaryRole] : undefined) ||
-        'Participante';
+      const profileLabel = this.buildProfileLabelFromParseUser(user, athlete);
 
       const heightRaw = Number(athlete?.get('height') || 0);
       map.set(user.id, {
@@ -1610,6 +1635,36 @@ export class MuralHighlightsService {
     }
 
     return map;
+  }
+
+  private isSpecificMuralProfileLabel(label: string | undefined): boolean {
+    const trimmed = (label || '').trim();
+    return !!trimmed && !GENERIC_MURAL_PROFILE_LABELS.has(trimmed);
+  }
+
+  private pickMuralProfileLabel(...candidates: (string | undefined)[]): string {
+    for (const candidate of candidates) {
+      if (this.isSpecificMuralProfileLabel(candidate)) {
+        return candidate!.trim();
+      }
+    }
+    for (const candidate of candidates) {
+      const trimmed = (candidate || '').trim();
+      if (trimmed) return trimmed;
+    }
+    return 'Participante';
+  }
+
+  private buildProfileLabelFromParseUser(
+    user: Parse.User,
+    athlete: Parse.Object | undefined
+  ): string {
+    const athletePosition = athlete?.get('primaryPosition') as string | undefined;
+    const primaryRole = user.get('primaryRole') as ProfileRole | undefined;
+    return this.pickMuralProfileLabel(
+      athletePosition,
+      primaryRole ? PROFILE_ROLE_LABELS[primaryRole] : undefined
+    );
   }
 
   private calcAge(birthDate: Date): number {
