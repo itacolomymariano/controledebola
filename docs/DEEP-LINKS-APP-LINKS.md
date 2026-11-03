@@ -27,22 +27,55 @@ Pacote / Bundle ID: `com.minhapelada.app`
 
 Publicar e preencher:
 
-1. `public/.well-known/assetlinks.json` — SHA-256 da upload key ja preenchido; falta o da App signing key da Play
+1. `public/.well-known/assetlinks.json` — **dois** SHA-256 no mesmo `target`: upload key + **App signing key** da Play (obrigatorio apos primeiro AAB na Play)
 2. `public/.well-known/apple-app-site-association` — publicado com appID `3MZPTGQ9GB.com.minhapelada.app`
 3. `public/_headers` — Content-Type JSON
 4. Pagina `src/pages/app.astro` — landing + intent Android
 
 ### Preencher SHA-256 (Android)
 
-No repo do app:
+| Certificado | Origem | Quem instala |
+|-------------|--------|--------------|
+| **Upload key** | Keystore local / `print-android-app-link-sha256.ps1` | APK release sideload (`npm run install:android`) |
+| **App signing key** | Play Console → **Integridade do app** → certificado de assinatura do app | Teste interno, producao, Play Console “Links diretos” |
+
+URL apos login: [Play app signing / key management](https://play.google.com/console/developers/app/keymanagement)
+
+Sincronizar o JSON no site (repo irmao `controledebolasite`):
+
+```powershell
+# Opcao A — parametro
+.\scripts\sync-play-assetlinks.ps1 -PlayAppSigningSha256 "COLE_SHA256_DA_PLAY" -PushSite
+
+# Opcao B — arquivo local (gitignored)
+Copy-Item android\play-app-signing-sha256.local.txt.example android\play-app-signing-sha256.local.txt
+# edite uma linha com o SHA da Play
+.\scripts\sync-play-assetlinks.ps1 -PushSite
+
+npm run sync:play-assetlinks -- -PlayAppSigningSha256 "..." -PushSite
+```
+
+Upload key (referencia, ja no ar):
 
 ```powershell
 .\scripts\print-android-app-link-sha256.ps1
 ```
 
-Cole o valor em `assetlinks.json` no lugar de `REPLACE_WITH_UPLOAD_KEY_SHA256`.
+### Play Console — Links diretos (2026-11)
 
-Quando o app estiver na **Google Play** com Play App Signing, adicione tambem o SHA-256 da **App signing key** (Play Console → App integrity).
+Sintomas tipicos com app na Play e `assetlinks.json` so com upload key:
+
+- **2 dominios nao verificados:** `controledebola.com`, `www.controledebola.com` — *Falha nas verificacoes do dominio*
+- **6 links Web nao funcionando:** `/app`, `/invite`, `/download` × 2 hosts (mesma causa raiz)
+
+O manifesto do app (`autoVerify`) pode estar correto; o fix e **site + deploy Cloudflare**, nao novo AAB.
+
+Checklist pos-fix:
+
+1. `assetlinks.json` publico com **2** fingerprints (validar apex e www).
+2. [Statement List Generator / Tester](https://developers.google.com/digital-asset-links/tools/generator) — site + package `com.minhapelada.app`.
+3. Play Console → **Links diretos** — aguardar re-scan (minutos a horas).
+4. Dispositivo com app **da Play:** `adb shell pm get-app-links com.minhapelada.app` → `verified`.
 
 ### iOS — Universal Links (estado em 2026-09-27)
 

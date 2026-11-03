@@ -41,6 +41,12 @@ ion-badge {
 
 .home-door {
   margin: 12px 16px;
+  border-inline-start: 4px solid var(--ion-color-primary);
+  background: var(--cb-card-accent, rgba(var(--ion-color-primary-rgb), 0.08));
+}
+
+.home-door ion-card-title {
+  color: var(--ion-color-primary-shade, var(--ion-color-primary));
 }
 
 .home-door ion-icon {

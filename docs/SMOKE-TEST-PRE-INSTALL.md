@@ -15,7 +15,9 @@ Publicar `cloud/main.js` no Back4App quando houver alteração em `cloud/source/
 
 | # | Fluxo | O que validar |
 |---|--------|----------------|
-| 1 | Login / tabs | Entrada em **`/tabs/home`** (quatro portas): **nenhum** botão do rodapé destacado; toque **Peladas** → lista com botão Peladas destacado; portas confrontos/times/usuários sem destaque no rodapé |
+| 1 | Login / tabs | Entrada em **`/tabs/home`** (quatro portas): aba **Início** destacada no rodapé (canto esquerdo); **sem** ícone casa no topo; toque **Peladas** (2ª aba) → lista com Peladas destacada |
+| 1b | Perfil atleta | Labels completos das taxas pelada e **jogo entre times amadores (R$)** (sem reticências) |
+| 1c | Tema | Menu → Cores e temas: paleta **Controle de Bola** visível; trocar claro/escuro muda toolbar e aba selecionada de forma perceptível |
 | 2 | Pelada → Configurações | Toggles com texto completo (quebra de linha) |
 | 3 | Evento → Participantes (admin) | Inscritos pendentes com card completo; **confirmados** só foto, apelido, perfil, posição (atleta), idade e média CB + controles (chegada, ingresso, time) abaixo |
 | 4 | Evento → Negociação/Contratações | Enviar convite; badge na carta do convidado |
@@ -26,7 +28,8 @@ Publicar `cloud/main.js` no Back4App quando houver alteração em `cloud/source/
 | 9 | Voto mural evento | Torcedor e porteiro aparecem na votacao e entram no Top 10 da aba correspondente; max. 2 notas 10 por cedula |
 | 10 | Esqueci senha | Enviar codigo → card com e-mail mascarado → digitar codigo no app (nao e link) |
 | 11 | Mural Geral craque | Hint de confianca; card mostra “X pessoas avaliaram” quando houver votos |
-| 12 | Cadastro | Subtitulo curto na tela Criar conta; hints de apelido/CPF legiveis |
+| 12 | Cadastro | Wizard **Criar conta** (5 passos): progresso, Continuar/Voltar; ajuda (?) em apelido/CPF/celular/endereco; criar conta teste ate profile-setup |
+| 12b | Montar perfil | Wizard **profile-setup**: atleta 3 passos; torcedor 2; profissional por etapas (valores/Pix/equip.); Completar depois; rascunho ao voltar |
 | 13 | Pelada ? (toolbar) | Ajuda com botao Ouvir (TTS) no popover |
 | 14 | Separação de times | Salvar desabilitado se nada mudou; desfazer separacao salva (admin) |
 | 15 | Scout + sumula | Gols do juiz aparecem no apontamento; scout so classifica tipo |

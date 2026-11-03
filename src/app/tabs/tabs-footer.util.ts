@@ -1,4 +1,4 @@
-export type FooterTabKey = 'peladas' | 'search' | 'events' | 'mural' | 'profile';
+export type FooterTabKey = 'home' | 'peladas' | 'search' | 'events' | 'mural' | 'profile';
 
 /** Normalizes router URL for footer tab matching (no query/hash). */
 export function normalizeFooterUrl(url: string): string {
@@ -10,6 +10,8 @@ export function isFooterTabActive(url: string, key: FooterTabKey): boolean {
   const path = normalizeFooterUrl(url);
 
   switch (key) {
+    case 'home':
+      return path === '/tabs/home' || path.startsWith('/tabs/home/');
     case 'peladas':
       return path === '/tabs/peladas/lista' || path.startsWith('/tabs/peladas/lista/');
     case 'search':

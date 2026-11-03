@@ -85,6 +85,7 @@ src/environments/environment.sandbox.local.ts
 android/keystore.properties
 android/*.keystore
 android/*.jks
+android/play-app-signing-sha256.local.txt
 
 # APKs gerados localmente
 /releases/

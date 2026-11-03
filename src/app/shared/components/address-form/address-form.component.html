@@ -1,20 +1,24 @@
 <div [formGroup]="form">
-  <h3 class="ion-padding-top">{{ title }}</h3>
-  @if (!required) {
-    <ion-note color="medium" class="ion-padding-horizontal">
-      Opcional. Se preencher, selecione o endereco na lista para validar a localizacao.
-    </ion-note>
-  } @else {
-    <ion-note color="medium" class="ion-padding-horizontal">
-      Usado para sugerir eventos proximos e para rankings do mural por bairro, cidade e estado.
-    </ion-note>
+  @if (showTitle && title) {
+    <h3 class="ion-padding-top">{{ title }}</h3>
+  }
+  @if (hintMode === 'inline') {
+    @if (!required) {
+      <ion-note color="medium" class="ion-padding-horizontal address-form-hint">
+        {{ 'addressForm.hint.optional' | t }}
+      </ion-note>
+    } @else {
+      <ion-note color="medium" class="ion-padding-horizontal address-form-hint">
+        {{ 'addressForm.hint.required' | t }}
+      </ion-note>
+    }
   }
   <ion-item>
     <ion-input
-      label="Logradouro / Rua (Digite aqui e selecione na lista)"
+      [label]="'addressForm.streetQueryLabel' | t"
       labelPlacement="stacked"
       formControlName="streetQuery"
-      placeholder="Ex: Rua das Flores, 100"
+      [placeholder]="'addressForm.streetQueryPlaceholder' | t"
       (ionInput)="onStreetQueryInput($event)"
       (ionBlur)="markTouched()"
     ></ion-input>
@@ -39,21 +43,21 @@
 
   <ion-item>
     <ion-input
-      label="Logradouro confirmado"
+      [label]="'addressForm.streetConfirmed' | t"
       labelPlacement="stacked"
       formControlName="street"
       readonly
     ></ion-input>
   </ion-item>
   <ion-item>
-    <ion-input label="Bairro" labelPlacement="stacked" formControlName="neighborhood" readonly></ion-input>
+    <ion-input [label]="'addressForm.neighborhood' | t" labelPlacement="stacked" formControlName="neighborhood" readonly></ion-input>
   </ion-item>
   <ion-item>
-    <ion-input label="Cidade" labelPlacement="stacked" formControlName="city" readonly></ion-input>
+    <ion-input [label]="'addressForm.city' | t" labelPlacement="stacked" formControlName="city" readonly></ion-input>
   </ion-item>
   <ion-item>
     <ion-input
-      label="Estado (UF)"
+      [label]="'addressForm.state' | t"
       labelPlacement="stacked"
       formControlName="state"
       maxlength="2"
@@ -62,7 +66,7 @@
   </ion-item>
   <ion-item>
     <ion-input
-      label="CEP"
+      [label]="'addressForm.zip' | t"
       labelPlacement="stacked"
       formControlName="zipCode"
       inputmode="numeric"
@@ -71,16 +75,16 @@
   </ion-item>
 
   @if (applying) {
-    <ion-note color="medium" class="ion-padding">Completando endereco...</ion-note>
+    <ion-note color="medium" class="ion-padding">{{ 'addressForm.completing' | t }}</ion-note>
   }
 
   @if (showIncompleteHint) {
     <ion-note color="warning" class="ion-padding">
-      Falta preencher: {{ missingFields.join(', ') }}.
+      {{ 'addressForm.incompletePrefix' | t }} {{ missingFields.join(', ') }}.
     </ion-note>
   }
 
   @if (!applying && isComplete) {
-    <ion-note color="success" class="ion-padding">Endereco validado para localizacao.</ion-note>
+    <ion-note color="success" class="ion-padding">{{ 'addressForm.validated' | t }}</ion-note>
   }
 </div>

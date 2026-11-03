@@ -46,6 +46,9 @@ import { AddressGeocodingService } from '../../../core/services/address-geocodin
 })
 export class AddressFormComponent implements OnInit, OnDestroy, ControlValueAccessor, Validator {
   @Input() title = 'Endereco';
+  @Input() showTitle = true;
+  /** inline = ion-note abaixo do titulo; help = sem note (ajuda externa). */
+  @Input() hintMode: 'inline' | 'help' = 'inline';
   @Input() required = true;
   @Output() readonly addressChange = new EventEmitter<void>();
 

@@ -15,190 +15,219 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <p class="register-subtitle">{{ 'register.subtitle' | t }}</p>
+<ion-content class="ion-padding page-register">
+  <div class="register-wizard-head">
+    <p class="register-wizard-progress-label">{{ wizardProgressLabel() }}</p>
+    <ion-progress-bar [value]="wizardProgress" color="primary"></ion-progress-bar>
+    <h2 class="register-wizard-step-title">{{ stepTitleKey() | t }}</h2>
+    <p class="register-wizard-step-lead">{{ stepLeadKey() | t }}</p>
+  </div>
+
   <form [formGroup]="form" (ngSubmit)="submit()">
-    <ion-item>
-      <ion-input [label]="'register.name' | t" labelPlacement="stacked" formControlName="name"></ion-input>
-    </ion-item>
-    @if (form.get('name')?.touched && form.get('name')?.invalid) {
-      <ion-note color="danger" class="ion-padding-horizontal">{{ 'register.nameError' | t }}</ion-note>
-    }
+    @switch (currentStep) {
+      @case ('identity') {
+        <ion-item>
+          <ion-input [label]="'register.name' | t" labelPlacement="stacked" formControlName="name"></ion-input>
+        </ion-item>
+        @if (form.get('name')?.touched && form.get('name')?.invalid) {
+          <ion-note color="danger" class="ion-padding-horizontal">{{ 'register.nameError' | t }}</ion-note>
+        }
 
-    <ion-item>
-      <ion-input
-        [label]="'register.nickname' | t"
-        labelPlacement="stacked"
-        formControlName="apelido"
-        placeholder="Como voce sera chamado nos eventos"
-      ></ion-input>
-    </ion-item>
-    <ion-note color="medium" class="ion-padding-horizontal">
-      {{ 'register.nicknameHint' | t }}
-    </ion-note>
-    @if (form.get('apelido')?.touched && form.get('apelido')?.invalid) {
-      <ion-note color="danger" class="ion-padding-horizontal">
-        {{ 'register.nicknameError' | t }}
-      </ion-note>
-    }
+        <ion-item>
+          <ion-input
+            [label]="'register.nickname' | t"
+            labelPlacement="stacked"
+            formControlName="apelido"
+            [placeholder]="'register.nicknamePlaceholder' | t"
+          ></ion-input>
+          <app-field-help slot="end" textKey="register.nicknameHint"></app-field-help>
+        </ion-item>
+        @if (form.get('apelido')?.touched && form.get('apelido')?.invalid) {
+          <ion-note color="danger" class="ion-padding-horizontal">
+            {{ 'register.nicknameError' | t }}
+          </ion-note>
+        }
+      }
 
-    <ion-item>
-      <ion-input [label]="'register.email' | t" labelPlacement="stacked" formControlName="email" type="email"></ion-input>
-    </ion-item>
-    @if (form.get('email')?.touched && form.get('email')?.hasError('required')) {
-      <ion-note color="danger" class="ion-padding-horizontal">{{ 'register.emailRequired' | t }}</ion-note>
-    }
-    @if (form.get('email')?.touched && form.get('email')?.hasError('invalidEmail')) {
-      <ion-note color="danger" class="ion-padding-horizontal">{{ 'register.emailInvalid' | t }}</ion-note>
-    }
+      @case ('contact') {
+        <ion-item>
+          <ion-input [label]="'register.email' | t" labelPlacement="stacked" formControlName="email" type="email"></ion-input>
+        </ion-item>
+        @if (form.get('email')?.touched && form.get('email')?.hasError('required')) {
+          <ion-note color="danger" class="ion-padding-horizontal">{{ 'register.emailRequired' | t }}</ion-note>
+        }
+        @if (form.get('email')?.touched && form.get('email')?.hasError('invalidEmail')) {
+          <ion-note color="danger" class="ion-padding-horizontal">{{ 'register.emailInvalid' | t }}</ion-note>
+        }
 
-    <ion-item>
-      <ion-input
-        [label]="'register.cpf' | t"
-        labelPlacement="stacked"
-        formControlName="cpf"
-        inputmode="numeric"
-        maxlength="14"
-        (ionInput)="onCpfInput($event)"
-      ></ion-input>
-    </ion-item>
-    @if (form.get('cpf')?.touched && form.get('cpf')?.hasError('required')) {
-      <ion-note color="danger" class="ion-padding-horizontal">{{ 'register.cpfRequired' | t }}</ion-note>
-    }
-    @if (form.get('cpf')?.touched && form.get('cpf')?.hasError('invalidCpf')) {
-      <ion-note color="danger" class="ion-padding-horizontal">{{ 'register.cpfInvalid' | t }}</ion-note>
-    }
-    <ion-note color="medium" class="ion-padding-horizontal">
-      {{ 'register.cpfHint' | t }}
-    </ion-note>
+        <ion-item>
+          <ion-input
+            [label]="'register.cpf' | t"
+            labelPlacement="stacked"
+            formControlName="cpf"
+            inputmode="numeric"
+            maxlength="14"
+            (ionInput)="onCpfInput($event)"
+          ></ion-input>
+          <app-field-help slot="end" textKey="register.cpfHint"></app-field-help>
+        </ion-item>
+        @if (form.get('cpf')?.touched && form.get('cpf')?.hasError('required')) {
+          <ion-note color="danger" class="ion-padding-horizontal">{{ 'register.cpfRequired' | t }}</ion-note>
+        }
+        @if (form.get('cpf')?.touched && form.get('cpf')?.hasError('invalidCpf')) {
+          <ion-note color="danger" class="ion-padding-horizontal">{{ 'register.cpfInvalid' | t }}</ion-note>
+        }
 
-    <ion-item>
-      <ion-input
-        [label]="'register.phone' | t"
-        labelPlacement="stacked"
-        formControlName="phone"
-        type="tel"
-      ></ion-input>
-    </ion-item>
-    @if (form.get('phone')?.touched && form.get('phone')?.hasError('invalidPhone')) {
-      <ion-note color="danger" class="ion-padding-horizontal">
-        {{ 'register.phoneError' | t }}
-      </ion-note>
-    }
-    <ion-note color="medium" class="ion-padding-horizontal">
-      {{ 'register.phoneHint' | t }}
-    </ion-note>
+        <ion-item>
+          <ion-input
+            [label]="'register.phone' | t"
+            labelPlacement="stacked"
+            formControlName="phone"
+            type="tel"
+          ></ion-input>
+          <app-field-help slot="end" textKey="register.phoneHint"></app-field-help>
+        </ion-item>
+        @if (form.get('phone')?.touched && form.get('phone')?.hasError('invalidPhone')) {
+          <ion-note color="danger" class="ion-padding-horizontal">
+            {{ 'register.phoneError' | t }}
+          </ion-note>
+        }
+      }
 
-    <app-birth-date-picker
-      formControlName="birthDate"
-      label="Data de nascimento (opcional)"
-    ></app-birth-date-picker>
-    @if (form.get('birthDate')?.touched && form.get('birthDate')?.hasError('incompleteBirthDate')) {
-      <ion-note color="danger" class="ion-padding-horizontal">
-        Selecione dia, mes e ano da data de nascimento.
-      </ion-note>
-    }
-    @if (form.get('birthDate')?.touched && form.get('birthDate')?.hasError('invalidBirthDate')) {
-      <ion-note color="danger" class="ion-padding-horizontal">
-        Data de nascimento invalida.
-      </ion-note>
-    }
-    <ion-note color="medium" class="ion-padding-horizontal">
-      Opcional. Se preencher, selecione dia, mes e ano. O ano aparece em lista decrescente.
-    </ion-note>
+      @case ('security') {
+        <ion-item>
+          <ion-input
+            [label]="'register.password' | t"
+            labelPlacement="stacked"
+            formControlName="password"
+            [type]="showPassword ? 'text' : 'password'"
+            autocomplete="new-password"
+          ></ion-input>
+          <ion-button
+            fill="clear"
+            slot="end"
+            class="password-toggle"
+            (click)="togglePasswordVisibility()"
+            [attr.aria-label]="(showPassword ? 'register.hidePassword' : 'register.showPassword') | t"
+          >
+            <ion-icon [name]="showPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+          </ion-button>
+        </ion-item>
+        @if (form.get('password')?.touched && form.get('password')?.invalid) {
+          <ion-note color="danger" class="ion-padding-horizontal">
+            {{ 'register.passwordError' | t }}
+          </ion-note>
+        }
 
-    <ion-item>
-      <ion-input
-        [label]="'register.password' | t"
-        labelPlacement="stacked"
-        formControlName="password"
-        [type]="showPassword ? 'text' : 'password'"
-        autocomplete="new-password"
-      ></ion-input>
-      <ion-button
-        fill="clear"
-        slot="end"
-        class="password-toggle"
-        (click)="togglePasswordVisibility()"
-        [attr.aria-label]="showPassword ? 'Ocultar senha' : 'Mostrar senha'"
-      >
-        <ion-icon [name]="showPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
-      </ion-button>
-    </ion-item>
-    @if (form.get('password')?.touched && form.get('password')?.invalid) {
-      <ion-note color="danger" class="ion-padding-horizontal">
-        {{ 'register.passwordError' | t }}
-      </ion-note>
-    }
-    <ion-item>
-      <ion-input
-        [label]="'register.confirmPassword' | t"
-        labelPlacement="stacked"
-        formControlName="confirmPassword"
-        [type]="showConfirmPassword ? 'text' : 'password'"
-        autocomplete="new-password"
-      ></ion-input>
-      <ion-button
-        fill="clear"
-        slot="end"
-        class="password-toggle"
-        (click)="toggleConfirmPasswordVisibility()"
-        [attr.aria-label]="showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'"
-      >
-        <ion-icon [name]="showConfirmPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
-      </ion-button>
-    </ion-item>
-    @if (
-      (form.get('confirmPassword')?.touched || form.get('password')?.touched) &&
-      form.hasError('passwordMismatch')
-    ) {
-      <ion-note color="danger" class="ion-padding-horizontal">{{ 'register.passwordMismatch' | t }}</ion-note>
-    }
+        <ion-item>
+          <ion-input
+            [label]="'register.confirmPassword' | t"
+            labelPlacement="stacked"
+            formControlName="confirmPassword"
+            [type]="showConfirmPassword ? 'text' : 'password'"
+            autocomplete="new-password"
+          ></ion-input>
+          <ion-button
+            fill="clear"
+            slot="end"
+            class="password-toggle"
+            (click)="toggleConfirmPasswordVisibility()"
+            [attr.aria-label]="(showConfirmPassword ? 'register.hidePassword' : 'register.showPassword') | t"
+          >
+            <ion-icon [name]="showConfirmPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+          </ion-button>
+        </ion-item>
+        @if (
+          (form.get('confirmPassword')?.touched || form.get('password')?.touched) &&
+          form.hasError('passwordMismatch')
+        ) {
+          <ion-note color="danger" class="ion-padding-horizontal">{{ 'register.passwordMismatch' | t }}</ion-note>
+        }
+      }
 
-    <app-address-form
-      formControlName="address"
-      title="Onde voce mora"
-      [required]="true"
-      (addressChange)="onAddressChanged()"
-    ></app-address-form>
-    <ion-note color="medium" class="ion-padding-horizontal">
-      {{ 'register.addressHint' | t }}
-    </ion-note>
-    @if (form.get('address')?.touched && form.get('address')?.hasError('addressIncomplete')) {
-      <ion-note color="danger" class="ion-padding-horizontal">
-        Selecione seu endereco na lista de sugestoes para validar a localizacao.
-      </ion-note>
+      @case ('location') {
+        <div class="register-field-row-help">
+          <app-birth-date-picker
+            formControlName="birthDate"
+            [label]="'register.birthDateLabel' | t"
+          ></app-birth-date-picker>
+          <app-field-help textKey="register.birthDateHint"></app-field-help>
+        </div>
+        @if (form.get('birthDate')?.touched && form.get('birthDate')?.hasError('incompleteBirthDate')) {
+          <ion-note color="danger" class="ion-padding-horizontal">
+            {{ 'register.birthDateIncomplete' | t }}
+          </ion-note>
+        }
+        @if (form.get('birthDate')?.touched && form.get('birthDate')?.hasError('invalidBirthDate')) {
+          <ion-note color="danger" class="ion-padding-horizontal">
+            {{ 'register.birthDateInvalid' | t }}
+          </ion-note>
+        }
+
+        <div class="register-address-block">
+          <div class="register-field-row-help register-address-help">
+            <h3 class="register-address-title">{{ 'register.addressTitle' | t }}</h3>
+            <app-field-help textKey="register.addressHint"></app-field-help>
+          </div>
+          <app-address-form
+            formControlName="address"
+            [title]="''"
+            [showTitle]="false"
+            hintMode="help"
+            [required]="true"
+            (addressChange)="onAddressChanged()"
+          ></app-address-form>
+        </div>
+        @if (form.get('address')?.touched && form.get('address')?.hasError('addressIncomplete')) {
+          <ion-note color="danger" class="ion-padding-horizontal">
+            {{ 'register.addressError' | t }}
+          </ion-note>
+        }
+      }
+
+      @case ('verify') {
+        @if (signupChallengeQuestion) {
+          <ion-item>
+            <ion-input
+              [label]="signupChallengeQuestion"
+              labelPlacement="stacked"
+              formControlName="signupCaptchaAnswer"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              [placeholder]="'register.captcha' | t"
+            ></ion-input>
+            <app-field-help slot="end" textKey="register.captchaHint"></app-field-help>
+          </ion-item>
+          @if (form.get('signupCaptchaAnswer')?.touched && form.get('signupCaptchaAnswer')?.invalid) {
+            <ion-note color="danger" class="ion-padding-horizontal">
+              {{ 'register.captchaError' | t }}
+            </ion-note>
+          }
+        }
+      }
     }
 
     <ion-item class="signup-honeypot" aria-hidden="true">
       <ion-input formControlName="signupHoneypot" tabindex="-1" autocomplete="off"></ion-input>
     </ion-item>
-
-    @if (signupChallengeQuestion) {
-      <ion-item>
-        <ion-input
-          label="{{ signupChallengeQuestion }}"
-          labelPlacement="stacked"
-          formControlName="signupCaptchaAnswer"
-          type="text"
-          inputmode="numeric"
-          autocomplete="off"
-          placeholder="Resposta"
-        ></ion-input>
-      </ion-item>
-      @if (form.get('signupCaptchaAnswer')?.touched && form.get('signupCaptchaAnswer')?.invalid) {
-        <ion-note color="danger" class="ion-padding-horizontal">
-          Responda a verificacao para confirmar que voce e humano.
-        </ion-note>
+    <div class="register-wizard-actions ion-margin-top">
+      @if (!isLastStep) {
+        <ion-button expand="block" type="button" (click)="goNext()">
+          {{ 'register.wizard.continue' | t }}
+        </ion-button>
+      } @else {
+        <ion-button expand="block" type="submit" [disabled]="!canSubmit">
+          {{ 'register.submit' | t }}
+        </ion-button>
       }
-      <ion-note color="medium" class="ion-padding-horizontal">
-        Verificacao simples para evitar cadastros automaticos.
-      </ion-note>
-    }
-
-    <ion-button expand="block" type="submit" class="ion-margin-top" [disabled]="!canSubmit">
-      {{ 'register.submit' | t }}
-    </ion-button>
+      @if (!isFirstStep) {
+        <ion-button expand="block" fill="outline" type="button" (click)="goBack()">
+          {{ 'register.wizard.back' | t }}
+        </ion-button>
+      }
+    </div>
   </form>
+
   <ion-button expand="block" fill="clear" (click)="goLogin()">{{ 'register.hasAccount' | t }}</ion-button>
 </ion-content>

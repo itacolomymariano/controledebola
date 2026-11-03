@@ -58,8 +58,8 @@ splash → onboarding? → login/register → profile-setup? → tabs/home (quat
 |----|-------|-------|----------|----|
 | A1 | Abrir app / `npm start` | — | Splash e depois onboarding ou login | [ ] |
 | A2 | Onboarding (3 passos), se 1a vez | nova | Completa sem travar; segue para login/register | [ ] |
-| A3 | **Criar conta** Admin | Admin | Captcha/anti-bot ok; conta criada; login automatico ou tela de login | [ ] |
-| A4 | Profile-setup / caminho wizard | Admin | Perfil criado (atleta ou caminho escolhido); chega em **Home** (quatro portas) | [ ] |
+| A3 | **Criar conta** Admin | Admin | Wizard 5 passos; captcha ok; ajuda (?) nos hints; conta criada | [ ] |
+| A4 | Profile-setup / caminho wizard | Admin | Wizard montagem (atleta 3 passos ou outro perfil); **Salvar e continuar** ou Completar depois; chega em **Home** | [ ] |
 | A5 | Logout → Login | Admin | Sessao valida; rodape: Peladas / Buscar / **Confrontos** / Mural / Perfil | [ ] |
 | A6 | Criar conta Atleta A | Atleta A | Mesmo fluxo A3–A4; perfil atleta utilizavel | [ ] |
 | A7 | Meus dados / data nascimento | qualquer | Picker dia/mes/ano (`app-birth-date-picker`), **nao** calendario nativo | [ ] |

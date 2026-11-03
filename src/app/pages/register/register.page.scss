@@ -13,6 +13,59 @@
   opacity: 0.85;
 }
 
+.register-wizard-head {
+  margin-bottom: 1rem;
+}
+
+.register-wizard-progress-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.register-wizard-step-title {
+  margin: 1rem 0 0.35rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.register-wizard-step-lead {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  opacity: 0.9;
+}
+
+.register-wizard-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.register-field-row-help {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.25rem;
+}
+
+.register-address-block {
+  margin-top: 0.5rem;
+}
+
+.register-address-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.register-address-help {
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
 .password-toggle {
   margin-top: 1.25rem;
 }
@@ -24,4 +77,11 @@
   height: 1px;
   opacity: 0;
   pointer-events: none;
+}
+
+.page-register ion-note[color='danger'],
+.page-register ion-note[color='warning'] {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 0.35rem;
 }

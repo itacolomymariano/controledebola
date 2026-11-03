@@ -41,6 +41,15 @@ Onde a tela mudou, a foto antiga foi tirada do MDX. O capítulo ficou com `{/* p
 | `p-mural-top-peladas.jpeg` | Mural, aba Peladas: **Top 10 — Peladas** abaixo de Top 10 — Atletas das Peladas | 06 |
 | `p-mural-geral-top-peladas.jpeg` | Mural, aba Geral: **Top 10 — Peladas** abaixo de Top 10 — Times | 06 |
 
+### Wizard cadastro e profile-setup (nov/2026)
+
+| Arquivo sugerido | O que mostrar | Capítulo |
+|------------------|---------------|----------|
+| `p-register-wizard-step.jpeg` | **Criar conta**: barra de progresso, título da etapa e ícone (?) em um passo (ex. endereço) | 01 |
+| `p-profile-setup-atleta-step.jpeg` | **Montando seu perfil** (atleta): uma etapa por vez (ex. posições), Continuar/Voltar e **Completar depois** | 01 |
+
+Placeholders `{/* print */}` no MDX até as fotos chegarem.
+
 ### Pós-vistoria UX (out/2026) — prioridade alta
 
 | Arquivo sugerido | O que mostrar | Capítulo |

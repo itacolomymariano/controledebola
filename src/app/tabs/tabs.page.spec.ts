@@ -37,8 +37,10 @@ describe('TabsPage', () => {
   });
 
   it('isFooterTabActive reflects router url', () => {
+    expect(component.isFooterTabActive('home')).toBe(true);
     expect(component.isFooterTabActive('peladas')).toBe(false);
     router.url = '/tabs/peladas/lista';
+    expect(component.isFooterTabActive('home')).toBe(false);
     expect(component.isFooterTabActive('peladas')).toBe(true);
   });
 });

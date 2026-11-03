@@ -4,6 +4,7 @@ import { AppStorageService } from './app-storage.service';
 import {
   DEFAULT_THEME_PALETTE,
   DEFAULT_THEME_SURFACE,
+  THEME_DARK_SURFACES,
   THEME_LIGHT_SURFACES,
   THEME_PALETTE_IDS,
   ThemePaletteId,
@@ -11,6 +12,7 @@ import {
 } from '../models/theme-palette.model';
 
 const PALETTE_LABEL_KEYS: Record<ThemePaletteId, string> = {
+  controle_de_bola: 'palette.controleDeBola',
   default: 'palette.default',
   red_black_yellow: 'palette.redBlackYellow',
   red_black_white: 'palette.redBlackWhite',
@@ -22,15 +24,6 @@ const PALETTE_LABEL_KEYS: Record<ThemePaletteId, string> = {
   yellow_black: 'palette.yellowBlack',
   blue_red_white: 'palette.blueRedWhite',
 };
-
-const LIGHT_SURFACE_VARS = [
-  '--ion-background-color',
-  '--ion-background-color-rgb',
-  '--ion-toolbar-background',
-  '--ion-item-background',
-  '--ion-card-background',
-  '--ion-text-color',
-] as const;
 
 @Injectable({ providedIn: 'root' })
 export class ThemePaletteService {
@@ -81,19 +74,15 @@ export class ThemePaletteService {
     root.setAttribute('data-surface', this.surface);
     root.classList.toggle('ion-palette-dark', this.surface === 'dark');
 
-    if (this.surface === 'light') {
-      const paper = THEME_LIGHT_SURFACES[this.current];
-      root.style.setProperty('--ion-background-color', paper.page);
-      root.style.setProperty('--ion-background-color-rgb', paper.pageRgb);
-      root.style.setProperty('--ion-toolbar-background', paper.toolbar);
-      root.style.setProperty('--ion-item-background', paper.item);
-      root.style.setProperty('--ion-card-background', paper.card);
-      root.style.setProperty('--ion-text-color', paper.text);
-      return;
-    }
-
-    for (const name of LIGHT_SURFACE_VARS) {
-      root.style.removeProperty(name);
-    }
+    const paper =
+      this.surface === 'light'
+        ? THEME_LIGHT_SURFACES[this.current]
+        : THEME_DARK_SURFACES[this.current];
+    root.style.setProperty('--ion-background-color', paper.page);
+    root.style.setProperty('--ion-background-color-rgb', paper.pageRgb);
+    root.style.setProperty('--ion-toolbar-background', paper.toolbar);
+    root.style.setProperty('--ion-item-background', paper.item);
+    root.style.setProperty('--ion-card-background', paper.card);
+    root.style.setProperty('--ion-text-color', paper.text);
   }
 }

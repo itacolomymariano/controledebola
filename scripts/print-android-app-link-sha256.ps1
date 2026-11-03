@@ -1,4 +1,4 @@
-# Extrai SHA-256 do keystore de release (somente fingerprint; nao imprime senhas).
+﻿# Extrai SHA-256 do keystore de release (somente fingerprint; nao imprime senhas).
 # Uso: .\scripts\print-android-app-link-sha256.ps1
 # Cole o resultado em controledebolasite/public/.well-known/assetlinks.json
 
@@ -49,9 +49,12 @@ $sha = ($match.Groups[1].Value -replace ':', '').ToUpperInvariant()
 $shaColon = $match.Groups[1].Value.ToUpperInvariant()
 
 Write-Host ''
-Write-Host 'Cole em assetlinks.json (com dois pontos, formato Google):'
+Write-Host 'Upload key — sideload / APK local. Cole em assetlinks.json (formato Google):'
 Write-Host $shaColon
 Write-Host ''
 Write-Host 'Forma sem dois pontos (referencia):'
 Write-Host $sha
+Write-Host ''
+Write-Host 'Play Store: tambem inclua o SHA da App signing key (Play Console -> Integridade do app).'
+Write-Host '  .\scripts\sync-play-assetlinks.ps1 -PlayAppSigningSha256 "..." -PushSite'
 Write-Host ''

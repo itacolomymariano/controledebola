@@ -10,7 +10,33 @@ import {
   ThemePaletteId,
   ThemeSurfaceId,
 } from '../models/theme-palette.model';
+import { Address } from '../models/address.model';
 import { ParticipationChoice, WizardPath } from '../models/wizard.model';
+
+/** Rascunho do profile-setup (parcial). */
+export interface ProfileSetupDraft {
+  wizardPath?: WizardPath | null;
+  otherStep?: string;
+  selectedRole?: string | null;
+  athleteStepIndex?: number;
+  fanStepIndex?: number;
+  proStepIndex?: number;
+  athleteForm?: Record<string, unknown>;
+  fanForm?: Record<string, unknown>;
+  otherForm?: Record<string, unknown>;
+}
+
+/** Rascunho do cadastro (sem senha). */
+export interface RegisterFormDraft {
+  name?: string;
+  apelido?: string;
+  email?: string;
+  cpf?: string;
+  phone?: string;
+  birthDate?: string;
+  address?: Address;
+  wizardStepIndex?: number;
+}
 
 export interface BiometricCredentials {
   identifier: string;
@@ -30,6 +56,8 @@ const COACH_HINT_PREFIX = 'coach_hint_dismissed_';
 const WIZARD_TOUR_OFFERED_KEY = 'wizard_tour_offered';
 const WIZARD_TOUR_DISMISSED_KEY = 'wizard_tour_dismissed';
 const CONTRACT_INBOX_SEEN_PREFIX = 'contract_inbox_seen:';
+const REGISTER_DRAFT_KEY = 'register_draft_v1';
+const PROFILE_SETUP_DRAFT_KEY = 'profile_setup_draft_v1';
 
 @Injectable({ providedIn: 'root' })
 export class AppStorageService {
@@ -223,5 +251,39 @@ export class AppStorageService {
     if (!userId || !invitationId) return;
     await this.init();
     await this.storage.set(`${CONTRACT_INBOX_SEEN_PREFIX}${userId}:${invitationId}`, true);
+  }
+
+  async getRegisterDraft(): Promise<RegisterFormDraft | null> {
+    await this.init();
+    const value = await this.storage.get(REGISTER_DRAFT_KEY);
+    if (!value || typeof value !== 'object') return null;
+    return value as RegisterFormDraft;
+  }
+
+  async setRegisterDraft(draft: RegisterFormDraft): Promise<void> {
+    await this.init();
+    await this.storage.set(REGISTER_DRAFT_KEY, draft);
+  }
+
+  async clearRegisterDraft(): Promise<void> {
+    await this.init();
+    await this.storage.remove(REGISTER_DRAFT_KEY);
+  }
+
+  async getProfileSetupDraft(): Promise<ProfileSetupDraft | null> {
+    await this.init();
+    const value = await this.storage.get(PROFILE_SETUP_DRAFT_KEY);
+    if (!value || typeof value !== 'object') return null;
+    return value as ProfileSetupDraft;
+  }
+
+  async setProfileSetupDraft(draft: ProfileSetupDraft): Promise<void> {
+    await this.init();
+    await this.storage.set(PROFILE_SETUP_DRAFT_KEY, draft);
+  }
+
+  async clearProfileSetupDraft(): Promise<void> {
+    await this.init();
+    await this.storage.remove(PROFILE_SETUP_DRAFT_KEY);
   }
 }

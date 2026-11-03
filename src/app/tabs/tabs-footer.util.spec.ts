@@ -1,6 +1,10 @@
 import { isFooterTabActive } from './tabs-footer.util';
 
 describe('isFooterTabActive', () => {
+  it('highlights home on hub', () => {
+    expect(isFooterTabActive('/tabs/home', 'home')).toBe(true);
+  });
+
   it('does not highlight peladas on home hub', () => {
     expect(isFooterTabActive('/tabs/home', 'peladas')).toBe(false);
   });

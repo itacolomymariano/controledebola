@@ -73,6 +73,23 @@ ion-toggle.toggle-label-wrap::part(label) {
   line-height: 1.4;
 }
 
+/* Labels longos em ion-input / ion-select (stacked) — perfil atleta, forms */
+ion-input.form-label-wrap::part(label),
+ion-select.form-label-wrap::part(label),
+ion-input[labelPlacement='stacked']::part(label),
+ion-select[labelPlacement='stacked']::part(label) {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  line-height: 1.35;
+}
+
+ion-item:has(ion-input[labelPlacement='stacked']),
+ion-item:has(ion-select[labelPlacement='stacked']) {
+  --min-height: auto;
+  align-items: flex-start;
+}
+
 .mural-card-header-row {
   display: flex;
   align-items: flex-start;

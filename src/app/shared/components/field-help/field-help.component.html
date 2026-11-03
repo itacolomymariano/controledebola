@@ -1,0 +1,19 @@
+@if (body) {
+  <ion-button
+    fill="clear"
+    size="small"
+    class="field-help-trigger"
+    [id]="triggerId"
+    (click)="$event.stopPropagation()"
+    [attr.aria-label]="ariaLabelKey | t"
+  >
+    <ion-icon slot="icon-only" name="help-circle-outline"></ion-icon>
+  </ion-button>
+  <ion-popover [trigger]="triggerId" side="top" alignment="end">
+    <ng-template>
+      <ion-content class="ion-padding field-help-popover">
+        <p class="field-help-text">{{ body }}</p>
+      </ion-content>
+    </ng-template>
+  </ion-popover>
+}

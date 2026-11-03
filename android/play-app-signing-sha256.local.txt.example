@@ -1,0 +1,4 @@
+# Copie para play-app-signing-sha256.local.txt (gitignored).
+# Uma linha: SHA-256 da App signing key — Play Console → Integridade do app → certificado de assinatura do app.
+# Exemplo (substitua pelo valor real):
+# AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99

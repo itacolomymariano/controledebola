@@ -21,8 +21,8 @@ Build minimo: **2026.10.19.0256+** + Cloud mural publicado.
 
 ## Quick wins — 2º sprint (2026-10-19, Primeiro Coordenador + Xaiana)
 
-- **Register:** subtitulo curto; hints de apelido e CPF enxutos (`register.subtitle`, `register.cpfHint`)
-- **Profile-setup:** intro atleta encurtada (`profileSetup.athleteIntro`)
+- **Register:** wizard 5 passos + `app-field-help` (validado 2026-11-03)
+- **Profile-setup:** wizard por caminho (atleta 3 / torcedor 2 / pro dinâmico) + rascunho + hints (validado 2026-11-03)
 - **Votacao evento:** subtitulo unico i18n (`eventDetail.voting.subtitle`)
 - **Participantes / Chegou:** botao sem texto vertical; footnote curta i18n
 - **Pelada ? (toolbar):** botao Ouvir no `app-screen-help` com `[enableSpeech]="true"`

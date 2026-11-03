@@ -1,4 +1,4 @@
-<ion-toolbar class="user-bar" color="light">
+<ion-toolbar class="user-bar" color="primary">
   <ion-buttons slot="start" class="user-bar-start">
     <img
       src="assets/icon/logo_controle_de_bola.png"
@@ -14,9 +14,6 @@
   <ion-title class="apelido-title">{{ apelido }}</ion-title>
   <ion-buttons slot="end">
     <app-help-balloon [textKey]="helpKey"></app-help-balloon>
-    <ion-button (click)="openHome()" aria-label="Ir para inicio">
-      <ion-icon name="home-outline" slot="icon-only"></ion-icon>
-    </ion-button>
     <ion-button class="inbox-button" (click)="openInbox()" [attr.aria-label]="'Caixa de entrada'">
       <ion-icon name="mail-outline" slot="icon-only"></ion-icon>
       @if (pendingInvitations > 0) {

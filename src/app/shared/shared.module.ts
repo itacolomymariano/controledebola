@@ -50,6 +50,7 @@ import { LocaleFlagsComponent } from './components/locale-flags/locale-flags.com
 import { ThemePickerComponent } from './components/theme-picker/theme-picker.component';
 import { WizardTourComponent } from './components/wizard-tour/wizard-tour.component';
 import { HelpBalloonComponent } from './components/help-balloon/help-balloon.component';
+import { FieldHelpComponent } from './components/field-help/field-help.component';
 import { RecordIdNoteComponent } from './components/record-id-note/record-id-note.component';
 
 @NgModule({
@@ -101,6 +102,7 @@ import { RecordIdNoteComponent } from './components/record-id-note/record-id-not
     ThemePickerComponent,
     WizardTourComponent,
     HelpBalloonComponent,
+    FieldHelpComponent,
     RecordIdNoteComponent,
     TranslatePipe,
   ],
@@ -153,6 +155,7 @@ import { RecordIdNoteComponent } from './components/record-id-note/record-id-not
     ThemePickerComponent,
     WizardTourComponent,
     HelpBalloonComponent,
+    FieldHelpComponent,
     RecordIdNoteComponent,
     TranslatePipe,
   ],

@@ -1,5 +1,28 @@
 // Paletas do usuario — aplicadas em html[data-palette]. Sem hex nas paginas.
 
+html[data-palette='controle_de_bola'] {
+  --ion-color-primary: #1d7a3e;
+  --ion-color-primary-rgb: 29, 122, 62;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #1a6c37;
+  --ion-color-primary-tint: #348751;
+  --ion-color-secondary: #145a2e;
+  --ion-color-secondary-rgb: 20, 90, 46;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #124f28;
+  --ion-color-secondary-tint: #2c6b43;
+  --ion-color-tertiary: #f5c400;
+  --ion-color-tertiary-rgb: 245, 196, 0;
+  --ion-color-tertiary-contrast: #143d22;
+  --ion-color-tertiary-contrast-rgb: 20, 61, 34;
+  --ion-color-tertiary-shade: #d8ac00;
+  --ion-color-tertiary-tint: #f6ca1a;
+  --cb-header-tint: rgba(var(--ion-color-primary-rgb), 0.22);
+  --cb-card-accent: rgba(var(--ion-color-primary-rgb), 0.14);
+}
+
 html[data-palette='red_black_yellow'] {
   --ion-color-primary: #c8102e;
   --ion-color-primary-rgb: 200, 16, 46;

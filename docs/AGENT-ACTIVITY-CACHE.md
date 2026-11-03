@@ -2,9 +2,39 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-11-02 (iOS 409 duplicate + push release 294)
+**Ultima atualizacao:** 2026-11-03 (UX profile-setup wizard fase 2 Xaiana)
 
 ---
+
+### 2026-11-03 — Profile-setup wizard (fase 2 Xaiana)
+
+- **Escopo:** `/profile-setup` — atleta 3 passos; torcedor 2; profissional rates/pix/gear dinâmico; hints `app-field-help`.
+- **Rascunho:** `profile_setup_draft_v1` em [`AppStorageService`](../src/app/core/services/app-storage.service.ts); limpa em skip/finish.
+- **Shared:** [`athlete-profile-fields`](../src/app/shared/components/athlete-profile-fields/) `section`; [`role-profile-fields`](../src/app/shared/components/role-profile-fields/) `section`.
+- **i18n:** `profileSetup.wizard.*`, `profileSetup.hint.*`, `athleteProfile.*` pt/en/es.
+- **Teste:** [`profile-setup.page.spec.ts`](../src/app/pages/profile-setup/profile-setup.page.spec.ts); smoke #12b.
+
+### 2026-11-03 — Cadastro wizard (feedback Xaiana)
+
+- **Escopo:** so `/register` — 5 etapas (identidade, contato, senha, endereco, verificacao).
+- **UX:** hints via `app-field-help` (?); rascunho local `register_draft_v1` (sem senha) em [`AppStorageService`](../src/app/core/services/app-storage.service.ts).
+- **Arquivos:** [`register.page.*`](../src/app/pages/register/), [`field-help`](../src/app/shared/components/field-help/), `address-form` `hintMode=help`.
+- **i18n:** `register.wizard.*`, ortografia pt-BR; en/es espelhados.
+
+### 2026-11-03 — Play Console: Links diretos (dominio nao verificado)
+
+- **Sintoma:** versao 294 — 2 dominios + 6 links Web (`/app`, `/invite`, `/download`) falham verificacao.
+- **Causa:** `assetlinks.json` no ar so com SHA da **upload key**; instalacoes pela Play usam **App signing key**.
+- **Fix:** Play App signing SHA publicado no site (commit `controledebolasite` `b2bd573`); upload + `A3:8A:7D:…:CD:8D` em `assetlinks.json`.
+- **App:** manifest `autoVerify` OK — [AndroidManifest.xml](../android/app/src/main/AndroidManifest.xml).
+- **Doc:** [DEEP-LINKS-APP-LINKS.md](DEEP-LINKS-APP-LINKS.md) secao Play Console Links diretos.
+
+### 2026-11-03 — UX producao (Nicole/Xaiana)
+
+- **Atleta:** labels taxa pelada/confronto com wrap + i18n; [`global.scss`](../src/global.scss)
+- **Home:** 1ª aba rodape **Inicio**; removido casa do [`user-bar`](../src/app/shared/components/user-bar/user-bar.component.html)
+- **Tema:** paleta `controle_de_bola` default (verde+ouro site); dark/light via `THEME_DARK_SURFACES` + [`ThemePaletteService`](../src/app/core/services/theme-palette.service.ts)
+- **Doc:** [UI-BRAND-THEME-2026-11.md](UI-BRAND-THEME-2026-11.md); smoke #1/#1b/#1c
 
 ### 2026-11-02 — TestFlight 409: bundle version 282 duplicado
 

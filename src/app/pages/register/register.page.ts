@@ -10,6 +10,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { AppStorageService } from '../../core/services/app-storage.service';
 import { BiometricUnlockService } from '../../core/services/biometric-unlock.service';
 import { PostAuthNavigationService } from '../../core/services/post-auth-navigation.service';
+import { I18nService } from '../../core/services/i18n.service';
 import Parse from 'parse';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
 import { parseBirthDateIso } from '../../core/utils/birth-date.util';
@@ -18,6 +19,24 @@ import {
   phoneFormatValidator,
 } from '../../core/utils/contact-validation.util';
 import { formatCpfMask, isValidCpf, normalizeCpfDigits } from '../../core/utils/cpf.util';
+
+export const REGISTER_WIZARD_STEPS = [
+  'identity',
+  'contact',
+  'security',
+  'location',
+  'verify',
+] as const;
+
+export type RegisterWizardStep = (typeof REGISTER_WIZARD_STEPS)[number];
+
+const STEP_FIELDS: Record<RegisterWizardStep, string[]> = {
+  identity: ['name', 'apelido'],
+  contact: ['email', 'cpf', 'phone'],
+  security: ['password', 'confirmPassword'],
+  location: ['birthDate', 'address'],
+  verify: ['signupCaptchaAnswer'],
+};
 
 function passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
   const password = control.get('password')?.value;
@@ -50,13 +69,18 @@ const SIGNUP_MIN_DURATION_MS = 8000;
 })
 export class RegisterPage implements OnInit, OnDestroy {
   readonly appVersion = formatAppReleaseFullLabel();
+  readonly wizardSteps = REGISTER_WIZARD_STEPS;
+
+  currentStepIndex = 0;
   canSubmit = false;
   showPassword = false;
   showConfirmPassword = false;
   signupChallengeQuestion = '';
+
   private signupStartedAt = new Date();
   private localSignupChallengeAnswer: number | null = null;
   private formSub?: Subscription;
+  private draftSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
   form = this.fb.group(
     {
@@ -93,17 +117,155 @@ export class RegisterPage implements OnInit, OnDestroy {
     private readonly storage: AppStorageService,
     private readonly biometric: BiometricUnlockService,
     private readonly postAuthNav: PostAuthNavigationService,
+    private readonly i18n: I18nService,
     private readonly cdr: ChangeDetectorRef
   ) {}
+
+  get currentStep(): RegisterWizardStep {
+    return this.wizardSteps[this.currentStepIndex];
+  }
+
+  get wizardProgress(): number {
+    return (this.currentStepIndex + 1) / this.wizardSteps.length;
+  }
+
+  get isFirstStep(): boolean {
+    return this.currentStepIndex === 0;
+  }
+
+  get isLastStep(): boolean {
+    return this.currentStepIndex === this.wizardSteps.length - 1;
+  }
+
+  wizardProgressLabel(): string {
+    return this.i18n
+      .t('register.wizard.progress')
+      .replace('{current}', String(this.currentStepIndex + 1))
+      .replace('{total}', String(this.wizardSteps.length));
+  }
+
+  stepTitleKey(): string {
+    return `register.wizard.step.${this.currentStep}.title`;
+  }
+
+  stepLeadKey(): string {
+    return `register.wizard.step.${this.currentStep}.lead`;
+  }
 
   ngOnInit(): void {
     this.signupStartedAt = new Date();
     this.loadLocalSignupChallenge();
     void this.tryUpgradeSignupChallenge();
+    void this.restoreRegisterDraft();
+
     this.formSub = merge(this.form.statusChanges, this.form.valueChanges).subscribe(() => {
       this.refreshSubmitState();
+      this.scheduleDraftSave();
     });
     this.refreshSubmitState();
+  }
+
+  ngOnDestroy(): void {
+    this.formSub?.unsubscribe();
+    if (this.draftSaveTimer) clearTimeout(this.draftSaveTimer);
+  }
+
+  goNext(): void {
+    if (!this.validateCurrentStep()) return;
+    if (this.currentStepIndex < this.wizardSteps.length - 1) {
+      this.currentStepIndex += 1;
+      void this.persistRegisterDraft();
+      this.cdr.markForCheck();
+    }
+  }
+
+  validateCurrentStep(): boolean {
+    const step = this.currentStep;
+    for (const name of STEP_FIELDS[step]) {
+      this.form.get(name)?.markAsTouched();
+      this.form.get(name)?.updateValueAndValidity();
+    }
+    if (step === 'security') {
+      this.form.get('password')?.markAsTouched();
+      this.form.get('confirmPassword')?.markAsTouched();
+    }
+    return this.isStepValid(step);
+  }
+
+  isStepValid(step: RegisterWizardStep): boolean {
+    if (step === 'identity') {
+      return this.form.get('name')!.valid && this.form.get('apelido')!.valid;
+    }
+    if (step === 'contact') {
+      const phone = this.form.get('phone');
+      const phoneOk = !phone?.value || phone.valid;
+      return this.form.get('email')!.valid && this.form.get('cpf')!.valid && phoneOk;
+    }
+    if (step === 'security') {
+      return (
+        this.form.get('password')!.valid &&
+        this.form.get('confirmPassword')!.valid &&
+        !this.form.hasError('passwordMismatch')
+      );
+    }
+    if (step === 'location') {
+      const birth = this.form.get('birthDate');
+      const birthOk = !birth?.value || birth.valid;
+      return birthOk && this.form.get('address')!.valid;
+    }
+    if (step === 'verify') {
+      return this.form.get('signupCaptchaAnswer')!.valid;
+    }
+    return false;
+  }
+
+  private async restoreRegisterDraft(): Promise<void> {
+    const draft = await this.storage.getRegisterDraft();
+    if (!draft) return;
+
+    this.form.patchValue(
+      {
+        name: draft.name ?? '',
+        apelido: draft.apelido ?? '',
+        email: draft.email ?? '',
+        cpf: draft.cpf ?? '',
+        phone: draft.phone ?? '',
+        birthDate: draft.birthDate ?? '',
+        address: draft.address ?? emptyAddress(),
+      },
+      { emitEvent: false }
+    );
+
+    if (
+      typeof draft.wizardStepIndex === 'number' &&
+      draft.wizardStepIndex >= 0 &&
+      draft.wizardStepIndex < this.wizardSteps.length
+    ) {
+      this.currentStepIndex = draft.wizardStepIndex;
+    }
+    this.refreshSubmitState();
+    this.cdr.markForCheck();
+  }
+
+  private scheduleDraftSave(): void {
+    if (this.draftSaveTimer) clearTimeout(this.draftSaveTimer);
+    this.draftSaveTimer = setTimeout(() => {
+      void this.persistRegisterDraft();
+    }, 400);
+  }
+
+  private async persistRegisterDraft(): Promise<void> {
+    const v = this.form.getRawValue();
+    await this.storage.setRegisterDraft({
+      name: v.name ?? '',
+      apelido: v.apelido ?? '',
+      email: v.email ?? '',
+      cpf: v.cpf ?? '',
+      phone: v.phone ?? '',
+      birthDate: v.birthDate ?? '',
+      address: v.address ?? emptyAddress(),
+      wizardStepIndex: this.currentStepIndex,
+    });
   }
 
   private async tryUpgradeSignupChallenge(): Promise<void> {
@@ -125,8 +287,9 @@ export class RegisterPage implements OnInit, OnDestroy {
         signupCaptchaAnswer: '',
       });
       this.refreshSubmitState();
+      this.cdr.markForCheck();
     } catch {
-      // Mantem o desafio local ja carregado na abertura da tela.
+      // Mantém o desafio local já carregado na abertura da tela.
     }
   }
 
@@ -134,13 +297,16 @@ export class RegisterPage implements OnInit, OnDestroy {
     const left = Math.floor(Math.random() * 8) + 1;
     const right = Math.floor(Math.random() * 8) + 1;
     this.localSignupChallengeAnswer = left + right;
-    this.signupChallengeQuestion = `Quanto e ${left} + ${right}?`;
+    this.signupChallengeQuestion = this.i18n
+      .t('register.captchaQuestion')
+      .replace('{left}', String(left))
+      .replace('{right}', String(right));
     this.form.patchValue({ signupChallengeId: LOCAL_SIGNUP_CHALLENGE_ID });
     this.refreshSubmitState();
   }
 
   private refreshSubmitState(): void {
-    this.canSubmit = this.form.valid;
+    this.canSubmit = this.isLastStep && this.form.valid;
     this.cdr.markForCheck();
   }
 
@@ -151,23 +317,19 @@ export class RegisterPage implements OnInit, OnDestroy {
 
     const honeypot = this.form.get('signupHoneypot')?.value?.trim();
     if (honeypot) {
-      return 'Cadastro invalido.';
+      return this.i18n.t('register.signupInvalid');
     }
 
     if (Date.now() - this.signupStartedAt.getTime() < SIGNUP_MIN_DURATION_MS) {
-      return 'Cadastro muito rapido. Revise os dados e tente novamente.';
+      return this.i18n.t('register.signupTooFast');
     }
 
     const answer = Number(this.form.get('signupCaptchaAnswer')?.value);
     if (Number.isNaN(answer) || answer !== this.localSignupChallengeAnswer) {
-      return 'Resposta da verificacao incorreta.';
+      return this.i18n.t('register.captchaWrong');
     }
 
     return null;
-  }
-
-  ngOnDestroy(): void {
-    this.formSub?.unsubscribe();
   }
 
   onAddressChanged(): void {
@@ -175,11 +337,17 @@ export class RegisterPage implements OnInit, OnDestroy {
     this.refreshSubmitState();
   }
 
-  goLogin(): void {
-    void this.router.navigateByUrl('/login');
+  async goLogin(): Promise<void> {
+    await this.router.navigateByUrl('/login');
   }
 
   async goBack(): Promise<void> {
+    if (this.currentStepIndex > 0) {
+      this.currentStepIndex -= 1;
+      void this.persistRegisterDraft();
+      this.cdr.markForCheck();
+      return;
+    }
     const wizardPath = await this.storage.getWizardPath();
     if (wizardPath) {
       void this.router.navigate(['/onboarding'], { queryParams: { step: 'participation' } });
@@ -197,12 +365,10 @@ export class RegisterPage implements OnInit, OnDestroy {
   }
 
   async submit(): Promise<void> {
-    if (this.form.invalid) {
+    if (!this.validateCurrentStep() || this.form.invalid) {
       this.form.markAllAsTouched();
       if (this.form.get('address')?.hasError('addressIncomplete')) {
-        await this.showError(
-          'Selecione seu endereco na lista de sugestoes. Ele e usado para eventos proximos e rankings por bairro, cidade e estado.'
-        );
+        await this.showError(this.i18n.t('register.addressSubmitError'));
       }
       return;
     }
@@ -214,7 +380,7 @@ export class RegisterPage implements OnInit, OnDestroy {
     }
 
     const v = this.form.getRawValue();
-    const loading = await this.loadingCtrl.create({ message: 'Criando conta...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('register.creatingAccount') });
     await loading.present();
 
     try {
@@ -233,6 +399,7 @@ export class RegisterPage implements OnInit, OnDestroy {
         signupHoneypot: v.signupHoneypot || undefined,
       });
 
+      await this.storage.clearRegisterDraft();
       await this.storage.setOnboardingComplete();
 
       await this.offerBiometric();
@@ -246,12 +413,12 @@ export class RegisterPage implements OnInit, OnDestroy {
 
   private async offerBiometric(): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Login rapido',
-      message: 'Deseja ativar login por biometria neste dispositivo?',
+      header: this.i18n.t('register.biometricTitle'),
+      message: this.i18n.t('register.biometricMessage'),
       buttons: [
-        { text: 'Agora nao', role: 'cancel' },
+        { text: this.i18n.t('register.biometricLater'), role: 'cancel' },
         {
-          text: 'Ativar',
+          text: this.i18n.t('register.biometricEnable'),
           handler: () => {
             const { email, password } = this.form.getRawValue();
             if (email && password) {

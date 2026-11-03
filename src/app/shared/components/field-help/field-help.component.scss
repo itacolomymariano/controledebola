@@ -1,0 +1,19 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+.field-help-trigger {
+  --padding-start: 4px;
+  --padding-end: 4px;
+  margin: 0;
+  height: 32px;
+}
+
+.field-help-popover .field-help-text {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  white-space: pre-line;
+}

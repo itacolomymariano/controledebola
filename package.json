@@ -21,7 +21,8 @@
     "lint": "ng lint",
     "build:cloud": "node scripts/build-cloud-code.js",
     "check:cloud-parity": "node scripts/cloud-client-parity.js",
-    "probe:sandbox-cloud": "node scripts/probe-sandbox-cloud-functions.js"
+    "probe:sandbox-cloud": "node scripts/probe-sandbox-cloud-functions.js",
+    "sync:play-assetlinks": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-play-assetlinks.ps1"
   },
   "private": true,
   "dependencies": {

@@ -1,1 +1,15 @@
+ion-tab-bar {
+  --color-selected: var(--ion-color-primary);
+  border-top: 2px solid var(--cb-card-accent, rgba(var(--ion-color-primary-rgb), 0.12));
+}
 
+ion-tab-button.tab-selected ion-icon,
+ion-tab-button[selected='true'] ion-icon {
+  color: var(--ion-color-primary);
+}
+
+ion-tab-button.tab-selected ion-label,
+ion-tab-button[selected='true'] ion-label {
+  font-weight: 600;
+  color: var(--ion-color-primary);
+}

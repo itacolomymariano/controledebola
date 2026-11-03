@@ -35,6 +35,10 @@ export class TabsPage implements OnDestroy {
     return isFooterTabActive(this.currentUrl || this.router.url, key);
   }
 
+  openHomeTab(): void {
+    void this.router.navigateByUrl('/tabs/home');
+  }
+
   /** Rodapé Peladas sempre abre a lista (não só o hub de portas). */
   openPeladasList(): void {
     void this.router.navigateByUrl('/tabs/peladas/lista');

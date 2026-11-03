@@ -127,7 +127,7 @@ Detalhes: [docs/IOS_GITHUB_ACTIONS.md](docs/IOS_GITHUB_ACTIONS.md) (secoes 3 e 7
 src/app/core/     models, services (37), guards, utils
 src/app/pages/    ~45 paginas lazy-loaded
 src/app/shared/   componentes reutilizaveis
-src/app/tabs/     navegacao (Peladas, Buscar, Mural, Perfil)
+src/app/tabs/     navegacao (Inicio, Peladas, Buscar, Confrontos, Mural, Perfil)
 cloud/source/     Cloud Code modular (01-12) — EDITAR AQUI
 cloud/main.js     GERADO — nao editar
 docs/             documentacao (guia completo + fases Back4App + iOS Actions)
@@ -147,6 +147,7 @@ docs/             documentacao (guia completo + fases Back4App + iOS Actions)
 - Chame `cdr.markForCheck()` em componentes `OnPush` apos operacoes async
 - Use `parseErrorMessage()` e `handleApiError()` para erros Parse
 - Configure chaves em `src/environments/environment.local.ts` (nao commitar)
+- **UI / tema:** paleta marca `controle_de_bola` — [`docs/UI-BRAND-THEME-2026-11.md`](docs/UI-BRAND-THEME-2026-11.md); hex so em `theme/variables.scss` + `theme-palette.model.ts`; **Inicio** so no rodape (1ª aba), nao icone casa no `user-bar`; labels longos em forms → `global.scss` (stacked input/select)
 
 ### Nao faca
 
@@ -192,7 +193,7 @@ splash → (onboarding?) → login/register → (profile-setup?) → tabs/pelada
 
 **Deep links / convite:** "Convidar Amigos" compartilha o link de **teste interno** da Play
 (`https://play.google.com/apps/internaltest/...`) enquanto nao houver listagem publica.
-App Links do dominio: [docs/DEEP-LINKS-APP-LINKS.md](docs/DEEP-LINKS-APP-LINKS.md). Site: repo `controledebolasite`.
+App Links do dominio: [docs/DEEP-LINKS-APP-LINKS.md](docs/DEEP-LINKS-APP-LINKS.md). Site: repo `controledebolasite`. Na Play, `assetlinks.json` precisa do SHA da **App signing key** — `npm run sync:play-assetlinks` / `scripts/verify-assetlinks-live.ps1`.
 
 **Android / Play:** `compileSdk` e `targetSdk` = **36** (`android/variables.gradle`) — requisito Play a partir de 31/08/2026. AAB: `npm run build:android:aab`.
 
