@@ -52,6 +52,8 @@ import { WizardTourComponent } from './components/wizard-tour/wizard-tour.compon
 import { HelpBalloonComponent } from './components/help-balloon/help-balloon.component';
 import { FieldHelpComponent } from './components/field-help/field-help.component';
 import { RecordIdNoteComponent } from './components/record-id-note/record-id-note.component';
+import { HomeHubHeroComponent } from './components/home-hub-hero/home-hub-hero.component';
+import { HomeDoorCardComponent } from './components/home-door-card/home-door-card.component';
 
 @NgModule({
   declarations: [
@@ -104,6 +106,8 @@ import { RecordIdNoteComponent } from './components/record-id-note/record-id-not
     HelpBalloonComponent,
     FieldHelpComponent,
     RecordIdNoteComponent,
+    HomeHubHeroComponent,
+    HomeDoorCardComponent,
     TranslatePipe,
   ],
   imports: [CommonModule, FormsModule, ReactiveFormsModule, IonicModule],
@@ -157,6 +161,8 @@ import { RecordIdNoteComponent } from './components/record-id-note/record-id-not
     HelpBalloonComponent,
     FieldHelpComponent,
     RecordIdNoteComponent,
+    HomeHubHeroComponent,
+    HomeDoorCardComponent,
     TranslatePipe,
   ],
 })

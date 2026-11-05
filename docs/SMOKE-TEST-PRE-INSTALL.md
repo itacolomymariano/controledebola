@@ -16,7 +16,7 @@ Publicar `cloud/main.js` no Back4App quando houver alteração em `cloud/source/
 | # | Fluxo | O que validar |
 |---|--------|----------------|
 | 0 | Sobre (build UX) | Antes de validar wizard Xaiana/Nicole: **Versão** ≥ **1.0.10**, build **> 295**, release **≥ 2026.11.04.0298** — ver [XAIANA-VALIDACAO-UX-POS-BUILD.md](XAIANA-VALIDACAO-UX-POS-BUILD.md) |
-| 1 | Login / tabs | Entrada em **`/tabs/home`** (quatro portas): aba **Início** destacada no rodapé (canto esquerdo); **sem** ícone casa no topo; toque **Peladas** (2ª aba) → lista com Peladas destacada |
+| 1 | Login / tabs | **`/tabs/home`**: hero roxo (avatar + apelido), **grid 2×2** das quatro portas (cores distintas, seta circular); simetria sem faixa vazia grande; aba **Início** no rodapé; **sem** ícone casa no topo; 2ª aba **Peladas** → lista |
 | 1b | Perfil atleta | Labels completos das taxas pelada e **jogo entre times amadores (R$)** (sem reticências) |
 | 1c | Tema | Menu → Cores e temas: paleta **Controle de Bola** visível; trocar claro/escuro muda toolbar e aba selecionada de forma perceptível |
 | 2 | Pelada → Configurações | Toggles com texto completo (quebra de linha) |

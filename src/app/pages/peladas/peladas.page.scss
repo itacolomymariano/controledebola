@@ -1,55 +1,36 @@
-.wizard-join-banner {
-  display: block;
-  font-size: 0.9rem;
-  line-height: 1.4;
-  background: var(--ion-color-primary-tint, rgba(var(--ion-color-primary-rgb), 0.12));
-  border-bottom: 1px solid var(--ion-color-primary, #3880ff);
+.home-hub-content {
+  --background: var(--cb-home-page-bg);
+  --padding-top: 0;
+  --padding-bottom: 0;
 }
 
-ion-badge {
-  margin-right: 4px;
+.home-hub-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  box-sizing: border-box;
+  padding-bottom: calc(var(--app-bottom-inset, 0px) + 8px);
 }
 
-.peladas-orientation p {
-  margin: 0;
-  line-height: 1.5;
+.home-door-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 12px 16px 20px;
+  flex: 1;
+  align-content: center;
+  max-width: 520px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.coach-card p {
-  margin: 0 0 8px;
-  line-height: 1.45;
-}
-
-.pelada-admin-flag {
-  margin: 4px 0 0;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--ion-color-tertiary-shade, #5260ff);
-}
-
-.pelada-nearby-flag {
-  margin: 2px 0 0;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--ion-color-primary-shade, #0054e9);
-}
-
-/* Hub sem ion-header local: ion-content fullscreen sobe; reserva altura do toolbar removido */
-.home-portas-content {
-  --padding-top: var(--ion-toolbar-height, 56px);
-}
-
-.home-door {
-  margin: 12px 16px;
-  border-inline-start: 4px solid var(--ion-color-primary);
-  background: var(--cb-card-accent, rgba(var(--ion-color-primary-rgb), 0.08));
-}
-
-.home-door ion-card-title {
-  color: var(--ion-color-primary-shade, var(--ion-color-primary));
-}
-
-.home-door ion-icon {
-  margin-right: 8px;
-  vertical-align: middle;
+.home-hub-footer-wave {
+  flex-shrink: 0;
+  height: 48px;
+  margin: auto 0 0;
+  background:
+    radial-gradient(ellipse 80% 100% at 0% 100%, rgba(124, 58, 237, 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 80% 100% at 100% 100%, rgba(219, 39, 119, 0.1) 0%, transparent 70%);
+  pointer-events: none;
 }

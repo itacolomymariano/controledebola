@@ -1,0 +1,81 @@
+.home-door-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  width: 100%;
+  min-height: 148px;
+  padding: 16px 14px 48px;
+  border: none;
+  border-radius: 18px;
+  box-shadow: 0 4px 14px rgba(30, 20, 60, 0.08);
+  cursor: pointer;
+  font: inherit;
+  color: #1f2937;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.home-door-card--peladas {
+  background: var(--cb-door-peladas-bg);
+  --door-accent: var(--cb-door-peladas-accent);
+}
+
+.home-door-card--confrontos {
+  background: var(--cb-door-confrontos-bg);
+  --door-accent: var(--cb-door-confrontos-accent);
+}
+
+.home-door-card--times {
+  background: var(--cb-door-times-bg);
+  --door-accent: var(--cb-door-times-accent);
+}
+
+.home-door-card--users {
+  background: var(--cb-door-users-bg);
+  --door-accent: var(--cb-door-users-accent);
+}
+
+.home-door-card__icon {
+  font-size: 2rem;
+  color: var(--door-accent);
+  margin-bottom: 8px;
+}
+
+.home-door-card__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.home-door-card__hint {
+  margin: 6px 0 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: #374151;
+  opacity: 0.9;
+}
+
+.home-door-card__go {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--door-accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+  ion-icon {
+    font-size: 1.25rem;
+  }
+}

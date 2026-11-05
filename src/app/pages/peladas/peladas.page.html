@@ -1,41 +1,17 @@
-<ion-content class="home-portas-content">
-  <ion-card button class="home-door" (click)="openDoor('lista')">
-    <ion-card-header>
-      <ion-card-title>
-        <ion-icon name="football-outline"></ion-icon>
-        {{ 'peladas.door.peladas' | t }}
-      </ion-card-title>
-      <ion-card-subtitle>{{ 'peladas.door.peladasHint' | t }}</ion-card-subtitle>
-    </ion-card-header>
-  </ion-card>
-
-  <ion-card button class="home-door" (click)="openDoor('confrontos')">
-    <ion-card-header>
-      <ion-card-title>
-        <ion-icon name="swap-horizontal-outline"></ion-icon>
-        {{ 'peladas.door.confrontos' | t }}
-      </ion-card-title>
-      <ion-card-subtitle>{{ 'peladas.door.confrontosHint' | t }}</ion-card-subtitle>
-    </ion-card-header>
-  </ion-card>
-
-  <ion-card button class="home-door" (click)="openDoor('times')">
-    <ion-card-header>
-      <ion-card-title>
-        <ion-icon name="shield-outline"></ion-icon>
-        {{ 'peladas.door.times' | t }}
-      </ion-card-title>
-      <ion-card-subtitle>{{ 'peladas.door.timesHint' | t }}</ion-card-subtitle>
-    </ion-card-header>
-  </ion-card>
-
-  <ion-card button class="home-door" (click)="openDoor('usuarios')">
-    <ion-card-header>
-      <ion-card-title>
-        <ion-icon name="people-outline"></ion-icon>
-        {{ 'peladas.door.users' | t }}
-      </ion-card-title>
-      <ion-card-subtitle>{{ 'peladas.door.usersHint' | t }}</ion-card-subtitle>
-    </ion-card-header>
-  </ion-card>
+<ion-content class="home-hub-content">
+  <div class="home-hub-shell">
+    <app-home-hub-hero></app-home-hub-hero>
+    <div class="home-door-grid" role="navigation" [attr.aria-label]="'homeHub.doorsAria' | t">
+      @for (door of doors; track door.id) {
+        <app-home-door-card
+          [titleKey]="door.titleKey"
+          [hintKey]="door.hintKey"
+          [icon]="door.icon"
+          [variant]="door.variant"
+          (activate)="openDoor(door.id)"
+        ></app-home-door-card>
+      }
+    </div>
+    <div class="home-hub-footer-wave" aria-hidden="true"></div>
+  </div>
 </ion-content>

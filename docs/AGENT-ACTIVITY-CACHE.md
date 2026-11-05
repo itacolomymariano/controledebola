@@ -2,9 +2,16 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-11-05 (Xaiana UX iOS build 295)
+**Ultima atualizacao:** 2026-11-05 (Home mock Nicole Fase 1)
 
 ---
+
+### 2026-11-05 — Home mock Nicole (Fase 1)
+
+- **Escopo:** `/tabs/home` only — [`peladas.page`](../src/app/pages/peladas/peladas.page.ts); hero + grid 2×2; tokens `--cb-home-*` / `--cb-door-*` em [`variables.scss`](../src/theme/variables.scss).
+- **Componentes:** [`home-hub-hero`](../src/app/shared/components/home-hub-hero/), [`home-door-card`](../src/app/shared/components/home-door-card/) no `SharedModule`.
+- **Docs:** [UI-REDESIGN-NICOLE-2026-11.md](UI-REDESIGN-NICOLE-2026-11.md), [NICOLE-VALIDACAO-HOME-POS-BUILD.md](NICOLE-VALIDACAO-HOME-POS-BUILD.md); exceção marca em [UI-BRAND-THEME-2026-11.md](UI-BRAND-THEME-2026-11.md).
+- **QA:** smoke #1, captura `p23-home-portas`; Nicole precisa APK/AAB novo (lista branca = build antigo).
 
 ### 2026-11-05 — Xaiana: wizard nao apareceu no iOS
 

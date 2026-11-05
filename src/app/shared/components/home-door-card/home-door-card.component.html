@@ -1,0 +1,16 @@
+<button
+  type="button"
+  class="home-door-card"
+  [class.home-door-card--peladas]="variant === 'peladas'"
+  [class.home-door-card--confrontos]="variant === 'confrontos'"
+  [class.home-door-card--times]="variant === 'times'"
+  [class.home-door-card--users]="variant === 'users'"
+  (click)="onActivate()"
+>
+  <ion-icon class="home-door-card__icon" [name]="icon" aria-hidden="true"></ion-icon>
+  <h2 class="home-door-card__title">{{ titleKey | t }}</h2>
+  <p class="home-door-card__hint">{{ hintKey | t }}</p>
+  <span class="home-door-card__go" aria-hidden="true">
+    <ion-icon name="arrow-forward"></ion-icon>
+  </span>
+</button>

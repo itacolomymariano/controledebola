@@ -145,3 +145,20 @@ html[data-palette='blue_red_white'] {
   --ion-color-secondary-shade: #b00e28;
   --ion-color-secondary-tint: #ce2843;
 }
+
+/* Home hub (mock Nicole) — escopo local em .home-hub-content; nao altera primary global */
+:root {
+  --cb-home-page-bg: #f3f0fa;
+  --cb-home-hero-start: #5b21b6;
+  --cb-home-hero-end: #7c3aed;
+  --cb-home-hero-text: #ffffff;
+  --cb-home-hero-chip-bg: rgba(255, 255, 255, 0.22);
+  --cb-door-peladas-bg: #e9d5ff;
+  --cb-door-peladas-accent: #7c3aed;
+  --cb-door-confrontos-bg: #bbf7d0;
+  --cb-door-confrontos-accent: #15803d;
+  --cb-door-times-bg: #fed7aa;
+  --cb-door-times-accent: #ea580c;
+  --cb-door-users-bg: #fbcfe8;
+  --cb-door-users-accent: #db2777;
+}

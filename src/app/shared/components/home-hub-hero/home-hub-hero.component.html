@@ -1,0 +1,12 @@
+<section class="home-hub-hero" [attr.aria-label]="'homeHub.heroAria' | t">
+  <div class="home-hub-hero__waves" aria-hidden="true"></div>
+  <div class="home-hub-hero__ball" aria-hidden="true"></div>
+  <div class="home-hub-hero__inner">
+    <app-user-avatar [avatarUrl]="avatarUrl" [alt]="apelido" size="lg"></app-user-avatar>
+    <h1 class="home-hub-hero__name">{{ apelido }}</h1>
+    <p class="home-hub-hero__welcome">{{ 'homeHub.welcome' | t }}</p>
+    <div class="home-hub-hero__chips" *ngIf="locationChips.length">
+      <span class="home-hub-hero__chip" *ngFor="let chip of locationChips">{{ chip }}</span>
+    </div>
+  </div>
+</section>

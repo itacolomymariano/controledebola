@@ -36,6 +36,10 @@
 - **Início** = 1ª aba do rodapé (`/tabs/home`) — não duplicar ícone casa no [`user-bar`](../src/app/shared/components/user-bar/user-bar.component.html).
 - **Peladas** = 2ª aba → `/tabs/peladas/lista`.
 
+### Exceção temporária — mock Nicole (2026-11)
+
+A tela **Início** (`/tabs/home`, `PeladasPage`) usa paleta **roxo/lilás + grid 2×2** alinhada ao mock ChatGPT, com tokens `--cb-home-*` e `--cb-door-*` em `variables.scss` (escopo local). O restante do app mantém verde/ouro `controle_de_bola`. Roadmap: [UI-REDESIGN-NICOLE-2026-11.md](UI-REDESIGN-NICOLE-2026-11.md).
+
 ---
 
 ## Labels longos em formulários
