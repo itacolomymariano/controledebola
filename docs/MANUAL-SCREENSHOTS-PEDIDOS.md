@@ -1,6 +1,6 @@
 # Screenshots para o manual ilustrado
 
-**Matriz atualizada (2026-10-29):** [MANUAL-SCREENSHOT-MATRIX-2026-10.md](MANUAL-SCREENSHOT-MATRIX-2026-10.md) · **Ordem de captura:** [MANUAL-CAPTURE-PRINTS-PRIORITY.md](MANUAL-CAPTURE-PRINTS-PRIORITY.md)
+**Matriz atualizada (2026-11-05):** [MANUAL-SCREENSHOT-MATRIX-2026-10.md](MANUAL-SCREENSHOT-MATRIX-2026-10.md) · **Ordem de captura:** [MANUAL-CAPTURE-PRINTS-PRIORITY.md](MANUAL-CAPTURE-PRINTS-PRIORITY.md) · **Roteiro WhatsApp:** [MANUAL-CAPTURA-WHATSAPP-PRODUCAO.txt](MANUAL-CAPTURA-WHATSAPP-PRODUCAO.txt)
 
 Retrato no Samsung, tela real, **sem teclado**. PNG ou JPG.
 

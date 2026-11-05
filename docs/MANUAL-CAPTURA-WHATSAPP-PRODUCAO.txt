@@ -1,0 +1,176 @@
+CONTROLE DE BOLA — FOTOS DO MANUAL (PRODUÇÃO)
+==============================================
+App: Controle de Bola (Play teste interno ou loja) — pacote com.minhapelada.app
+NÃO usar o APK Demo (sandbox).
+
+REGRAS
+- Celular Samsung, retrato, tela cheia, SEM teclado na foto
+- Tema padrão do app (verde/ouro), português
+- Salvar como JPG; renomear EXATAMENTE como abaixo
+- Enviar para: D:\Ita\Projetos\Minha_Pelada_Controle_de_Bola\imagens\Manual\Novas
+- Ordem sugerida: do 1 ao 27 (mais fácil primeiro)
+
+FIXTURE (papai/mamãe prepara antes, se faltar tela):
+- Conta ADMIN de uma pelada + 1 evento futuro com inscritos confirmados
+- 1 evento com portaria ligada; 1 confronto aceito sem data (selo Próximo)
+- Opcional: cinegrafista confirmado no evento; votação aberta no evento
+
+────────────────────────────────────────────────────────────
+1) p-register-wizard-step.jpeg — Cap. 01 Cadastro
+────────────────────────────────────────────────────────────
+Como chegar: Sair da conta → Login → Criar conta → avançar até um passo do meio (ex.: ENDEREÇO, passo 4 de 5).
+Na foto: barra de progresso no topo, título da etapa, botão Continuar, ícone (?) ao lado de um campo.
+
+────────────────────────────────────────────────────────────
+2) p-profile-setup-atleta-step.jpeg — Cap. 01 Montar perfil
+────────────────────────────────────────────────────────────
+Como chegar: Conta NOVA escolhendo caminho ATLETA (ou resetar teste) → tela Montando seu perfil → passo POSIÇÕES (1 de 3).
+Na foto: progresso, título da etapa, campos de posição, Continuar/Voltar, Completar depois.
+
+────────────────────────────────────────────────────────────
+3) p-login-reset-enviado.jpeg — Cap. 01 Esqueci senha
+────────────────────────────────────────────────────────────
+Como chegar: Login → Esqueci minha senha → e-mail válido → Enviar código → AGUARDAR card na mesma tela.
+Na foto: e-mail mascarado (ex.: t***@...), campo para código de 6 dígitos, SEM teclado aberto.
+
+────────────────────────────────────────────────────────────
+4) p23-home-portas.jpeg — Cap. 01 Home
+────────────────────────────────────────────────────────────
+Como chegar: Login → tocar aba INÍCIO no rodapé (ícone casa) — fica em /tabs/home.
+Na foto: 4 portas (Peladas, Confrontos, Times, Usuários), topo com logo + apelido + ? + ícones; NENHUMA aba do rodapé destacada (Início não fica “selecionado” como Peladas).
+
+────────────────────────────────────────────────────────────
+5) p-lista-peladas.jpeg — Cap. 01 e 02 Lista
+────────────────────────────────────────────────────────────
+Como chegar: Toque aba PELADAS no rodapé (lista de peladas).
+Na foto: lista de peladas visível; aba Peladas do rodapé DESTACADA.
+
+────────────────────────────────────────────────────────────
+6) p-wizard-lista-peladas.jpeg — Cap. 01 Wizard
+────────────────────────────────────────────────────────────
+Como chegar: Menu (☰) → Usar o Wizard → tocar Abrir pelada OU Ver peladas.
+Na foto: resultado = mesma lista do item 5 (pode ser print igual ao 5 se vier do wizard).
+
+────────────────────────────────────────────────────────────
+7) p-menu-idioma-tema.jpeg — Cap. 01 e 11 Menu
+────────────────────────────────────────────────────────────
+Como chegar: Menu ☰ aberto (logado).
+Na foto: itens Idioma e Cores e tema visíveis na lista.
+
+────────────────────────────────────────────────────────────
+8) p-tema-restaurar.jpeg — Cap. 01 e 11 Tema
+────────────────────────────────────────────────────────────
+Como chegar: Menu → Cores e tema → abrir cortina.
+Na foto: botão/opção Restaurar padrão do app visível.
+
+────────────────────────────────────────────────────────────
+9) p-usuarios-busca.jpeg — Cap. 15 Porta Usuários
+────────────────────────────────────────────────────────────
+Como chegar: Home (Início) → porta USUÁRIOS → usar busca/filtro (ex.: perfil Juiz ou posição goleiro).
+Na foto: lista filtrada com resultados.
+
+────────────────────────────────────────────────────────────
+10) p-usuarios-ficha-atleta.jpeg — Cap. 15 Ficha
+────────────────────────────────────────────────────────────
+Como chegar: Mesma porta Usuários → tocar uma pessoa que tenha perfil ATLETA.
+Na foto: ficha com bloco atleta (posição, medidas, etc.) na mesma tela.
+
+────────────────────────────────────────────────────────────
+11) p56-caixa-card.jpeg — Cap. 07 e 14 Caixa
+────────────────────────────────────────────────────────────
+Como chegar: Ícone envelope (caixa) no topo → Entrada — lista de mensagens.
+Na foto: card COMPACTO — só apelido, nome entre parênteses, data e hora (layout novo, NÃO o print antigo “Contratações confirmadas”).
+
+────────────────────────────────────────────────────────────
+12) p62-desafio-card.jpeg — Cap. 10 e 14 Desafio
+────────────────────────────────────────────────────────────
+Como chegar: Conta PRESIDENTE de time com DESAFIO RECEBIDO na caixa.
+Na foto: mesmo formato compacto do item 11, mensagem de desafio.
+
+────────────────────────────────────────────────────────────
+13) p-aceite-ida-volta.jpeg — Cap. 10 Ida e volta
+────────────────────────────────────────────────────────────
+Como chegar: Caixa → abrir mensagem de aceite ida e volta (confronto).
+Na foto: data, hora e local da VOLTA visíveis.
+
+────────────────────────────────────────────────────────────
+14) p60-confrontos-proximo.jpeg — Cap. 10 Confrontos
+────────────────────────────────────────────────────────────
+Como chegar: Aba CONFRONTOS no rodapé → lista com desafio aceito ainda SEM data marcada.
+Na foto: selo PRÓXIMO em um card.
+
+────────────────────────────────────────────────────────────
+15) p-evento-participantes-confirmado.jpeg — Cap. 05 Evento admin
+────────────────────────────────────────────────────────────
+Como chegar: Admin → abrir EVENTO → aba/seção Participantes → inscrito já CONFIRMADO (pagou/isento).
+Na foto: card compacto do confirmado + botão CHEGOU abaixo.
+
+────────────────────────────────────────────────────────────
+16) p39-separacao-media-cb.jpeg — Cap. 05 Times
+────────────────────────────────────────────────────────────
+Como chegar: Admin → evento → Separar times (montagem de times).
+Na foto: MÉDIA CB visível em cada time/atleta.
+
+────────────────────────────────────────────────────────────
+17) p46-portaria-entradas.jpeg — Cap. 05 Portaria lista
+────────────────────────────────────────────────────────────
+Como chegar: Evento COM PORTARIA → admin → Lista de entradas (NÃO é a tela de ler QR — já existe p45).
+Na foto: lista de quem entrou.
+
+────────────────────────────────────────────────────────────
+18) p-evento-votacao-contador-10.jpeg — Cap. 05 e 06 Votação
+────────────────────────────────────────────────────────────
+Como chegar: Evento em período de VOTAÇÃO → painel de votar no detalhe do evento.
+Na foto: texto tipo “Notas 10 restantes neste evento: X”.
+
+────────────────────────────────────────────────────────────
+19) p57-cinegrafista-video.jpeg — Cap. 08 Cinegrafista
+────────────────────────────────────────────────────────────
+Como chegar: Usuário CINEGRAFISTA confirmado no evento → tela Enviar vídeo / cobertura (/event/.../cameraman-coverage).
+Na foto: formulário de envio de vídeo (melhores momentos).
+
+────────────────────────────────────────────────────────────
+20) p58-hub-midia-video.jpeg — Cap. 08 Hub vídeo
+────────────────────────────────────────────────────────────
+Como chegar: Mural do evento → Imprensa/Mídia → Abrir cobertura → hub → aba VÍDEO (quem assiste).
+Na foto: tela de consumo do vídeo (player ou card de vídeo publicado).
+
+────────────────────────────────────────────────────────────
+21) p50-mural-confrontos.jpeg — Cap. 06 Mural Confrontos
+────────────────────────────────────────────────────────────
+Como chegar: Aba MURAL → sub-aba CONFRONTOS.
+Na foto: cards Melhor time do app, Maior invencibilidade, Melhor ataque, Melhor defesa (NÃO só “Top Times” antigo).
+
+────────────────────────────────────────────────────────────
+22) p-mural-confianca.jpeg — Cap. 06 Mural Geral
+────────────────────────────────────────────────────────────
+Como chegar: Mural → aba GERAL → scroll até hint de confiança + card Craque com “X pessoas avaliaram”.
+
+────────────────────────────────────────────────────────────
+23) p-mural-melhor-pelada.jpeg — Cap. 06 Mural Peladas
+────────────────────────────────────────────────────────────
+Como chegar: Mural → aba PELADAS → primeiro card Melhor Pelada do App.
+
+────────────────────────────────────────────────────────────
+24) p-mural-top-peladas.jpeg — Cap. 06 Top peladas
+────────────────────────────────────────────────────────────
+Como chegar: Mural → Peladas → Top 10 Peladas (abaixo de Top 10 Atletas das Peladas).
+
+────────────────────────────────────────────────────────────
+25) p-mural-geral-top-peladas.jpeg — Cap. 06 Top peladas geral
+────────────────────────────────────────────────────────────
+Como chegar: Mural → Geral → Top 10 Peladas (abaixo de Top 10 Times).
+
+────────────────────────────────────────────────────────────
+26) p-home-ajuda-balao.jpeg — Cap. 01 (OPCIONAL)
+────────────────────────────────────────────────────────────
+Só se p24-balao-ajuda.jpeg não bastar: Home → tocar ? → balão aberto com Ouvir.
+
+────────────────────────────────────────────────────────────
+27) Substituir figuras antigas (quando 1 e 2 prontos)
+────────────────────────────────────────────────────────────
+- Trocar no site depois: 03-criar-conta.jpeg → usar p-register-wizard-step
+- p27-montagem-perfil.jpeg → pode manter OU usar print do último passo do wizard
+
+FIM — 25 obrigatórios + 1 opcional + 2 substituições editoriais
+Dúvidas: docs/MANUAL-SITE-INTEGRATE.md no repo minhapelada

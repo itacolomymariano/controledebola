@@ -2,8 +2,9 @@
 
 Retrato Samsung, **sem teclado**, APK **produção** (`com.minhapelada.app`).
 
-Ordem sugerida para enviar à pasta `imagens\Manual\Novas` (renomear ao copiar para `controledebolasite/public/guia/` conforme [MANUAL-SCREENSHOTS-PEDIDOS.md](MANUAL-SCREENSHOTS-PEDIDOS.md)).
+Ordem sugerida para enviar à pasta `imagens\Manual\Novas` (renomear ao copiar para `controledebolasite/public/guia/` conforme [MANUAL-SCREENSHOTS-PEDIDOS.md](MANUAL-SCREENSHOTS-PEDIDOS.md)). **Passo a passo completo:** [MANUAL-CAPTURA-WHATSAPP-PRODUCAO.txt](MANUAL-CAPTURA-WHATSAPP-PRODUCAO.txt).
 
+0. `p-register-wizard-step.jpeg` / `p-profile-setup-atleta-step.jpeg` — wizard cadastro e profile-setup (cap. 01)
 1. `p23-home-portas.jpeg` — Home, 4 portas, header único, **nenhuma** aba do rodapé destacada  
 2. `p-lista-peladas.jpeg` — Lista de peladas, aba **Peladas** destacada  
 3. `p-login-reset-enviado.jpeg` — Após Enviar código: e-mail mascarado + campo do código  

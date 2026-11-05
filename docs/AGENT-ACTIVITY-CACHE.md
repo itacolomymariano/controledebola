@@ -2,9 +2,23 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-11-03 (UX profile-setup wizard fase 2 Xaiana)
+**Ultima atualizacao:** 2026-11-05 (Xaiana UX iOS build 295)
 
 ---
+
+### 2026-11-05 — Xaiana: wizard nao apareceu no iOS
+
+- **Causa:** TestFlight **1.0.9 (295)** / `2026.11.02.0295` — anterior ao commit wizard `5ea684d`.
+- **Codigo:** wizard ja em `main`; marketing **1.0.10** (`1c1299a`); AAB **298** Android.
+- **Acao:** `release-ipa` na `main` → TestFlight **1.0.10** build **> 295** — [XAIANA-VALIDACAO-UX-POS-BUILD.md](XAIANA-VALIDACAO-UX-POS-BUILD.md).
+- **Fix fluxo:** [`post-auth-navigation.service.ts`](../src/app/core/services/post-auth-navigation.service.ts) — Login → Criar conta (sem onboarding) ainda abre `/profile-setup` com path atleta default.
+
+### 2026-11-05 — Coordenador manual + docs (producao)
+
+- **Auditoria:** [MANUAL-DOC-AUDIT-2026-11.md](MANUAL-DOC-AUDIT-2026-11.md) (0 P0); [MANUAL-MDX-INVENTORY-2026-11.md](MANUAL-MDX-INVENTORY-2026-11.md) (28 placeholders, 0 links quebrados).
+- **Capturas:** roteiro WhatsApp [MANUAL-CAPTURA-WHATSAPP-PRODUCAO.txt](MANUAL-CAPTURA-WHATSAPP-PRODUCAO.txt); status [MANUAL-CAPTURA-STATUS.md](MANUAL-CAPTURA-STATUS.md) — pendente filhos/APK prod.
+- **Site:** integracao pos-fotos [MANUAL-SITE-INTEGRATE.md](MANUAL-SITE-INTEGRATE.md); matriz rev. [MANUAL-SCREENSHOT-MATRIX-2026-10.md](MANUAL-SCREENSHOT-MATRIX-2026-10.md).
+- **Script:** `node scripts/check-manual-guia-images.js` (paths irmao `controledebolasite`).
 
 ### 2026-11-03 — Profile-setup wizard (fase 2 Xaiana)
 

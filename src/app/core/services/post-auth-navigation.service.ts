@@ -37,26 +37,37 @@ export class PostAuthNavigationService {
   }
 
   async navigateAfterAuth(): Promise<void> {
-    if (await this.storage.isProfileWizardComplete()) {
-      void this.syncProfileWizardForCurrentUser();
-      await this.router.navigateByUrl('/tabs/home', { replaceUrl: true });
-      return;
-    }
-
-    const wizardPath = await this.storage.getWizardPath();
-    if (!wizardPath) {
-      void this.syncProfileWizardForCurrentUser();
-      await this.router.navigateByUrl('/tabs/home', { replaceUrl: true });
-      return;
-    }
-
     await this.syncProfileWizardForCurrentUser();
 
-    if (await this.storage.needsProfileSetup()) {
+    if (await this.storage.isProfileWizardComplete()) {
+      await this.router.navigateByUrl('/tabs/home', { replaceUrl: true });
+      return;
+    }
+
+    if (await this.shouldNavigateToProfileSetup()) {
+      if (!(await this.storage.getWizardPath())) {
+        await this.storage.setWizardPath('athlete');
+      }
       await this.router.navigateByUrl('/profile-setup', { replaceUrl: true });
       return;
     }
 
     await this.router.navigateByUrl('/tabs/home', { replaceUrl: true });
+  }
+
+  /** Conta nova sem onboarding (Login → Criar conta) ainda deve ir ao profile-setup wizard. */
+  private async shouldNavigateToProfileSetup(): Promise<boolean> {
+    if (await this.storage.isProfileWizardComplete()) return false;
+    if (await this.storage.getWizardPath()) return true;
+
+    if (!this.auth.isLoggedIn()) return false;
+    const user = this.auth.getCurrentUser();
+    if (user?.get('primaryRole')) return false;
+
+    const [athleteProfile, roleProfile] = await Promise.all([
+      this.athleteProfileService.getForCurrentUser(),
+      this.roleProfileService.getForCurrentUser(),
+    ]);
+    return !athleteProfile && !roleProfile;
   }
 }
