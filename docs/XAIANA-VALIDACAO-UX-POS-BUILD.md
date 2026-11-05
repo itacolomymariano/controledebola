@@ -2,7 +2,7 @@
 
 **Problema reportado (nov/2025):** iPhone na **Sobre** com `1.0.9 (295)` e release **`2026.11.02.0295`** — binário **sem** wizard de cadastro/profile-setup (anterior ao commit `5ea684d`).
 
-**Código em `main`:** wizard implementado; marketing **`1.0.10`**, `versionCode` **298** no repo.
+**Código em `main`:** wizard implementado; marketing **`1.0.11`**, `versionCode` **299+** no repo.
 
 ---
 
@@ -12,7 +12,7 @@ Menu → **Sobre** (ou Perfil → Sobre):
 
 | Campo | Mínimo para wizard |
 |-------|-------------------|
-| Versão do build | **1.0.10** |
+| Versão do build | **1.0.11** (ou superior se a trilha 1.0.10 já fechou no Connect) |
 | Número entre parênteses | **> 295** (ex. 299+) |
 | Release do app | **≥ 2026.11.04.0298** |
 
@@ -24,9 +24,9 @@ Se ainda aparecer **295** ou **1.0.9**, atualize pelo **TestFlight** (iOS) ou te
 
 1. GitHub → [iOS Capacitor Build — Run workflow](https://github.com/itacolomymariano/controledebola/actions/workflows/ios-capacitor-build.yml)
 2. Branch **`main`**, tipo **`release-ipa`**, **Run workflow** (não Re-run de job falho).
-3. Log: `iOS version 1.0.10 (299)` ou superior.
-4. App Store Connect → **TestFlight** → versão **1.0.10** → instalar no iPhone.
-5. Trilha **1.0.9** está fechada na Apple (erros 90186/90062) — usar **1.0.10**.
+3. Log: `iOS version 1.0.11 (301)` ou superior (prebuild CI = versionCode commitado + 1).
+4. App Store Connect → **TestFlight** → versão **1.0.11** → instalar no iPhone.
+5. Trilhas **1.0.9** e **1.0.10** fechadas (90186/90062) — usar marketing **maior** que a última aprovada no Connect.
 
 ---
 
@@ -69,4 +69,4 @@ Se ainda aparecer **295** ou **1.0.9**, atualize pelo **TestFlight** (iOS) ou te
 | Wizard profile-setup | `src/app/pages/profile-setup/` |
 | Rascunhos | `register_draft_v1`, `profile_setup_draft_v1` |
 | Commit UX | `5ea684d` |
-| Marketing iOS | `1.0.10` (`1c1299a`) |
+| Marketing iOS | `1.0.11` |
