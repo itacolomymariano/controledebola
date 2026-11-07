@@ -91,14 +91,15 @@ CFBundleVersion = versionCode em .app-release-state.json na main (após push) + 
 | **2026-10-30** | **1.0.9** | **281** | Enviado / trilha 1.0.9 | Falha 90062/90186 corrigida com bump marketing |
 | **2026-11-02** | 1.0.9 | **282** | TestFlight | Upload OK; próximo IPA precisa **> 282** |
 | **2026-11-02** | 1.0.9 | **294** (repo) → **295** (CI) | Enviado / reservado | — |
-| **2026-11-07** | **1.0.11** | **313** (repo) → **314** (CI) | **Próximo `release-ipa` após push** | AAB Play 313; confirmar último build TestFlight no Connect |
+| **2026-11-07** | 1.0.11 | 313→314 (CI) | Trilha **1.0.11 fechada** | altool **90062** + **90186** |
+| **2026-11-07** | **1.0.12** | **313** (repo) → **314** (CI) | **Próximo `release-ipa` após push** | Só bump marketing; `versionCode` mantido |
 
 ### Próximo build iOS (agents: leia antes de bump)
 
-- **Marketing no repo:** `1.0.11` (`package.json`)
-- **Último build TestFlight:** conferir no Connect (doc histórico: **282**; repo em **313**)
-- **`versionCode` commitado na main:** **313** (label `2026.11.06.0313`) — CI gera IPA **314**
-- **Se 90062/90186 de novo:** bump **só** `package.json` patch (ex. 1.0.11 → 1.0.12), push, novo workflow
+- **Marketing no repo:** `1.0.12` (`package.json`)
+- **Último build TestFlight:** conferir no Connect; trilha **1.0.11** não aceita mais builds
+- **`versionCode` commitado na main:** **313** — CI gera IPA **314** (build não chegou a subir com 1.0.11)
+- **Se 90062/90186 de novo:** bump **só** `package.json` patch, push, novo workflow
 
 ---
 
