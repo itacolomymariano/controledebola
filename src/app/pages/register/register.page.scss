@@ -29,6 +29,7 @@
   font-size: 1.25rem;
   font-weight: 700;
   line-height: 1.25;
+  color: var(--cb-playful-text);
 }
 
 .register-wizard-step-lead {
@@ -36,6 +37,15 @@
   font-size: 0.9rem;
   line-height: 1.45;
   opacity: 0.9;
+  color: var(--cb-playful-text-muted);
+}
+
+.page-register app-playful-card .register-wizard-head {
+  margin-bottom: 0;
+}
+
+.page-register form ion-item {
+  --background: transparent;
 }
 
 .register-wizard-actions {

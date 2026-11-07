@@ -12,166 +12,182 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding page-profile-setup">
-  @if (loading) {
-    <ion-spinner name="crescent"></ion-spinner>
-  }
-
-  @if (!loading && showWizardProgress) {
-    <div class="setup-wizard-head">
-      <p class="setup-wizard-progress-label">{{ wizardProgressLabel() }}</p>
-      <ion-progress-bar [value]="wizardProgress" color="primary"></ion-progress-bar>
-      <div class="setup-step-head-row">
-        <div>
-          <h2 class="setup-wizard-step-title">{{ stepTitleKey() | t }}</h2>
-          <p class="setup-wizard-step-lead">{{ stepLeadKey() | t }}</p>
-        </div>
-        @if (stepHintKey()) {
-          <app-field-help [textKey]="stepHintKey()"></app-field-help>
-        }
+<ion-content class="ion-padding page-profile-setup cb-playful-ion-content">
+  <app-playful-page>
+    @if (loading) {
+      <div class="ion-text-center ion-padding">
+        <ion-spinner name="crescent"></ion-spinner>
       </div>
-    </div>
-  }
+    }
 
-  @if (!loading && wizardPath === 'athlete') {
-    <form [formGroup]="athleteForm" (ngSubmit)="goWizardNext()">
-      <ion-list lines="full">
-        <app-athlete-profile-fields [form]="athleteForm" [section]="currentAthleteSection"></app-athlete-profile-fields>
-      </ion-list>
+    @if (!loading && showWizardProgress) {
+      <app-playful-card tone="surface" class="ion-margin-bottom">
+        <div class="setup-wizard-head">
+          <p class="setup-wizard-progress-label">{{ wizardProgressLabel() }}</p>
+          <ion-progress-bar [value]="wizardProgress" color="primary"></ion-progress-bar>
+          <div class="setup-step-head-row">
+            <div>
+              <h2 class="setup-wizard-step-title">{{ stepTitleKey() | t }}</h2>
+              <p class="setup-wizard-step-lead">{{ stepLeadKey() | t }}</p>
+            </div>
+            @if (stepHintKey()) {
+              <app-field-help [textKey]="stepHintKey()"></app-field-help>
+            }
+          </div>
+        </div>
+      </app-playful-card>
+    }
+
+    @if (!loading && wizardPath === 'athlete') {
+      <form [formGroup]="athleteForm" (ngSubmit)="goWizardNext()">
+        <app-playful-card tone="muted">
+          <ion-list lines="full" class="playful-transparent-list">
+            <app-athlete-profile-fields [form]="athleteForm" [section]="currentAthleteSection"></app-athlete-profile-fields>
+          </ion-list>
+        </app-playful-card>
+        <div class="setup-wizard-actions ion-margin-top">
+          <ion-button expand="block" type="submit">
+            {{
+              isLastWizardStep ? ('profileSetup.saveContinue' | t) : ('profileSetup.continue' | t)
+            }}
+          </ion-button>
+          @if (!isFirstWizardStep) {
+            <ion-button expand="block" fill="outline" type="button" (click)="goWizardBack()">
+              {{ 'profileSetup.back' | t }}
+            </ion-button>
+          }
+          <ion-button expand="block" fill="clear" type="button" (click)="skip()">
+            {{ 'profileSetup.completeLater' | t }}
+          </ion-button>
+        </div>
+      </form>
+    }
+
+    @if (!loading && wizardPath === 'other' && otherStep === 'pick') {
+      <app-playful-card tone="surface" class="ion-margin-bottom">
+        <div class="setup-hero">
+          <ion-icon name="star-outline"></ion-icon>
+          <h2>{{ 'profileSetup.otherPickTitle' | t }}</h2>
+          <p>{{ 'profileSetup.otherPickLead' | t }}</p>
+        </div>
+      </app-playful-card>
+
+      <app-playful-grid>
+        @for (role of otherRoles; track role.value) {
+          <app-playful-card
+            [tone]="rolePlayfulTone($index)"
+            [interactive]="true"
+            [class.setup-role-card-selected]="selectedRole === role.value"
+            (activate)="selectRole(role.value)"
+          >
+            <h2 class="setup-role-card-title">{{ role.label }}</h2>
+          </app-playful-card>
+        }
+      </app-playful-grid>
+
       <div class="setup-wizard-actions ion-margin-top">
-        <ion-button expand="block" type="submit">
-          {{
-            isLastWizardStep ? ('profileSetup.saveContinue' | t) : ('profileSetup.continue' | t)
-          }}
+        <ion-button expand="block" [disabled]="!selectedRole" (click)="continueOtherProfile()">
+          {{ 'profileSetup.continue' | t }}
         </ion-button>
-        @if (!isFirstWizardStep) {
+        <ion-button expand="block" fill="clear" (click)="skip()">{{ 'profileSetup.completeLater' | t }}</ion-button>
+      </div>
+    }
+
+    @if (!loading && wizardPath === 'other' && otherStep === 'form' && isProfessionalSelected) {
+      <form [formGroup]="otherForm" (ngSubmit)="goWizardNext()">
+        <app-playful-card tone="muted">
+          <div class="role-profile-form-stack">
+            <app-role-profile-fields
+              [form]="otherForm"
+              [role]="professionalRole!"
+              [section]="currentProSection"
+            ></app-role-profile-fields>
+          </div>
+        </app-playful-card>
+        <div class="setup-wizard-actions ion-margin-top">
+          <ion-button expand="block" type="submit">
+            {{
+              isLastWizardStep ? ('profileSetup.saveContinue' | t) : ('profileSetup.continue' | t)
+            }}
+          </ion-button>
           <ion-button expand="block" fill="outline" type="button" (click)="goWizardBack()">
             {{ 'profileSetup.back' | t }}
           </ion-button>
-        }
-        <ion-button expand="block" fill="clear" type="button" (click)="skip()">
-          {{ 'profileSetup.completeLater' | t }}
-        </ion-button>
-      </div>
-    </form>
-  }
-
-  @if (!loading && wizardPath === 'other' && otherStep === 'pick') {
-    <div class="setup-hero">
-      <ion-icon name="star-outline"></ion-icon>
-      <h2>{{ 'profileSetup.otherPickTitle' | t }}</h2>
-      <p>{{ 'profileSetup.otherPickLead' | t }}</p>
-    </div>
-
-    @for (role of otherRoles; track role.value) {
-      <ion-card
-        button
-        class="role-card"
-        [class.selected]="selectedRole === role.value"
-        (click)="selectRole(role.value)"
-      >
-        <ion-card-content>
-          <h2>{{ role.label }}</h2>
-        </ion-card-content>
-      </ion-card>
+          <ion-button expand="block" fill="clear" type="button" (click)="skip()">
+            {{ 'profileSetup.completeLater' | t }}
+          </ion-button>
+        </div>
+      </form>
     }
 
-    <ion-button expand="block" [disabled]="!selectedRole" (click)="continueOtherProfile()">
-      {{ 'profileSetup.continue' | t }}
-    </ion-button>
-    <ion-button expand="block" fill="clear" (click)="skip()">{{ 'profileSetup.completeLater' | t }}</ion-button>
-  }
-
-  @if (!loading && wizardPath === 'other' && otherStep === 'form' && isProfessionalSelected) {
-    <form [formGroup]="otherForm" (ngSubmit)="goWizardNext()">
-      <div class="role-profile-form-stack">
-        <app-role-profile-fields
-          [form]="otherForm"
-          [role]="professionalRole!"
-          [section]="currentProSection"
-        ></app-role-profile-fields>
-      </div>
-      <div class="setup-wizard-actions ion-margin-top">
-        <ion-button expand="block" type="submit">
-          {{
-            isLastWizardStep ? ('profileSetup.saveContinue' | t) : ('profileSetup.continue' | t)
-          }}
-        </ion-button>
-        <ion-button expand="block" fill="outline" type="button" (click)="goWizardBack()">
-          {{ 'profileSetup.back' | t }}
-        </ion-button>
-        <ion-button expand="block" fill="clear" type="button" (click)="skip()">
-          {{ 'profileSetup.completeLater' | t }}
-        </ion-button>
-      </div>
-    </form>
-  }
-
-  @if (!loading && wizardPath === 'other' && otherStep === 'fan') {
-    <form [formGroup]="fanForm" (ngSubmit)="goWizardNext()">
-      <ion-list lines="full">
-        @if (currentFanStep === 'fanPelada') {
-          <ion-item>
-            <ion-input
-              type="number"
-              [label]="'profileSetup.fan.peladaPresential' | t"
-              labelPlacement="stacked"
-              formControlName="peladaPresentialRate"
-              min="0"
-              step="0.01"
-            ></ion-input>
-          </ion-item>
-          <ion-item>
-            <ion-input
-              type="number"
-              [label]="'profileSetup.fan.peladaRemote' | t"
-              labelPlacement="stacked"
-              formControlName="peladaRemoteRate"
-              min="0"
-              step="0.01"
-            ></ion-input>
-          </ion-item>
-        }
-        @if (currentFanStep === 'fanMatch') {
-          <ion-item>
-            <ion-input
-              type="number"
-              [label]="'profileSetup.fan.matchPresential' | t"
-              labelPlacement="stacked"
-              formControlName="matchPresentialRate"
-              min="0"
-              step="0.01"
-            ></ion-input>
-          </ion-item>
-          <ion-item>
-            <ion-input
-              type="number"
-              [label]="'profileSetup.fan.matchRemote' | t"
-              labelPlacement="stacked"
-              formControlName="matchRemoteRate"
-              min="0"
-              step="0.01"
-            ></ion-input>
-          </ion-item>
-          <ion-item lines="full" class="item-toggle-wrap">
-            <ion-label class="ion-text-wrap">{{ 'profileSetup.fan.acceptsPaid' | t }}</ion-label>
-            <ion-toggle slot="end" formControlName="acceptsPaidCommitments"></ion-toggle>
-          </ion-item>
-        }
-      </ion-list>
-      <div class="setup-wizard-actions ion-margin-top">
-        <ion-button expand="block" type="submit">
-          {{
-            isLastWizardStep ? ('profileSetup.saveContinue' | t) : ('profileSetup.continue' | t)
-          }}
-        </ion-button>
-        <ion-button expand="block" fill="outline" type="button" (click)="goWizardBack()">
-          {{ 'profileSetup.back' | t }}
-        </ion-button>
-        <ion-button expand="block" fill="clear" type="button" (click)="skip()">
-          {{ 'profileSetup.completeLater' | t }}
-        </ion-button>
-      </div>
-    </form>
-  }
+    @if (!loading && wizardPath === 'other' && otherStep === 'fan') {
+      <form [formGroup]="fanForm" (ngSubmit)="goWizardNext()">
+        <app-playful-card tone="muted">
+          <ion-list lines="full" class="playful-transparent-list">
+            @if (currentFanStep === 'fanPelada') {
+              <ion-item>
+                <ion-input
+                  type="number"
+                  [label]="'profileSetup.fan.peladaPresential' | t"
+                  labelPlacement="stacked"
+                  formControlName="peladaPresentialRate"
+                  min="0"
+                  step="0.01"
+                ></ion-input>
+              </ion-item>
+              <ion-item>
+                <ion-input
+                  type="number"
+                  [label]="'profileSetup.fan.peladaRemote' | t"
+                  labelPlacement="stacked"
+                  formControlName="peladaRemoteRate"
+                  min="0"
+                  step="0.01"
+                ></ion-input>
+              </ion-item>
+            }
+            @if (currentFanStep === 'fanMatch') {
+              <ion-item>
+                <ion-input
+                  type="number"
+                  [label]="'profileSetup.fan.matchPresential' | t"
+                  labelPlacement="stacked"
+                  formControlName="matchPresentialRate"
+                  min="0"
+                  step="0.01"
+                ></ion-input>
+              </ion-item>
+              <ion-item>
+                <ion-input
+                  type="number"
+                  [label]="'profileSetup.fan.matchRemote' | t"
+                  labelPlacement="stacked"
+                  formControlName="matchRemoteRate"
+                  min="0"
+                  step="0.01"
+                ></ion-input>
+              </ion-item>
+              <ion-item lines="full" class="item-toggle-wrap">
+                <ion-label class="ion-text-wrap">{{ 'profileSetup.fan.acceptsPaid' | t }}</ion-label>
+                <ion-toggle slot="end" formControlName="acceptsPaidCommitments"></ion-toggle>
+              </ion-item>
+            }
+          </ion-list>
+        </app-playful-card>
+        <div class="setup-wizard-actions ion-margin-top">
+          <ion-button expand="block" type="submit">
+            {{
+              isLastWizardStep ? ('profileSetup.saveContinue' | t) : ('profileSetup.continue' | t)
+            }}
+          </ion-button>
+          <ion-button expand="block" fill="outline" type="button" (click)="goWizardBack()">
+            {{ 'profileSetup.back' | t }}
+          </ion-button>
+          <ion-button expand="block" fill="clear" type="button" (click)="skip()">
+            {{ 'profileSetup.completeLater' | t }}
+          </ion-button>
+        </div>
+      </form>
+    }
+  </app-playful-page>
 </ion-content>

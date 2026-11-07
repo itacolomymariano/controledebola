@@ -9,7 +9,7 @@
   <ion-chip [color]="chip.color">{{ chip.label }}</ion-chip>
 }
 
-<ion-list lines="none" class="ion-margin-top">
+<ion-list lines="none" class="ion-margin-top playful-elevated-list">
   @for (row of viewModel.rows; track row.icon + row.title) {
     <ion-item>
       <ion-icon [name]="row.icon" slot="start"></ion-icon>

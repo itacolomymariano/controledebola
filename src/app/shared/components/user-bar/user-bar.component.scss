@@ -3,6 +3,8 @@
 }
 
 .user-bar {
+  --background: var(--ion-toolbar-background);
+  --color: var(--ion-toolbar-color, var(--ion-color-primary-contrast));
   --min-height: 48px;
 }
 
@@ -34,11 +36,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--ion-color-primary-contrast);
+  color: var(--ion-toolbar-color, var(--ion-color-primary-contrast));
 }
 
 .user-bar ion-button {
-  --color: var(--ion-color-primary-contrast);
+  --color: var(--ion-toolbar-color, var(--ion-color-primary-contrast));
 }
 
 .user-bar ion-buttons[slot='end'] {

@@ -29,6 +29,7 @@ import { RoleProfileService } from '../../core/services/role-profile.service';
 import { buildMissingFieldsMessage } from '../../core/utils/form-validation.util';
 import { AthleteProfileFieldsSection } from '../../shared/components/athlete-profile-fields/athlete-profile-fields.component';
 import { RoleProfileFieldsSection } from '../../shared/components/role-profile-fields/role-profile-fields.component';
+import { PlayfulCardTone } from '../../shared/components/playful-card/playful-card.component';
 
 type OtherSetupStep = 'pick' | 'form' | 'fan';
 type AthleteSetupStep = 'positions' | 'measures' | 'extras';
@@ -62,6 +63,12 @@ export class ProfileSetupPage implements OnDestroy {
     value,
     label: PROFILE_ROLE_LABELS[value],
   }));
+
+  private readonly rolePlayfulTones: PlayfulCardTone[] = ['peladas', 'confrontos', 'times', 'users'];
+
+  rolePlayfulTone(index: number): PlayfulCardTone {
+    return this.rolePlayfulTones[index % this.rolePlayfulTones.length];
+  }
 
   athleteForm = this.fb.group({
     primaryPosition: ['', Validators.required],

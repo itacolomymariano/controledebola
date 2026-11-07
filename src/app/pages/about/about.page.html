@@ -10,12 +10,13 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding about-content">
-  <div class="about-logo-wrap">
-    <img [src]="logoPath" alt="Controle de Bola" class="about-logo" />
-  </div>
+<ion-content class="ion-padding about-content cb-playful-ion-content">
+  <app-playful-page>
+    <div class="about-logo-wrap">
+      <img [src]="logoPath" alt="Controle de Bola" class="about-logo" />
+    </div>
 
-  <ion-list lines="full" class="about-list">
+    <ion-list lines="none" class="about-list playful-elevated-list">
     <ion-item>
       <ion-label>
         <h3>Versao do build</h3>
@@ -89,4 +90,5 @@
     }
     <ion-note color="medium">Outras redes em breve</ion-note>
   </div>
+  </app-playful-page>
 </ion-content>

@@ -15,14 +15,18 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding page-register">
-  <div class="register-wizard-head">
-    <p class="register-wizard-progress-label">{{ wizardProgressLabel() }}</p>
-    <ion-progress-bar [value]="wizardProgress" color="primary"></ion-progress-bar>
-    <h2 class="register-wizard-step-title">{{ stepTitleKey() | t }}</h2>
-    <p class="register-wizard-step-lead">{{ stepLeadKey() | t }}</p>
-  </div>
+<ion-content class="ion-padding page-register cb-playful-ion-content">
+  <app-playful-page>
+    <app-playful-card tone="surface">
+      <div class="register-wizard-head">
+        <p class="register-wizard-progress-label">{{ wizardProgressLabel() }}</p>
+        <ion-progress-bar [value]="wizardProgress" color="primary"></ion-progress-bar>
+        <h2 class="register-wizard-step-title">{{ stepTitleKey() | t }}</h2>
+        <p class="register-wizard-step-lead">{{ stepLeadKey() | t }}</p>
+      </div>
+    </app-playful-card>
 
+    <app-playful-card tone="muted" class="ion-margin-top">
   <form [formGroup]="form" (ngSubmit)="submit()">
     @switch (currentStep) {
       @case ('identity') {
@@ -230,4 +234,6 @@
   </form>
 
   <ion-button expand="block" fill="clear" (click)="goLogin()">{{ 'register.hasAccount' | t }}</ion-button>
+    </app-playful-card>
+  </app-playful-page>
 </ion-content>

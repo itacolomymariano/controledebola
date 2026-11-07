@@ -1,0 +1,13 @@
+.cb-playful-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 380px) {
+  .cb-playful-grid {
+    grid-template-columns: 1fr;
+  }
+}

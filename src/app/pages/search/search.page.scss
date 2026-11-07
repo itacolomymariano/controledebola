@@ -33,3 +33,61 @@ ion-segment-button {
   font-weight: 600;
   text-transform: none;
 }
+
+.directory-segment {
+  margin-bottom: 8px;
+  --background: var(--cb-playful-card-muted);
+  border-radius: var(--cb-playful-radius-sm);
+}
+
+.search-results-grid {
+  margin-bottom: 16px;
+}
+
+.search-card-title {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--cb-playful-text);
+  line-height: 1.25;
+}
+
+.search-card-meta {
+  margin: 0 0 4px;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--cb-playful-text-muted);
+}
+
+.search-team-head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.search-profile-head {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.search-profile-head .search-card-title {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.search-history-title {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.search-legend-avatar {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 8px;
+}

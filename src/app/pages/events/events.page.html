@@ -7,102 +7,89 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
+<ion-content class="ion-padding cb-playful-ion-content">
   <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
 
-  @if (loading) {
-    <div class="ion-text-center ion-padding">
-      <ion-spinner name="crescent"></ion-spinner>
-    </div>
-  }
+  <app-playful-page>
+    @if (loading) {
+      <div class="ion-text-center ion-padding">
+        <ion-spinner name="crescent"></ion-spinner>
+      </div>
+    }
 
-  @if (!loading && errorMessage) {
-    <ion-card color="warning" class="ion-margin">
-      <ion-card-content>
+    @if (!loading && errorMessage) {
+      <app-playful-card tone="muted" class="ion-margin-bottom">
         <p>{{ errorMessage }}</p>
         <ion-button fill="clear" (click)="retry()">Tentar novamente</ion-button>
-      </ion-card-content>
-    </ion-card>
-  }
+      </app-playful-card>
+    }
 
-  @if (!loading && !errorMessage) {
-    <div class="ion-padding-horizontal ion-padding-top">
-      <ion-button expand="block" (click)="createDesafio()">
-        Marcar novo confronto/jogo
-      </ion-button>
-    </div>
-  }
+    @if (!loading && !errorMessage) {
+      <app-playful-card tone="peladas" class="ion-margin-bottom">
+        <ion-button expand="block" (click)="createDesafio()">Marcar novo confronto/jogo</ion-button>
+      </app-playful-card>
+    }
 
-  @if (!loading && acceptedChallenges.length > 0) {
-    <ion-list>
-      <ion-list-header>
-        <ion-label>Desafios aceitos — marcar data</ion-label>
-      </ion-list-header>
-      @for (challenge of acceptedChallenges; track challenge.objectId) {
-        <ion-item button (click)="scheduleAccepted(challenge)">
-          <ion-label>
-            <h2>{{ challenge.challengerTeamName }} x {{ challenge.challengedTeamName }}</h2>
-            <p>Toque para definir data, local e convocacao</p>
-          </ion-label>
-        </ion-item>
-      }
-    </ion-list>
-  }
+    @if (!loading && acceptedChallenges.length > 0) {
+      <h2 class="events-section-title">Desafios aceitos — marcar data</h2>
+      <app-playful-grid class="events-grid">
+        @for (challenge of acceptedChallenges; track challenge.objectId) {
+          <app-playful-card
+            [tone]="challengeTone($index)"
+            [interactive]="true"
+            (activate)="scheduleAccepted(challenge)"
+          >
+            <h3 class="events-card-title">{{ challenge.challengerTeamName }} x {{ challenge.challengedTeamName }}</h3>
+            <p class="events-card-meta">Toque para definir data, local e convocacao</p>
+          </app-playful-card>
+        }
+      </app-playful-grid>
+    }
 
-  @if (!loading && !errorMessage && rows.length === 0 && acceptedChallenges.length === 0) {
-    <ion-list>
-      <ion-item>
-        <ion-icon name="swap-horizontal-outline" slot="start"></ion-icon>
-        <ion-label>
-          <h2>Nenhum confronto</h2>
-          <p>Use o botão acima para marcar um novo confronto.</p>
-        </ion-label>
-      </ion-item>
-    </ion-list>
-  }
+    @if (!loading && !errorMessage && rows.length === 0 && acceptedChallenges.length === 0) {
+      <app-playful-card tone="surface">
+        <div class="events-empty">
+          <ion-icon name="swap-horizontal-outline"></ion-icon>
+          <div>
+            <h3 class="events-card-title">Nenhum confronto</h3>
+            <p class="events-card-meta">Use o botão acima para marcar um novo confronto.</p>
+          </div>
+        </div>
+      </app-playful-card>
+    }
 
-  @if (!loading && rows.length > 0) {
-    <ion-list>
-      <ion-list-header>
-        <ion-label>Confrontos marcados</ion-label>
-      </ion-list-header>
-      @for (row of rows; track row.match.objectId) {
-        <ion-item button (click)="openMatch(row)" class="list-card-with-action">
-          <ion-icon name="football-outline" slot="start"></ion-icon>
-          <ion-label>
-            <h2>
+    @if (!loading && rows.length > 0) {
+      <h2 class="events-section-title">Confrontos marcados</h2>
+      <app-playful-grid class="events-grid">
+        @for (row of rows; track row.match.objectId) {
+          <app-playful-card [tone]="matchRowTone($index)" [interactive]="true" (activate)="openMatch(row)">
+            <ion-icon name="football-outline" class="events-match-icon"></ion-icon>
+            <h3 class="events-card-title">
               <app-team-match-headline
                 [homeTeamName]="row.match.homeTeamName"
                 [awayTeamName]="row.match.awayTeamName"
                 [homeTeamShieldUrl]="row.match.homeTeamShieldUrl"
                 [awayTeamShieldUrl]="row.match.awayTeamShieldUrl"
               ></app-team-match-headline>
-            </h2>
+            </h3>
             @if (row.badge) {
               <ion-badge color="tertiary">{{ row.badge }}</ion-badge>
             }
             @if (row.match.nearby) {
               <ion-badge color="success" class="ion-margin-start">Proximo</ion-badge>
             }
-            <p>{{ row.dateLabel }}</p>
+            <p class="events-card-meta">{{ row.dateLabel }}</p>
             @if (row.locationLabel) {
-              <p>{{ row.locationLabel }}</p>
+              <p class="events-card-meta">{{ row.locationLabel }}</p>
             }
-          </ion-label>
-          <ion-button
-            slot="end"
-            fill="solid"
-            size="small"
-            (click)="openMatch(row); $event.stopPropagation()"
-          >
-            Entrar
-          </ion-button>
-        </ion-item>
-      }
-    </ion-list>
-  }
+            <ion-button expand="block" size="small" class="ion-margin-top" (click)="openMatch(row); $event.stopPropagation()">Entrar</ion-button>
+          </app-playful-card>
+        }
+      </app-playful-grid>
+    }
+  </app-playful-page>
 
   <ion-fab slot="fixed" vertical="bottom" horizontal="end">
     <ion-fab-button (click)="createDesafio()">

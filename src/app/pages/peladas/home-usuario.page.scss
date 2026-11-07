@@ -4,11 +4,54 @@
   align-items: center;
 }
 
+.user-hero-card .user-header {
+  margin: 0;
+}
+
 .user-header h1 {
   margin: 0;
   font-size: 1.25rem;
+  color: var(--cb-playful-text);
 }
 
 .user-header p {
   margin: 4px 0 0;
+  color: var(--cb-playful-text-muted);
+  font-size: 0.9rem;
+}
+
+.usuario-mini-label {
+  margin: 0 0 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--cb-playful-text-muted);
+}
+
+.usuario-mini-value {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: var(--cb-playful-text);
+}
+
+.usuario-section-title {
+  margin: 16px 0 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--cb-playful-text);
+}
+
+.usuario-profile-icon {
+  font-size: 1.5rem;
+  color: var(--ion-color-primary);
+  margin-bottom: 6px;
+}
+
+.usuario-profile-label {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--cb-playful-text);
 }

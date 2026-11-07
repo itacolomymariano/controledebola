@@ -12,6 +12,7 @@ import { I18nService } from '../../core/services/i18n.service';
 import { ParseService } from '../../core/services/parse.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
 import { formatPlaceLine } from './home-directory.util';
+import { PlayfulCardTone } from '../../shared/components/playful-card/playful-card.component';
 
 @Component({
   selector: 'app-home-usuario',
@@ -21,6 +22,11 @@ import { formatPlaceLine } from './home-directory.util';
   standalone: false,
 })
 export class HomeUsuarioPage implements OnDestroy {
+  private readonly infoTones: PlayfulCardTone[] = ['peladas', 'confrontos', 'times'];
+
+  infoPlayfulTone(index: number): PlayfulCardTone {
+    return this.infoTones[index % this.infoTones.length];
+  }
   userId = '';
   user: HomeDirectoryUser | null = null;
   athleteProfile: AthletePublicProfile | null = null;

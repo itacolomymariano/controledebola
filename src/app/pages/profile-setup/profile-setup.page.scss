@@ -31,6 +31,28 @@
   border: 2px solid var(--ion-color-primary);
 }
 
+.setup-role-card-selected .cb-playful-card__inner {
+  outline: 2px solid var(--ion-color-primary);
+  outline-offset: 2px;
+}
+
+.setup-role-card-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--cb-playful-text);
+}
+
+.playful-transparent-list {
+  background: transparent;
+  margin: 0;
+  padding: 0;
+}
+
+.playful-transparent-list ion-item {
+  --background: transparent;
+}
+
 .role-profile-form-stack {
   display: flex;
   flex-direction: column;
@@ -53,11 +75,13 @@
   font-size: 1.25rem;
   font-weight: 700;
   line-height: 1.25;
+  color: var(--cb-playful-text);
 }
 
 .setup-wizard-step-lead {
   margin: 0;
   font-size: 0.9rem;
+  color: var(--cb-playful-text-muted);
   line-height: 1.45;
   opacity: 0.9;
 }

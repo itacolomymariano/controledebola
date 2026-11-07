@@ -92,7 +92,7 @@
               <span>Material</span>
               <span>Qtd.Evento</span>
             </div>
-            <ion-list lines="full">
+            <ion-list lines="none" class="playful-elevated-list">
               @for (item of inventory; track item.objectId) {
                 <ion-item>
                   <ion-label>
@@ -131,7 +131,7 @@
 
         @if (session.lines.length) {
           <h3 class="ion-margin-top">Material carregado / enviado</h3>
-          <ion-list lines="full">
+          <ion-list lines="none" class="playful-elevated-list">
             @for (line of session.lines; track lineKey(line.itemType, line.color)) {
               <ion-item>
                 <ion-label>
@@ -166,7 +166,7 @@
           <ion-note color="medium" class="ion-margin-bottom">
             Informe a quantidade recebida e, se houver, quantas unidades com avaria (ainda utilizaveis).
           </ion-note>
-          <ion-list lines="full">
+          <ion-list lines="none" class="playful-elevated-list">
             @for (line of session.lines; track lineKey(line.itemType, line.color)) {
               <ion-item>
                 <ion-label>
@@ -222,7 +222,7 @@
         @if (!session.divergences.length) {
           <ion-note>Nenhuma divergencia registrada.</ion-note>
         } @else {
-          <ion-list lines="full">
+          <ion-list lines="none" class="playful-elevated-list">
             @for (row of session.divergences; track row.label + row.delta) {
               <ion-item>
                 <ion-label>

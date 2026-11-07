@@ -24,159 +24,171 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  @if (!passwordResetEnabled || !forgotPasswordMode) {
-    <h1 class="login-heading">{{ 'login.title' | t }}</h1>
-    @if (showBiometricUnlock) {
-      <button
-        type="button"
-        class="login-fingerprint"
-        (click)="loginWithBiometric()"
-        [attr.aria-label]="'login.biometricAria' | t"
-      >
-        <img src="assets/icon/fingerprint.svg" alt="" class="login-fingerprint-image" />
-        <span class="login-fingerprint-hint">{{ 'login.biometricHint' | t }}</span>
-      </button>
+<ion-content class="ion-padding cb-playful-ion-content">
+  <app-playful-page>
+    @if (!passwordResetEnabled || !forgotPasswordMode) {
+      <app-playful-card tone="surface">
+        <div class="cb-playful-section">
+          <h1 class="login-heading">{{ 'login.title' | t }}</h1>
+        </div>
+        @if (showBiometricUnlock) {
+          <button
+            type="button"
+            class="login-fingerprint"
+            (click)="loginWithBiometric()"
+            [attr.aria-label]="'login.biometricAria' | t"
+          >
+            <img src="assets/icon/fingerprint.svg" alt="" class="login-fingerprint-image" />
+            <span class="login-fingerprint-hint">{{ 'login.biometricHint' | t }}</span>
+          </button>
+        }
+        <form [formGroup]="form" (ngSubmit)="submit()">
+          <ion-list lines="none" class="playful-auth-list">
+            <ion-item lines="none">
+              <ion-input
+                [label]="'login.identifier' | t"
+                labelPlacement="stacked"
+                formControlName="identifier"
+                type="text"
+                autocomplete="username"
+              ></ion-input>
+            </ion-item>
+            @if (form.get('identifier')?.invalid && form.get('identifier')?.touched) {
+              <ion-note color="danger" class="ion-padding-horizontal">{{ 'login.identifierError' | t }}</ion-note>
+            }
+            <ion-item lines="none">
+              <ion-input
+                [label]="'login.password' | t"
+                labelPlacement="stacked"
+                formControlName="password"
+                [type]="showPassword ? 'text' : 'password'"
+                autocomplete="current-password"
+              ></ion-input>
+              <ion-button
+                fill="clear"
+                slot="end"
+                class="password-toggle"
+                (click)="togglePasswordVisibility()"
+                [attr.aria-label]="showPassword ? ('login.hidePassword' | t) : ('login.showPassword' | t)"
+              >
+                <ion-icon [name]="showPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+              </ion-button>
+            </ion-item>
+            @if (form.get('password')?.invalid && form.get('password')?.touched) {
+              <ion-note color="danger" class="ion-padding-horizontal">{{ 'login.passwordError' | t }}</ion-note>
+            }
+          </ion-list>
+          <ion-button expand="block" type="submit" class="ion-margin-top">{{ 'login.submit' | t }}</ion-button>
+        </form>
+
+        @if (passwordResetEnabled) {
+          <ion-button expand="block" fill="clear" (click)="openForgotPassword()">
+            {{ 'login.forgot' | t }}
+          </ion-button>
+        }
+        <ion-button expand="block" fill="clear" (click)="goRegister()">{{ 'login.register' | t }}</ion-button>
+      </app-playful-card>
+    } @else if (passwordResetEnabled && resetStep === 'email') {
+      <app-playful-card tone="muted">
+        <h1 class="login-heading">{{ 'login.resetTitle' | t }}</h1>
+        <p class="reset-hint">{{ 'login.resetHint' | t }}</p>
+
+        <form [formGroup]="resetForm" (ngSubmit)="submitPasswordReset()">
+          <ion-list lines="none" class="playful-auth-list">
+            <ion-item lines="none">
+              <ion-input
+                [label]="'login.resetEmail' | t"
+                labelPlacement="stacked"
+                formControlName="email"
+                type="email"
+                autocomplete="email"
+              ></ion-input>
+            </ion-item>
+            @if (resetForm.get('email')?.invalid && resetForm.get('email')?.touched) {
+              <ion-note color="danger" class="ion-padding-horizontal">{{ 'login.resetEmailError' | t }}</ion-note>
+            }
+          </ion-list>
+
+          <ion-button expand="block" type="submit" class="ion-margin-top" [disabled]="resetForm.invalid">
+            {{ 'login.resetSubmit' | t }}
+          </ion-button>
+        </form>
+      </app-playful-card>
+    } @else if (passwordResetEnabled) {
+      <app-playful-card tone="surface" class="ion-margin-bottom">
+        <h1 class="login-heading">{{ 'login.resetCodeTitle' | t }}</h1>
+        <p class="reset-hint">{{ 'login.resetCodeHint' | t }}</p>
+
+        @if (resetCodeSentNotice) {
+          <app-playful-card tone="users" class="ion-margin-vertical">
+            <p class="ion-no-margin"><strong>{{ 'login.resetSentTitle' | t }}</strong></p>
+            <p>{{ resetEmailMasked }}</p>
+            <p>{{ 'login.resetSentBody' | t }}</p>
+            <p>{{ 'login.resetReturnToAppHint' | t }}</p>
+          </app-playful-card>
+        }
+
+        <form [formGroup]="confirmResetForm" (ngSubmit)="submitPasswordResetConfirm()">
+          <ion-list lines="none" class="playful-auth-list">
+            <ion-item lines="none">
+              <ion-input
+                [label]="'login.resetCode' | t"
+                labelPlacement="stacked"
+                formControlName="code"
+                type="text"
+                inputmode="numeric"
+                maxlength="6"
+                autocomplete="one-time-code"
+              ></ion-input>
+            </ion-item>
+            @if (confirmResetForm.get('code')?.invalid && confirmResetForm.get('code')?.touched) {
+              <ion-note color="danger" class="ion-padding-horizontal">{{ 'login.resetCodeError' | t }}</ion-note>
+            }
+
+            <ion-item lines="none">
+              <ion-input
+                [label]="'login.resetNewPassword' | t"
+                labelPlacement="stacked"
+                formControlName="newPassword"
+                [type]="showNewPassword ? 'text' : 'password'"
+                autocomplete="new-password"
+              ></ion-input>
+              <ion-button
+                fill="clear"
+                slot="end"
+                class="password-toggle"
+                (click)="toggleNewPasswordVisibility()"
+                [attr.aria-label]="showNewPassword ? ('login.hidePassword' | t) : ('login.showPassword' | t)"
+              >
+                <ion-icon [name]="showNewPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+              </ion-button>
+            </ion-item>
+            @if (confirmResetForm.get('newPassword')?.invalid && confirmResetForm.get('newPassword')?.touched) {
+              <ion-note color="danger" class="ion-padding-horizontal">{{ 'login.resetNewPasswordError' | t }}</ion-note>
+            }
+
+            <ion-item lines="none">
+              <ion-input
+                [label]="'login.resetConfirmPassword' | t"
+                labelPlacement="stacked"
+                formControlName="confirmPassword"
+                [type]="showNewPassword ? 'text' : 'password'"
+                autocomplete="new-password"
+              ></ion-input>
+            </ion-item>
+            @if (confirmResetForm.get('confirmPassword')?.invalid && confirmResetForm.get('confirmPassword')?.touched) {
+              <ion-note color="danger" class="ion-padding-horizontal">{{ 'login.resetConfirmPasswordError' | t }}</ion-note>
+            }
+          </ion-list>
+
+          <ion-button expand="block" type="submit" class="ion-margin-top" [disabled]="confirmResetForm.invalid">
+            {{ 'login.resetConfirmSubmit' | t }}
+          </ion-button>
+          <ion-button expand="block" fill="clear" type="button" (click)="submitPasswordReset()">
+            {{ 'login.resetResend' | t }}
+          </ion-button>
+        </form>
+      </app-playful-card>
     }
-    <form [formGroup]="form" (ngSubmit)="submit()">
-      <ion-item>
-        <ion-input
-          [label]="'login.identifier' | t"
-          labelPlacement="stacked"
-          formControlName="identifier"
-          type="text"
-          autocomplete="username"
-        ></ion-input>
-      </ion-item>
-      @if (form.get('identifier')?.invalid && form.get('identifier')?.touched) {
-        <ion-note color="danger" class="ion-padding-horizontal">{{ 'login.identifierError' | t }}</ion-note>
-      }
-      <ion-item>
-        <ion-input
-          [label]="'login.password' | t"
-          labelPlacement="stacked"
-          formControlName="password"
-          [type]="showPassword ? 'text' : 'password'"
-          autocomplete="current-password"
-        ></ion-input>
-        <ion-button
-          fill="clear"
-          slot="end"
-          class="password-toggle"
-          (click)="togglePasswordVisibility()"
-          [attr.aria-label]="showPassword ? ('login.hidePassword' | t) : ('login.showPassword' | t)"
-        >
-          <ion-icon [name]="showPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
-        </ion-button>
-      </ion-item>
-      @if (form.get('password')?.invalid && form.get('password')?.touched) {
-        <ion-note color="danger" class="ion-padding-horizontal">{{ 'login.passwordError' | t }}</ion-note>
-      }
-      <ion-button expand="block" type="submit" class="ion-margin-top">{{ 'login.submit' | t }}</ion-button>
-    </form>
-
-    @if (passwordResetEnabled) {
-      <ion-button expand="block" fill="clear" (click)="openForgotPassword()">
-        {{ 'login.forgot' | t }}
-      </ion-button>
-    }
-    <ion-button expand="block" fill="clear" (click)="goRegister()">{{ 'login.register' | t }}</ion-button>
-  } @else if (passwordResetEnabled && resetStep === 'email') {
-    <h1 class="login-heading">{{ 'login.resetTitle' | t }}</h1>
-    <p class="reset-hint">{{ 'login.resetHint' | t }}</p>
-
-    <form [formGroup]="resetForm" (ngSubmit)="submitPasswordReset()">
-      <ion-item>
-        <ion-input
-          [label]="'login.resetEmail' | t"
-          labelPlacement="stacked"
-          formControlName="email"
-          type="email"
-          autocomplete="email"
-        ></ion-input>
-      </ion-item>
-      @if (resetForm.get('email')?.invalid && resetForm.get('email')?.touched) {
-        <ion-note color="danger" class="ion-padding-horizontal">{{ 'login.resetEmailError' | t }}</ion-note>
-      }
-
-      <ion-button expand="block" type="submit" class="ion-margin-top" [disabled]="resetForm.invalid">
-        {{ 'login.resetSubmit' | t }}
-      </ion-button>
-    </form>
-  } @else if (passwordResetEnabled) {
-    <h1 class="login-heading">{{ 'login.resetCodeTitle' | t }}</h1>
-    <p class="reset-hint">{{ 'login.resetCodeHint' | t }}</p>
-
-    @if (resetCodeSentNotice) {
-      <ion-card color="light" class="ion-margin-bottom reset-sent-card">
-        <ion-card-header>
-          <ion-card-subtitle>{{ 'login.resetSentTitle' | t }}</ion-card-subtitle>
-          <ion-card-title>{{ resetEmailMasked }}</ion-card-title>
-        </ion-card-header>
-        <ion-card-content>
-          <p>{{ 'login.resetSentBody' | t }}</p>
-          <p>{{ 'login.resetReturnToAppHint' | t }}</p>
-        </ion-card-content>
-      </ion-card>
-    }
-
-    <form [formGroup]="confirmResetForm" (ngSubmit)="submitPasswordResetConfirm()">
-      <ion-item>
-        <ion-input
-          [label]="'login.resetCode' | t"
-          labelPlacement="stacked"
-          formControlName="code"
-          type="text"
-          inputmode="numeric"
-          maxlength="6"
-          autocomplete="one-time-code"
-        ></ion-input>
-      </ion-item>
-      @if (confirmResetForm.get('code')?.invalid && confirmResetForm.get('code')?.touched) {
-        <ion-note color="danger" class="ion-padding-horizontal">{{ 'login.resetCodeError' | t }}</ion-note>
-      }
-
-      <ion-item>
-        <ion-input
-          [label]="'login.resetNewPassword' | t"
-          labelPlacement="stacked"
-          formControlName="newPassword"
-          [type]="showNewPassword ? 'text' : 'password'"
-          autocomplete="new-password"
-        ></ion-input>
-        <ion-button
-          fill="clear"
-          slot="end"
-          class="password-toggle"
-          (click)="toggleNewPasswordVisibility()"
-          [attr.aria-label]="showNewPassword ? ('login.hidePassword' | t) : ('login.showPassword' | t)"
-        >
-          <ion-icon [name]="showNewPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
-        </ion-button>
-      </ion-item>
-      @if (confirmResetForm.get('newPassword')?.invalid && confirmResetForm.get('newPassword')?.touched) {
-        <ion-note color="danger" class="ion-padding-horizontal">{{ 'login.resetNewPasswordError' | t }}</ion-note>
-      }
-
-      <ion-item>
-        <ion-input
-          [label]="'login.resetConfirmPassword' | t"
-          labelPlacement="stacked"
-          formControlName="confirmPassword"
-          [type]="showNewPassword ? 'text' : 'password'"
-          autocomplete="new-password"
-        ></ion-input>
-      </ion-item>
-      @if (confirmResetForm.get('confirmPassword')?.invalid && confirmResetForm.get('confirmPassword')?.touched) {
-        <ion-note color="danger" class="ion-padding-horizontal">{{ 'login.resetConfirmPasswordError' | t }}</ion-note>
-      }
-
-      <ion-button expand="block" type="submit" class="ion-margin-top" [disabled]="confirmResetForm.invalid">
-        {{ 'login.resetConfirmSubmit' | t }}
-      </ion-button>
-      <ion-button expand="block" fill="clear" type="button" (click)="submitPasswordReset()">
-        {{ 'login.resetResend' | t }}
-      </ion-button>
-    </form>
-  }
+  </app-playful-page>
 </ion-content>

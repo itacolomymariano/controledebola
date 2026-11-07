@@ -1,15 +1,73 @@
+ion-tabs {
+  --background: var(--ion-background-color);
+  /* Cápsula + margem = altura reservada no scroll (--padding-bottom em app-tabs ion-content). */
+  --cb-tab-bar-capsule-height: 52px;
+  --cb-tab-bar-margin-bottom: max(10px, env(safe-area-inset-bottom, 0px) + 8px);
+  --cb-tab-bar-stack: calc(var(--cb-tab-bar-capsule-height) + var(--cb-tab-bar-margin-bottom));
+  overflow: visible;
+}
+
 ion-tab-bar {
-  --color-selected: var(--ion-color-primary);
-  border-top: 2px solid var(--cb-card-accent, rgba(var(--ion-color-primary-rgb), 0.12));
+  --background: var(--ion-toolbar-background);
+  --border: 0;
+  --color: color-mix(in srgb, var(--ion-toolbar-color, var(--ion-color-medium)) 58%, transparent);
+  --color-selected: var(--ion-toolbar-color, var(--ion-color-primary));
+  box-sizing: border-box;
+  overflow: visible;
+  min-height: var(--cb-tab-bar-capsule-height);
+  padding: 4px 8px 6px;
+  margin: 0 12px var(--cb-tab-bar-margin-bottom);
+  border-radius: 20px;
+  box-shadow: 0 -4px 18px rgba(15, 23, 42, 0.1);
+}
+
+ion-tab-button {
+  --background: transparent;
+  --padding-start: 3px;
+  --padding-end: 3px;
+  --padding-top: 2px;
+  --padding-bottom: 2px;
+  min-height: 42px;
+  border-radius: 999px;
+  margin: 0 1px;
+  font-size: 0.65rem;
+  transition: background 0.15s ease;
+}
+
+ion-tab-button ion-icon {
+  color: var(--color);
+  font-size: 1.4rem;
+  margin-bottom: 2px;
+}
+
+ion-tab-button ion-label {
+  color: var(--color);
+  font-weight: 500;
+}
+
+ion-tab-button.tab-selected,
+ion-tab-button[selected='true'] {
+  --background: color-mix(in srgb, var(--ion-toolbar-color, var(--ion-color-primary)) 20%, transparent);
+  --color: var(--ion-toolbar-color, var(--ion-color-primary));
+  --color-selected: var(--ion-toolbar-color, var(--ion-color-primary));
 }
 
 ion-tab-button.tab-selected ion-icon,
 ion-tab-button[selected='true'] ion-icon {
-  color: var(--ion-color-primary);
+  color: var(--ion-toolbar-color, var(--ion-color-primary));
 }
 
 ion-tab-button.tab-selected ion-label,
 ion-tab-button[selected='true'] ion-label {
-  font-weight: 600;
-  color: var(--ion-color-primary);
+  font-weight: 700;
+  color: var(--ion-toolbar-color, var(--ion-color-primary));
+}
+
+html.ion-palette-dark ion-tab-bar {
+  box-shadow: 0 -8px 26px rgba(0, 0, 0, 0.45);
+}
+
+html.ion-palette-dark ion-tab-button.tab-selected,
+html.ion-palette-dark ion-tab-button[selected='true'] {
+  --background: color-mix(in srgb, var(--ion-toolbar-color, var(--ion-color-primary)) 26%, transparent);
 }

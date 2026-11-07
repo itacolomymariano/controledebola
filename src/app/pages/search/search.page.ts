@@ -19,6 +19,7 @@ import { AmateurLegendService } from '../../core/services/amateur-legend.service
 import { TeamService } from '../../core/services/team.service';
 import { isParseObjectId } from '../../core/utils/parse-object-id.util';
 import { loggedUserAddress } from '../peladas/home-directory.util';
+import { PlayfulCardTone } from '../../shared/components/playful-card/playful-card.component';
 
 type SearchSegment = 'eventos' | 'perfis' | 'times';
 
@@ -59,6 +60,20 @@ interface TeamSearchRow {
   standalone: false,
 })
 export class SearchPage {
+  private readonly eventTones: PlayfulCardTone[] = ['peladas', 'confrontos', 'times', 'users'];
+  private readonly profileTones: PlayfulCardTone[] = ['users', 'peladas', 'confrontos', 'times'];
+
+  eventPlayfulTone(index: number): PlayfulCardTone {
+    return this.eventTones[index % this.eventTones.length];
+  }
+
+  profilePlayfulTone(index: number): PlayfulCardTone {
+    return this.profileTones[index % this.profileTones.length];
+  }
+
+  legendPlayfulTone(index: number): PlayfulCardTone {
+    return this.eventTones[(index + 1) % this.eventTones.length];
+  }
   segment: SearchSegment = 'eventos';
   eventRows: EventSearchRow[] = [];
   profileResults: ProfileSearchResult[] = [];

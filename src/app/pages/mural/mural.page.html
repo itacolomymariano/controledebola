@@ -13,10 +13,11 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
+<ion-content class="ion-padding cb-playful-ion-content">
+  <app-playful-page>
   @if (showLocationFilter) {
     <div class="mural-location-filter">
-      <ion-list lines="none" class="mural-location-list">
+      <ion-list lines="none" class="mural-location-list playful-elevated-list">
         <ion-item>
           <ion-select
             label="Estado"
@@ -122,12 +123,10 @@
   }
 
   @if (!loading && errorMessage) {
-    <ion-card color="warning" class="ion-margin-bottom">
-      <ion-card-content>
-        <p>{{ errorMessage }}</p>
-        <ion-button fill="clear" (click)="retry()">Tentar novamente</ion-button>
-      </ion-card-content>
-    </ion-card>
+    <app-playful-card tone="muted" class="ion-margin-bottom">
+      <p>{{ errorMessage }}</p>
+      <ion-button fill="clear" (click)="retry()">Tentar novamente</ion-button>
+    </app-playful-card>
   }
 
   @if (!loading) {
@@ -144,4 +143,5 @@
       [filterCaption]="locationFilterCaption"
     ></app-mural-app-feed>
   }
+  </app-playful-page>
 </ion-content>

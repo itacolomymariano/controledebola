@@ -12,130 +12,115 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
+<ion-content class="ion-padding cb-playful-ion-content">
   <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
 
-  @if (loading) {
-    <div class="ion-text-center ion-padding">
-      <ion-spinner name="crescent"></ion-spinner>
-    </div>
-  }
+  <app-playful-page>
+    @if (loading) {
+      <div class="ion-text-center ion-padding">
+        <ion-spinner name="crescent"></ion-spinner>
+      </div>
+    }
 
-  @if (!loading && errorMessage) {
-    <ion-card color="warning" class="ion-margin">
-      <ion-card-content>
+    @if (!loading && errorMessage) {
+      <app-playful-card tone="muted" class="ion-margin-bottom">
         <p>{{ errorMessage }}</p>
         <ion-button fill="clear" (click)="retry()">{{ 'peladas.retry' | t }}</ion-button>
-      </ion-card-content>
-    </ion-card>
-  }
+      </app-playful-card>
+    }
 
-  @if (!loading && user) {
-    <app-record-id-note [recordId]="userId"></app-record-id-note>
-    <div class="user-header ion-padding">
-      <app-user-avatar
-        [avatarUrl]="user.avatarUrl"
-        [alt]="user.displayName || user.apelido"
-        size="lg"
-      ></app-user-avatar>
-      <div>
-        <h1>{{ headerDisplayName || ('peladas.userTitle' | t) }}</h1>
-        @if (user.fullName && user.fullName !== user.displayName) {
-          <p>{{ user.fullName }}</p>
-        }
-      </div>
-    </div>
+    @if (!loading && user) {
+      <app-record-id-note [recordId]="userId"></app-record-id-note>
 
-    <ion-list lines="full">
-      <ion-item>
-        <ion-label class="ion-text-wrap">
-          <h3>{{ 'peladas.fullName' | t }}</h3>
-          <p>{{ user.fullName || '—' }}</p>
-        </ion-label>
-      </ion-item>
-      <ion-item>
-        <ion-label class="ion-text-wrap">
-          <h3>{{ 'peladas.nickname' | t }}</h3>
-          <p>{{ user.apelido || '—' }}</p>
-        </ion-label>
-      </ion-item>
-      <ion-item>
-        <ion-label class="ion-text-wrap">
-          <h3>Local</h3>
-          <p>{{ place || ('peladas.localMissing' | t) }}</p>
-        </ion-label>
-      </ion-item>
-    </ion-list>
-
-    @if (user.roles.includes('athlete') && (athleteLoading || athleteProfile)) {
-      <ion-list-header>
-        <ion-label>{{ 'peladas.athleteProfile' | t }}</ion-label>
-      </ion-list-header>
-      @if (athleteLoading) {
-        <div class="ion-text-center ion-padding">
-          <ion-spinner name="crescent"></ion-spinner>
+      <app-playful-card tone="users" class="ion-margin-bottom user-hero-card">
+        <div class="user-header">
+          <app-user-avatar
+            [avatarUrl]="user.avatarUrl"
+            [alt]="user.displayName || user.apelido"
+            size="lg"
+          ></app-user-avatar>
+          <div>
+            <h1>{{ headerDisplayName || ('peladas.userTitle' | t) }}</h1>
+            @if (user.fullName && user.fullName !== user.displayName) {
+              <p>{{ user.fullName }}</p>
+            }
+          </div>
         </div>
-      } @else if (athleteProfile) {
-        <ion-list lines="full">
-          <ion-item>
-            <ion-label class="ion-text-wrap">
-              <h3>{{ 'peladas.position' | t }}</h3>
-              <p>{{ user.positions.length ? user.positions.join(' · ') : (athleteProfile.primaryPosition || '—') }}</p>
-            </ion-label>
-          </ion-item>
-          @if (athleteBodyLabel) {
-            <ion-item>
-              <ion-label class="ion-text-wrap">
-                <h3>{{ 'peladas.body' | t }}</h3>
-                <p>{{ athleteBodyLabel }}</p>
-              </ion-label>
-            </ion-item>
+      </app-playful-card>
+
+      <app-playful-grid class="ion-margin-bottom">
+        <app-playful-card [tone]="infoPlayfulTone(0)">
+          <h3 class="usuario-mini-label">{{ 'peladas.fullName' | t }}</h3>
+          <p class="usuario-mini-value">{{ user.fullName || '—' }}</p>
+        </app-playful-card>
+        <app-playful-card [tone]="infoPlayfulTone(1)">
+          <h3 class="usuario-mini-label">{{ 'peladas.nickname' | t }}</h3>
+          <p class="usuario-mini-value">{{ user.apelido || '—' }}</p>
+        </app-playful-card>
+        <app-playful-card [tone]="infoPlayfulTone(2)">
+          <h3 class="usuario-mini-label">Local</h3>
+          <p class="usuario-mini-value">{{ place || ('peladas.localMissing' | t) }}</p>
+        </app-playful-card>
+      </app-playful-grid>
+
+      @if (user.roles.includes('athlete') && (athleteLoading || athleteProfile)) {
+        <h2 class="usuario-section-title">{{ 'peladas.athleteProfile' | t }}</h2>
+        @if (athleteLoading) {
+          <div class="ion-text-center ion-padding">
+            <ion-spinner name="crescent"></ion-spinner>
+          </div>
+        } @else if (athleteProfile) {
+          <app-playful-grid class="ion-margin-bottom">
+            <app-playful-card tone="surface">
+              <h3 class="usuario-mini-label">{{ 'peladas.position' | t }}</h3>
+              <p class="usuario-mini-value">{{ user.positions.length ? user.positions.join(' · ') : (athleteProfile.primaryPosition || '—') }}</p>
+            </app-playful-card>
+            @if (athleteBodyLabel) {
+              <app-playful-card tone="surface">
+                <h3 class="usuario-mini-label">{{ 'peladas.body' | t }}</h3>
+                <p class="usuario-mini-value">{{ athleteBodyLabel }}</p>
+              </app-playful-card>
+            }
+            <app-playful-card tone="surface">
+              <h3 class="usuario-mini-label">{{ 'peladas.age' | t }}</h3>
+              <p class="usuario-mini-value">{{ athleteAgeLabel }}</p>
+            </app-playful-card>
+            <app-playful-card tone="muted">
+              <h3 class="usuario-mini-label">{{ 'peladas.goals' | t }}</h3>
+              <p class="usuario-mini-value">{{ athleteProfile.goals }}</p>
+            </app-playful-card>
+          </app-playful-grid>
+          <app-playful-card tone="muted" class="ion-margin-bottom">
+            <h3 class="usuario-mini-label">{{ 'peladas.athletePeladas' | t }}</h3>
+            <p class="usuario-mini-value">{{ joinNames(athleteProfile.peladas) || '—' }}</p>
+          </app-playful-card>
+          <app-playful-card tone="muted" class="ion-margin-bottom">
+            <h3 class="usuario-mini-label">{{ 'peladas.athleteTeams' | t }}</h3>
+            <p class="usuario-mini-value">{{ joinNames(athleteProfile.teams) || '—' }}</p>
+          </app-playful-card>
+        }
+      }
+
+      <h2 class="usuario-section-title">{{ 'peladas.profiles' | t }}</h2>
+
+      @if (user.roles.length === 0) {
+        <ion-note class="ion-padding">{{ 'peladas.noProfiles' | t }}</ion-note>
+      } @else {
+        <app-playful-grid>
+          @for (role of user.roles; track role) {
+            <app-playful-card
+              tone="peladas"
+              [interactive]="true"
+              (activate)="openProfile(role)"
+            >
+              <ion-icon name="person-outline" class="usuario-profile-icon"></ion-icon>
+              <p class="usuario-profile-label">{{ roleLabels[role] }}</p>
+            </app-playful-card>
           }
-          <ion-item>
-            <ion-label>
-              <h3>{{ 'peladas.age' | t }}</h3>
-              <p>{{ athleteAgeLabel }}</p>
-            </ion-label>
-          </ion-item>
-          <ion-item>
-            <ion-label class="ion-text-wrap">
-              <h3>{{ 'peladas.athletePeladas' | t }}</h3>
-              <p>{{ joinNames(athleteProfile.peladas) || '—' }}</p>
-            </ion-label>
-          </ion-item>
-          <ion-item>
-            <ion-label class="ion-text-wrap">
-              <h3>{{ 'peladas.athleteTeams' | t }}</h3>
-              <p>{{ joinNames(athleteProfile.teams) || '—' }}</p>
-            </ion-label>
-          </ion-item>
-          <ion-item>
-            <ion-label>
-              <h3>{{ 'peladas.goals' | t }}</h3>
-              <p>{{ athleteProfile.goals }}</p>
-            </ion-label>
-          </ion-item>
-        </ion-list>
+        </app-playful-grid>
       }
     }
-
-    <ion-list-header>
-      <ion-label>{{ 'peladas.profiles' | t }}</ion-label>
-    </ion-list-header>
-
-    @if (user.roles.length === 0) {
-      <ion-note class="ion-padding">{{ 'peladas.noProfiles' | t }}</ion-note>
-    } @else {
-      <ion-list>
-        @for (role of user.roles; track role) {
-          <ion-item button (click)="openProfile(role)">
-            <ion-icon name="person-outline" slot="start"></ion-icon>
-            <ion-label>{{ roleLabels[role] }}</ion-label>
-          </ion-item>
-        }
-      </ion-list>
-    }
-  }
+  </app-playful-page>
 </ion-content>

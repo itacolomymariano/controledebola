@@ -7,7 +7,8 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
+<ion-content class="ion-padding cb-playful-ion-content">
+  <app-playful-page>
   <ion-card>
     <ion-card-content class="profile-avatar-section">
       <app-image-picker
@@ -23,7 +24,7 @@
     </ion-card-header>
   </ion-card>
 
-  <ion-list>
+  <ion-list class="playful-elevated-list">
     <ion-item button (click)="openLegends()">
       <ion-icon name="star-outline" slot="start"></ion-icon>
       <ion-label>
@@ -169,4 +170,5 @@
       <ion-label>Sair do App</ion-label>
     </ion-item>
   </ion-list>
+  </app-playful-page>
 </ion-content>

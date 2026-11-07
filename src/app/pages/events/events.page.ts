@@ -12,6 +12,7 @@ import {
   MatchChallengeService,
 } from '../../core/services/match-challenge.service';
 import { ParseService } from '../../core/services/parse.service';
+import { PlayfulCardTone } from '../../shared/components/playful-card/playful-card.component';
 
 interface ConfrontoRow {
   match: TeamMatchListItem;
@@ -28,6 +29,15 @@ interface ConfrontoRow {
   standalone: false,
 })
 export class EventsPage implements OnDestroy {
+  private readonly rowTones: PlayfulCardTone[] = ['confrontos', 'peladas', 'times', 'users'];
+
+  matchRowTone(index: number): PlayfulCardTone {
+    return this.rowTones[index % this.rowTones.length];
+  }
+
+  challengeTone(index: number): PlayfulCardTone {
+    return this.rowTones[(index + 1) % this.rowTones.length];
+  }
   rows: ConfrontoRow[] = [];
   acceptedChallenges: MatchChallengeItem[] = [];
   loading = true;

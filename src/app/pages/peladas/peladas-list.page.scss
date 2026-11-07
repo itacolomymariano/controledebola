@@ -1,0 +1,65 @@
+.directory-playful-search {
+  padding: 8px 12px 0;
+}
+
+.directory-playful-grid {
+  padding: 0 12px 88px;
+}
+
+.pelada-grid-card__title {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--cb-playful-text);
+  line-height: 1.25;
+}
+
+.pelada-grid-card__meta,
+.pelada-grid-card__sub {
+  margin: 0 0 4px;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--cb-playful-text-muted);
+}
+
+.pelada-grid-card__cta {
+  margin-top: 10px;
+}
+
+.pelada-admin-flag,
+.pelada-nearby-flag {
+  margin: 0 0 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pelada-empty-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.pelada-empty-icon {
+  font-size: 2rem;
+  color: var(--ion-color-primary);
+  flex-shrink: 0;
+}
+
+.pelada-grid-card__sport-icon {
+  font-size: 1.75rem;
+  color: var(--ion-color-primary);
+  margin-bottom: 6px;
+}
+
+.pelada-admin-flag--grid {
+  color: var(--ion-color-tertiary-shade, #5260ff);
+}
+
+.pelada-nearby-flag--grid {
+  color: var(--ion-color-primary-shade);
+}
+
+.playful-searchbar {
+  --background: var(--cb-playful-card-surface);
+  border-radius: var(--cb-playful-radius-sm);
+}

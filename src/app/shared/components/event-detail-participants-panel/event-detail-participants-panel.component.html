@@ -94,6 +94,7 @@
         <ion-note>Nenhum participante inscrito ainda.</ion-note>
       } @else {
         <ion-searchbar
+          class="playful-searchbar"
           placeholder="Buscar participante"
           [value]="participantSearch"
           [debounce]="0"
@@ -102,7 +103,7 @@
         @if (filteredParticipants.length === 0) {
           <ion-note color="medium">Nenhum participante encontrado para "{{ participantSearch }}".</ion-note>
         }
-        <ion-list lines="none" class="participant-admin-list">
+        <ion-list lines="none" class="participant-admin-list playful-elevated-list">
           @for (participant of filteredParticipants; track participant.objectId; let i = $index) {
             @if (showTeamGroupHeader(i, filteredParticipants)) {
               <h3 class="team-group-title">{{ teamGroupTitle(participant) }}</h3>
@@ -182,7 +183,7 @@
                     }
 
                     @if (showPaymentAdminControlsFor(participant)) {
-                      <ion-list lines="full" class="participant-admin-controls">
+                      <ion-list lines="none" class="participant-admin-controls playful-elevated-list">
                         <ion-item>
                           <ion-toggle
                             [checked]="participant.paymentExempt"
@@ -309,7 +310,7 @@
                   }
 
                   @if (showPaymentAdminControlsFor(participant)) {
-                    <ion-list lines="full" class="participant-admin-controls">
+                    <ion-list lines="none" class="participant-admin-controls playful-elevated-list">
                       <ion-item>
                         <ion-toggle
                           [checked]="participant.paymentExempt"
@@ -356,6 +357,7 @@
         {{ 'eventDetail.participants.confirmedSection' | t: { count: confirmedParticipantsCount } }}
       </h3>
       <ion-searchbar
+        class="playful-searchbar"
         placeholder="Buscar participante"
         [value]="participantSearch"
         [debounce]="0"
@@ -364,7 +366,7 @@
       @if (filteredConfirmedParticipants.length === 0) {
         <ion-note color="medium">Nenhum participante encontrado para "{{ participantSearch }}".</ion-note>
       }
-      <ion-list lines="full">
+      <ion-list lines="none" class="playful-elevated-list">
         @for (participant of filteredConfirmedParticipants; track participant.objectId; let i = $index) {
           @if (showTeamGroupHeader(i, filteredConfirmedParticipants)) {
             <ion-list-header>{{ teamGroupTitle(participant) }}</ion-list-header>

@@ -1,0 +1,13 @@
+<div class="cb-playful-card__shell" [class.cb-playful-card__shell--with-go]="showGoDecoration">
+  @if (showWaveLayer) {
+    <div class="cb-playful-card__waves" aria-hidden="true"></div>
+  }
+  <div class="cb-playful-card__body">
+    <ng-content></ng-content>
+  </div>
+  @if (showGoDecoration) {
+    <span class="cb-playful-card__go" aria-hidden="true">
+      <ion-icon name="arrow-forward"></ion-icon>
+    </span>
+  }
+</div>

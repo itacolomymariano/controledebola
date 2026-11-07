@@ -2,9 +2,80 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-11-05 (Home mock Nicole Fase 1)
+**Ultima atualizacao:** 2026-11-06 (Tab bar altura 52px cápsula — correção pós-compactação)
 
 ---
+
+### 2026-11-06 — Tab bar: recalibração altura (ícones cortados)
+
+- Compactação anterior (`max-height: 40px`, padding 2px) deixou cápsula irreconhecível e faixa branca entre grade e rodapé.
+- [`tabs.page.scss`](../src/app/tabs/tabs.page.scss): `--cb-tab-bar-capsule-height: 52px`, botões `min-height: 42px`, tokens `--cb-tab-bar-margin-bottom` / `--cb-tab-bar-stack`.
+- [`global.scss`](../src/global.scss): `app-tabs ion-content` padding-bottom = stack + 6px (sem folga extra).
+
+### 2026-11-06 — Tab bar global em /tabs
+
+- Rodapé compacto só em [`tabs.page.scss`](../src/app/tabs/tabs.page.scss) (único `ion-tab-bar` do app).
+- [`global.scss`](../src/global.scss): `app-tabs ion-content` — `--padding-bottom` com `--cb-tab-bar-stack` em **todas** as abas (Android e demais); rotas fora de tabs mantêm `app-bottom-inset`.
+- Fallback `--cb-tab-bar-stack: 54px` em [`variables.scss`](../src/theme/variables.scss).
+
+### 2026-11-06 — Tab bar: altura e sobreposição na home
+
+- **Problema:** cápsula alta (`padding` topo + `min-height` 48px + `margin` com `--app-bottom-inset`) sobrepunha Times/Usuários; `home-hub-content` com `--padding-bottom: 8px` não reservava a cápsula.
+- **Fix:** [`tabs.page.scss`](../src/app/tabs/tabs.page.scss) — padding `2px/4px`, botões ~36–40px, `margin-bottom: max(8px, safe-area+8px)` (sem somar `app-bottom-inset`); token `--cb-tab-bar-stack` no `ion-tabs`.
+- **Home:** [`peladas.page.scss`](../src/global.scss) + [`global.scss`](../src/global.scss) — `--padding-bottom: calc(var(--cb-tab-bar-stack) + 10px)`.
+
+### 2026-11-06 — Home + rodape (regressao Samsung)
+
+- **Causa:** em `/tabs/home` o `ion-header` (user-bar) fica no `TabsPage`; o `ion-content` da home nao recebe `--offset-top`, com `--padding-top: 0` o hero subia por baixo da toolbar. O `--padding-bottom` nativo Android somado ao inset extra no shell empurrava o conteudo e agravava o corte do avatar.
+- **Home:** [`peladas.page.scss`](../src/app/pages/peladas/peladas.page.scss) — `--padding-top: safe-area + --cb-tab-shell-toolbar-height`; `--padding-bottom: 8px`; shell sem `padding-top` duplicado. [`global.scss`](../src/global.scss) — `ion-content.home-hub-content` sem o `padding-bottom` grande do Android (evita duplicar inset com a tab bar).
+- **Token:** [`variables.scss`](../src/theme/variables.scss) — `--cb-tab-shell-toolbar-height: 56px` (alinhar com user-bar).
+- **Hero:** [`home-hub-hero.component.scss`](../src/app/shared/components/home-hub-hero/home-hub-hero.component.scss) — padding superior reduzido (compensa o padding do `ion-content`).
+- **Tab bar:** [`tabs.page.scss`](../src/app/tabs/tabs.page.scss) — `border-radius` nos quatro cantos + mais `margin-bottom`/`padding-bottom` para a borda inferior da capsula ficar acima da navegacao do sistema.
+
+### 2026-11-06 — UX Android: hero abaixo do header + rodapé tab bar visível
+
+- **Home:** [`peladas.page.scss`](../src/app/pages/peladas/peladas.page.scss) `padding-top` no shell; [`home-hub-hero.component.scss`](../src/app/shared/components/home-hub-hero/home-hub-hero.component.scss) sem `padding-top` com altura da toolbar (tabs já têm header externo).
+- **Tab bar global:** [`tabs.page.scss`](../src/app/tabs/tabs.page.scss) — `margin-bottom` + `padding-bottom` com safe-area; `ion-tabs` `overflow: visible`; [`global.scss`](../src/global.scss) removido `padding-bottom` extra em `ion-tab-bar` nativo Android (evitava soma com margin e cortava a borda).
+
+### 2026-11-06 — Painéis event-detail (participantes, votacao, convocacao, admin, material, contratacao)
+
+- **`playful-elevated-list` + `lines="none"`** em todas as `ion-list` desses componentes: [`event-detail-participants-panel`](../src/app/shared/components/event-detail-participants-panel/event-detail-participants-panel.component.html), [`event-detail-voting-panel`](../src/app/shared/components/event-detail-voting-panel/event-detail-voting-panel.component.html), [`event-detail-convocation-panel`](../src/app/shared/components/event-detail-convocation-panel/event-detail-convocation-panel.component.html), [`event-detail-admin-settings-panel`](../src/app/shared/components/event-detail-admin-settings-panel/event-detail-admin-settings-panel.component.html), [`event-detail-material-panel`](../src/app/shared/components/event-detail-material-panel/event-detail-material-panel.component.html), [`event-role-hiring-panel`](../src/app/shared/components/event-role-hiring-panel/event-role-hiring-panel.component.html).
+- **`playful-searchbar`** nos searchbars de participantes, convocacao e contratacao.
+
+### 2026-11-06 — pelada-detail + event-detail (listas elevadas)
+
+- **`pelada-detail.page.html`:** `ion-content.cb-playful-ion-content` + `app-playful-page`; todas as `ion-list` de dados com `playful-elevated-list` + `lines="none"`; `ion-searchbar` de eventos/socios com `playful-searchbar`; modal revisao perfil alinhado (`cb-playful-ion-content` + `app-playful-page` + lista elevada).
+- **`event-detail-overview.component.html`:** lista de visao geral com `playful-elevated-list` (ja dentro de `app-playful-page` na pagina).
+- **`event-detail.page.html`:** modal revisao perfil — `ion-list` de sumulas com `playful-elevated-list`.
+
+### 2026-11-06 — Migração segura listas → playful (3 telas)
+
+- **Padrao:** `ion-content.cb-playful-ion-content` + `app-playful-page` + `ion-list.playful-elevated-list` (estilos em [`global.scss`](../src/global.scss)).
+- **Arquivos:** [`about.page.html`](../src/app/pages/about/about.page.html), [`profile-view.page.html`](../src/app/pages/profile-view/profile-view.page.html), [`legends-hub.page.html`](../src/app/pages/legends-hub/legends-hub.page.html) — sem mudanca de TS; searchbar lendas com `playful-searchbar`.
+
+### 2026-11-06 — Toolbar = tab bar, home hub por paleta, hero sem crop
+
+- **Modelo:** [`theme-palette.model.ts`](../src/app/core/models/theme-palette.model.ts) — `toolbarText` em superfícies; `THEME_HOME_HUB_LIGHT` / `THEME_HOME_HUB_DARK` (gradiente + `--cb-home-page-bg` por paleta).
+- **Serviço:** [`theme-palette.service.ts`](../src/app/core/services/theme-palette.service.ts) — `--ion-toolbar-color`, `--cb-home-*` em `apply()`; [`user-bar`](../src/app/shared/components/user-bar/) sem `color="primary"` para respeitar toolbar.
+- **Tab bar:** [`tabs.page.scss`](../src/app/tabs/tabs.page.scss) — fundo `--ion-toolbar-background`, cantos superiores arredondados, seleção via `--ion-toolbar-color`.
+- **Home:** [`home-hub-hero`](../src/app/shared/components/home-hub-hero/home-hub-hero.component.scss) — mais padding-top, `overflow: visible` + ondas com clip no pseudo.
+- **Playful controle_de_bola:** [`theme-playful.model.ts`](../src/app/core/models/theme-playful.model.ts) — página/cartões alinhados ao matiz roxo.
+- **Doc:** [UI-BRAND-THEME-2026-11.md](UI-BRAND-THEME-2026-11.md).
+
+### 2026-11-06 — Alinhamento ao mock Nicole (cartões + temas)
+
+- **Tons por paleta:** `THEME_PLAYFUL_DOOR_LIGHT` / `THEME_PLAYFUL_DOOR_DARK` em [`theme-playful.model.ts`](../src/app/core/models/theme-playful.model.ts); [`ThemePaletteService`](../src/app/core/services/theme-palette.service.ts) injeta `--cb-playful-tone-*` e `--cb-door-*`.
+- **`app-playful-card`:** template com ondas + seta circular quando `interactive` + tom porta — estilos em [`global.scss`](../src/global.scss) (`.cb-playful-card`).
+- **Tab bar:** cápsula na aba selecionada — [`tabs.page.scss`](../src/app/tabs/tabs.page.scss).
+- **Listas:** classe `playful-elevated-list` — Perfil, Inbox, Mural — [`global.scss`](../src/global.scss) + HTML das páginas.
+- **Doc/smoke:** [UI-PLAYFUL-DESIGN-SYSTEM-2026-11.md](UI-PLAYFUL-DESIGN-SYSTEM-2026-11.md); itens **#1c** e **#15** em [SMOKE-TEST-PRE-INSTALL.md](SMOKE-TEST-PRE-INSTALL.md).
+
+### 2026-11-06 — UI playful ampliada (Nicole Fase A–C + event-detail)
+
+- **Tokens/modelo:** [`theme-playful.model.ts`](../src/app/core/models/theme-playful.model.ts); [`ThemePaletteService`](../src/app/core/services/theme-palette.service.ts) define `--cb-playful-*` por paleta e superfície.
+- **Componentes:** `app-playful-page`, `app-playful-card`, `app-playful-grid` — [`SharedModule`](../src/app/shared/shared.module.ts).
+- **Telas tocadas:** login, register, splash, onboarding, profile-setup, peladas-list, home-directory, home-usuario, search, events (tab), mural, profile, inbox, event-detail (+ modal perfil), todas as subpáginas `event-*` (registro, mural evento, team-split, scout, súmula, palpites, treinador, PF, massagista, torcida, contratação suplementar, portaria, hub/rádio/jornal/vídeo imprensa, narrador, câmera, jornalista), pelada-form, event-create, team-form, desafio-create, confronto-create.
+- **Docs:** [UI-PLAYFUL-DESIGN-SYSTEM-2026-11.md](UI-PLAYFUL-DESIGN-SYSTEM-2026-11.md); [UI-REDESIGN-NICOLE-2026-11.md](UI-REDESIGN-NICOLE-2026-11.md); smoke **#15** em [SMOKE-TEST-PRE-INSTALL.md](SMOKE-TEST-PRE-INSTALL.md).
 
 ### 2026-11-05 — Home mock Nicole (Fase 1)
 

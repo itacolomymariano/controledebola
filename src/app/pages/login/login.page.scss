@@ -25,6 +25,19 @@
   margin: 0 0 12px;
   font-size: 1.35rem;
   font-weight: 600;
+  color: var(--cb-playful-text);
+}
+
+.playful-auth-list {
+  background: transparent;
+  margin: 0;
+  padding: 0;
+}
+
+.playful-auth-list ion-item {
+  --background: transparent;
+  --inner-padding-end: 0;
+  --inner-padding-start: 0;
 }
 
 .password-toggle {

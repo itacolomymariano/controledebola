@@ -10,7 +10,8 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding" [class.with-assignment-dock]="showTeamAssignmentDock">
+<ion-content class="ion-padding cb-playful-ion-content" [class.with-assignment-dock]="showTeamAssignmentDock">
+  <app-playful-page>
   <app-coach-hint
     tipId="team-split"
     titleKey="coach.hint.teamSplitTitle"
@@ -306,4 +307,5 @@
       </div>
     </div>
   }
+  </app-playful-page>
 </ion-content>

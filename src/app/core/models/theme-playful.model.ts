@@ -1,0 +1,411 @@
+import { ThemePaletteId } from './theme-palette.model';
+
+/** Tons pastel dos cartões “porta” / mock Nicole, por paleta e por superfície (claro/escuro). */
+export interface PlayfulDoorPalette {
+  peladasBg: string;
+  peladasAccent: string;
+  confrontosBg: string;
+  confrontosAccent: string;
+  timesBg: string;
+  timesAccent: string;
+  usersBg: string;
+  usersAccent: string;
+}
+
+/** Modo claro — fundos pastéis elevados (mock). */
+export const THEME_PLAYFUL_DOOR_LIGHT: Record<ThemePaletteId, PlayfulDoorPalette> = {
+  controle_de_bola: {
+    peladasBg: '#e9d5ff',
+    peladasAccent: '#7c3aed',
+    confrontosBg: '#bbf7d0',
+    confrontosAccent: '#15803d',
+    timesBg: '#fed7aa',
+    timesAccent: '#ea580c',
+    usersBg: '#fbcfe8',
+    usersAccent: '#db2777',
+  },
+  default: {
+    peladasBg: '#e8eefe',
+    peladasAccent: '#6030ff',
+    confrontosBg: '#d9f5e5',
+    confrontosAccent: '#0d8659',
+    timesBg: '#fde8d4',
+    timesAccent: '#c2410c',
+    usersBg: '#fce7f3',
+    usersAccent: '#be185d',
+  },
+  red_black_yellow: {
+    peladasBg: '#fde2e4',
+    peladasAccent: '#c8102e',
+    confrontosBg: '#fef3c7',
+    confrontosAccent: '#b45309',
+    timesBg: '#e5e5e5',
+    timesAccent: '#111111',
+    usersBg: '#fce7f3',
+    usersAccent: '#9d174d',
+  },
+  red_black_white: {
+    peladasBg: '#fde8ec',
+    peladasAccent: '#c8102e',
+    confrontosBg: '#f5f5f5',
+    confrontosAccent: '#14532d',
+    timesBg: '#fff4e6',
+    timesAccent: '#c2410c',
+    usersBg: '#fce7f3',
+    usersAccent: '#be123c',
+  },
+  black_white: {
+    peladasBg: '#e8e8e8',
+    peladasAccent: '#111111',
+    confrontosBg: '#d9f5e5',
+    confrontosAccent: '#166534',
+    timesBg: '#e5e5e5',
+    timesAccent: '#525252',
+    usersBg: '#ececec',
+    usersAccent: '#404040',
+  },
+  green_white: {
+    peladasBg: '#e0e7ff',
+    peladasAccent: '#4338ca',
+    confrontosBg: '#d9f5e5',
+    confrontosAccent: '#15803d',
+    timesBg: '#ffedd5',
+    timesAccent: '#c2410c',
+    usersBg: '#fce7f3',
+    usersAccent: '#be185d',
+  },
+  red_white: {
+    peladasBg: '#ffe4e6',
+    peladasAccent: '#c8102e',
+    confrontosBg: '#e8f5ec',
+    confrontosAccent: '#1b7a3d',
+    timesBg: '#ffedd5',
+    timesAccent: '#ea580c',
+    usersBg: '#fce7f3',
+    usersAccent: '#be185d',
+  },
+  blue_black_white: {
+    peladasBg: '#e8eefe',
+    peladasAccent: '#0054e9',
+    confrontosBg: '#ecfdf5',
+    confrontosAccent: '#047857',
+    timesBg: '#ffedd5',
+    timesAccent: '#c2410c',
+    usersBg: '#fce7f3',
+    usersAccent: '#db2777',
+  },
+  blue_white: {
+    peladasBg: '#e0e7ff',
+    peladasAccent: '#0054e9',
+    confrontosBg: '#d1fae5',
+    confrontosAccent: '#059669',
+    timesBg: '#fef3c7',
+    timesAccent: '#d97706',
+    usersBg: '#fce7f3',
+    usersAccent: '#e11d48',
+  },
+  yellow_black: {
+    peladasBg: '#fef9c3',
+    peladasAccent: '#ca8a04',
+    confrontosBg: '#e8e8e8',
+    confrontosAccent: '#111111',
+    timesBg: '#fde68a',
+    timesAccent: '#a16207',
+    usersBg: '#fce7f3',
+    usersAccent: '#831843',
+  },
+  blue_red_white: {
+    peladasBg: '#dbeafe',
+    peladasAccent: '#0054e9',
+    confrontosBg: '#ffe4e6',
+    confrontosAccent: '#c8102e',
+    timesBg: '#ffedd5',
+    timesAccent: '#ea580c',
+    usersBg: '#fce7f3',
+    usersAccent: '#be185d',
+  },
+};
+
+/** Modo escuro — cartões elevados com matiz pastel (contraste com --cb-playful-text). */
+export const THEME_PLAYFUL_DOOR_DARK: Record<ThemePaletteId, PlayfulDoorPalette> = {
+  controle_de_bola: {
+    peladasBg: '#2a2438',
+    peladasAccent: '#c4b5fd',
+    confrontosBg: '#142e1f',
+    confrontosAccent: '#4ade80',
+    timesBg: '#3a2818',
+    timesAccent: '#fb923c',
+    usersBg: '#3a1f2e',
+    usersAccent: '#f472b6',
+  },
+  default: {
+    peladasBg: '#252038',
+    peladasAccent: '#a78bfa',
+    confrontosBg: '#142418',
+    confrontosAccent: '#34d399',
+    timesBg: '#3b2518',
+    timesAccent: '#fb923c',
+    usersBg: '#381c2e',
+    usersAccent: '#f472b6',
+  },
+  red_black_yellow: {
+    peladasBg: '#321a1c',
+    peladasAccent: '#fb7185',
+    confrontosBg: '#2a2310',
+    confrontosAccent: '#facc15',
+    timesBg: '#1f1f1f',
+    timesAccent: '#e5e5e5',
+    usersBg: '#301826',
+    usersAccent: '#f472b6',
+  },
+  red_black_white: {
+    peladasBg: '#2e181b',
+    peladasAccent: '#fb7185',
+    confrontosBg: '#17261a',
+    confrontosAccent: '#4ade80',
+    timesBg: '#2a2018',
+    timesAccent: '#fdba74',
+    usersBg: '#301824',
+    usersAccent: '#f472b6',
+  },
+  black_white: {
+    peladasBg: '#252525',
+    peladasAccent: '#e5e5e5',
+    confrontosBg: '#1a281e',
+    confrontosAccent: '#4ade80',
+    timesBg: '#2a2a2a',
+    timesAccent: '#a3a3a3',
+    usersBg: '#282828',
+    usersAccent: '#d4d4d4',
+  },
+  green_white: {
+    peladasBg: '#222538',
+    peladasAccent: '#818cf8',
+    confrontosBg: '#142820',
+    confrontosAccent: '#34d399',
+    timesBg: '#322218',
+    timesAccent: '#fdba74',
+    usersBg: '#301c28',
+    usersAccent: '#f472b6',
+  },
+  red_white: {
+    peladasBg: '#301820',
+    peladasAccent: '#fb7185',
+    confrontosBg: '#14261c',
+    confrontosAccent: '#4ade80',
+    timesBg: '#322218',
+    timesAccent: '#fb923c',
+    usersBg: '#301828',
+    usersAccent: '#f472b6',
+  },
+  blue_black_white: {
+    peladasBg: '#1e2438',
+    peladasAccent: '#93c5fd',
+    confrontosBg: '#142e28',
+    confrontosAccent: '#2dd4bf',
+    timesBg: '#302018',
+    timesAccent: '#fdba74',
+    usersBg: '#301c2a',
+    usersAccent: '#f472b6',
+  },
+  blue_white: {
+    peladasBg: '#1a2238',
+    peladasAccent: '#93c5fd',
+    confrontosBg: '#142e22',
+    confrontosAccent: '#34d399',
+    timesBg: '#2c2618',
+    timesAccent: '#fbbf24',
+    usersBg: '#301828',
+    usersAccent: '#fb7185',
+  },
+  yellow_black: {
+    peladasBg: '#30280c',
+    peladasAccent: '#fde047',
+    confrontosBg: '#242424',
+    confrontosAccent: '#e5e5e5',
+    timesBg: '#2a220c',
+    timesAccent: '#fcd34d',
+    usersBg: '#28181c',
+    usersAccent: '#f9a8d4',
+  },
+  blue_red_white: {
+    peladasBg: '#1a2440',
+    peladasAccent: '#93c5fd',
+    confrontosBg: '#301c24',
+    confrontosAccent: '#fb7185',
+    timesBg: '#2f2012',
+    timesAccent: '#fdba74',
+    usersBg: '#301828',
+    usersAccent: '#f472b6',
+  },
+};
+
+/** Superfícies “playful” (Nicole) por paleta — hex só aqui e em theme-palette (Ionic). */
+export interface PlayfulSurface {
+  page: string;
+  card: string;
+  cardMuted: string;
+  /** Orbes radiais do fundo da página (transparência via CSS) */
+  orbA: string;
+  orbB: string;
+}
+
+export const THEME_PLAYFUL_LIGHT: Record<ThemePaletteId, PlayfulSurface> = {
+  controle_de_bola: {
+    page: '#f3f0fa',
+    card: '#ffffff',
+    cardMuted: '#ede9fe',
+    orbA: 'rgba(91, 33, 182, 0.12)',
+    orbB: 'rgba(124, 58, 237, 0.1)',
+  },
+  default: {
+    page: '#f1f3f8',
+    card: '#ffffff',
+    cardMuted: '#e8edf7',
+    orbA: 'rgba(0, 84, 233, 0.1)',
+    orbB: 'rgba(96, 48, 255, 0.08)',
+  },
+  red_black_yellow: {
+    page: '#faf6f2',
+    card: '#fffefb',
+    cardMuted: '#fff8e6',
+    orbA: 'rgba(200, 16, 46, 0.08)',
+    orbB: 'rgba(255, 209, 0, 0.15)',
+  },
+  red_black_white: {
+    page: '#faf4f5',
+    card: '#ffffff',
+    cardMuted: '#fde8ec',
+    orbA: 'rgba(200, 16, 46, 0.1)',
+    orbB: 'rgba(17, 17, 17, 0.06)',
+  },
+  black_white: {
+    page: '#f3f3f3',
+    card: '#ffffff',
+    cardMuted: '#ebebeb',
+    orbA: 'rgba(17, 17, 17, 0.06)',
+    orbB: 'rgba(77, 77, 77, 0.08)',
+  },
+  green_white: {
+    page: '#eef8f1',
+    card: '#ffffff',
+    cardMuted: '#dff5e8',
+    orbA: 'rgba(27, 122, 61, 0.12)',
+    orbB: 'rgba(50, 135, 80, 0.1)',
+  },
+  red_white: {
+    page: '#faf4f6',
+    card: '#ffffff',
+    cardMuted: '#fde8ec',
+    orbA: 'rgba(200, 16, 46, 0.1)',
+    orbB: 'rgba(176, 14, 40, 0.06)',
+  },
+  blue_black_white: {
+    page: '#f0f4fb',
+    card: '#ffffff',
+    cardMuted: '#e8eef8',
+    orbA: 'rgba(0, 84, 233, 0.1)',
+    orbB: 'rgba(17, 17, 17, 0.05)',
+  },
+  blue_white: {
+    page: '#f0f4fb',
+    card: '#ffffff',
+    cardMuted: '#e8eef8',
+    orbA: 'rgba(0, 84, 233, 0.12)',
+    orbB: 'rgba(26, 101, 235, 0.08)',
+  },
+  yellow_black: {
+    page: '#faf8ee',
+    card: '#fffdf5',
+    cardMuted: '#fff4cc',
+    orbA: 'rgba(245, 196, 0, 0.2)',
+    orbB: 'rgba(17, 17, 17, 0.06)',
+  },
+  blue_red_white: {
+    page: '#f2f5fb',
+    card: '#ffffff',
+    cardMuted: '#e8eef6',
+    orbA: 'rgba(0, 84, 233, 0.1)',
+    orbB: 'rgba(200, 16, 46, 0.08)',
+  },
+};
+
+export const THEME_PLAYFUL_DARK: Record<ThemePaletteId, PlayfulSurface> = {
+  controle_de_bola: {
+    page: '#1a1528',
+    card: '#2a2438',
+    cardMuted: '#231d32',
+    orbA: 'rgba(124, 58, 237, 0.22)',
+    orbB: 'rgba(91, 33, 182, 0.15)',
+  },
+  default: {
+    page: '#12151c',
+    card: '#1e2430',
+    cardMuted: '#181d28',
+    orbA: 'rgba(96, 48, 255, 0.15)',
+    orbB: 'rgba(0, 84, 233, 0.12)',
+  },
+  red_black_yellow: {
+    page: '#181210',
+    card: '#241818',
+    cardMuted: '#1a1412',
+    orbA: 'rgba(200, 16, 46, 0.2)',
+    orbB: 'rgba(255, 209, 0, 0.1)',
+  },
+  red_black_white: {
+    page: '#161012',
+    card: '#221a1c',
+    cardMuted: '#1a1416',
+    orbA: 'rgba(200, 16, 46, 0.18)',
+    orbB: 'rgba(255, 255, 255, 0.04)',
+  },
+  black_white: {
+    page: '#101010',
+    card: '#1c1c1c',
+    cardMuted: '#161616',
+    orbA: 'rgba(255, 255, 255, 0.06)',
+    orbB: 'rgba(77, 77, 77, 0.15)',
+  },
+  green_white: {
+    page: '#0f1a14',
+    card: '#1a2e20',
+    cardMuted: '#142218',
+    orbA: 'rgba(50, 135, 80, 0.2)',
+    orbB: 'rgba(238, 248, 241, 0.06)',
+  },
+  red_white: {
+    page: '#161012',
+    card: '#221a1c',
+    cardMuted: '#1a1416',
+    orbA: 'rgba(200, 16, 46, 0.2)',
+    orbB: 'rgba(255, 255, 255, 0.04)',
+  },
+  blue_black_white: {
+    page: '#0e1218',
+    card: '#1a2230',
+    cardMuted: '#151c26',
+    orbA: 'rgba(0, 84, 233, 0.2)',
+    orbB: 'rgba(255, 255, 255, 0.04)',
+  },
+  blue_white: {
+    page: '#0e1218',
+    card: '#1a2230',
+    cardMuted: '#151c26',
+    orbA: 'rgba(26, 101, 235, 0.18)',
+    orbB: 'rgba(0, 84, 233, 0.12)',
+  },
+  yellow_black: {
+    page: '#14120c',
+    card: '#221e12',
+    cardMuted: '#1a160e',
+    orbA: 'rgba(245, 196, 0, 0.15)',
+    orbB: 'rgba(17, 17, 17, 0.4)',
+  },
+  blue_red_white: {
+    page: '#0e1218',
+    card: '#1a2230',
+    cardMuted: '#161c28',
+    orbA: 'rgba(0, 84, 233, 0.16)',
+    orbB: 'rgba(200, 16, 46, 0.14)',
+  },
+};

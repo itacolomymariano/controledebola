@@ -161,4 +161,29 @@ html[data-palette='blue_red_white'] {
   --cb-door-times-accent: #ea580c;
   --cb-door-users-bg: #fbcfe8;
   --cb-door-users-accent: #db2777;
+  /* Playful UI — raio/sombra; fundos/cartoes por paleta via ThemePaletteService.setProperty */
+  --cb-playful-radius: 18px;
+  --cb-playful-radius-sm: 14px;
+  --cb-playful-shadow: 0 4px 14px rgba(30, 20, 60, 0.08);
+  --cb-playful-text: #111827;
+  --cb-playful-text-muted: #374151;
+  --cb-playful-tone-peladas-bg: var(--cb-door-peladas-bg);
+  --cb-playful-tone-peladas-fg: var(--cb-door-peladas-accent);
+  --cb-playful-tone-confrontos-bg: var(--cb-door-confrontos-bg);
+  --cb-playful-tone-confrontos-fg: var(--cb-door-confrontos-accent);
+  --cb-playful-tone-times-bg: var(--cb-door-times-bg);
+  --cb-playful-tone-times-fg: var(--cb-door-times-accent);
+  --cb-playful-tone-users-bg: var(--cb-door-users-bg);
+  --cb-playful-tone-users-fg: var(--cb-door-users-accent);
+  /* Tabs: user-bar no shell — ion-content da home compensa esta altura em --padding-top */
+  --cb-tab-shell-toolbar-height: 56px;
+  /* Fallback alinhado a tabs.page.scss (52px cápsula + ~10px margem). */
+  --cb-tab-bar-stack: 62px;
+  --cb-tab-bar-capsule-height: 52px;
+}
+
+html.ion-palette-dark {
+  --cb-playful-text: rgba(255, 255, 255, 0.95);
+  --cb-playful-text-muted: rgba(255, 255, 255, 0.78);
+  --cb-playful-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
 }

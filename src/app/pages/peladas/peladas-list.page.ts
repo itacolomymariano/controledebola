@@ -12,6 +12,7 @@ import {
   directoryTextMatches,
   loggedUserAddress,
 } from './home-directory.util';
+import { PlayfulCardTone } from '../../shared/components/playful-card/playful-card.component';
 
 interface PeladaListRow {
   pelada: PeladaListItem;
@@ -22,11 +23,16 @@ interface PeladaListRow {
 @Component({
   selector: 'app-peladas-list',
   templateUrl: './peladas-list.page.html',
-  styleUrls: ['./peladas.page.scss'],
+  styleUrls: ['./peladas.page.scss', './peladas-list.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: false,
 })
 export class PeladasListPage implements OnDestroy {
+  private readonly peladaTones: PlayfulCardTone[] = ['peladas', 'confrontos', 'times', 'users'];
+
+  peladaPlayfulTone(index: number): PlayfulCardTone {
+    return this.peladaTones[index % this.peladaTones.length];
+  }
   peladaRows: PeladaListRow[] = [];
   search = '';
   loading = true;

@@ -54,6 +54,9 @@ import { FieldHelpComponent } from './components/field-help/field-help.component
 import { RecordIdNoteComponent } from './components/record-id-note/record-id-note.component';
 import { HomeHubHeroComponent } from './components/home-hub-hero/home-hub-hero.component';
 import { HomeDoorCardComponent } from './components/home-door-card/home-door-card.component';
+import { PlayfulPageComponent } from './components/playful-page/playful-page.component';
+import { PlayfulCardComponent } from './components/playful-card/playful-card.component';
+import { PlayfulGridComponent } from './components/playful-grid/playful-grid.component';
 
 @NgModule({
   declarations: [
@@ -108,6 +111,9 @@ import { HomeDoorCardComponent } from './components/home-door-card/home-door-car
     RecordIdNoteComponent,
     HomeHubHeroComponent,
     HomeDoorCardComponent,
+    PlayfulPageComponent,
+    PlayfulCardComponent,
+    PlayfulGridComponent,
     TranslatePipe,
   ],
   imports: [CommonModule, FormsModule, ReactiveFormsModule, IonicModule],
@@ -163,6 +169,9 @@ import { HomeDoorCardComponent } from './components/home-door-card/home-door-car
     RecordIdNoteComponent,
     HomeHubHeroComponent,
     HomeDoorCardComponent,
+    PlayfulPageComponent,
+    PlayfulCardComponent,
+    PlayfulGridComponent,
     TranslatePipe,
   ],
 })

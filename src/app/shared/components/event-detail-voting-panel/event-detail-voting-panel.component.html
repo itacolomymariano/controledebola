@@ -26,7 +26,7 @@
       <ion-note color="medium" class="ion-padding-bottom">
         {{ 'eventDetail.voting.maxTenHint' | t:{ count: scoreTenRemaining } }}
       </ion-note>
-      <ion-list lines="full">
+      <ion-list lines="none" class="playful-elevated-list">
         @for (participant of votingTargets; track participant.objectId) {
           <ion-item>
             <app-user-avatar
@@ -69,7 +69,7 @@
       <ion-note color="success" class="ion-padding-bottom">
         {{ 'eventDetail.voting.oneVotePerAccountDone' | t }}
       </ion-note>
-      <ion-list lines="full">
+      <ion-list lines="none" class="playful-elevated-list">
         @for (participant of votingTargets; track participant.objectId) {
           @if (voteScores[participant.objectId] != null) {
             <ion-item>

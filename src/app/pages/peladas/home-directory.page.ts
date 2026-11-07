@@ -24,6 +24,7 @@ import {
   formatPlaceLineWithExtra,
   loggedUserAddress,
 } from './home-directory.util';
+import { PlayfulCardTone } from '../../shared/components/playful-card/playful-card.component';
 
 type HomeDoor = 'confrontos' | 'times' | 'usuarios';
 
@@ -68,6 +69,10 @@ interface UserRow {
   standalone: false,
 })
 export class HomeDirectoryPage implements OnDestroy {
+  private readonly matchTones: PlayfulCardTone[] = ['confrontos', 'peladas', 'times', 'users'];
+  private readonly teamTones: PlayfulCardTone[] = ['times', 'confrontos', 'peladas', 'users'];
+  private readonly userTones: PlayfulCardTone[] = ['users', 'peladas', 'confrontos', 'times'];
+
   door: HomeDoor = 'confrontos';
   teamKind: HomeTeamKind = 'active';
   search = '';
@@ -96,6 +101,18 @@ export class HomeDirectoryPage implements OnDestroy {
 
   ngOnDestroy(): void {
     this.localeSub?.unsubscribe();
+  }
+
+  matchPlayfulTone(index: number): PlayfulCardTone {
+    return this.matchTones[index % this.matchTones.length];
+  }
+
+  teamPlayfulTone(index: number): PlayfulCardTone {
+    return this.teamTones[index % this.teamTones.length];
+  }
+
+  userPlayfulTone(index: number): PlayfulCardTone {
+    return this.userTones[index % this.userTones.length];
   }
 
   ionViewWillEnter(): void {

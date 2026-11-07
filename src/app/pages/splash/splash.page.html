@@ -1,26 +1,17 @@
-﻿<ion-content class="ion-padding splash-content" fullscreen>
-
-  <div class="splash-center">
-
-    <img
-
-      src="assets/icon/logo_controle_de_bola.png"
-
-      alt="Controle de Bola"
-
-      class="splash-icon"
-
-    />
-
-    <h1>Controle de Bola</h1>
-
-    <p>Rede social do futebol amador</p>
-
-    <p class="splash-version">{{ appVersion }}</p>
-
-    <ion-spinner name="crescent"></ion-spinner>
-
-  </div>
-
+﻿<ion-content class="ion-padding splash-content cb-playful-ion-content" fullscreen>
+  <app-playful-page>
+    <app-playful-card tone="surface" class="splash-card">
+      <div class="splash-center">
+        <img
+          src="assets/icon/logo_controle_de_bola.png"
+          alt="Controle de Bola"
+          class="splash-icon"
+        />
+        <h1>Controle de Bola</h1>
+        <p>Rede social do futebol amador</p>
+        <p class="splash-version">{{ appVersion }}</p>
+        <ion-spinner name="crescent"></ion-spinner>
+      </div>
+    </app-playful-card>
+  </app-playful-page>
 </ion-content>
-

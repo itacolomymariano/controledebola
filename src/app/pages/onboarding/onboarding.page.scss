@@ -14,15 +14,12 @@
 }
 
 .wizard-content {
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
-  justify-content: center;
+  --background: transparent;
 }
 
 .wizard-hero {
   text-align: center;
-  padding: 24px 16px;
+  padding: 8px 0 16px;
 }
 
 .wizard-icon {
@@ -35,28 +32,41 @@
   font-size: 1.5rem;
   font-weight: 700;
   margin-bottom: 12px;
+  color: var(--cb-playful-text);
 }
 
 .wizard-text {
-  color: var(--ion-color-medium);
+  color: var(--cb-playful-text-muted);
   line-height: 1.5;
   margin-bottom: 8px;
 }
 
-.choice-card {
-  margin-bottom: 12px;
-  cursor: pointer;
-}
-
-.choice-card ion-card-content {
+.choice-card-inner {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
+  text-align: left;
 }
 
-.choice-card ion-icon {
-  font-size: 32px;
+.choice-card-inner ion-icon {
+  flex-shrink: 0;
+  font-size: 2rem;
   color: var(--ion-color-primary);
+  margin-top: 2px;
+}
+
+.choice-card-inner h2 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--cb-playful-text);
+}
+
+.choice-card-inner p {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--cb-playful-text-muted);
 }
 
 .wizard-actions {

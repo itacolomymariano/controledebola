@@ -5,3 +5,61 @@
 ion-fab {
   margin-bottom: var(--app-bottom-inset, 0px);
 }
+
+.directory-playful-search {
+  padding: 8px 0 0;
+}
+
+.directory-playful-grid {
+  padding: 8px 0 88px;
+}
+
+.directory-segment {
+  margin-bottom: 8px;
+  --background: var(--cb-playful-card-muted);
+  border-radius: var(--cb-playful-radius-sm);
+}
+
+.playful-searchbar {
+  --background: var(--cb-playful-card-surface);
+  border-radius: var(--cb-playful-radius-sm);
+}
+
+.directory-new-legend p {
+  margin-top: 0;
+  color: var(--cb-playful-text-muted);
+}
+
+.directory-card-icon {
+  font-size: 1.75rem;
+  color: var(--ion-color-primary);
+  margin-bottom: 6px;
+}
+
+.directory-card-title {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--cb-playful-text);
+  line-height: 1.25;
+}
+
+.directory-card-meta {
+  margin: 0 0 4px;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--cb-playful-text-muted);
+}
+
+.directory-team-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.directory-team-head .directory-card-title {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}

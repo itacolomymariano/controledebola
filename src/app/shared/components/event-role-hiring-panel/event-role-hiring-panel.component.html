@@ -8,6 +8,7 @@
   <div slot="content" class="ion-padding hiring-panel-content" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()" (touchstart)="$event.stopPropagation()">
     <div [id]="searchAnchorId" class="hiring-role-search-anchor">
       <ion-searchbar
+        class="playful-searchbar"
         [placeholder]="'Buscar ' + roleLabel.toLowerCase()"
         [(ngModel)]="search"
         [ngModelOptions]="{ standalone: true }"
@@ -41,7 +42,7 @@
     }
 
     @if (search.trim() && displayedCandidates.length) {
-      <ion-list lines="full" class="candidate-results">
+      <ion-list lines="none" class="candidate-results playful-elevated-list">
         @for (candidate of displayedCandidates; track candidate.userId) {
           <ion-item
             detail="false"
@@ -213,7 +214,7 @@
       @if (!invitations.length) {
         <ion-note class="ion-padding-top">Nenhum convite enviado ainda.</ion-note>
       } @else {
-        <ion-list lines="full" class="hiring-invitations-list">
+        <ion-list lines="none" class="hiring-invitations-list playful-elevated-list">
           @for (invitation of invitations; track invitation.objectId) {
             <ion-item>
               <app-user-avatar

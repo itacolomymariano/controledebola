@@ -18,7 +18,8 @@
     </ion-toolbar>
 </ion-header>
 
-<ion-content>
+<ion-content class="cb-playful-ion-content">
+  <app-playful-page>
   <app-coach-hint
     tipId="invite"
     titleKey="coach.hint.inviteTitle"
@@ -93,7 +94,7 @@
                 </ion-button>
               } @else {
                 <p>{{ 'coach.wizard.peladaOpenEventsHint' | t }}</p>
-                <ion-list lines="none">
+                <ion-list lines="none" class="playful-elevated-list">
                   @for (event of openRegistrationEvents; track event.objectId) {
                     <ion-item button (click)="openEvent(event)">
                       <ion-label class="ion-text-wrap">
@@ -127,7 +128,7 @@
               @if (loadingProfileRequests) {
                 <ion-spinner name="crescent"></ion-spinner>
               } @else {
-                <ion-list lines="full">
+                <ion-list lines="none" class="playful-elevated-list">
                   @for (request of profilePresentationRequests; track request.registrationId) {
                     <ion-item>
                       <ion-label>
@@ -177,6 +178,7 @@
           </ion-card>
         }
         <ion-searchbar
+          class="playful-searchbar"
           placeholder="Buscar por nome, data ou local"
           [value]="eventSearch"
           [debounce]="200"
@@ -188,7 +190,7 @@
         } @else if (filteredEvents.length === 0) {
           <ion-note>Nenhum evento para "{{ eventSearch }}".</ion-note>
         }
-        <ion-list>
+        <ion-list lines="none" class="playful-elevated-list">
           @for (event of filteredEvents; track event.objectId) {
             <ion-item button (click)="openEvent(event)">
               <ion-label class="ion-text-wrap">
@@ -238,6 +240,7 @@
             em Back4App (ver docs/back4app-cloud-functions.md).
           </ion-note>
           <ion-searchbar
+            class="playful-searchbar"
             placeholder="Buscar participante de eventos"
             [(ngModel)]="participantSearch"
             [ngModelOptions]="{ standalone: true }"
@@ -254,7 +257,7 @@
               Nenhum resultado para "{{ participantSearch }}".
             </ion-note>
           }
-          <ion-list>
+          <ion-list lines="none" class="playful-elevated-list">
             @for (row of socioListRows; track row.userId) {
               <ion-item [class.socio-row-hidden]="!socioRowMatchesSearch(row)">
                 <app-user-avatar
@@ -289,7 +292,7 @@
           </ion-list>
         }
         @if (!isAdmin) {
-          <ion-list>
+          <ion-list lines="none" class="playful-elevated-list">
             @for (member of activeMembersForDisplay; track member.userId) {
               <ion-item>
                 <app-user-avatar
@@ -334,7 +337,7 @@
             <ion-button expand="block" type="submit">Criar cotinha</ion-button>
           </form>
         }
-        <ion-list>
+        <ion-list lines="none" class="playful-elevated-list">
           @for (cotinha of cotinhas; track cotinha.objectId) {
             <ion-item button (click)="selectCotinha(cotinha.objectId)">
               <ion-label>
@@ -367,7 +370,7 @@
               <ion-button expand="block" type="submit">Registrar contribuicao</ion-button>
             </form>
           }
-          <ion-list>
+          <ion-list lines="none" class="playful-elevated-list">
             @for (payment of cotinhaPayments; track payment.objectId) {
               <ion-item>
                 <app-user-avatar slot="start" [avatarUrl]="payment.avatarUrl" [alt]="payment.userName" size="md"></app-user-avatar>
@@ -434,7 +437,7 @@
               <ion-button expand="block" type="submit">Registrar</ion-button>
             </form>
           }
-          <ion-list>
+          <ion-list lines="none" class="playful-elevated-list">
             @for (entry of cashEntries; track $index) {
               <ion-item>
                 <ion-label>
@@ -468,7 +471,7 @@
         @if (monthlyFeesLoaded && monthlyFeesEmptyMessage) {
           <ion-note class="ion-padding">{{ monthlyFeesEmptyMessage }}</ion-note>
         }
-        <ion-list>
+        <ion-list lines="none" class="playful-elevated-list">
           @for (fee of monthlyFees; track fee.membershipId) {
             <ion-item>
               <app-user-avatar slot="start" [avatarUrl]="fee.avatarUrl" [alt]="fee.userName" size="md"></app-user-avatar>
@@ -501,7 +504,7 @@
           </ion-card-header>
           <ion-card-content>
             <form [formGroup]="settingsForm" novalidate (ngSubmit)="saveSettings()">
-              <ion-list lines="full">
+              <ion-list lines="none" class="playful-elevated-list">
                 <ion-item class="item-toggle-wrap">
                   <ion-toggle formControlName="socioGoodStandingPaymentExempt">
                     Socio em dia e isento do pagamento do evento?
@@ -595,7 +598,7 @@
             } @else if (!profilePresentationRequests.length) {
               <p>Nenhuma solicitacao pendente.</p>
             } @else {
-              <ion-list lines="full">
+              <ion-list lines="none" class="playful-elevated-list">
                 @for (request of profilePresentationRequests; track request.registrationId) {
                   <ion-item>
                     <ion-label>
@@ -742,6 +745,7 @@
       </ion-fab-button>
     </ion-fab>
   }
+  </app-playful-page>
 </ion-content>
 
 <ion-modal [isOpen]="reviewProfileOpen" (didDismiss)="closeProfilePresentationReview()">
@@ -754,7 +758,8 @@
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
-    <ion-content class="ion-padding">
+    <ion-content class="ion-padding cb-playful-ion-content">
+      <app-playful-page>
       @if (loadingReviewProfile) {
         <ion-spinner name="crescent"></ion-spinner>
       } @else if (reviewProfile) {
@@ -784,7 +789,7 @@
         }
         @if (reviewProfile.sumulaObservations.length) {
           <h3 class="ion-margin-top">Observacoes de sumulas</h3>
-          <ion-list lines="full">
+          <ion-list lines="none" class="playful-elevated-list">
             @for (entry of reviewProfile.sumulaObservations; track entry.eventId) {
               <ion-item>
                 <ion-label>
@@ -812,6 +817,7 @@
           {{ 'profile.openFullAthlete' | t }}
         </ion-button>
       }
+      </app-playful-page>
     </ion-content>
   </ng-template>
 </ion-modal>

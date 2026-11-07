@@ -1,16 +1,30 @@
-﻿.splash-content {
-  --background: var(--ion-color-primary);
-  color: #fff;
+﻿.splash-content.cb-playful-ion-content {
+  --background: transparent;
+  color: var(--cb-playful-text);
+}
+
+.splash-card {
+  margin-top: 15vh;
 }
 
 .splash-center {
-  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
   gap: 12px;
+  min-height: 280px;
+}
+
+.splash-center h1 {
+  margin: 0;
+  color: var(--cb-playful-text);
+}
+
+.splash-center p {
+  margin: 0;
+  color: var(--cb-playful-text-muted);
 }
 
 .splash-icon {

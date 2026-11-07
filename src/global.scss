@@ -196,13 +196,20 @@ html.native-android ion-content {
   --padding-bottom: calc(16px + var(--app-bottom-inset));
 }
 
+/* Qualquer rota em /tabs: reservar a cápsula do rodapé (--cb-tab-bar-stack em tabs.page.scss). */
+app-tabs ion-content {
+  --padding-bottom: calc(var(--cb-tab-bar-stack, 62px) + 6px);
+}
+
+html.native-android app-tabs ion-content {
+  --padding-bottom: calc(var(--cb-tab-bar-stack, 62px) + 6px);
+}
+
 html.native-android ion-footer {
   padding-bottom: var(--app-bottom-inset);
 }
 
-html.native-android ion-tab-bar {
-  padding-bottom: var(--app-bottom-inset);
-}
+/* Tab bar: layout global em tabs.page.scss (cápsula + margem safe-area). */
 
 html.native-android ion-menu ion-content {
   --padding-bottom: calc(8px + var(--app-bottom-inset));
@@ -210,4 +217,204 @@ html.native-android ion-menu ion-content {
 
 html.native-android ion-popover ion-content {
   --padding-bottom: 16px;
+}
+
+/* Playful UI (Nicole escopo ampliado) — fundo via ThemePaletteService + app-playful-page */
+ion-content.cb-playful-ion-content {
+  --background: transparent;
+}
+
+.cb-playful-ion-content app-playful-page ion-card {
+  border-radius: var(--cb-playful-radius);
+  box-shadow: var(--cb-playful-shadow);
+  --background: var(--cb-playful-card-surface);
+  border: 1px solid rgba(30, 20, 60, 0.08);
+  margin: 12px 0;
+}
+
+html.ion-palette-dark .cb-playful-ion-content app-playful-page ion-card {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Listas em páginas playful — cada linha como cartão (mock Nicole) */
+.cb-playful-ion-content app-playful-page ion-list.playful-elevated-list {
+  background: transparent;
+  padding: 0;
+}
+
+.cb-playful-ion-content app-playful-page ion-list.playful-elevated-list > ion-item {
+  --background: var(--cb-playful-card-surface);
+  --border-color: transparent;
+  --inner-border-width: 0;
+  --border-radius: var(--cb-playful-radius-sm);
+  margin-bottom: 10px;
+  box-shadow: var(--cb-playful-shadow);
+  overflow: hidden;
+}
+
+.cb-playful-ion-content app-playful-page ion-list.playful-elevated-list > ion-item-divider {
+  --background: transparent;
+  border: none;
+  --padding-start: 0;
+  margin: 16px 0 8px;
+  min-height: auto;
+
+  ion-label {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--cb-playful-text);
+    opacity: 0.85;
+  }
+}
+
+.cb-playful-section {
+  margin-bottom: 16px;
+}
+
+.cb-playful-section > h1,
+.cb-playful-section > h2:first-child {
+  color: var(--cb-playful-text);
+}
+
+.playful-transparent-list {
+  background: transparent;
+  margin: 0;
+  padding: 0;
+}
+
+.playful-transparent-list ion-item {
+  --background: transparent;
+}
+
+.playful-searchbar {
+  --background: var(--cb-playful-card-surface);
+  border-radius: var(--cb-playful-radius-sm);
+}
+
+/* app-playful-card — estilos no global para respeitar orçamento de SCSS por componente */
+.cb-playful-card {
+  --cb-playful-card-go-size: 40px;
+}
+
+.cb-playful-card .cb-playful-card__shell {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: auto;
+  box-sizing: border-box;
+  border-radius: var(--cb-playful-radius, 18px);
+  box-shadow: var(--cb-playful-shadow);
+  overflow: hidden;
+}
+
+.cb-playful-card .cb-playful-card__shell--with-go {
+  padding-bottom: calc(var(--cb-playful-card-go-size) + 20px);
+}
+
+.cb-playful-card .cb-playful-card__waves {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0.45;
+  background:
+    radial-gradient(ellipse 85% 60% at 92% 12%, rgba(255, 255, 255, 0.55) 0%, transparent 52%),
+    radial-gradient(ellipse 70% 50% at 8% 88%, rgba(255, 255, 255, 0.38) 0%, transparent 50%);
+}
+
+.cb-playful-card .cb-playful-card__body {
+  position: relative;
+  z-index: 1;
+  padding: 14px 16px;
+  box-sizing: border-box;
+}
+
+.cb-playful-card .cb-playful-card__go {
+  position: absolute;
+  z-index: 2;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--cb-playful-card-go-size);
+  height: var(--cb-playful-card-go-size);
+  border-radius: 50%;
+  background: var(--cb-card-door-accent, var(--ion-color-primary));
+  color: var(--cb-playful-card-go-fg, #fff);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.cb-playful-card .cb-playful-card__go ion-icon {
+  font-size: 1.25rem;
+}
+
+.cb-playful-card.cb-playful-card--surface .cb-playful-card__shell {
+  background: var(--cb-playful-card-surface, var(--ion-card-background));
+  color: var(--cb-playful-text);
+}
+
+.cb-playful-card.cb-playful-card--muted .cb-playful-card__shell {
+  background: var(--cb-playful-card-muted);
+  color: var(--cb-playful-text);
+}
+
+.cb-playful-card.cb-playful-card--peladas {
+  --cb-card-door-accent: var(--cb-playful-tone-peladas-fg);
+}
+
+.cb-playful-card.cb-playful-card--peladas .cb-playful-card__shell {
+  background: var(--cb-playful-tone-peladas-bg);
+  color: var(--cb-playful-text);
+  border: 1px solid rgba(30, 20, 60, 0.1);
+}
+
+.cb-playful-card.cb-playful-card--confrontos {
+  --cb-card-door-accent: var(--cb-playful-tone-confrontos-fg);
+}
+
+.cb-playful-card.cb-playful-card--confrontos .cb-playful-card__shell {
+  background: var(--cb-playful-tone-confrontos-bg);
+  color: var(--cb-playful-text);
+  border: 1px solid rgba(30, 20, 60, 0.1);
+}
+
+.cb-playful-card.cb-playful-card--times {
+  --cb-card-door-accent: var(--cb-playful-tone-times-fg);
+}
+
+.cb-playful-card.cb-playful-card--times .cb-playful-card__shell {
+  background: var(--cb-playful-tone-times-bg);
+  color: var(--cb-playful-text);
+  border: 1px solid rgba(30, 20, 60, 0.1);
+}
+
+.cb-playful-card.cb-playful-card--users {
+  --cb-card-door-accent: var(--cb-playful-tone-users-fg);
+}
+
+.cb-playful-card.cb-playful-card--users .cb-playful-card__shell {
+  background: var(--cb-playful-tone-users-bg);
+  color: var(--cb-playful-text);
+  border: 1px solid rgba(30, 20, 60, 0.1);
+}
+
+.cb-playful-card.cb-playful-card--interactive .cb-playful-card__shell {
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.cb-playful-card.cb-playful-card--interactive:active .cb-playful-card__shell {
+  transform: scale(0.99);
+}
+
+html.ion-palette-dark .cb-playful-card.cb-playful-card--peladas .cb-playful-card__shell,
+html.ion-palette-dark .cb-playful-card.cb-playful-card--confrontos .cb-playful-card__shell,
+html.ion-palette-dark .cb-playful-card.cb-playful-card--times .cb-playful-card__shell,
+html.ion-palette-dark .cb-playful-card.cb-playful-card--users .cb-playful-card__shell {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+html.ion-palette-dark .cb-playful-card .cb-playful-card__go {
+  color: var(--cb-playful-card-go-fg, #0f172a);
 }

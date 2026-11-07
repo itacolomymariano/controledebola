@@ -1,7 +1,12 @@
 .home-hub-content {
   --background: var(--cb-home-page-bg);
-  --padding-top: 0;
-  --padding-bottom: 0;
+  /*
+   * Em /tabs/home o header (user-bar) vive no TabsPage, fora do outlet desta página:
+   * o ion-content não recebe --offset-top automático. Sem padding superior o hero
+   * sobe por baixo da toolbar e corta avatar/bordas.
+   */
+  --padding-top: calc(env(safe-area-inset-top, 0px) + var(--cb-tab-shell-toolbar-height, 56px));
+  /* --padding-bottom do rodapé: global.scss → app-tabs ion-content */
 }
 
 .home-hub-shell {
@@ -9,7 +14,9 @@
   flex-direction: column;
   min-height: 100%;
   box-sizing: border-box;
-  padding-bottom: calc(var(--app-bottom-inset, 0px) + 8px);
+  /* O respiro sob a user-bar vem de --padding-top no ion-content. */
+  padding-top: 0;
+  padding-bottom: 8px;
 }
 
 .home-door-grid {

@@ -43,6 +43,7 @@
     }
 
     <ion-searchbar
+      class="playful-searchbar"
       placeholder="Buscar atleta para convocar"
       [value]="search"
       [debounce]="250"
@@ -52,7 +53,7 @@
       <ion-note>Buscando...</ion-note>
     }
     @if (candidates.length) {
-      <ion-list lines="full">
+      <ion-list lines="none" class="playful-elevated-list">
         @for (candidate of candidates; track candidate.userId) {
           <ion-item button detail="false" (click)="selectCandidate(candidate)">
             <app-user-avatar
@@ -111,7 +112,7 @@
     } @else if (rows.length === 0) {
       <ion-note color="medium">Nenhum atleta convocado neste time ainda.</ion-note>
     } @else {
-      <ion-list lines="none" class="ion-margin-top">
+      <ion-list lines="none" class="ion-margin-top playful-elevated-list">
         @for (row of rows; track row.userId) {
           <ion-card>
             <ion-card-content>

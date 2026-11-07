@@ -8,7 +8,8 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
+<ion-content class="ion-padding cb-playful-ion-content">
+  <app-playful-page>
   @if (isEdit) {
     <app-coach-hint
       tipId="pelada-config"
@@ -97,4 +98,5 @@
       {{ isEdit ? 'Salvar' : 'Criar pelada' }}
     </ion-button>
   </form>
+  </app-playful-page>
 </ion-content>

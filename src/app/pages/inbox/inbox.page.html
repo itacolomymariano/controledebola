@@ -21,7 +21,8 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
+<ion-content class="ion-padding cb-playful-ion-content">
+  <app-playful-page>
   <ion-searchbar
     class="inbox-searchbar"
     [value]="searchTerm"
@@ -667,7 +668,7 @@
   }
 
   @if (messages.length > 0) {
-    <ion-list lines="full" class="messages-list">
+    <ion-list lines="none" class="messages-list playful-elevated-list">
       @for (message of messages; track message.objectId) {
         <ion-item
           button
@@ -705,6 +706,8 @@
   <ion-button expand="block" class="ion-margin-top" fill="outline" (click)="goBack()">
     {{ 'inbox.back' | t }}
   </ion-button>
+
+  </app-playful-page>
 
   <ion-modal [isOpen]="!!openedMessage" (didDismiss)="closeOpenedMessage()">
     <ng-template>

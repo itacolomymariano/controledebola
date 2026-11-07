@@ -8,9 +8,9 @@
 
 | Token | Valor | Uso |
 |-------|--------|-----|
-| Primary (verde) | `#1d7a3e` | Toolbar, aba selecionada, bordas Home |
-| Tertiary (ouro) | `#f5c400` | Destaques / CTAs (tokens Ionic) |
-| Superfície clara | `#eef8f1` | Fundo modo claro (`controle_de_bola`) |
+| Primary (verde) | `#1d7a3e` | Botões/CTAs e tokens `--ion-color-primary` (marca no site) |
+| Tertiary (ouro) | `#f5c400` | Destaques (tokens Ionic) |
+| Toolbar / fundo claro (mock Home) | Ver `THEME_LIGHT_SURFACES.controle_de_bola` | `ThemePaletteService` aplica `--ion-toolbar-background` + `--ion-toolbar-color`; alinhado ao hero roxo (`THEME_HOME_HUB_*`) e tab bar |
 
 - **ID:** `controle_de_bola` em [`theme-palette.model.ts`](../src/app/core/models/theme-palette.model.ts)
 - **CSS:** [`src/theme/variables.scss`](../src/theme/variables.scss) — **único lugar** para hex de paleta (+ model para superfícies)
@@ -22,8 +22,8 @@
 
 | Arquivo | Papel |
 |---------|--------|
-| `theme-palette.model.ts` | IDs, `THEME_LIGHT_SURFACES`, `THEME_DARK_SURFACES`, swatches |
-| `theme-palette.service.ts` | `apply()` — `data-palette`, `data-surface`, cores de fundo claro **e** escuro |
+| `theme-palette.model.ts` | IDs, `THEME_LIGHT_SURFACES`, `THEME_DARK_SURFACES`, `THEME_HOME_HUB_LIGHT` / `THEME_HOME_HUB_DARK`, swatches |
+| `theme-palette.service.ts` | `apply()` — `data-palette`, `data-surface`, `--ion-background-color`, `--ion-toolbar-*`, `--cb-home-*` (hero), `--cb-playful-*` |
 | `variables.scss` | `--ion-color-primary/tertiary`, `--cb-card-accent`, `--cb-header-tint` |
 | `global.scss` | Labels longos (input/select stacked); **não** cores de marca |
 
@@ -38,7 +38,7 @@
 
 ### Exceção temporária — mock Nicole (2026-11)
 
-A tela **Início** (`/tabs/home`, `PeladasPage`) usa paleta **roxo/lilás + grid 2×2** alinhada ao mock ChatGPT, com tokens `--cb-home-*` e `--cb-door-*` em `variables.scss` (escopo local). O restante do app mantém verde/ouro `controle_de_bola`. Roadmap: [UI-REDESIGN-NICOLE-2026-11.md](UI-REDESIGN-NICOLE-2026-11.md).
+A tela **Início** (`/tabs/home`, `PeladasPage`) usa paleta **roxo/lilás + grid 2×2** alinhada ao mock ChatGPT, com tokens `--cb-home-*` e `--cb-door-*` em `variables.scss` (escopo local). A partir de 2026-11-06, o **design system playful** (`--cb-playful-*`, `app-playful-page`) estende fundos e cartões ao restante do app em ondas — ver [UI-PLAYFUL-DESIGN-SYSTEM-2026-11.md](UI-PLAYFUL-DESIGN-SYSTEM-2026-11.md). Roadmap: [UI-REDESIGN-NICOLE-2026-11.md](UI-REDESIGN-NICOLE-2026-11.md).
 
 ---
 

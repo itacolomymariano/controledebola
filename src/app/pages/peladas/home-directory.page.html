@@ -12,152 +12,169 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
+<ion-content class="ion-padding cb-playful-ion-content">
   <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
 
-  @if (wizardTeamJoin) {
-    <ion-note class="ion-padding wizard-join-banner">{{ 'coach.wizard.teamJoinBanner' | t }}</ion-note>
-  }
+  <app-playful-page>
+    @if (wizardTeamJoin) {
+      <ion-note class="ion-padding wizard-join-banner">{{ 'coach.wizard.teamJoinBanner' | t }}</ion-note>
+    }
 
-  @if (!loading && !errorMessage && door === 'times') {
-    <ion-segment [value]="teamKind" (ionChange)="onTeamKindChange($any($event.detail.value))">
-      <ion-segment-button value="active">
-        <ion-label>{{ 'peladas.teamKindActive' | t }}</ion-label>
-      </ion-segment-button>
-      <ion-segment-button value="legend">
-        <ion-label>{{ 'peladas.teamKindLegend' | t }}</ion-label>
-      </ion-segment-button>
-      <ion-segment-button value="new">
-        <ion-label>{{ 'peladas.teamKindNew' | t }}</ion-label>
-      </ion-segment-button>
-    </ion-segment>
-  }
+    @if (!loading && !errorMessage && door === 'times') {
+      <ion-segment class="directory-segment" [value]="teamKind" (ionChange)="onTeamKindChange($any($event.detail.value))">
+        <ion-segment-button value="active">
+          <ion-label>{{ 'peladas.teamKindActive' | t }}</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="legend">
+          <ion-label>{{ 'peladas.teamKindLegend' | t }}</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="new">
+          <ion-label>{{ 'peladas.teamKindNew' | t }}</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    }
 
-  @if (!loading && !errorMessage) {
-    <ion-searchbar
-      [placeholder]="searchPlaceholderKey | t"
-      [value]="search"
-      [debounce]="200"
-      (ionInput)="onSearchChange($any($event.detail.value))"
-      (ionClear)="onSearchChange('')"
-    ></ion-searchbar>
-  }
+    @if (!loading && !errorMessage) {
+      <div class="directory-playful-search">
+        <ion-searchbar
+          class="playful-searchbar"
+          [placeholder]="searchPlaceholderKey | t"
+          [value]="search"
+          [debounce]="200"
+          (ionInput)="onSearchChange($any($event.detail.value))"
+          (ionClear)="onSearchChange('')"
+        ></ion-searchbar>
+      </div>
+    }
 
-  @if (!loading && !errorMessage && showNewLegendTeamPanel) {
-    <div class="ion-padding new-legend-team-panel">
-      <p>{{ 'peladas.newLegendTeamIntro' | t }}</p>
-      <ion-button expand="block" (click)="createLegendTeam()">
-        {{ 'peladas.createLegendTeam' | t }}
-      </ion-button>
-    </div>
-  }
+    @if (!loading && !errorMessage && showNewLegendTeamPanel) {
+      <app-playful-card tone="muted" class="ion-margin-bottom directory-new-legend">
+        <p>{{ 'peladas.newLegendTeamIntro' | t }}</p>
+        <ion-button expand="block" (click)="createLegendTeam()">
+          {{ 'peladas.createLegendTeam' | t }}
+        </ion-button>
+      </app-playful-card>
+    }
 
-  @if (loading) {
-    <div class="ion-text-center ion-padding">
-      <ion-spinner name="crescent"></ion-spinner>
-    </div>
-  }
+    @if (loading) {
+      <div class="ion-text-center ion-padding">
+        <ion-spinner name="crescent"></ion-spinner>
+      </div>
+    }
 
-  @if (!loading && errorMessage) {
-    <ion-card color="warning" class="ion-margin">
-      <ion-card-content>
+    @if (!loading && errorMessage) {
+      <app-playful-card tone="muted" class="ion-margin-bottom">
         <p>{{ errorMessage }}</p>
         <ion-button fill="clear" (click)="retry()">{{ 'peladas.retry' | t }}</ion-button>
-      </ion-card-content>
-    </ion-card>
-  }
+      </app-playful-card>
+    }
 
-  @if (!loading && !errorMessage && !hasRows && !showNewLegendTeamPanel) {
-    <ion-note class="ion-padding">{{ emptyKey | t }}</ion-note>
-  }
+    @if (!loading && !errorMessage && !hasRows && !showNewLegendTeamPanel) {
+      <ion-note class="ion-padding">{{ emptyKey | t }}</ion-note>
+    }
 
-  @if (!loading && !errorMessage && hasRows && !hasVisible) {
-    <ion-note class="ion-padding">{{ 'peladas.searchEmpty' | t: { query: search } }}</ion-note>
-  }
+    @if (!loading && !errorMessage && hasRows && !hasVisible) {
+      <ion-note class="ion-padding">{{ 'peladas.searchEmpty' | t: { query: search } }}</ion-note>
+    }
 
-  @if (!loading && !errorMessage && door === 'confrontos' && visibleMatches.length > 0) {
-    <ion-list>
-      @for (row of visibleMatches; track row.id) {
-        <ion-item button (click)="openMatch(row)">
-          <ion-icon name="swap-horizontal-outline" slot="start"></ion-icon>
-          <ion-label class="ion-text-wrap">
-            <h2>{{ row.homeTeamName }} x {{ row.awayTeamName }}</h2>
-            <p>{{ row.homeTeamName }} — {{ 'peladas.president' | t }}: {{ row.homePresident || '—' }}</p>
-            <p>{{ row.awayTeamName }} — {{ 'peladas.president' | t }}: {{ row.awayPresident || '—' }}</p>
-            <p>{{ row.place || ('peladas.localMissing' | t) }}</p>
-            @if (row.when) {
-              <p>{{ row.when }}</p>
-            }
-          </ion-label>
-        </ion-item>
-      }
-    </ion-list>
-  }
-
-  @if (!loading && !errorMessage && door === 'times' && !showNewLegendTeamPanel && visibleTeams.length > 0) {
-    <ion-list>
-      @for (row of visibleTeams; track row.id) {
-        <ion-item button (click)="openTeam(row)">
-          <app-user-avatar
-            slot="start"
-            [avatarUrl]="row.imageUrl"
-            [alt]="row.name"
-            size="md"
-          ></app-user-avatar>
-          <ion-label class="ion-text-wrap">
-            <h2>{{ row.name }}</h2>
-            @if (row.kind === 'legend') {
-              @if (row.subtitle) {
-                <p>{{ row.subtitle }}</p>
+    @if (!loading && !errorMessage && door === 'confrontos' && visibleMatches.length > 0) {
+      <div class="directory-playful-grid">
+        <app-playful-grid>
+          @for (row of visibleMatches; track row.id) {
+            <app-playful-card
+              [tone]="matchPlayfulTone($index)"
+              [interactive]="true"
+              (activate)="openMatch(row)"
+            >
+              <ion-icon name="swap-horizontal-outline" class="directory-card-icon"></ion-icon>
+              <h3 class="directory-card-title">{{ row.homeTeamName }} x {{ row.awayTeamName }}</h3>
+              <p class="directory-card-meta">{{ row.homeTeamName }} — {{ 'peladas.president' | t }}: {{ row.homePresident || '—' }}</p>
+              <p class="directory-card-meta">{{ row.awayTeamName }} — {{ 'peladas.president' | t }}: {{ row.awayPresident || '—' }}</p>
+              <p class="directory-card-meta">{{ row.place || ('peladas.localMissing' | t) }}</p>
+              @if (row.when) {
+                <p class="directory-card-meta">{{ row.when }}</p>
               }
-              <p>{{ 'peladas.teamKindLegend' | t }}</p>
-            } @else {
-              <p>{{ 'peladas.president' | t }}: {{ row.presidentName || '—' }}</p>
-            }
-            <p>{{ row.place || ('peladas.localMissing' | t) }}</p>
-          </ion-label>
-        </ion-item>
-      }
-    </ion-list>
-  }
+            </app-playful-card>
+          }
+        </app-playful-grid>
+      </div>
+    }
 
-  @if (!loading && !errorMessage && door === 'times' && teamKind === 'active') {
-    <ion-fab slot="fixed" vertical="bottom" horizontal="end">
-      <ion-fab-button (click)="createTeam()" [attr.aria-label]="'peladas.createTeam' | t">
-        <ion-icon name="add"></ion-icon>
-      </ion-fab-button>
-    </ion-fab>
-  }
-
-  @if (!loading && !errorMessage && door === 'usuarios' && visibleUsers.length > 0) {
-    <ion-list>
-      @for (row of visibleUsers; track row.user.userId) {
-        <ion-item button (click)="openUser(row)">
-          <app-user-avatar
-            slot="start"
-            [avatarUrl]="row.user.avatarUrl"
-            [alt]="row.user.displayName || row.user.apelido"
-            size="md"
-          ></app-user-avatar>
-          <ion-label class="ion-text-wrap">
-            <h2>{{ row.user.displayName || ('peladas.userTitle' | t) }}</h2>
-            <p>{{ 'peladas.fullName' | t }}: {{ row.user.listFullName || '—' }}</p>
-            <p>{{ 'peladas.nickname' | t }}: {{ row.user.apelido || '—' }}</p>
-            <p>{{ row.rolesLabel || ('peladas.noProfiles' | t) }}</p>
-            @if (isPrimaryAthlete(row.user)) {
-              @if (row.user.primaryPosition) {
-                <p>{{ row.user.primaryPosition }}</p>
+    @if (!loading && !errorMessage && door === 'times' && !showNewLegendTeamPanel && visibleTeams.length > 0) {
+      <div class="directory-playful-grid">
+        <app-playful-grid>
+          @for (row of visibleTeams; track row.id) {
+            <app-playful-card
+              [tone]="teamPlayfulTone($index)"
+              [interactive]="true"
+              (activate)="openTeam(row)"
+            >
+              <div class="directory-team-head">
+                <app-user-avatar
+                  [avatarUrl]="row.imageUrl"
+                  [alt]="row.name"
+                  size="md"
+                ></app-user-avatar>
+                <h3 class="directory-card-title">{{ row.name }}</h3>
+              </div>
+              @if (row.kind === 'legend') {
+                @if (row.subtitle) {
+                  <p class="directory-card-meta">{{ row.subtitle }}</p>
+                }
+                <p class="directory-card-meta">{{ 'peladas.teamKindLegend' | t }}</p>
+              } @else {
+                <p class="directory-card-meta">{{ 'peladas.president' | t }}: {{ row.presidentName || '—' }}</p>
               }
-              <p>{{ 'peladas.age' | t }}: {{ athleteAgeLabel(row.user) }}</p>
-            } @else if (row.user.positions.length) {
-              <p>{{ row.user.positions.join(' · ') }}</p>
-            }
-            <p>{{ row.place || ('peladas.localMissing' | t) }}</p>
-          </ion-label>
-        </ion-item>
-      }
-    </ion-list>
-  }
+              <p class="directory-card-meta">{{ row.place || ('peladas.localMissing' | t) }}</p>
+            </app-playful-card>
+          }
+        </app-playful-grid>
+      </div>
+    }
+
+    @if (!loading && !errorMessage && door === 'times' && teamKind === 'active') {
+      <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+        <ion-fab-button (click)="createTeam()" [attr.aria-label]="'peladas.createTeam' | t">
+          <ion-icon name="add"></ion-icon>
+        </ion-fab-button>
+      </ion-fab>
+    }
+
+    @if (!loading && !errorMessage && door === 'usuarios' && visibleUsers.length > 0) {
+      <div class="directory-playful-grid">
+        <app-playful-grid>
+          @for (row of visibleUsers; track row.user.userId) {
+            <app-playful-card
+              [tone]="userPlayfulTone($index)"
+              [interactive]="true"
+              (activate)="openUser(row)"
+            >
+              <div class="directory-team-head">
+                <app-user-avatar
+                  [avatarUrl]="row.user.avatarUrl"
+                  [alt]="row.user.displayName || row.user.apelido"
+                  size="md"
+                ></app-user-avatar>
+                <h3 class="directory-card-title">{{ row.user.displayName || ('peladas.userTitle' | t) }}</h3>
+              </div>
+              <p class="directory-card-meta">{{ 'peladas.fullName' | t }}: {{ row.user.listFullName || '—' }}</p>
+              <p class="directory-card-meta">{{ 'peladas.nickname' | t }}: {{ row.user.apelido || '—' }}</p>
+              <p class="directory-card-meta">{{ row.rolesLabel || ('peladas.noProfiles' | t) }}</p>
+              @if (isPrimaryAthlete(row.user)) {
+                @if (row.user.primaryPosition) {
+                  <p class="directory-card-meta">{{ row.user.primaryPosition }}</p>
+                }
+                <p class="directory-card-meta">{{ 'peladas.age' | t }}: {{ athleteAgeLabel(row.user) }}</p>
+              } @else if (row.user.positions.length) {
+                <p class="directory-card-meta">{{ row.user.positions.join(' · ') }}</p>
+              }
+              <p class="directory-card-meta">{{ row.place || ('peladas.localMissing' | t) }}</p>
+            </app-playful-card>
+          }
+        </app-playful-grid>
+      </div>
+    }
+  </app-playful-page>
 </ion-content>

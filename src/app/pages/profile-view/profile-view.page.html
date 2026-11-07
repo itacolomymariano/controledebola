@@ -12,7 +12,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
+<ion-content class="ion-padding cb-playful-ion-content">
   @if (loading) {
     <div class="ion-text-center ion-padding">
       <ion-spinner name="crescent"></ion-spinner>
@@ -24,6 +24,7 @@
   }
 
   @if (!loading && profile) {
+    <app-playful-page>
     <div class="profile-header">
       <app-user-avatar
         [avatarUrl]="profile.avatarUrl"
@@ -39,7 +40,7 @@
       </div>
     </div>
 
-    <ion-list lines="full">
+    <ion-list lines="none" class="playful-elevated-list">
       <ion-item>
         <ion-label class="ion-text-wrap">
           <h3>Local</h3>
@@ -211,5 +212,6 @@
         </ion-card-content>
       </ion-card>
     }
+    </app-playful-page>
   }
 </ion-content>
