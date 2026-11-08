@@ -32,6 +32,62 @@
   border-bottom: 1px solid var(--ion-color-light-shade);
 }
 
+.mural-playful-hero__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.mural-playful-hero__icon {
+  font-size: 2rem;
+  color: var(--cb-playful-tone-users-fg);
+  flex-shrink: 0;
+}
+
+.mural-playful-hero__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.mural-playful-hero__lead {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: var(--cb-playful-text-muted);
+}
+
+.mural-playful-section-title {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.mural-playful-tile {
+  min-height: 120px;
+
+  h4 {
+    margin: 6px 0 8px;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+}
+
+.mural-playful-tile__icon {
+  font-size: 1.5rem;
+  color: var(--cb-playful-text-muted);
+}
+
+.mural-playful-team {
+  margin: 0;
+  font-weight: 600;
+}
+
+.mural-playful-meta {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: var(--cb-playful-text-muted);
+}
+
 .highlight-section-title {
   margin: 0 0 0.75rem;
   font-size: 0.9rem;

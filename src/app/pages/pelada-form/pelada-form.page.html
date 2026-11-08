@@ -96,23 +96,30 @@
           [progressValue]="wizardProgress"
           [stepTitle]="wizardStepTitle"
           [stepLead]="wizardStepLead"
+          [stepHelpKey]="wizardStepHelpKey"
           [isFirst]="currentStepIndex === 0"
           [isLast]="currentStepIndex === wizardSteps.length - 1"
           [submitLabelKey]="'peladaForm.wizard.submit'"
           (continue)="goWizardNext()"
           (back)="goWizardBack()"
           (submit)="wizardSubmit()"
+          (exit)="exitWizard()"
         >
           @switch (wizardStep) {
             @case ('basics') {
               <ion-item>
-                <ion-input label="Nome da pelada" labelPlacement="stacked" formControlName="name"></ion-input>
+                <ion-input
+                  class="form-label-wrap"
+                  label="Nome da pelada"
+                  labelPlacement="stacked"
+                  formControlName="name"
+                ></ion-input>
               </ion-item>
               @if (form.get('name')?.touched && form.get('name')?.invalid) {
                 <ion-note color="danger" class="ion-padding-horizontal">Informe o nome da pelada.</ion-note>
               }
               <ion-item>
-                <ion-select label="Esporte" labelPlacement="stacked" formControlName="sport">
+                <ion-select class="form-label-wrap" label="Esporte" labelPlacement="stacked" formControlName="sport">
                   @for (s of sports; track s.value) {
                     <ion-select-option [value]="s.value">{{ s.label }}</ion-select-option>
                   }
@@ -122,6 +129,7 @@
             @case ('rules') {
               <ion-item>
                 <ion-input
+                  class="form-label-wrap"
                   label="Quantidade de sócios (meta)"
                   labelPlacement="stacked"
                   type="number"
@@ -130,6 +138,7 @@
               </ion-item>
               <ion-item>
                 <ion-input
+                  class="form-label-wrap"
                   label="Mensalidade padrão (R$)"
                   labelPlacement="stacked"
                   type="number"

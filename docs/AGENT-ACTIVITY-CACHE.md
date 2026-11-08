@@ -2,9 +2,16 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-11-08 (Home 6 cards, wizards pelada/desafio, UX familiar)
+**Ultima atualizacao:** 2026-11-08 (fix wizard i18n, mural playful geral, cloud verify)
 
 ---
+
+### 2026-11-08 — Pós-teste Samsung (wizard + mural)
+
+- `I18nService.t` aceita `{current}` e `{{current}}`; `wizardProgress()` centraliza passos.
+- [`form-wizard`](../src/app/shared/components/form-wizard/): `?` por passo + **Sair e continuar depois**.
+- Mural aba **Geral**: hero playful + grid conquistas + ranking ([`mural-highlights-panel`](../src/app/shared/components/mural-highlights-panel/), [`mural-app-feed`](../src/app/shared/components/mural-app-feed/)).
+- Cloud: `Quanto é` confirmado em `cloud/main.js` L2928 (25207 linhas — diff mínimo no 04-auth).
 
 ### 2026-11-08 — Home hub + wizards + ajustes família
 

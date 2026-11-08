@@ -31,6 +31,12 @@ export class MuralHighlightsPanelComponent {
   @Input() filterCaption = '';
   /** Event mural: craque → juiz, sem time mais amado. */
   @Input() layout: 'default' | 'eventOrdered' = 'default';
+  /** Mural do app — aba Geral: hero + grid no padrão playful. */
+  @Input() playfulChrome = false;
+
+  get showPlayfulGeral(): boolean {
+    return this.playfulChrome && this.scope === 'app' && this.appBucketTab === 'geral';
+  }
 
   ageBands: MuralAgeBand[] = ['sub30', 'sub60', 'plus60'];
 

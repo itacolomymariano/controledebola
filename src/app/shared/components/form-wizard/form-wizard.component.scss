@@ -1,5 +1,13 @@
+.form-wizard-head-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
 .form-wizard-progress-label {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 0.8rem;
   color: var(--cb-playful-text-muted);
 }

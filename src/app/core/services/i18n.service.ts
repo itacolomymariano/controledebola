@@ -55,10 +55,15 @@ export class I18nService {
   t(key: string, params?: Record<string, string | number>): string {
     const raw = this.dict[key] ?? this.fallback[key] ?? key;
     if (!params) return raw;
-    return Object.entries(params).reduce(
-      (acc, [name, value]) => acc.split(`{{${name}}}`).join(String(value)),
-      raw
-    );
+    return Object.entries(params).reduce((acc, [name, value]) => {
+      const text = String(value);
+      return acc.split(`{{${name}}}`).join(text).split(`{${name}}`).join(text);
+    }, raw);
+  }
+
+  /** Rótulo de progresso de wizard (Passo N de M). */
+  wizardProgress(key: string, current: number, total: number): string {
+    return this.t(key, { current, total });
   }
 
   translateError(error: unknown): string {

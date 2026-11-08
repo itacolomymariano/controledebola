@@ -19,10 +19,14 @@ export class FormWizardComponent {
   @Input() submitLabelKey = 'formWizard.submit';
   @Input() continueDisabled = false;
   @Input() submitDisabled = false;
+  /** Chave i18n para app-help-balloon no cabeçalho do passo. */
+  @Input() stepHelpKey = '';
+  @Input() showExit = true;
 
   @Output() readonly continue = new EventEmitter<void>();
   @Output() readonly back = new EventEmitter<void>();
   @Output() readonly submit = new EventEmitter<void>();
+  @Output() readonly exit = new EventEmitter<void>();
 
   onContinue(): void {
     this.continue.emit();
@@ -34,5 +38,9 @@ export class FormWizardComponent {
 
   onSubmit(): void {
     this.submit.emit();
+  }
+
+  onExit(): void {
+    this.exit.emit();
   }
 }

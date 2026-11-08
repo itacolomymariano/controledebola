@@ -139,10 +139,11 @@ export class RegisterPage implements OnInit, OnDestroy {
   }
 
   wizardProgressLabel(): string {
-    return this.i18n
-      .t('register.wizard.progress')
-      .replace('{current}', String(this.currentStepIndex + 1))
-      .replace('{total}', String(this.wizardSteps.length));
+    return this.i18n.wizardProgress(
+      'register.wizard.progress',
+      this.currentStepIndex + 1,
+      this.wizardSteps.length
+    );
   }
 
   stepTitleKey(): string {

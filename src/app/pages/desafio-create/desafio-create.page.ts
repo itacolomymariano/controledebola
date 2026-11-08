@@ -98,10 +98,15 @@ export class DesafioCreatePage {
   }
 
   get wizardProgressLabel(): string {
-    return this.i18n.t('desafioForm.wizard.progress', {
-      current: this.currentStepIndex + 1,
-      total: this.wizardSteps.length,
-    });
+    return this.i18n.wizardProgress(
+      'desafioForm.wizard.progress',
+      this.currentStepIndex + 1,
+      this.wizardSteps.length
+    );
+  }
+
+  get wizardStepHelpKey(): string {
+    return `desafioForm.wizard.step.${this.wizardStep}.help`;
   }
 
   get wizardStepTitle(): string {
@@ -119,7 +124,26 @@ export class DesafioCreatePage {
   }
 
   cancel(): void {
-    void this.router.navigateByUrl('/tabs/events');
+    void this.router.navigateByUrl('/tabs/peladas/confrontos');
+  }
+
+  async exitWizard(): Promise<void> {
+    this.persistDraft();
+    const alert = await this.alertCtrl.create({
+      header: 'Sair do desafio',
+      message: 'Seu rascunho foi salvo neste aparelho. Você pode continuar depois.',
+      buttons: [
+        { text: 'Continuar preenchendo', role: 'cancel' },
+        {
+          text: 'Sair',
+          role: 'destructive',
+          handler: () => {
+            void this.router.navigateByUrl('/tabs/peladas/confrontos');
+          },
+        },
+      ],
+    });
+    await alert.present();
   }
 
   goRegisterTeam(): void {
@@ -318,18 +342,22 @@ export class DesafioCreatePage {
     if (draft.schedule) {
       this.scheduleForm.patchValue(draft.schedule);
     }
-    if (draft.selectedTeamId) {
+    if (this.wizardStep === 'opponent' && !draft.selectedTeamId) {
+      this.selected = null;
+      this.profile = null;
+    } else if (draft.selectedTeamId) {
       this.selected = { id: draft.selectedTeamId, name: draft.selectedTeamName || 'Time' };
       void this.teamService.getPublicProfile(draft.selectedTeamId).then((p) => {
         this.profile = p;
         this.cdr.markForCheck();
       });
-    } else if (!this.challengerTeamId && this.myTeams.length) {
+    }
+    if (!this.challengerTeamId && this.myTeams.length) {
       this.challengerTeamId = this.myTeams[0].objectId;
     }
   }
 
-  private persistDraft(): void {
+  persistDraft(): void {
     const schedule = this.scheduleForm.getRawValue();
     writeFormDraft<DesafioFormDraft>(DESAFIO_FORM_DRAFT_KEY, {
       stepIndex: this.currentStepIndex,

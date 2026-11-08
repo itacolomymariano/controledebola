@@ -2,6 +2,7 @@ import { ChangeDetectorRef, Component, ViewChild } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
+import { I18nService } from '../../core/services/i18n.service';
 import { emptyAddress, isAddressComplete } from '../../core/models/address.model';
 import { PeladaSport } from '../../core/models/pelada.model';
 import { PeladaService } from '../../core/services/pelada.service';
@@ -15,7 +16,6 @@ import {
 } from '../../core/utils/form-draft.util';
 import { buildMissingFieldsMessage } from '../../core/utils/form-validation.util';
 import { AddressFormComponent } from '../../shared/components/address-form/address-form.component';
-import { I18nService } from '../../core/services/i18n.service';
 
 const PELADA_WIZARD_STEPS = ['basics', 'rules', 'location', 'photos'] as const;
 type PeladaWizardStep = (typeof PELADA_WIZARD_STEPS)[number];
@@ -86,10 +86,15 @@ export class PeladaFormPage {
   }
 
   get wizardProgressLabel(): string {
-    return this.i18n.t('peladaForm.wizard.progress', {
-      current: this.currentStepIndex + 1,
-      total: this.wizardSteps.length,
-    });
+    return this.i18n.wizardProgress(
+      'peladaForm.wizard.progress',
+      this.currentStepIndex + 1,
+      this.wizardSteps.length
+    );
+  }
+
+  get wizardStepHelpKey(): string {
+    return `peladaForm.wizard.step.${this.wizardStep}.help`;
   }
 
   get wizardStepTitle(): string {
@@ -131,8 +136,27 @@ export class PeladaFormPage {
     if (this.isEdit && this.peladaId) {
       void this.router.navigate(['/pelada', this.peladaId]);
     } else {
-      void this.router.navigateByUrl('/tabs/peladas');
+      void this.router.navigateByUrl('/tabs/peladas/lista');
     }
+  }
+
+  async exitWizard(): Promise<void> {
+    this.persistDraft();
+    const alert = await this.alertCtrl.create({
+      header: 'Sair do cadastro',
+      message: 'Seu rascunho foi salvo neste aparelho. Você pode continuar depois.',
+      buttons: [
+        { text: 'Continuar preenchendo', role: 'cancel' },
+        {
+          text: 'Sair',
+          role: 'destructive',
+          handler: () => {
+            void this.router.navigateByUrl('/tabs/peladas/lista');
+          },
+        },
+      ],
+    });
+    await alert.present();
   }
 
   onAddressChanged(): void {

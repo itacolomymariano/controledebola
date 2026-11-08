@@ -213,11 +213,40 @@
   [highlights]="highlights"
   scope="app"
   [appBucketTab]="tab"
+  [playfulChrome]="tab === 'geral'"
   [shareContext]="shareContext"
   [titleOverrides]="titles"
   [filterCaption]="filterCaption"
 ></app-mural-highlights-panel>
 
+@if (tab === 'geral') {
+  <app-playful-card tone="surface" class="mural-playful-ranking ion-margin-bottom">
+    <div class="mural-card-header-row">
+      <h2 class="mural-playful-ranking__title">{{ 'mural.playful.ranking' | t }} — {{ titles.athletes }}</h2>
+      <app-mural-share-button
+        [context]="shareContext"
+        [cardTitle]="titles.athletes"
+        ruleKey="mural.rule.atletas"
+      ></app-mural-share-button>
+    </div>
+    @if (filterCaption) {
+      <p class="mural-filter-line">{{ filterCaption }}</p>
+    }
+    @if (!athleteEntries().length) {
+      <ion-note>Ainda não há dados para exibir no ranking.</ion-note>
+    }
+    @for (entry of athleteEntries(); track entry.userId; let i = $index) {
+      <div class="mural-playful-rank-row">
+        <span class="mural-playful-rank-pos">{{ i + 1 }}</span>
+        <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="md"></app-user-avatar>
+        <div class="mural-playful-rank-meta">
+          <strong>{{ entry.userName }}</strong>
+          <span>{{ badge('athlete', entry) }}</span>
+        </div>
+      </div>
+    }
+  </app-playful-card>
+} @else {
 <ion-card>
   <ion-card-header>
     <div class="mural-card-header-row">
@@ -245,6 +274,7 @@
     }
   </ion-card-content>
 </ion-card>
+}
 
 @if (tab === 'peladas') {
   <ng-container [ngTemplateOutlet]="peladaTopCard"></ng-container>

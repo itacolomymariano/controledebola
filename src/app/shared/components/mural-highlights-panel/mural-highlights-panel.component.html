@@ -1,4 +1,72 @@
 @if (highlights) {
+  @if (showPlayfulGeral) {
+    <app-playful-card tone="users" class="mural-playful-hero ion-margin-bottom">
+      <div class="mural-playful-hero__head">
+        <ion-icon name="trophy" class="mural-playful-hero__icon" aria-hidden="true"></ion-icon>
+        <div>
+          <h2 class="mural-playful-hero__title">{{ 'mural.playful.craqueApp' | t }}</h2>
+          <p class="mural-playful-hero__lead">{{ 'mural.playful.craqueAppLead' | t }}</p>
+        </div>
+        <app-mural-share-button
+          [context]="shareContext"
+          [cardTitle]="('mural.playful.craqueApp' | t)"
+          ruleKey="mural.rule.craque"
+        ></app-mural-share-button>
+      </div>
+      @if (filterCaption) {
+        <p class="mural-filter-line">{{ filterCaption }}</p>
+      }
+      <p class="mural-filter-line">{{ 'mural.app.confidenceHint' | t }}</p>
+      @if (eventCraque; as entry) {
+        <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
+      } @else {
+        <ion-badge color="medium">{{ 'mural.playful.noData' | t }}</ion-badge>
+      }
+    </app-playful-card>
+
+    <h3 class="mural-playful-section-title">{{ 'mural.playful.conquistas' | t }}</h3>
+    <app-playful-grid class="mural-playful-conquistas ion-margin-bottom">
+      <app-playful-card tone="confrontos" class="mural-playful-tile">
+        <ion-icon name="football-outline" class="mural-playful-tile__icon"></ion-icon>
+        <h4>{{ 'mural.playful.topScorer' | t }}</h4>
+        @if (eventGoleadores.length) {
+          <app-mural-showcase-entry [entry]="eventGoleadores[0]"></app-mural-showcase-entry>
+        } @else {
+          <ion-badge color="medium">{{ 'mural.playful.noData' | t }}</ion-badge>
+        }
+      </app-playful-card>
+      <app-playful-card tone="peladas" class="mural-playful-tile">
+        <ion-icon name="hand-left-outline" class="mural-playful-tile__icon"></ion-icon>
+        <h4>{{ 'mural.playful.bestGk' | t }}</h4>
+        @if (eventMelhorGoleiro; as entry) {
+          <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
+        } @else {
+          <ion-badge color="medium">{{ 'mural.playful.noData' | t }}</ion-badge>
+        }
+      </app-playful-card>
+      <app-playful-card tone="times" class="mural-playful-tile">
+        <ion-icon name="heart-outline" class="mural-playful-tile__icon"></ion-icon>
+        <h4>{{ 'mural.playful.bestTeam' | t }}</h4>
+        @if (highlights.timeMaisAmado; as team) {
+          <p class="mural-playful-team">{{ team.teamName }}</p>
+          <p class="mural-playful-meta">{{ team.count }} torcedor(es)</p>
+        } @else {
+          <ion-badge color="medium">{{ 'mural.playful.noData' | t }}</ion-badge>
+        }
+      </app-playful-card>
+      <app-playful-card tone="users" class="mural-playful-tile">
+        <ion-icon name="megaphone-outline" class="mural-playful-tile__icon"></ion-icon>
+        <h4>{{ melhorJuizTitle }}</h4>
+        @if (highlights.melhorJuiz; as entry) {
+          <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
+        } @else {
+          <ion-badge color="medium">{{ 'mural.playful.noData' | t }}</ion-badge>
+        }
+      </app-playful-card>
+    </app-playful-grid>
+  }
+
+  @if (!showPlayfulGeral) {
   <ion-card>
     <ion-card-header>
       @if (scope === 'event') {
@@ -72,7 +140,9 @@
       }
     </ion-card-content>
   </ion-card>
+  }
 
+  @if (!showPlayfulGeral) {
   <ion-card>
     <ion-card-header>
       @if (scope === 'event') {
@@ -239,8 +309,9 @@
       }
     </ion-card-content>
   </ion-card>
+  }
 
-  @if (!isEventOrdered) {
+  @if (!isEventOrdered && !showPlayfulGeral) {
   <ion-card>
     <ion-card-header>
       @if (scope === 'event') {

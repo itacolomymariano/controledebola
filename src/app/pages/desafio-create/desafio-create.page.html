@@ -23,21 +23,25 @@
         [progressValue]="wizardProgress"
         [stepTitle]="wizardStepTitle"
         [stepLead]="wizardStepLead"
+        [stepHelpKey]="wizardStepHelpKey"
         [isFirst]="currentStepIndex === 0"
         [isLast]="currentStepIndex === wizardSteps.length - 1"
         [submitLabelKey]="'desafioForm.wizard.submit'"
         (continue)="goWizardNext()"
         (back)="goWizardBack()"
         (submit)="wizardSubmit()"
+        (exit)="exitWizard()"
       >
         @switch (wizardStep) {
           @case ('team') {
             <ion-list lines="full">
               <ion-item>
                 <ion-select
+                  class="form-label-wrap"
                   label="Seu time desafiante"
                   labelPlacement="stacked"
                   [(ngModel)]="challengerTeamId"
+                  (ionChange)="persistDraft()"
                   interface="popover"
                 >
                   @for (team of myTeams; track team.objectId) {
@@ -102,19 +106,44 @@
             <form [formGroup]="scheduleForm">
               <ion-list lines="full">
                 <ion-item>
-                  <ion-input type="date" label="Data de início" labelPlacement="stacked" formControlName="startDate"></ion-input>
-                </ion-item>
-                <ion-item>
-                  <ion-input type="time" label="Hora de início" labelPlacement="stacked" formControlName="startTime"></ion-input>
-                </ion-item>
-                <ion-item>
-                  <ion-input type="date" label="Data de término" labelPlacement="stacked" formControlName="endDate"></ion-input>
-                </ion-item>
-                <ion-item>
-                  <ion-input type="time" label="Hora de término" labelPlacement="stacked" formControlName="endTime"></ion-input>
+                  <ion-input
+                    class="form-label-wrap"
+                    type="date"
+                    label="Data de início"
+                    labelPlacement="stacked"
+                    formControlName="startDate"
+                  ></ion-input>
                 </ion-item>
                 <ion-item>
                   <ion-input
+                    class="form-label-wrap"
+                    type="time"
+                    label="Hora de início"
+                    labelPlacement="stacked"
+                    formControlName="startTime"
+                  ></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input
+                    class="form-label-wrap"
+                    type="date"
+                    label="Data de término"
+                    labelPlacement="stacked"
+                    formControlName="endDate"
+                  ></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input
+                    class="form-label-wrap"
+                    type="time"
+                    label="Hora de término"
+                    labelPlacement="stacked"
+                    formControlName="endTime"
+                  ></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input
+                    class="form-label-wrap"
                     label="Complemento do local"
                     labelPlacement="stacked"
                     formControlName="locationComplement"
@@ -129,9 +158,11 @@
             <ion-list lines="full">
               <ion-item>
                 <ion-textarea
+                  class="form-label-wrap"
                   label="Mensagem ao presidente desafiado"
                   labelPlacement="stacked"
                   [(ngModel)]="message"
+                  (ionInput)="persistDraft()"
                   autoGrow="true"
                   maxlength="1000"
                   placeholder="Ex.: Queremos marcar um amistoso no sábado..."
@@ -139,18 +170,24 @@
               </ion-item>
               <ion-item>
                 <ion-textarea
+                  class="form-label-wrap"
                   label="Condições e benefícios ao desafiado"
                   labelPlacement="stacked"
                   [(ngModel)]="challengeConditions"
+                  (ionInput)="persistDraft()"
                   autoGrow="true"
                   maxlength="2000"
                   placeholder="Ex.: água, coletes, arbitragem por nossa conta..."
                 ></ion-textarea>
               </ion-item>
               <ion-item>
-                <ion-toggle [(ngModel)]="hasReturnLeg">
-                  Ida e volta (adversário será mandante na volta)
-                </ion-toggle>
+                <ion-toggle
+                  class="form-label-wrap"
+                  labelPlacement="stacked"
+                  label="Ida e volta (adversário será mandante na volta)"
+                  [(ngModel)]="hasReturnLeg"
+                  (ionChange)="persistDraft()"
+                ></ion-toggle>
               </ion-item>
             </ion-list>
           }

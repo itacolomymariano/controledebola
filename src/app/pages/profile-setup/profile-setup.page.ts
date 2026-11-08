@@ -181,10 +181,11 @@ export class ProfileSetupPage implements OnDestroy {
   }
 
   wizardProgressLabel(): string {
-    return this.i18n
-      .t('profileSetup.wizard.progress')
-      .replace('{current}', String(this.wizardStepCurrent + 1))
-      .replace('{total}', String(this.wizardStepTotal));
+    return this.i18n.wizardProgress(
+      'profileSetup.wizard.progress',
+      this.wizardStepCurrent + 1,
+      this.wizardStepTotal
+    );
   }
 
   stepTitleKey(): string {

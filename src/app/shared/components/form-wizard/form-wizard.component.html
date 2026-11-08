@@ -1,5 +1,10 @@
 <app-playful-card tone="surface" class="form-wizard-head-card">
-  <p class="form-wizard-progress-label">{{ progressLabel }}</p>
+  <div class="form-wizard-head-row">
+    <p class="form-wizard-progress-label">{{ progressLabel }}</p>
+    @if (stepHelpKey) {
+      <app-help-balloon [textKey]="stepHelpKey"></app-help-balloon>
+    }
+  </div>
   <ion-progress-bar [value]="progressValue" color="primary"></ion-progress-bar>
   <h2 class="form-wizard-step-title">{{ stepTitle }}</h2>
   @if (stepLead) {
@@ -22,6 +27,11 @@
     @if (!isFirst) {
       <ion-button expand="block" fill="outline" type="button" (click)="onBack()">
         {{ backLabelKey | t }}
+      </ion-button>
+    }
+    @if (showExit) {
+      <ion-button expand="block" fill="clear" type="button" (click)="onExit()">
+        {{ 'formWizard.exitSaveDraft' | t }}
       </ion-button>
     }
   </div>
