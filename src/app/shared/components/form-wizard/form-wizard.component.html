@@ -1,0 +1,28 @@
+<app-playful-card tone="surface" class="form-wizard-head-card">
+  <p class="form-wizard-progress-label">{{ progressLabel }}</p>
+  <ion-progress-bar [value]="progressValue" color="primary"></ion-progress-bar>
+  <h2 class="form-wizard-step-title">{{ stepTitle }}</h2>
+  @if (stepLead) {
+    <p class="form-wizard-step-lead">{{ stepLead }}</p>
+  }
+</app-playful-card>
+
+<app-playful-card tone="muted" class="ion-margin-top form-wizard-body-card">
+  <ng-content></ng-content>
+  <div class="form-wizard-actions ion-margin-top">
+    @if (!isLast) {
+      <ion-button expand="block" type="button" [disabled]="continueDisabled" (click)="onContinue()">
+        {{ continueLabelKey | t }}
+      </ion-button>
+    } @else {
+      <ion-button expand="block" type="button" [disabled]="submitDisabled" (click)="onSubmit()">
+        {{ submitLabelKey | t }}
+      </ion-button>
+    }
+    @if (!isFirst) {
+      <ion-button expand="block" fill="outline" type="button" (click)="onBack()">
+        {{ backLabelKey | t }}
+      </ion-button>
+    }
+  </div>
+</app-playful-card>

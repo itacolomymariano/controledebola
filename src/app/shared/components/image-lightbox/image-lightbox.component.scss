@@ -1,0 +1,19 @@
+.image-lightbox-content {
+  --background: rgba(0, 0, 0, 0.92);
+}
+
+.image-lightbox-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.image-lightbox-img {
+  max-width: 100%;
+  max-height: min(85vh, 720px);
+  object-fit: contain;
+  border-radius: 8px;
+}

@@ -4,7 +4,7 @@
       <div>
         <ion-card-title>Material do evento</ion-card-title>
         <ion-card-subtitle>
-          Controle de envio, recebimento e conferencia com o ropeiro
+          Controle de envio, recebimento e conferencia com o roupeiro
         </ion-card-subtitle>
       </div>
       <ion-button fill="clear" size="small" class="event-panel-back" (click)="back.emit()">
@@ -34,7 +34,7 @@
           [disabled]="!canSelectKitmanSource"
           (click)="onSourceSelect('kitman')"
         >
-          Do Ropeiro
+          Do Roupeiro
         </ion-button>
         <ion-button
           size="small"
@@ -53,7 +53,7 @@
       }
 
       @if (session.counterpartyName) {
-        <ion-note color="medium">Ropeiro do evento: {{ session.counterpartyName }}</ion-note>
+        <ion-note color="medium">Roupeiro do evento: {{ session.counterpartyName }}</ion-note>
       }
 
       @if (showMissingPeladaInventoryHint) {
@@ -63,7 +63,7 @@
         </ion-note>
       } @else if (showMissingKitmanHint) {
         <ion-note color="warning">
-          Nenhum ropeiro contratado neste evento. Negocie/contrate um ropeiro para enviar o material.
+          Nenhum roupeiro contratado neste evento. Negocie/contrate um roupeiro para enviar o material.
         </ion-note>
       }
 
@@ -77,7 +77,7 @@
 
         @if (source === 'kitman' && isKitman && hasEmptyInventory) {
           <ion-note color="warning" class="ion-margin-top">
-            Seu material de ropeiro ainda nao foi cadastrado. Cadastre em Perfil → Material do Ropeiro.
+            Seu material de roupeiro ainda nao foi cadastrado. Cadastre em Perfil → Material do Roupeiro.
           </ion-note>
         }
 
@@ -149,7 +149,7 @@
 
         @if (session.status === 'loaded' && source === 'pelada' && isAdmin && !hasKitmanCounterparty) {
           <ion-note color="warning" class="ion-margin-top">
-            Botao de envio liberado somente apos contratar um ropeiro no evento.
+            Botao de envio liberado somente apos contratar um roupeiro no evento.
           </ion-note>
         }
 
@@ -211,10 +211,10 @@
             [disabled]="busy"
             (click)="receiveReturn.emit()"
           >
-            Receber devolucao do Ropeiro
+            Receber devolucao do Roupeiro
           </ion-button>
           <ion-note color="medium">
-            Use a conferencia acima (ou a contagem do ropeiro) para fechar a devolucao e registrar avarias.
+            Use a conferencia acima (ou a contagem do roupeiro) para fechar a devolucao e registrar avarias.
           </ion-note>
         }
 

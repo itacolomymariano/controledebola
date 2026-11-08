@@ -3,12 +3,12 @@
   <div class="select-row" [formGroup]="form">
     <ion-item lines="none" class="select-item">
       <ion-select
-        label="Dia"
+        [label]="'birthDatePicker.day' | t"
         labelPlacement="stacked"
         formControlName="day"
         [interface]="selectInterface"
-        [interfaceOptions]="{ header: 'Selecionar dia' }"
-        placeholder="Dia"
+        [interfaceOptions]="{ header: ('birthDatePicker.selectDay' | t) }"
+        [placeholder]="'birthDatePicker.day' | t"
         (ionBlur)="markAsTouched()"
       >
         @for (day of days; track day) {
@@ -18,12 +18,12 @@
     </ion-item>
     <ion-item lines="none" class="select-item">
       <ion-select
-        label="Mes"
+        [label]="'birthDatePicker.month' | t"
         labelPlacement="stacked"
         formControlName="month"
         [interface]="selectInterface"
-        [interfaceOptions]="{ header: 'Selecionar mes' }"
-        placeholder="Mes"
+        [interfaceOptions]="{ header: ('birthDatePicker.selectMonth' | t) }"
+        [placeholder]="'birthDatePicker.month' | t"
         (ionBlur)="markAsTouched()"
       >
         @for (month of months; track month.value) {
@@ -33,11 +33,11 @@
     </ion-item>
     <ion-item lines="none" class="select-item">
       <ion-select
-        label="Ano"
+        [label]="'birthDatePicker.year' | t"
         labelPlacement="stacked"
         formControlName="year"
         [interface]="selectInterface"
-        [interfaceOptions]="{ header: 'Selecionar ano' }"
+        [interfaceOptions]="{ header: ('birthDatePicker.selectYear' | t) }"
         placeholder="Ano"
         (ionBlur)="markAsTouched()"
       >

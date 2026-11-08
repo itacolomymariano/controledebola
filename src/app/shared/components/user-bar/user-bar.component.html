@@ -1,15 +1,27 @@
 <ion-toolbar class="user-bar">
   <ion-buttons slot="start" class="user-bar-start">
-    <img
-      src="assets/icon/logo_controle_de_bola.png"
-      alt="Controle de Bola"
-      class="user-bar-logo"
-    />
-    <app-user-avatar
-      [avatarUrl]="avatarUrl"
-      alt="Foto de perfil"
-      size="sm"
-    ></app-user-avatar>
+    <button
+      type="button"
+      class="user-bar-logo-btn"
+      (click)="openLogo()"
+      [class.user-bar-logo-btn--zoom]="enableImageZoom"
+      [attr.aria-label]="'homeHub.zoomLogo' | t"
+    >
+      <img [src]="appLogoSrc" alt="Controle de Bola" class="user-bar-logo" />
+    </button>
+    <button
+      type="button"
+      class="user-bar-avatar-btn"
+      (click)="openAvatarZoom()"
+      [class.user-bar-avatar-btn--zoom]="enableImageZoom && avatarUrl"
+      [attr.aria-label]="'homeHub.zoomAvatar' | t"
+    >
+      <app-user-avatar
+        [avatarUrl]="avatarUrl"
+        alt="Foto de perfil"
+        size="sm"
+      ></app-user-avatar>
+    </button>
   </ion-buttons>
   <ion-title class="apelido-title">{{ apelido }}</ion-title>
   <ion-buttons slot="end">

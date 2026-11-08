@@ -57,6 +57,8 @@ import { HomeDoorCardComponent } from './components/home-door-card/home-door-car
 import { PlayfulPageComponent } from './components/playful-page/playful-page.component';
 import { PlayfulCardComponent } from './components/playful-card/playful-card.component';
 import { PlayfulGridComponent } from './components/playful-grid/playful-grid.component';
+import { ImageLightboxComponent } from './components/image-lightbox/image-lightbox.component';
+import { FormWizardComponent } from './components/form-wizard/form-wizard.component';
 
 @NgModule({
   declarations: [
@@ -114,6 +116,8 @@ import { PlayfulGridComponent } from './components/playful-grid/playful-grid.com
     PlayfulPageComponent,
     PlayfulCardComponent,
     PlayfulGridComponent,
+    ImageLightboxComponent,
+    FormWizardComponent,
     TranslatePipe,
   ],
   imports: [CommonModule, FormsModule, ReactiveFormsModule, IonicModule],
@@ -172,6 +176,8 @@ import { PlayfulGridComponent } from './components/playful-grid/playful-grid.com
     PlayfulPageComponent,
     PlayfulCardComponent,
     PlayfulGridComponent,
+    ImageLightboxComponent,
+    FormWizardComponent,
     TranslatePipe,
   ],
 })

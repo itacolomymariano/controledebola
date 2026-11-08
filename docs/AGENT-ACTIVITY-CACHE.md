@@ -2,9 +2,17 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-11-06 (Tab bar altura 52px cápsula — correção pós-compactação)
+**Ultima atualizacao:** 2026-11-08 (Home 6 cards, wizards pelada/desafio, UX familiar)
 
 ---
+
+### 2026-11-08 — Home hub + wizards + ajustes família
+
+- **Home:** [`peladas.page.ts`](../src/app/pages/peladas/peladas.page.ts) — portas **Convidar amigos** (`AppInviteShareService`) e **Mural do app**; grid 2×3 compacto; user-bar com zoom na logo/avatar em `/tabs/home` ([`image-lightbox`](../src/app/shared/components/image-lightbox/)).
+- **Diretórios:** FAB **+** em confrontos ([`home-directory.page.html`](../src/app/pages/peladas/home-directory.page.html)) → `/desafio-create`.
+- **Wizards:** [`form-wizard`](../src/app/shared/components/form-wizard/) + rascunho `sessionStorage`; [`pelada-form`](../src/app/pages/pelada-form/) (criação); [`desafio-create`](../src/app/pages/desafio-create/).
+- **UX:** `address-form` aviso amarelo só após `armIncompleteHint()`; birth-date **Mês** i18n; **Roupeiro** em labels; captcha Cloud `Quanto é` ([`04-auth-signup.js`](../cloud/source/04-auth-signup.js)).
+- **Build:** release **2026.11.08.0314** (314); publicar `cloud/main.js` no Back4App.
 
 ### 2026-11-06 — Tab bar: recalibração altura (ícones cortados)
 

@@ -5,8 +5,8 @@
   align-items: flex-start;
   text-align: left;
   width: 100%;
-  min-height: 148px;
-  padding: 16px 14px 48px;
+  min-height: 108px;
+  padding: 12px 12px 40px;
   border: none;
   border-radius: 18px;
   box-shadow: 0 4px 14px rgba(30, 20, 60, 0.08);
@@ -40,22 +40,32 @@
   --door-accent: var(--cb-door-users-accent);
 }
 
+.home-door-card--invite {
+  background: var(--cb-door-invite-bg);
+  --door-accent: var(--cb-door-invite-accent);
+}
+
+.home-door-card--mural {
+  background: var(--cb-door-mural-bg);
+  --door-accent: var(--cb-door-mural-accent);
+}
+
 .home-door-card__icon {
-  font-size: 2rem;
+  font-size: 1.65rem;
   color: var(--door-accent);
   margin-bottom: 8px;
 }
 
 .home-door-card__title {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: var(--cb-playful-text);
 }
 
 .home-door-card__hint {
-  margin: 6px 0 0;
-  font-size: 0.72rem;
+  margin: 4px 0 0;
+  font-size: 0.65rem;
   line-height: 1.35;
   color: var(--cb-playful-text-muted);
   opacity: 0.95;

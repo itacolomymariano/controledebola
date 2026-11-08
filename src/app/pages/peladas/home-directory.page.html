@@ -142,6 +142,14 @@
       </ion-fab>
     }
 
+    @if (!loading && !errorMessage && door === 'confrontos') {
+      <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+        <ion-fab-button (click)="createDesafio()" [attr.aria-label]="'peladas.createChallenge' | t">
+          <ion-icon name="add"></ion-icon>
+        </ion-fab-button>
+      </ion-fab>
+    }
+
     @if (!loading && !errorMessage && door === 'usuarios' && visibleUsers.length > 0) {
       <div class="directory-playful-grid">
         <app-playful-grid>

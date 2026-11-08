@@ -28,7 +28,7 @@ Parse.Cloud.define('prepareSignupChallenge', async () => {
   await challenge.save(null, { useMasterKey: true });
   return {
     challengeId: challenge.id,
-    question: `Quanto e ${left} + ${right}?`,
+    question: `Quanto é ${left} + ${right}?`,
   };
 });
 

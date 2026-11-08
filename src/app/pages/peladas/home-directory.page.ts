@@ -259,6 +259,10 @@ export class HomeDirectoryPage implements OnDestroy {
     void this.router.navigate(['/team/form'], { queryParams: { new: '1' } });
   }
 
+  createDesafio(): void {
+    void this.router.navigateByUrl('/desafio-create');
+  }
+
   createLegendTeam(): void {
     const term = this.search.trim();
     void this.router.navigate(['/legends/team/new'], {

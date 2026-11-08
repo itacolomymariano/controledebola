@@ -23,7 +23,7 @@ export const PROFILE_ROLE_LABELS: Record<ProfileRole, string> = {
   coach: 'Treinador',
   physical_trainer: 'Preparador Fisico',
   masseur: 'Massagista',
-  kitman: 'Ropeiro',
+  kitman: 'Roupeiro',
   gandula: 'Gandula',
   gatekeeper: 'Porteiro',
   fan: 'Torcedor',

@@ -1,6 +1,6 @@
 /**
  * Cloud Code — gerado por npm run build:cloud
- * Gerado em: 2026-11-01T15:48:50.963Z
+ * Gerado em: 2026-11-08T10:11:30.973Z
  * Copie o conteudo deste arquivo no Back4App (Server Settings > Cloud Code).
  * Fontes modulares em cloud/source/
  * NAO edite este arquivo direto — edite cloud/source/ e rode npm run build:cloud
@@ -2925,7 +2925,7 @@ Parse.Cloud.define('prepareSignupChallenge', async () => {
   await challenge.save(null, { useMasterKey: true });
   return {
     challengeId: challenge.id,
-    question: `Quanto e ${left} + ${right}?`,
+    question: `Quanto é ${left} + ${right}?`,
   };
 });
 

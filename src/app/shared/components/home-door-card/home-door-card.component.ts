@@ -1,6 +1,12 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 
-export type HomeDoorVariant = 'peladas' | 'confrontos' | 'times' | 'users';
+export type HomeDoorVariant =
+  | 'peladas'
+  | 'confrontos'
+  | 'times'
+  | 'users'
+  | 'invite'
+  | 'mural';
 
 @Component({
   selector: 'app-home-door-card',

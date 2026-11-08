@@ -2,7 +2,7 @@
   position: relative;
   overflow: visible;
   /* Espaço superior já vem do ion-content da home (offset da user-bar em tabs). */
-  padding: 12px 20px 28px;
+  padding: 8px 16px 16px;
   background: linear-gradient(145deg, var(--cb-home-hero-start), var(--cb-home-hero-end));
   color: var(--cb-home-hero-text);
   border-radius: 0 0 28px 28px;
@@ -33,6 +33,15 @@
   pointer-events: none;
 }
 
+.home-hub-hero__avatar-btn {
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
 .home-hub-hero__inner {
   position: relative;
   z-index: 1;
@@ -44,8 +53,8 @@
 }
 
 :host ::ng-deep .avatar-lg {
-  width: 72px;
-  height: 72px;
+  width: 64px;
+  height: 64px;
   border: 3px solid rgba(255, 255, 255, 0.85);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }

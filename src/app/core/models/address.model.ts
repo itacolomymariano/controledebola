@@ -127,10 +127,10 @@ export function getMissingAddressFields(address: Address | null | undefined): st
   if (normalizeBrazilUf(address.state).length !== 2) missing.push('UF');
   if (normalizeZipCode(address.zipCode).length !== 8) missing.push('CEP');
   if (typeof address.latitude !== 'number' || Number.isNaN(address.latitude)) {
-    missing.push('Localizacao (selecione na lista)');
+    missing.push('Localização (selecione na lista)');
   }
   if (typeof address.longitude !== 'number' || Number.isNaN(address.longitude)) {
-    missing.push('Localizacao (selecione na lista)');
+    missing.push('Localização (selecione na lista)');
   }
   return [...new Set(missing)];
 }

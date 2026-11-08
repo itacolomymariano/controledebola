@@ -1,0 +1,24 @@
+.form-wizard-progress-label {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  color: var(--cb-playful-text-muted);
+}
+
+.form-wizard-step-title {
+  margin: 12px 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.form-wizard-step-lead {
+  margin: 6px 0 0;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: var(--cb-playful-text-muted);
+}
+
+.form-wizard-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

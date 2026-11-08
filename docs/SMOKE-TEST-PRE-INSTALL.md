@@ -16,7 +16,8 @@ Publicar `cloud/main.js` no Back4App quando houver alteração em `cloud/source/
 | # | Fluxo | O que validar |
 |---|--------|----------------|
 | 0 | Sobre (build UX) | Antes de validar wizard Xaiana/Nicole: **Versão** ≥ **1.0.10**, build **> 295**, release **≥ 2026.11.04.0298** — ver [XAIANA-VALIDACAO-UX-POS-BUILD.md](XAIANA-VALIDACAO-UX-POS-BUILD.md) |
-| 1 | Login / tabs | **`/tabs/home`**: hero roxo (avatar + apelido), **grid 2×2** das quatro portas (cores distintas, seta circular); simetria sem faixa vazia grande; aba **Início** no rodapé; **sem** ícone casa no topo; 2ª aba **Peladas** → lista |
+| 1 | Login / tabs | **`/tabs/home`**: hero compacto (avatar ampliável ao toque), **grid 2×3** com **6 portas** (Peladas, Confrontos, Times, Usuários, Convidar amigos, Mural do app); logo/avatar na user-bar ampliam na Home; aba **Início** no rodapé; 2ª aba **Peladas** → lista com FAB **+** |
+| 1a | Home → diretórios | Confrontos e Times (ativos): FAB **+** canto inferior direito (desafio / novo time); toque em **Convidar amigos** abre share |
 | 1b | Perfil atleta | Labels completos das taxas pelada e **jogo entre times amadores (R$)** (sem reticências) |
 | 1c | Tema | Menu → Cores e temas: paleta **Controle de Bola** visível; trocar claro/escuro muda toolbar, **fundo com orbes** (playful), **tab bar em cápsula** na aba ativa e tons pastel dos cartões “porta” |
 | 15 | Playful UI | Login e **Cadastro** com cartões/fundo colorido; **Peladas** → lista em **grid 2 col** com cartões **pastéis + onda + seta** (itens clicáveis); **Buscar** → idem; **Perfil** / **Inbox** / filtros **Mural**: linhas em cartão elevado; **Detalhe evento** e **subtelas do evento** com fundo/orbes |

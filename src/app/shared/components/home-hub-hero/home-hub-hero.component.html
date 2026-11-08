@@ -2,7 +2,14 @@
   <div class="home-hub-hero__waves" aria-hidden="true"></div>
   <div class="home-hub-hero__ball" aria-hidden="true"></div>
   <div class="home-hub-hero__inner">
-    <app-user-avatar [avatarUrl]="avatarUrl" [alt]="apelido" size="lg"></app-user-avatar>
+    <button
+      type="button"
+      class="home-hub-hero__avatar-btn"
+      (click)="openAvatar()"
+      [attr.aria-label]="'homeHub.zoomAvatar' | t"
+    >
+      <app-user-avatar [avatarUrl]="avatarUrl" [alt]="apelido" size="lg"></app-user-avatar>
+    </button>
     <h1 class="home-hub-hero__name">{{ apelido }}</h1>
     <p class="home-hub-hero__welcome">{{ 'homeHub.welcome' | t }}</p>
     <div class="home-hub-hero__chips" *ngIf="locationChips.length">

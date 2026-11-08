@@ -8,6 +8,7 @@ import {
 import { Subscription } from 'rxjs';
 import { Address, emptyAddress } from '../../../core/models/address.model';
 import { AuthService } from '../../../core/services/auth.service';
+import { ImageLightboxService } from '../../../core/services/image-lightbox.service';
 import { I18nService } from '../../../core/services/i18n.service';
 
 @Component({
@@ -28,8 +29,15 @@ export class HomeHubHeroComponent implements OnInit, OnDestroy {
   constructor(
     private readonly auth: AuthService,
     private readonly i18n: I18nService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly imageLightbox: ImageLightboxService
   ) {}
+
+  openAvatar(): void {
+    const url = this.avatarUrl?.trim();
+    if (!url) return;
+    void this.imageLightbox.open(url, this.apelido || 'Foto de perfil');
+  }
 
   ngOnInit(): void {
     this.applyProfile();

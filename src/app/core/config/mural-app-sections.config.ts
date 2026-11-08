@@ -51,7 +51,7 @@ const SUPPORT_MASSEUR: MuralAppSupportRoleSection = {
 };
 const SUPPORT_KITMAN: MuralAppSupportRoleSection = {
   role: 'kitman',
-  title: 'Top 10 — Ropeiros',
+  title: 'Top 10 — Roupeiros',
 };
 const SUPPORT_GANDULA: MuralAppSupportRoleSection = {
   role: 'gandula',

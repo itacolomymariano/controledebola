@@ -68,6 +68,8 @@ export class AddressFormComponent implements OnInit, OnDestroy, ControlValueAcce
   geocoded = false;
   searchError = '';
   applying = false;
+  /** Só exibe aviso amarelo após o pai chamar armIncompleteHint (tentativa de avanço). */
+  private incompleteHintArmed = false;
 
   private subs = new Subscription();
   private onChange: (value: Address) => void = () => undefined;
@@ -228,11 +230,20 @@ export class AddressFormComponent implements OnInit, OnDestroy, ControlValueAcce
     this.onTouched();
   }
 
+  armIncompleteHint(): void {
+    this.incompleteHintArmed = true;
+  }
+
+  resetIncompleteHint(): void {
+    this.incompleteHintArmed = false;
+  }
+
   get isComplete(): boolean {
     return isAddressComplete(this.readAddress());
   }
 
   get showIncompleteHint(): boolean {
+    if (!this.incompleteHintArmed) return false;
     if (this.applying || this.isComplete) return false;
     if (!this.required && isAddressEmpty(this.readAddress())) return false;
     return this.missingFields.length > 0;

@@ -113,8 +113,8 @@ export class EventDetailMaterialPanelComponent implements OnChanges {
 
   get sendButtonLabel(): string {
     if (this.source === 'pelada') {
-      const name = (this.session?.counterpartyName || 'Ropeiro').trim();
-      return `Enviar material ao Ropeiro (${name})`;
+      const name = (this.session?.counterpartyName || 'Roupeiro').trim();
+      return `Enviar material ao Roupeiro (${name})`;
     }
     return 'Enviar material ao Administrador';
   }

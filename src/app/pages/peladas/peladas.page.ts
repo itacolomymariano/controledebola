@@ -1,18 +1,21 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { AppInviteShareService } from '../../core/services/app-invite-share.service';
 import { AuthService } from '../../core/services/auth.service';
 import { I18nService } from '../../core/services/i18n.service';
 import { HomeDoorVariant } from '../../shared/components/home-door-card/home-door-card.component';
 
 type HomeDoor = 'lista' | 'confrontos' | 'times' | 'usuarios';
+type HomeHubCardId = HomeDoor | 'convidar' | 'mural';
 
 interface HomeDoorConfig {
-  id: HomeDoor;
+  id: HomeHubCardId;
   titleKey: string;
   hintKey: string;
   icon: string;
   variant: HomeDoorVariant;
+  action: 'door' | 'invite' | 'mural';
 }
 
 @Component({
@@ -32,6 +35,7 @@ export class PeladasPage implements OnDestroy {
       hintKey: 'peladas.door.peladasHint',
       icon: 'football-outline',
       variant: 'peladas',
+      action: 'door',
     },
     {
       id: 'confrontos',
@@ -39,6 +43,7 @@ export class PeladasPage implements OnDestroy {
       hintKey: 'peladas.door.confrontosHint',
       icon: 'swap-horizontal-outline',
       variant: 'confrontos',
+      action: 'door',
     },
     {
       id: 'times',
@@ -46,6 +51,7 @@ export class PeladasPage implements OnDestroy {
       hintKey: 'peladas.door.timesHint',
       icon: 'shield-outline',
       variant: 'times',
+      action: 'door',
     },
     {
       id: 'usuarios',
@@ -53,6 +59,23 @@ export class PeladasPage implements OnDestroy {
       hintKey: 'peladas.door.usersHint',
       icon: 'people-outline',
       variant: 'users',
+      action: 'door',
+    },
+    {
+      id: 'convidar',
+      titleKey: 'peladas.door.invite',
+      hintKey: 'peladas.door.inviteHint',
+      icon: 'share-social-outline',
+      variant: 'invite',
+      action: 'invite',
+    },
+    {
+      id: 'mural',
+      titleKey: 'peladas.door.mural',
+      hintKey: 'peladas.door.muralHint',
+      icon: 'trophy-outline',
+      variant: 'mural',
+      action: 'mural',
     },
   ];
 
@@ -60,7 +83,8 @@ export class PeladasPage implements OnDestroy {
     private readonly router: Router,
     private readonly cdr: ChangeDetectorRef,
     private readonly i18n: I18nService,
-    private readonly auth: AuthService
+    private readonly auth: AuthService,
+    private readonly appInviteShare: AppInviteShareService
   ) {
     this.localeSub = this.i18n.locale$.subscribe(() => this.cdr.markForCheck());
   }
@@ -77,7 +101,15 @@ export class PeladasPage implements OnDestroy {
     }
   }
 
-  openDoor(door: HomeDoor): void {
-    void this.router.navigate(['/tabs/peladas', door]);
+  activateCard(card: HomeDoorConfig): void {
+    if (card.action === 'invite') {
+      void this.appInviteShare.shareInvite();
+      return;
+    }
+    if (card.action === 'mural') {
+      void this.router.navigateByUrl('/tabs/mural');
+      return;
+    }
+    void this.router.navigate(['/tabs/peladas', card.id as HomeDoor]);
   }
 }

@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef, OnDestroy, OnInit } from '@angular/core';
+import { Component, ChangeDetectorRef, Input, OnDestroy, OnInit } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { MenuController, Platform } from '@ionic/angular';
 import { Subscription, filter } from 'rxjs';
@@ -6,6 +6,7 @@ import { resolveScreenHelpKey } from '../../../core/config/screen-help.config';
 import { AppMessageService } from '../../../core/services/app-message.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { MatchChallengeService } from '../../../core/services/match-challenge.service';
+import { ImageLightboxService } from '../../../core/services/image-lightbox.service';
 import { RefereeInvitationService } from '../../../core/services/referee-invitation.service';
 
 @Component({
@@ -15,6 +16,11 @@ import { RefereeInvitationService } from '../../../core/services/referee-invitat
   standalone: false,
 })
 export class UserBarComponent implements OnInit, OnDestroy {
+  /** Quando true, logo e avatar abrem em tela cheia (home). */
+  @Input() enableImageZoom = false;
+
+  readonly appLogoSrc = 'assets/icon/logo_controle_de_bola.png';
+
   apelido = '';
   avatarUrl: string | null = null;
   pendingInvitations = 0;
@@ -36,8 +42,21 @@ export class UserBarComponent implements OnInit, OnDestroy {
     private readonly router: Router,
     private readonly menuCtrl: MenuController,
     private readonly platform: Platform,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly imageLightbox: ImageLightboxService
   ) {}
+
+  openLogo(): void {
+    if (!this.enableImageZoom) return;
+    void this.imageLightbox.open(this.appLogoSrc, 'Controle de Bola');
+  }
+
+  openAvatarZoom(): void {
+    if (!this.enableImageZoom) return;
+    const url = this.avatarUrl?.trim();
+    if (!url) return;
+    void this.imageLightbox.open(url, this.apelido || 'Foto de perfil');
+  }
 
   ngOnInit(): void {
     void this.loadUserBar();

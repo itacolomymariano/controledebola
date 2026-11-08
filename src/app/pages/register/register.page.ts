@@ -1,4 +1,4 @@
-﻿import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+﻿import { ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { AbstractControl, FormBuilder, ValidationErrors, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
@@ -19,6 +19,7 @@ import {
   phoneFormatValidator,
 } from '../../core/utils/contact-validation.util';
 import { formatCpfMask, isValidCpf, normalizeCpfDigits } from '../../core/utils/cpf.util';
+import { AddressFormComponent } from '../../shared/components/address-form/address-form.component';
 
 export const REGISTER_WIZARD_STEPS = [
   'identity',
@@ -170,8 +171,17 @@ export class RegisterPage implements OnInit, OnDestroy {
     if (this.draftSaveTimer) clearTimeout(this.draftSaveTimer);
   }
 
+  @ViewChild(AddressFormComponent) private addressForm?: AddressFormComponent;
+
   goNext(): void {
-    if (!this.validateCurrentStep()) return;
+    if (!this.validateCurrentStep()) {
+      if (this.currentStep === 'location') {
+        this.addressForm?.armIncompleteHint();
+      }
+      this.cdr.markForCheck();
+      return;
+    }
+    this.addressForm?.resetIncompleteHint();
     if (this.currentStepIndex < this.wizardSteps.length - 1) {
       this.currentStepIndex += 1;
       void this.persistRegisterDraft();

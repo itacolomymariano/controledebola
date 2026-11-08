@@ -44,7 +44,7 @@ export const MURAL_TARGET_ROLE_LABELS: Record<MuralTargetRole, string> = {
   coach: 'Treinador',
   physical_trainer: 'Preparador Fisico',
   masseur: 'Massagista',
-  kitman: 'Ropeiro',
+  kitman: 'Roupeiro',
   gandula: 'Gandula',
   fan: 'Torcedor',
   gatekeeper: 'Porteiro',

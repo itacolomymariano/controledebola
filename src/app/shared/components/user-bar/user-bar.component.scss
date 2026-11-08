@@ -17,6 +17,27 @@
   max-height: 48px;
 }
 
+.user-bar-logo-btn,
+.user-bar-avatar-btn {
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+}
+
+.user-bar-logo-btn:not(.user-bar-logo-btn--zoom),
+.user-bar-avatar-btn:not(.user-bar-avatar-btn--zoom) {
+  pointer-events: none;
+  cursor: default;
+}
+
+.user-bar-logo-btn--zoom,
+.user-bar-avatar-btn--zoom {
+  cursor: pointer;
+}
+
 .user-bar-logo {
   width: 28px;
   height: 28px;

@@ -62,7 +62,7 @@ export class MaterialInventoryPage {
   }
 
   get pageTitle(): string {
-    return this.ownerType === 'kitman' ? 'Material do Ropeiro' : 'Material da Pelada';
+    return this.ownerType === 'kitman' ? 'Material do Roupeiro' : 'Material da Pelada';
   }
 
   rowsFor(type: MaterialItemType): DraftRow[] {
