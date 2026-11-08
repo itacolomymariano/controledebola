@@ -53,7 +53,7 @@
         Limite de 5 times atingido.
       </ion-note>
     }
-  } @else {
+  } @else if (team) {
     <form [formGroup]="form" (ngSubmit)="submit()">
       <ion-list lines="full">
         <ion-item>
@@ -156,7 +156,7 @@
       </ion-list>
 
       <ion-button expand="block" type="submit" class="ion-margin-top">
-        {{ team ? 'Salvar alteracoes' : 'Salvar time' }}
+        Salvar alteracoes
       </ion-button>
     </form>
 
@@ -231,6 +231,111 @@
         <ion-note color="medium" class="ion-padding">Nenhum atleta no elenco ainda.</ion-note>
       }
     }
+  } @else {
+    <form [formGroup]="form">
+      <app-form-wizard
+        [progressLabel]="wizardProgressLabel"
+        [progressValue]="wizardProgress"
+        [stepTitle]="wizardStepTitle"
+        [stepLead]="wizardStepLead"
+        [stepHelpKey]="wizardStepHelpKey"
+        [isFirst]="currentStepIndex === 0"
+        [isLast]="currentStepIndex === wizardSteps.length - 1"
+        [submitLabelKey]="'teamForm.wizard.submit'"
+        (continue)="goWizardNext()"
+        (back)="goWizardBack()"
+        (submit)="wizardSubmit()"
+        (exit)="exitWizard()"
+      >
+        @switch (wizardStep) {
+          @case ('basics') {
+            <ion-item>
+              <ion-input
+                class="form-label-wrap"
+                label="Nome do time"
+                labelPlacement="stacked"
+                formControlName="name"
+              ></ion-input>
+            </ion-item>
+            @if (form.get('name')?.touched && form.get('name')?.invalid) {
+              <ion-note color="danger" class="ion-padding-horizontal">Informe o nome do time.</ion-note>
+            }
+            <div class="ion-padding-horizontal ion-padding-top">
+              <app-birth-date-picker
+                label="Data de fundacao (opcional)"
+                formControlName="foundedAt"
+              ></app-birth-date-picker>
+            </div>
+          }
+          @case ('venue') {
+            <app-address-form
+              title="Local principal onde joga"
+              [required]="false"
+              [showTitle]="true"
+              formControlName="homeVenueAddress"
+              (addressChange)="onVenueAddressChanged()"
+            ></app-address-form>
+          }
+          @case ('about') {
+            <ion-item>
+              <ion-textarea
+                class="form-label-wrap"
+                label="Descricao breve (opcional)"
+                labelPlacement="stacked"
+                formControlName="description"
+                autoGrow="true"
+                maxlength="2000"
+              ></ion-textarea>
+            </ion-item>
+          }
+          @case ('photos') {
+            <p class="ion-padding-horizontal">{{ 'teamForm.wizard.photosHint' | t }}</p>
+            <div class="ion-padding">
+              <app-image-picker
+                label="Imagem do time"
+                [previewUrl]="teamImagePreview"
+                (imageSelected)="onTeamImageSelected($event)"
+              ></app-image-picker>
+              <app-image-picker
+                label="Escudo (opcional)"
+                [previewUrl]="shieldImagePreview"
+                (imageSelected)="onShieldImageSelected($event)"
+              ></app-image-picker>
+              <app-image-picker
+                label="Imagem do presidente"
+                [previewUrl]="presidentImagePreview"
+                (imageSelected)="onPresidentImageSelected($event)"
+              ></app-image-picker>
+              <app-image-picker
+                label="Foto da sede (opcional)"
+                [previewUrl]="headquartersImagePreview"
+                (imageSelected)="onHeadquartersImageSelected($event)"
+              ></app-image-picker>
+            </div>
+          }
+          @case ('uniform') {
+            <div class="ion-padding">
+              @if (uniformPickerOpen) {
+                <app-uniform-picker formControlName="uniformId"></app-uniform-picker>
+              } @else {
+                @if (selectedUniform) {
+                  <div class="selected-uniform">
+                    <app-jersey-preview [colors]="selectedUniform.colors"></app-jersey-preview>
+                    <p>Uniforme selecionado: {{ selectedUniform.teamName }}</p>
+                  </div>
+                }
+                <ion-button type="button" fill="outline" expand="block" (click)="uniformPickerOpen = true">
+                  {{ selectedUniform ? 'Trocar uniforme' : 'Selecionar uniforme' }}
+                </ion-button>
+              }
+              @if (form.get('uniformId')?.touched && form.get('uniformId')?.invalid) {
+                <ion-note color="danger">Selecione o uniforme do time.</ion-note>
+              }
+            </div>
+          }
+        }
+      </app-form-wizard>
+    </form>
   }
   </app-playful-page>
 </ion-content>

@@ -4,90 +4,106 @@
     <ion-buttons slot="start">
       <ion-button (click)="cancel()">Voltar</ion-button>
     </ion-buttons>
-    <ion-title>Perfil de {{ roleLabel }}</ion-title>
+    <ion-title>{{ useWizard ? ('roleProfileForm.wizard.title' | t : { role: roleLabel }) : ('Perfil de ' + roleLabel) }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding role-profile-content">
-  @if (role) {
-    <ion-card>
-      <ion-card-content class="profile-header">
-        <app-user-avatar [avatarUrl]="avatarUrl" [alt]="displayName" size="lg"></app-user-avatar>
-        <div>
-          <h2>{{ displayName }}</h2>
-          @if (apelido && apelido !== displayName) {
-            <p>{{ apelido }}</p>
-          }
-        </div>
-      </ion-card-content>
-    </ion-card>
+<ion-content class="ion-padding cb-playful-ion-content role-profile-content">
+  <app-playful-page>
+    @if (role) {
+      @if (useWizard) {
+        <form [formGroup]="form" id="roleProfileForm">
+          <app-form-wizard
+            [progressLabel]="wizardProgressLabel"
+            [progressValue]="wizardProgress"
+            [stepTitle]="wizardStepTitle"
+            [stepLead]="wizardStepLead"
+            [stepHelpKey]="wizardStepHelpKey"
+            [isFirst]="currentStepIndex === 0"
+            [isLast]="currentStepIndex === wizardStepIds.length - 1"
+            [submitLabelKey]="'roleProfileForm.wizard.submit'"
+            [submitDisabled]="saving"
+            (continue)="goWizardNext()"
+            (back)="goWizardBack()"
+            (submit)="wizardSubmit()"
+            (exit)="exitWizard()"
+          >
+            @switch (wizardStep) {
+              @case ('intro') {
+                <ion-card>
+                  <ion-card-content class="profile-header">
+                    <app-user-avatar [avatarUrl]="avatarUrl" [alt]="displayName" size="lg"></app-user-avatar>
+                    <div>
+                      <h2>{{ displayName }}</h2>
+                      @if (apelido && apelido !== displayName) {
+                        <p>{{ apelido }}</p>
+                      }
+                      <p class="role-profile-wizard-role">{{ roleLabel }}</p>
+                    </div>
+                  </ion-card-content>
+                </ion-card>
+                <ion-note color="medium" class="ion-margin-top">
+                  Times do coração, ídolos e data de nascimento são editados em Meus dados.
+                </ion-note>
+              }
+              @case ('rates') {
+                <div class="role-profile-form-stack">
+                  <app-role-profile-fields [form]="form" [role]="role" section="rates"></app-role-profile-fields>
+                </div>
+              }
+              @case ('gear') {
+                <div class="role-profile-form-stack">
+                  <app-role-profile-fields [form]="form" [role]="role" section="gear"></app-role-profile-fields>
+                </div>
+              }
+              @case ('pix') {
+                <div class="role-profile-form-stack">
+                  <app-role-profile-fields [form]="form" [role]="role" section="pix"></app-role-profile-fields>
+                </div>
+              }
+              @case ('history') {
+                <ng-container *ngTemplateOutlet="roleHistoryBlocks"></ng-container>
+                <ion-note color="medium" class="ion-margin-top">
+                  O histórico é só leitura; ele cresce conforme você participa de peladas e eventos.
+                </ion-note>
+              }
+            }
+          </app-form-wizard>
+        </form>
+      } @else {
+        <ion-card>
+          <ion-card-content class="profile-header">
+            <app-user-avatar [avatarUrl]="avatarUrl" [alt]="displayName" size="lg"></app-user-avatar>
+            <div>
+              <h2>{{ displayName }}</h2>
+              @if (apelido && apelido !== displayName) {
+                <p>{{ apelido }}</p>
+              }
+            </div>
+          </ion-card-content>
+        </ion-card>
 
-    @if (hasProfile) {
-      <ion-note class="ion-margin-bottom">
-        Atualize seus dados profissionais abaixo.
-      </ion-note>
+        @if (hasProfile) {
+          <ion-note class="ion-margin-bottom">
+            Atualize seus dados profissionais abaixo.
+          </ion-note>
+        }
+
+        <form id="roleProfileForm" [formGroup]="form" (ngSubmit)="submit()">
+          <div class="role-profile-form-stack">
+            <app-role-profile-fields [form]="form" [role]="role"></app-role-profile-fields>
+            <ion-note color="medium">
+              Times do coração, ídolos e data de nascimento são editados em Meus dados.
+            </ion-note>
+          </div>
+          <ng-container *ngTemplateOutlet="roleHistoryBlocks"></ng-container>
+        </form>
+      }
     }
-
-    <form id="roleProfileForm" [formGroup]="form" (ngSubmit)="submit()">
-      <div class="role-profile-form-stack">
-        <app-role-profile-fields [form]="form" [role]="role"></app-role-profile-fields>
-        <ion-note color="medium">
-          Times do coracao, idolos e data de nascimento sao editados em Meus dados.
-        </ion-note>
-      </div>
-
-      @if (showsPeladaHistory) {
-        <ion-card>
-          <ion-card-header>
-            <ion-card-title>Peladas</ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
-            @if (!history.peladas.length) {
-              <ion-note>Nenhuma pelada registrada ainda.</ion-note>
-            }
-            @for (item of peladaHistoryPreview; track item.id) {
-              <p>{{ item.name }} · Pontuacao: {{ item.score.toFixed(1) }}</p>
-            }
-          </ion-card-content>
-        </ion-card>
-      }
-
-      @if (showsMatchHistory) {
-        <ion-card>
-          <ion-card-header>
-            <ion-card-title>Partidas entre equipes amadoras</ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
-            @if (!history.matches.length) {
-              <ion-note>Nenhuma partida registrada ainda.</ion-note>
-            }
-            @for (item of matchHistoryPreview; track item.id) {
-              <p>{{ item.name }} · Pontuacao: {{ item.score.toFixed(1) }}</p>
-            }
-          </ion-card-content>
-        </ion-card>
-      }
-
-      @if (showsTeamHistory) {
-        <ion-card>
-          <ion-card-header>
-            <ion-card-title>Times amadores</ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
-            @if (!history.teams.length) {
-              <ion-note>Nenhum time registrado ainda.</ion-note>
-            }
-            @for (item of teamHistoryPreview; track item.id) {
-              <p>{{ item.name }} · Pontuacao: {{ item.score.toFixed(1) }}</p>
-            }
-          </ion-card-content>
-        </ion-card>
-      }
-    </form>
-  }
+  </app-playful-page>
 </ion-content>
 
-@if (role) {
+@if (role && !useWizard) {
   <ion-footer class="role-profile-footer">
     <ion-toolbar>
       <ion-button
@@ -107,3 +123,53 @@
     </ion-toolbar>
   </ion-footer>
 }
+
+<ng-template #roleHistoryBlocks>
+  @if (showsPeladaHistory) {
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Peladas</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        @if (!history.peladas.length) {
+          <ion-note>Nenhuma pelada registrada ainda.</ion-note>
+        }
+        @for (item of peladaHistoryPreview; track item.id) {
+          <p>{{ item.name }} · Pontuacao: {{ item.score.toFixed(1) }}</p>
+        }
+      </ion-card-content>
+    </ion-card>
+  }
+
+  @if (showsMatchHistory) {
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Partidas entre equipes amadoras</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        @if (!history.matches.length) {
+          <ion-note>Nenhuma partida registrada ainda.</ion-note>
+        }
+        @for (item of matchHistoryPreview; track item.id) {
+          <p>{{ item.name }} · Pontuacao: {{ item.score.toFixed(1) }}</p>
+        }
+      </ion-card-content>
+    </ion-card>
+  }
+
+  @if (showsTeamHistory) {
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Times amadores</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        @if (!history.teams.length) {
+          <ion-note>Nenhum time registrado ainda.</ion-note>
+        }
+        @for (item of teamHistoryPreview; track item.id) {
+          <p>{{ item.name }} · Pontuacao: {{ item.score.toFixed(1) }}</p>
+        }
+      </ion-card-content>
+    </ion-card>
+  }
+</ng-template>

@@ -28,6 +28,7 @@
     </ion-note>
   }
 
+  @if (hasProfile) {
     <form [formGroup]="form" (ngSubmit)="submit()">
       <ion-note color="medium" class="ion-margin-bottom">
         Times do coracao, idolos e data de nascimento sao editados em Meus dados.
@@ -96,7 +97,103 @@
     </ion-list>
 
     <ion-button expand="block" type="submit" class="ion-margin-top">
-      {{ hasProfile ? 'Salvar alteracoes' : 'Salvar perfil' }}
+      Salvar alteracoes
     </ion-button>
   </form>
+  } @else {
+    <form [formGroup]="form">
+      <ion-note color="medium" class="ion-margin-bottom">
+        Times do coracao, idolos e data de nascimento sao editados em Meus dados.
+      </ion-note>
+      <app-form-wizard
+        [progressLabel]="wizardProgressLabel"
+        [progressValue]="wizardProgress"
+        [stepTitle]="wizardStepTitle"
+        [stepLead]="wizardStepLead"
+        [stepHelpKey]="wizardStepHelpKey"
+        [isFirst]="currentStepIndex === 0"
+        [isLast]="currentStepIndex === wizardSteps.length - 1"
+        [submitLabelKey]="'fanProfileForm.wizard.submit'"
+        (continue)="goWizardNext()"
+        (back)="goWizardBack()"
+        (submit)="wizardSubmit()"
+        (exit)="exitWizard()"
+      >
+        @switch (wizardStep) {
+          @case ('pelada') {
+            <ion-list lines="full">
+              <ion-item-divider>
+                <ion-label>Por quanto assiste uma pelada</ion-label>
+              </ion-item-divider>
+              <ion-item>
+                <ion-input
+                  class="form-label-wrap"
+                  type="number"
+                  label="Presencialmente (R$)"
+                  labelPlacement="stacked"
+                  formControlName="peladaPresentialRate"
+                  min="0"
+                  step="0.01"
+                ></ion-input>
+              </ion-item>
+              <ion-item>
+                <ion-input
+                  class="form-label-wrap"
+                  type="number"
+                  label="Remotamente — filmagem/narracao (R$)"
+                  labelPlacement="stacked"
+                  formControlName="peladaRemoteRate"
+                  min="0"
+                  step="0.01"
+                ></ion-input>
+              </ion-item>
+            </ion-list>
+          }
+          @case ('match') {
+            <ion-list lines="full">
+              <ion-item-divider>
+                <ion-label>Por quanto assiste uma partida (equipes amadoras)</ion-label>
+              </ion-item-divider>
+              <ion-item>
+                <ion-input
+                  class="form-label-wrap"
+                  type="number"
+                  label="Presencialmente (R$)"
+                  labelPlacement="stacked"
+                  formControlName="matchPresentialRate"
+                  min="0"
+                  step="0.01"
+                ></ion-input>
+              </ion-item>
+              <ion-item>
+                <ion-input
+                  class="form-label-wrap"
+                  type="number"
+                  label="Remotamente — filmagem/narracao (R$)"
+                  labelPlacement="stacked"
+                  formControlName="matchRemoteRate"
+                  min="0"
+                  step="0.01"
+                ></ion-input>
+              </ion-item>
+            </ion-list>
+          }
+          @case ('extra') {
+            <ion-item>
+              <ion-toggle formControlName="acceptsPaidCommitments">
+                Aceito compromissos quando contratado e pago
+              </ion-toggle>
+            </ion-item>
+            @if (form.get('acceptsPaidCommitments')?.value) {
+              <ion-note color="medium" class="ion-padding commitment-note">
+                Ao aceitar contratacao paga, voce se compromete a comparecer ou assistir a transmissao,
+                realizar a votacao do evento e cumprir os palpites. O nao cumprimento pode resultar em
+                nao recebimento. O administrador pode registrar falta justificada e decidir pelo pagamento.
+              </ion-note>
+            }
+          }
+        }
+      </app-form-wizard>
+    </form>
+  }
 </ion-content>

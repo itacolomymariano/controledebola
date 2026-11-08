@@ -1,22 +1,12 @@
 <ion-header>
-
   <app-user-bar></app-user-bar>
-
   <ion-toolbar>
-
     <ion-buttons slot="start">
-
       <ion-button (click)="cancel()">Voltar</ion-button>
-
     </ion-buttons>
-
     <ion-title>Perfil de atleta</ion-title>
-
   </ion-toolbar>
-
 </ion-header>
-
-
 
 <ion-content class="ion-padding">
   <app-coach-hint
@@ -26,59 +16,103 @@
   />
 
   @if (hasProfile) {
-
     <ion-note>
-
       Atualize seus dados de atleta e valores de participacao abaixo.
-
     </ion-note>
-
-  }
-
-
-
-  <form [formGroup]="form" (ngSubmit)="submit()">
-
-    <ion-list lines="full">
-
-      <app-athlete-profile-fields [form]="form"></app-athlete-profile-fields>
-
-      <ion-list-header>
-        <ion-label>{{ 'athleteProfile.playedTeamsTitle' | t }}</ion-label>
-      </ion-list-header>
-      <ion-item lines="none">
-        <ion-label class="ion-text-wrap">
-          <p>{{ 'athleteProfile.playedTeamsHint' | t }}</p>
-        </ion-label>
-      </ion-item>
-      @if (playedAmateurTeams.length) {
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <ion-list lines="full">
+        <app-athlete-profile-fields [form]="form"></app-athlete-profile-fields>
+        <ion-list-header>
+          <ion-label>{{ 'athleteProfile.playedTeamsTitle' | t }}</ion-label>
+        </ion-list-header>
         <ion-item lines="none">
-          <div class="played-teams-chips">
-            @for (team of playedAmateurTeams; track team; let index = $index) {
-              <ion-chip (click)="removePlayedTeam(index)">
-                <ion-label>{{ team }}</ion-label>
-                <ion-icon name="close-circle"></ion-icon>
-              </ion-chip>
-            }
-          </div>
+          <ion-label class="ion-text-wrap">
+            <p>{{ 'athleteProfile.playedTeamsHint' | t }}</p>
+          </ion-label>
         </ion-item>
-      }
-      <ion-item button (click)="openTeamPicker()" detail="false">
-        <ion-icon name="add-circle-outline" slot="start"></ion-icon>
-        <ion-label>{{ 'athleteProfile.addPlayedTeam' | t }}</ion-label>
-      </ion-item>
-
-    </ion-list>
-
-
-
-    <ion-button expand="block" type="submit" class="ion-margin-top">
-
-      {{ hasProfile ? 'Salvar alteracoes' : 'Salvar perfil' }}
-
-    </ion-button>
-
-  </form>
+        @if (playedAmateurTeams.length) {
+          <ion-item lines="none">
+            <div class="played-teams-chips">
+              @for (team of playedAmateurTeams; track team; let index = $index) {
+                <ion-chip (click)="removePlayedTeam(index)">
+                  <ion-label>{{ team }}</ion-label>
+                  <ion-icon name="close-circle"></ion-icon>
+                </ion-chip>
+              }
+            </div>
+          </ion-item>
+        }
+        <ion-item button (click)="openTeamPicker()" detail="false">
+          <ion-icon name="add-circle-outline" slot="start"></ion-icon>
+          <ion-label>{{ 'athleteProfile.addPlayedTeam' | t }}</ion-label>
+        </ion-item>
+      </ion-list>
+      <ion-button expand="block" type="submit" class="ion-margin-top">
+        Salvar alteracoes
+      </ion-button>
+    </form>
+  } @else {
+    <form [formGroup]="form">
+      <app-form-wizard
+        [progressLabel]="wizardProgressLabel"
+        [progressValue]="wizardProgress"
+        [stepTitle]="wizardStepTitle"
+        [stepLead]="wizardStepLead"
+        [stepHelpKey]="wizardStepHelpKey"
+        [isFirst]="currentStepIndex === 0"
+        [isLast]="currentStepIndex === wizardSteps.length - 1"
+        [submitLabelKey]="'athleteProfileForm.wizard.submit'"
+        (continue)="goWizardNext()"
+        (back)="goWizardBack()"
+        (submit)="wizardSubmit()"
+        (exit)="exitWizard()"
+      >
+        @switch (wizardStep) {
+          @case ('positions') {
+            <ion-list lines="full">
+              <app-athlete-profile-fields [form]="form" section="positions"></app-athlete-profile-fields>
+            </ion-list>
+          }
+          @case ('measures') {
+            <ion-list lines="full">
+              <app-athlete-profile-fields [form]="form" section="measures"></app-athlete-profile-fields>
+            </ion-list>
+          }
+          @case ('extras') {
+            <ion-list lines="full">
+              <app-athlete-profile-fields [form]="form" section="extras"></app-athlete-profile-fields>
+            </ion-list>
+          }
+          @case ('teams') {
+            <ion-list-header>
+              <ion-label>{{ 'athleteProfile.playedTeamsTitle' | t }}</ion-label>
+            </ion-list-header>
+            <ion-item lines="none">
+              <ion-label class="ion-text-wrap">
+                <p>{{ 'athleteProfile.playedTeamsHint' | t }}</p>
+              </ion-label>
+            </ion-item>
+            @if (playedAmateurTeams.length) {
+              <ion-item lines="none">
+                <div class="played-teams-chips">
+                  @for (team of playedAmateurTeams; track team; let index = $index) {
+                    <ion-chip (click)="removePlayedTeam(index)">
+                      <ion-label>{{ team }}</ion-label>
+                      <ion-icon name="close-circle"></ion-icon>
+                    </ion-chip>
+                  }
+                </div>
+              </ion-item>
+            }
+            <ion-item button (click)="openTeamPicker()" detail="false">
+              <ion-icon name="add-circle-outline" slot="start"></ion-icon>
+              <ion-label>{{ 'athleteProfile.addPlayedTeam' | t }}</ion-label>
+            </ion-item>
+          }
+        }
+      </app-form-wizard>
+    </form>
+  }
 
 </ion-content>
 

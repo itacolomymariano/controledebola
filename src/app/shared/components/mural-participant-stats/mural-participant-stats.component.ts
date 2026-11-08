@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, HostBinding, Input } from '@angular/core';
 import { MuralLocationCount, MuralParticipantLocationStats } from '../../../core/models/mural-participant-stats.model';
 import { MuralShareContext } from '../../../core/models/mural-share.model';
 import { MuralScope } from '../../../core/models/mural.model';
@@ -28,6 +28,12 @@ export class MuralParticipantStatsComponent {
   @Input() stats: MuralParticipantLocationStats | null = null;
   @Input() scope: MuralScope = 'app';
   @Input() shareContext: MuralShareContext | null = null;
+  @Input() playfulChrome = false;
+
+  @HostBinding('class.mural-playful-participant-host')
+  get playfulParticipantHost(): boolean {
+    return this.playfulChrome && !!this.stats;
+  }
   @Input() filterCaption = '';
 
   level: ParticipantStatsLevel = 'states';

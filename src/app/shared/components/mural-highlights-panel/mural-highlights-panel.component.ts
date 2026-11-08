@@ -31,11 +31,46 @@ export class MuralHighlightsPanelComponent {
   @Input() filterCaption = '';
   /** Event mural: craque → juiz, sem time mais amado. */
   @Input() layout: 'default' | 'eventOrdered' = 'default';
-  /** Mural do app — aba Geral: hero + grid no padrão playful. */
+  /** Hero + conquistas no padrão Nicole (app Geral, mural da pelada, mural do evento). */
   @Input() playfulChrome = false;
 
-  get showPlayfulGeral(): boolean {
-    return this.playfulChrome && this.scope === 'app' && this.appBucketTab === 'geral';
+  /** Hero + grid de conquistas (substitui os 3 primeiros ion-cards de destaques). */
+  get showPlayfulHero(): boolean {
+    if (!this.playfulChrome || !this.highlights) return false;
+    if (this.scope === 'app') return this.appBucketTab === 'geral';
+    return this.scope === 'pelada' || this.scope === 'event';
+  }
+
+  get showPlayfulExtraCards(): boolean {
+    return this.showPlayfulHero;
+  }
+
+  get heroCraque(): MuralShowcaseEntry | null {
+    if (this.scope === 'event' || (this.scope === 'app' && this.appBucketTab)) {
+      return this.eventCraque;
+    }
+    if (this.scope === 'pelada') {
+      for (const band of this.ageBands) {
+        const w = this.winnerForBand(this.highlights?.craque, band);
+        if (w) return w;
+      }
+    }
+    return null;
+  }
+
+  get tileGoleador(): MuralShowcaseEntry | null {
+    const list = this.scope === 'event' || (this.scope === 'app' && this.appBucketTab)
+      ? this.eventGoleadores
+      : this.winnersForGoleadorBand(this.highlights?.goleador, 'sub30');
+    return list[0] ?? null;
+  }
+
+  get showPlayfulTeamTile(): boolean {
+    return this.scope !== 'event';
+  }
+
+  get showPlayfulJuizTile(): boolean {
+    return this.scope === 'event' || this.scope === 'app';
   }
 
   ageBands: MuralAgeBand[] = ['sub30', 'sub60', 'plus60'];

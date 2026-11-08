@@ -1,7 +1,15 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component, ViewChild } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
+import { I18nService } from '../../core/services/i18n.service';
+import {
+  clearFormDraft,
+  readFormDraft,
+  TEAM_FORM_DRAFT_KEY,
+  writeFormDraft,
+} from '../../core/utils/form-draft.util';
+import { AddressFormComponent } from '../../shared/components/address-form/address-form.component';
 import { getUniformById } from '../../core/data/team-uniforms.data';
 import { Address, emptyAddress, isAddressEmpty, normalizeBrazilUf } from '../../core/models/address.model';
 import { EventInviteCandidate } from '../../core/models/event-hiring.model';
@@ -14,6 +22,19 @@ import { buildMissingFieldsMessage } from '../../core/utils/form-validation.util
 import { birthDateToIsoString, parseBirthDateIso } from '../../core/utils/birth-date.util';
 
 const MAX_TEAMS = 5;
+
+const TEAM_WIZARD_STEPS = ['basics', 'venue', 'about', 'photos', 'uniform'] as const;
+type TeamWizardStep = (typeof TEAM_WIZARD_STEPS)[number];
+
+interface TeamFormDraft {
+  stepIndex: number;
+  name: string;
+  uniformId: string;
+  foundedAt: string;
+  homeVenue: string;
+  homeVenueAddress: Address;
+  description: string;
+}
 
 @Component({
   selector: 'app-team-form',
@@ -38,7 +59,11 @@ export class TeamFormPage {
   athleteResults: EventInviteCandidate[] = [];
   athleteSearching = false;
   uniformPickerOpen = false;
+  readonly wizardSteps = TEAM_WIZARD_STEPS;
+  currentStepIndex = 0;
   private athleteSearchTimer: ReturnType<typeof setTimeout> | null = null;
+
+  @ViewChild(AddressFormComponent) private addressForm?: AddressFormComponent;
 
   form = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
@@ -57,7 +82,9 @@ export class TeamFormPage {
     private readonly route: ActivatedRoute,
     private readonly loadingCtrl: LoadingController,
     private readonly alertCtrl: AlertController,
-    private readonly wizardTour: WizardTourService
+    private readonly wizardTour: WizardTourService,
+    private readonly i18n: I18nService,
+    private readonly cdr: ChangeDetectorRef
   ) {
     this.form.get('uniformId')?.valueChanges.subscribe((id) => {
       if (id) this.uniformPickerOpen = false;
@@ -71,6 +98,38 @@ export class TeamFormPage {
 
   get canCreateMore(): boolean {
     return this.myTeams.length < MAX_TEAMS;
+  }
+
+  get isCreateWizard(): boolean {
+    return this.mode === 'form' && !this.team;
+  }
+
+  get wizardStep(): TeamWizardStep {
+    return this.wizardSteps[this.currentStepIndex];
+  }
+
+  get wizardProgress(): number {
+    return (this.currentStepIndex + 1) / this.wizardSteps.length;
+  }
+
+  get wizardProgressLabel(): string {
+    return this.i18n.wizardProgress(
+      'teamForm.wizard.progress',
+      this.currentStepIndex + 1,
+      this.wizardSteps.length
+    );
+  }
+
+  get wizardStepHelpKey(): string {
+    return `teamForm.wizard.step.${this.wizardStep}.help`;
+  }
+
+  get wizardStepTitle(): string {
+    return this.i18n.t(`teamForm.wizard.step.${this.wizardStep}.title`);
+  }
+
+  get wizardStepLead(): string {
+    return this.i18n.t(`teamForm.wizard.step.${this.wizardStep}.lead`);
   }
 
   async ionViewWillEnter(): Promise<void> {
@@ -108,6 +167,8 @@ export class TeamFormPage {
     this.mode = 'form';
     this.team = null;
     this.resetFormState();
+    this.restoreDraft();
+    this.cdr.markForCheck();
   }
 
   async openEdit(teamId: string): Promise<void> {
@@ -223,6 +284,11 @@ export class TeamFormPage {
       return;
     }
 
+    if (!this.team && !values.uniformId) {
+      await this.showError('Selecione o uniforme do time.');
+      return;
+    }
+
     const loading = await this.loadingCtrl.create({
       message: this.team ? 'Salvando alteracoes...' : 'Salvando time...',
     });
@@ -243,6 +309,7 @@ export class TeamFormPage {
           headquartersImage: this.headquartersImageFile,
         });
       } else {
+        clearFormDraft(TEAM_FORM_DRAFT_KEY);
         await this.teamService.create({
           name: values.name!,
           teamImage: this.teamImageFile!,
@@ -277,7 +344,118 @@ export class TeamFormPage {
     }
   }
 
+  async exitWizard(): Promise<void> {
+    this.persistDraft();
+    const alert = await this.alertCtrl.create({
+      header: 'Sair do cadastro',
+      message: 'Seu rascunho foi salvo neste aparelho. Você pode continuar depois.',
+      buttons: [
+        { text: 'Continuar preenchendo', role: 'cancel' },
+        {
+          text: 'Sair',
+          role: 'destructive',
+          handler: () => {
+            void this.router.navigateByUrl(this.readReturnUrl());
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  onVenueAddressChanged(): void {
+    this.form.get('homeVenueAddress')?.updateValueAndValidity();
+    this.persistDraft();
+  }
+
+  goWizardNext(): void {
+    if (!this.validateWizardStep()) {
+      this.cdr.markForCheck();
+      return;
+    }
+    this.addressForm?.resetIncompleteHint();
+    if (this.currentStepIndex < this.wizardSteps.length - 1) {
+      this.currentStepIndex += 1;
+      this.persistDraft();
+      this.cdr.markForCheck();
+    }
+  }
+
+  goWizardBack(): void {
+    if (this.currentStepIndex > 0) {
+      this.currentStepIndex -= 1;
+      this.persistDraft();
+      this.cdr.markForCheck();
+    }
+  }
+
+  wizardSubmit(): void {
+    void this.submit();
+  }
+
+  validateWizardStep(): boolean {
+    const step = this.wizardStep;
+    if (step === 'basics') {
+      this.form.get('name')?.markAsTouched();
+      return this.form.get('name')!.valid;
+    }
+    if (step === 'venue') {
+      return true;
+    }
+    if (step === 'about') {
+      return true;
+    }
+    if (step === 'photos') {
+      if (!this.teamImageFile) {
+        void this.showError('Selecione a imagem do time.');
+        return false;
+      }
+      if (!this.presidentImageFile) {
+        void this.showError('Selecione a imagem do presidente.');
+        return false;
+      }
+      return true;
+    }
+    if (step === 'uniform') {
+      this.form.get('uniformId')?.markAsTouched();
+      return this.form.get('uniformId')!.valid;
+    }
+    return true;
+  }
+
+  private restoreDraft(): void {
+    const draft = readFormDraft<TeamFormDraft>(TEAM_FORM_DRAFT_KEY);
+    if (!draft) return;
+    this.currentStepIndex = Math.min(
+      Math.max(0, draft.stepIndex ?? 0),
+      this.wizardSteps.length - 1
+    );
+    this.form.patchValue({
+      name: draft.name ?? '',
+      uniformId: draft.uniformId ?? '',
+      foundedAt: draft.foundedAt ?? '',
+      homeVenue: draft.homeVenue ?? '',
+      homeVenueAddress: draft.homeVenueAddress ?? emptyAddress(),
+      description: draft.description ?? '',
+    });
+  }
+
+  persistDraft(): void {
+    if (!this.isCreateWizard) return;
+    const v = this.form.getRawValue();
+    writeFormDraft<TeamFormDraft>(TEAM_FORM_DRAFT_KEY, {
+      stepIndex: this.currentStepIndex,
+      name: v.name ?? '',
+      uniformId: v.uniformId ?? '',
+      foundedAt: v.foundedAt ?? '',
+      homeVenue: v.homeVenue ?? '',
+      homeVenueAddress: v.homeVenueAddress ?? emptyAddress(),
+      description: v.description ?? '',
+    });
+  }
+
   private resetFormState(): void {
+    this.currentStepIndex = 0;
     this.form.reset({
       name: '',
       uniformId: '',

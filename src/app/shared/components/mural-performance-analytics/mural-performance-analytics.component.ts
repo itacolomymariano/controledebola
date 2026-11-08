@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, HostBinding, Input, OnChanges, SimpleChanges } from '@angular/core';
 import {
   ATHLETE_FOOT_LABELS,
   formatFootPreference,
@@ -27,6 +27,12 @@ export class MuralPerformanceAnalyticsComponent implements OnChanges {
   @Input() filterCaption = '';
   /** Exibe só um bloco (mural do evento em drill-down). */
   @Input() panel: 'all' | 'qualitative' | 'quantitative' | 'charts' | 'goalTypes' = 'all';
+  @Input() playfulChrome = false;
+
+  @HostBinding('class.mural-playful-analytics-host')
+  get playfulAnalyticsHost(): boolean {
+    return this.playfulChrome;
+  }
 
   readonly goalMethodOptions = SCOUT_GOAL_METHOD_OPTIONS;
 

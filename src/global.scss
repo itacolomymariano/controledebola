@@ -112,6 +112,70 @@ ion-item:has(ion-select[labelPlacement='stacked']) {
   color: var(--ion-color-medium);
 }
 
+/* Mural fase 2 — pelada / evento (tela inteira playful) */
+.mural-playful-screen__title {
+  margin: 0 0 12px;
+  padding-inline: 4px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--cb-playful-text);
+}
+
+.mural-playful-ranking__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.mural-playful-rank-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--cb-playful-card-muted, var(--cb-playful-card-surface, #fff));
+  box-shadow: 0 2px 8px rgba(30, 20, 60, 0.06);
+}
+
+.mural-playful-rank-pos {
+  font-weight: 700;
+  min-width: 1.5rem;
+  text-align: center;
+}
+
+.mural-playful-rank-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.mural-playful-screen .mural-playful-participant-host > ion-card {
+  margin-inline: 0;
+  border-radius: var(--cb-playful-radius);
+  box-shadow: var(--cb-playful-shadow);
+  --background: var(--cb-playful-tone-peladas-bg);
+}
+
+.mural-playful-screen .mural-playful-analytics-host ion-card {
+  border-radius: var(--cb-playful-radius);
+  box-shadow: var(--cb-playful-shadow);
+}
+
+.mural-event-hub__title {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.mural-event-hub__subtitle {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--cb-playful-text-muted);
+}
+
 ion-list-header app-mural-share-button {
   margin-left: auto;
 }

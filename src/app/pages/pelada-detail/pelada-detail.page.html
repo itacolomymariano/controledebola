@@ -649,7 +649,8 @@
       }
 
       @if (segment === 'mural') {
-        <h2 class="ion-padding-start">Mural da pelada</h2>
+        <div class="mural-playful-screen">
+        <h2 class="mural-playful-screen__title">{{ 'mural.playful.peladaTitle' | t }}</h2>
         @if (muralLoading) {
           <div class="ion-text-center ion-padding">
             <ion-spinner name="crescent"></ion-spinner>
@@ -666,22 +667,27 @@
           [stats]="participantStats"
           scope="pelada"
           [shareContext]="muralShareContext"
+          [playfulChrome]="true"
         ></app-mural-participant-stats>
 
         <app-mural-highlights-panel
           [highlights]="muralHighlights"
+          scope="pelada"
           [shareContext]="muralShareContext"
+          [playfulChrome]="true"
         ></app-mural-highlights-panel>
 
         <app-mural-prediction-rankings
           scope="pelada"
           [scopeId]="peladaId"
           [shareContext]="muralShareContext"
+          [playfulChrome]="true"
         ></app-mural-prediction-rankings>
         <app-mural-fan-highlights
           scope="pelada"
           [scopeId]="peladaId"
           [shareContext]="muralShareContext"
+          [playfulChrome]="true"
         ></app-mural-fan-highlights>
 
         <app-mural-media-top-card
@@ -689,52 +695,56 @@
           [peladaId]="peladaId"
           kind="video"
           [shareContext]="muralShareContext"
+          [playfulChrome]="true"
         ></app-mural-media-top-card>
         <app-mural-media-top-card
           scope="pelada"
           [peladaId]="peladaId"
           kind="radio"
           [shareContext]="muralShareContext"
+          [playfulChrome]="true"
         ></app-mural-media-top-card>
         <app-mural-media-top-card
           scope="pelada"
           [peladaId]="peladaId"
           kind="journal"
           [shareContext]="muralShareContext"
+          [playfulChrome]="true"
         ></app-mural-media-top-card>
 
         <app-mural-performance-analytics
           scope="pelada"
           [scopeId]="peladaId"
           [shareContext]="muralShareContext"
+          [playfulChrome]="true"
         ></app-mural-performance-analytics>
 
         @for (role of muralRoles; track role) {
-          <ion-card>
-            <ion-card-header>
-              <div class="mural-card-header-row">
-                <ion-card-title>Top 10 — {{ roleLabel(role) }}</ion-card-title>
-                <app-mural-share-button
-                  [context]="muralShareContext"
-                  [cardTitle]="'Top 10 — ' + roleLabel(role)"
-                ></app-mural-share-button>
-              </div>
-            </ion-card-header>
-            <ion-card-content>
-              @if (!muralRankings[role]?.length) {
-                <ion-note>Sem dados ainda.</ion-note>
-              }
-              @for (entry of muralRankings[role] ?? []; track entry.userId; let i = $index) {
-                <div class="rank-row ion-margin-bottom">
-                  <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="sm"></app-user-avatar>
-                  <span>{{ i + 1 }}. {{ entry.userName }}</span>
-                  <ion-badge>{{ rankingBadgeLabel(role, entry) }}</ion-badge>
+          <app-playful-card tone="surface" class="mural-playful-ranking ion-margin-bottom">
+            <div class="mural-card-header-row">
+              <h2 class="mural-playful-ranking__title">{{ 'mural.playful.ranking' | t }} — {{ roleLabel(role) }}</h2>
+              <app-mural-share-button
+                [context]="muralShareContext"
+                [cardTitle]="'Top 10 — ' + roleLabel(role)"
+              ></app-mural-share-button>
+            </div>
+            @if (!muralRankings[role]?.length) {
+              <ion-note>Sem dados ainda.</ion-note>
+            }
+            @for (entry of muralRankings[role] ?? []; track entry.userId; let i = $index) {
+              <div class="mural-playful-rank-row">
+                <span class="mural-playful-rank-pos">{{ i + 1 }}</span>
+                <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="md"></app-user-avatar>
+                <div class="mural-playful-rank-meta">
+                  <strong>{{ entry.userName }}</strong>
+                  <span>{{ rankingBadgeLabel(role, entry) }}</span>
                 </div>
-              }
-            </ion-card-content>
-          </ion-card>
+              </div>
+            }
+          </app-playful-card>
         }
         }
+        </div>
       }
     </div>
   }

@@ -276,6 +276,32 @@ export function isProfessionalRole(role: ProfileRole): role is ProfessionalRole 
   return PROFESSIONAL_ROLES.includes(role as ProfessionalRole);
 }
 
+export type RoleProfileWizardStepId = 'intro' | 'rates' | 'gear' | 'pix' | 'history';
+
+export function roleProfileHasGearSection(role: ProfessionalRole): boolean {
+  return ROLE_PROFILE_FIELDS[role].some(
+    (field) =>
+      field.type === 'boolean' ||
+      field.type === 'textarea' ||
+      (field.type === 'text' && field.key !== 'pixKey1')
+  );
+}
+
+export function roleProfileWizardSteps(
+  role: ProfessionalRole,
+  includeHistory: boolean
+): RoleProfileWizardStepId[] {
+  const steps: RoleProfileWizardStepId[] = ['intro', 'rates'];
+  if (roleProfileHasGearSection(role)) {
+    steps.push('gear');
+  }
+  steps.push('pix');
+  if (includeHistory) {
+    steps.push('history');
+  }
+  return steps;
+}
+
 export function buildRoleProfileForm(fb: FormBuilder, role: ProfessionalRole): FormGroup {
   const controls: Record<string, unknown> = {};
 

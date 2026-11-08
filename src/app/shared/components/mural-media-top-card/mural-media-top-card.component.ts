@@ -24,6 +24,7 @@ export class MuralMediaTopCardComponent implements OnChanges {
   @Input() kind: EventMediaTopKind = 'video';
   @Input() shareContext: MuralShareContext | null = null;
   @Input() filterCaption = '';
+  @Input() playfulChrome = false;
 
   loading = true;
   item: EventMediaTopItem | null = null;

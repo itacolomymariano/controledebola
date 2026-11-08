@@ -15,6 +15,7 @@ export class MuralFanHighlightsComponent implements OnChanges {
   @Input() scopeId?: string;
   @Input() shareContext: MuralShareContext | null = null;
   @Input() filterCaption = '';
+  @Input() playfulChrome = false;
 
   loading = false;
   entries: FanHighlightEntry[] = [];

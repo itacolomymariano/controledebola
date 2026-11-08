@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
@@ -9,8 +9,23 @@ import {
   partsToHeightCm,
 } from '../../core/models/athlete-profile.model';
 import { AthleteProfileService } from '../../core/services/athlete-profile.service';
+import { I18nService } from '../../core/services/i18n.service';
 import { WizardTourService } from '../../core/services/wizard-tour.service';
+import {
+  ATHLETE_PROFILE_FORM_DRAFT_KEY,
+  clearFormDraft,
+  readFormDraft,
+  writeFormDraft,
+} from '../../core/utils/form-draft.util';
 import { buildMissingFieldsMessage } from '../../core/utils/form-validation.util';
+
+const ATHLETE_WIZARD_STEPS = ['positions', 'measures', 'extras', 'teams'] as const;
+type AthleteWizardStep = (typeof ATHLETE_WIZARD_STEPS)[number];
+
+interface AthleteFormDraft {
+  stepIndex: number;
+  values: Record<string, unknown>;
+}
 
 @Component({
   selector: 'app-athlete-profile-form',
@@ -21,6 +36,9 @@ import { buildMissingFieldsMessage } from '../../core/utils/form-validation.util
 export class AthleteProfileFormPage {
   hasProfile = false;
   teamPickerOpen = false;
+
+  readonly wizardSteps = ATHLETE_WIZARD_STEPS;
+  currentStepIndex = 0;
 
   form = this.fb.group({
     primaryPosition: ['', Validators.required],
@@ -43,33 +61,66 @@ export class AthleteProfileFormPage {
     private readonly wizardTour: WizardTourService,
     private readonly router: Router,
     private readonly loadingCtrl: LoadingController,
-    private readonly alertCtrl: AlertController
+    private readonly alertCtrl: AlertController,
+    private readonly i18n: I18nService,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
   get playedAmateurTeams(): string[] {
     return this.form.get('playedAmateurTeams')?.value ?? [];
   }
 
+  get wizardStep(): AthleteWizardStep {
+    return this.wizardSteps[this.currentStepIndex];
+  }
+
+  get wizardProgress(): number {
+    return (this.currentStepIndex + 1) / this.wizardSteps.length;
+  }
+
+  get wizardProgressLabel(): string {
+    return this.i18n.wizardProgress(
+      'athleteProfileForm.wizard.progress',
+      this.currentStepIndex + 1,
+      this.wizardSteps.length
+    );
+  }
+
+  get wizardStepHelpKey(): string {
+    return `athleteProfileForm.wizard.step.${this.wizardStep}.help`;
+  }
+
+  get wizardStepTitle(): string {
+    return this.i18n.t(`athleteProfileForm.wizard.step.${this.wizardStep}.title`);
+  }
+
+  get wizardStepLead(): string {
+    return this.i18n.t(`athleteProfileForm.wizard.step.${this.wizardStep}.lead`);
+  }
+
   async ionViewWillEnter(): Promise<void> {
     const profile = await this.athleteProfileService.getForCurrentUser();
-    if (!profile) return;
-
-    this.hasProfile = true;
-    const { meter, centimeters } = heightCmToParts(profile.height);
-    this.form.patchValue({
-      primaryPosition: profile.primaryPosition,
-      secondaryPosition: profile.secondaryPosition ?? '',
-      thirdPosition: profile.thirdPosition ?? '',
-      shoeSize: profile.shoeSize,
-      heightMeter: meter,
-      heightCm: centimeters,
-      weight: profile.weight,
-      footPreference: profile.footPreference ?? '',
-      maritalStatus: profile.maritalStatus ?? '',
-      peladaRate: profile.peladaRate ?? null,
-      teamMatchRate: profile.teamMatchRate ?? null,
-      playedAmateurTeams: profile.playedAmateurTeams ?? [],
-    });
+    this.hasProfile = !!profile;
+    if (profile) {
+      const { meter, centimeters } = heightCmToParts(profile.height);
+      this.form.patchValue({
+        primaryPosition: profile.primaryPosition,
+        secondaryPosition: profile.secondaryPosition ?? '',
+        thirdPosition: profile.thirdPosition ?? '',
+        shoeSize: profile.shoeSize,
+        heightMeter: meter,
+        heightCm: centimeters,
+        weight: profile.weight,
+        footPreference: profile.footPreference ?? '',
+        maritalStatus: profile.maritalStatus ?? '',
+        peladaRate: profile.peladaRate ?? null,
+        teamMatchRate: profile.teamMatchRate ?? null,
+        playedAmateurTeams: profile.playedAmateurTeams ?? [],
+      });
+    } else {
+      this.restoreDraft();
+      this.cdr.markForCheck();
+    }
   }
 
   openTeamPicker(): void {
@@ -89,6 +140,7 @@ export class AthleteProfileFormPage {
     const teams = [...this.playedAmateurTeams];
     teams.splice(index, 1);
     this.form.patchValue({ playedAmateurTeams: teams });
+    this.persistDraft();
   }
 
   private addPlayedTeamName(name: string): void {
@@ -98,11 +150,69 @@ export class AthleteProfileFormPage {
     if (!teams.includes(trimmed)) {
       teams.push(trimmed);
       this.form.patchValue({ playedAmateurTeams: teams });
+      this.persistDraft();
     }
   }
 
   cancel(): void {
     void this.router.navigateByUrl('/tabs/profile');
+  }
+
+  async exitWizard(): Promise<void> {
+    this.persistDraft();
+    const alert = await this.alertCtrl.create({
+      header: 'Sair do cadastro',
+      message: 'Seu rascunho foi salvo neste aparelho. Você pode continuar depois.',
+      buttons: [
+        { text: 'Continuar preenchendo', role: 'cancel' },
+        { text: 'Sair', role: 'destructive', handler: () => this.cancel() },
+      ],
+    });
+    await alert.present();
+  }
+
+  goWizardNext(): void {
+    if (!this.validateWizardStep()) {
+      this.cdr.markForCheck();
+      return;
+    }
+    if (this.currentStepIndex < this.wizardSteps.length - 1) {
+      this.currentStepIndex += 1;
+      this.persistDraft();
+      this.cdr.markForCheck();
+    }
+  }
+
+  goWizardBack(): void {
+    if (this.currentStepIndex > 0) {
+      this.currentStepIndex -= 1;
+      this.persistDraft();
+      this.cdr.markForCheck();
+    }
+  }
+
+  wizardSubmit(): void {
+    void this.submit();
+  }
+
+  validateWizardStep(): boolean {
+    const step = this.wizardStep;
+    if (step === 'positions') {
+      this.form.get('primaryPosition')?.markAsTouched();
+      return this.form.get('primaryPosition')!.valid;
+    }
+    if (step === 'measures') {
+      ['shoeSize', 'heightMeter', 'heightCm', 'weight'].forEach((key) =>
+        this.form.get(key)?.markAsTouched()
+      );
+      return (
+        this.form.get('shoeSize')!.valid &&
+        this.form.get('heightMeter')!.valid &&
+        this.form.get('heightCm')!.valid &&
+        this.form.get('weight')!.valid
+      );
+    }
+    return true;
   }
 
   async submit(): Promise<void> {
@@ -144,6 +254,7 @@ export class AthleteProfileFormPage {
         await this.athleteProfileService.update(payload);
       } else {
         await this.athleteProfileService.create(payload);
+        clearFormDraft(ATHLETE_PROFILE_FORM_DRAFT_KEY);
       }
       this.wizardTour.completePendingStep();
       await this.router.navigateByUrl('/tabs/profile', { replaceUrl: true });
@@ -152,6 +263,24 @@ export class AthleteProfileFormPage {
     } finally {
       await loading.dismiss();
     }
+  }
+
+  private restoreDraft(): void {
+    const draft = readFormDraft<AthleteFormDraft>(ATHLETE_PROFILE_FORM_DRAFT_KEY);
+    if (!draft?.values) return;
+    this.currentStepIndex = Math.min(
+      Math.max(0, draft.stepIndex ?? 0),
+      this.wizardSteps.length - 1
+    );
+    this.form.patchValue(draft.values);
+  }
+
+  private persistDraft(): void {
+    if (this.hasProfile) return;
+    writeFormDraft<AthleteFormDraft>(ATHLETE_PROFILE_FORM_DRAFT_KEY, {
+      stepIndex: this.currentStepIndex,
+      values: this.form.getRawValue() as Record<string, unknown>,
+    });
   }
 
   private normalizeFootPreference(value: unknown): AthleteFootPreference | undefined {

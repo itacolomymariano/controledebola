@@ -16,6 +16,7 @@ export class MuralPredictionRankingsComponent implements OnChanges {
   @Input() entries: PredictionRankingEntry[] = [];
   @Input() preloadEntries = false;
   @Input() shareContext: MuralShareContext | null = null;
+  @Input() playfulChrome = false;
 
   loading = false;
   loadedEntries: PredictionRankingEntry[] = [];

@@ -2,9 +2,24 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-11-08 (fix wizard i18n, mural playful geral, cloud verify)
+**Ultima atualizacao:** 2026-11-08 (Fase C wizard perfis pro)
 
 ---
+
+### 2026-11-08 — Fase C: wizard role-profile-form (11 perfis pro)
+
+- [`role-profile-form`](../src/app/pages/role-profile-form/): **criação** em passos (`intro` → `rates` → `gear?` → `pix` → `history?`); **edição** = formulário único (como pelada edit).
+- [`role-profile-fields`](../src/app/shared/components/role-profile-fields/): seções `rates` | `gear` | `pix`; labels longos com `form-label-wrap`.
+- Rascunho `sessionStorage` `role-profile-form-draft` (por função); sair com alerta.
+- i18n `roleProfileForm.wizard.*` pt-BR; smoke **#16**; build **322**.
+
+### 2026-11-08 — Mural playful fase 2 (pelada + evento)
+
+- [`mural-highlights-panel`](../src/app/shared/components/mural-highlights-panel/): `playfulChrome` em **pelada** e **evento** (hero, conquistas, faixas etárias, cartões Master/aniversário/juiz).
+- [`pelada-detail`](../src/app/pages/pelada-detail/pelada-detail.page.html) aba Mural: `mural-playful-screen` + subcomponentes com `playfulChrome`; Top 10 em `app-playful-card`.
+- [`event-mural`](../src/app/pages/event-mural/event-mural.page.html): hubs e drill-down em cartões porta; rankings playful; analytics/participantes com chrome.
+- Subcomponentes: `mural-prediction-rankings`, `mural-fan-highlights`, `mural-media-top-card`, `mural-participant-stats`, `mural-performance-analytics` — input `playfulChrome`.
+- Tokens globais: `.mural-playful-screen` em [`global.scss`](../src/global.scss); i18n `mural.playful.craquePelada|Event|ageBands*` em pt-BR.
 
 ### 2026-11-08 — Pós-teste Samsung (wizard + mural)
 

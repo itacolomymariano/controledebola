@@ -20,8 +20,10 @@ Publicar `cloud/main.js` no Back4App quando houver alteração em `cloud/source/
 | 1a | Home → diretórios | Confrontos e Times (ativos): FAB **+** canto inferior direito (desafio / novo time); toque em **Convidar amigos** abre share |
 | 1b | Wizard pelada/desafio | Progresso **Passo 1 de 4** (não `{current}`); **?** no passo; **Voltar** sem tela errada; **Sair e continuar depois** salva rascunho |
 | 1c | Mural Geral | Hero **Craque do App** + grid **Conquistas** (playful); ranking com avatar |
+| 1c | Mural Pelada / Evento | Aba **Mural** na pelada e **Mural do evento**: hero + conquistas, hubs com cartão porta, rankings em linhas playful |
 | 1b | Perfil atleta | Labels completos das taxas pelada e **jogo entre times amadores (R$)** (sem reticências) |
 | 1c | Tema | Menu → Cores e temas: paleta **Controle de Bola** visível; trocar claro/escuro muda toolbar, **fundo com orbes** (playful), **tab bar em cápsula** na aba ativa e tons pastel dos cartões “porta” |
+| 16 | Perfis pro (wizard) | Perfil → criar função (ex. árbitro): passos intro / valores / equipamentos / Pix / histórico; **Sair e continuar depois**; editar perfil existente = formulário único |
 | 15 | Playful UI | Login e **Cadastro** com cartões/fundo colorido; **Peladas** → lista em **grid 2 col** com cartões **pastéis + onda + seta** (itens clicáveis); **Buscar** → idem; **Perfil** / **Inbox** / filtros **Mural**: linhas em cartão elevado; **Detalhe evento** e **subtelas do evento** com fundo/orbes |
 | 2 | Pelada → Configurações | Toggles com texto completo (quebra de linha) |
 | 3 | Evento → Participantes (admin) | Inscritos pendentes com card completo; **confirmados** só foto, apelido, perfil, posição (atleta), idade e média CB + controles (chegada, ingresso, time) abaixo |

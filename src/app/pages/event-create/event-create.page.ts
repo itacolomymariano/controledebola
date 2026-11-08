@@ -1,24 +1,31 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
-
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
-
 import { ActivatedRoute, Router } from '@angular/router';
-
 import { AlertController, LoadingController } from '@ionic/angular';
-
 import { Subscription, merge } from 'rxjs';
-
-import { emptyAddress } from '../../core/models/address.model';
-
+import { Address, emptyAddress } from '../../core/models/address.model';
 import { EventType, hasPixKey } from '../../core/models/event.model';
-
 import { EventService } from '../../core/services/event.service';
-
+import { I18nService } from '../../core/services/i18n.service';
 import { ParseService } from '../../core/services/parse.service';
-
 import { TeamService } from '../../core/services/team.service';
-
 import { WizardTourService } from '../../core/services/wizard-tour.service';
+import {
+  clearFormDraft,
+  EVENT_CREATE_FORM_DRAFT_KEY,
+  readFormDraft,
+  writeFormDraft,
+} from '../../core/utils/form-draft.util';
+import { AddressFormComponent } from '../../shared/components/address-form/address-form.component';
+
+const EVENT_WIZARD_STEPS = ['basics', 'schedule', 'location', 'payment'] as const;
+type EventWizardStep = (typeof EVENT_WIZARD_STEPS)[number];
+
+interface EventCreateFormDraft {
+  stepIndex: number;
+  peladaId: string;
+  values: Record<string, unknown>;
+}
 
 
 
@@ -94,7 +101,10 @@ export class EventCreatePage implements OnInit, OnDestroy {
 
   amateurTeams: Array<{ id: string; name: string }> = [];
 
+  readonly wizardSteps = EVENT_WIZARD_STEPS;
+  currentStepIndex = 0;
 
+  @ViewChild(AddressFormComponent) private addressForm?: AddressFormComponent;
 
   private formSub?: Subscription;
 
@@ -119,25 +129,48 @@ export class EventCreatePage implements OnInit, OnDestroy {
     private readonly alertCtrl: AlertController,
 
     private readonly cdr: ChangeDetectorRef,
-
-    private readonly wizardTour: WizardTourService
-
+    private readonly wizardTour: WizardTourService,
+    private readonly i18n: I18nService
   ) {}
+
+  get wizardStep(): EventWizardStep {
+    return this.wizardSteps[this.currentStepIndex];
+  }
+
+  get wizardProgress(): number {
+    return (this.currentStepIndex + 1) / this.wizardSteps.length;
+  }
+
+  get wizardProgressLabel(): string {
+    return this.i18n.wizardProgress(
+      'eventCreateForm.wizard.progress',
+      this.currentStepIndex + 1,
+      this.wizardSteps.length
+    );
+  }
+
+  get wizardStepHelpKey(): string {
+    return `eventCreateForm.wizard.step.${this.wizardStep}.help`;
+  }
+
+  get wizardStepTitle(): string {
+    return this.i18n.t(`eventCreateForm.wizard.step.${this.wizardStep}.title`);
+  }
+
+  get wizardStepLead(): string {
+    return this.i18n.t(`eventCreateForm.wizard.step.${this.wizardStep}.lead`);
+  }
 
 
 
   ngOnInit(): void {
 
     this.peladaId = this.route.snapshot.queryParamMap.get('peladaId') ?? '';
-
+    this.restoreDraft();
     this.formSub = merge(this.form.statusChanges, this.form.valueChanges).subscribe(() => {
-
       this.refreshSubmitState();
-
     });
-
     this.refreshSubmitState();
-
   }
 
   ionViewWillEnter(): void {
@@ -318,6 +351,7 @@ export class EventCreatePage implements OnInit, OnDestroy {
       await loading.dismiss();
       await this.showPushResult(created.push);
       this.wizardTour.completeStepById('pelada-admin-first-event');
+      clearFormDraft(EVENT_CREATE_FORM_DRAFT_KEY);
       await this.router.navigate(['/pelada', this.peladaId], { replaceUrl: true });
       return;
 
@@ -438,6 +472,117 @@ export class EventCreatePage implements OnInit, OnDestroy {
 
     await alert.present();
 
+  }
+
+  async exitWizard(): Promise<void> {
+    this.persistDraft();
+    const alert = await this.alertCtrl.create({
+      header: 'Sair do cadastro',
+      message: 'Seu rascunho foi salvo neste aparelho. Você pode continuar depois.',
+      buttons: [
+        { text: 'Continuar preenchendo', role: 'cancel' },
+        {
+          text: 'Sair',
+          role: 'destructive',
+          handler: () => this.cancel(),
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  goWizardNext(): void {
+    if (!this.validateWizardStep()) {
+      this.cdr.markForCheck();
+      return;
+    }
+    this.addressForm?.resetIncompleteHint();
+    if (this.currentStepIndex < this.wizardSteps.length - 1) {
+      this.currentStepIndex += 1;
+      this.persistDraft();
+      this.cdr.markForCheck();
+    }
+  }
+
+  goWizardBack(): void {
+    if (this.currentStepIndex > 0) {
+      this.currentStepIndex -= 1;
+      this.persistDraft();
+      this.cdr.markForCheck();
+    }
+  }
+
+  wizardSubmit(): void {
+    void this.submit();
+  }
+
+  validateWizardStep(): boolean {
+    const step = this.wizardStep;
+    if (step === 'basics') {
+      this.form.get('name')?.markAsTouched();
+      if (this.form.get('name')?.invalid) return false;
+      const v = this.form.getRawValue();
+      if (v.type === 'team_match') {
+        if (!String(v.homeTeamName || '').trim() || !String(v.awayTeamName || '').trim()) {
+          void this.showError('Informe os nomes das equipes mandante e visitante.');
+          return false;
+        }
+        if (v.homeTeamId && v.awayTeamId && v.homeTeamId === v.awayTeamId) {
+          void this.showError('Times mandante e visitante devem ser diferentes.');
+          return false;
+        }
+      }
+      return true;
+    }
+    if (step === 'schedule') {
+      ['startDate', 'startTime', 'endDate', 'endTime'].forEach((key) =>
+        this.form.get(key)?.markAsTouched()
+      );
+      if (
+        this.form.get('startDate')?.invalid ||
+        this.form.get('startTime')?.invalid ||
+        this.form.get('endDate')?.invalid ||
+        this.form.get('endTime')?.invalid
+      ) {
+        return false;
+      }
+      const v = this.form.getRawValue();
+      const start = this.combineDateTime(v.startDate!, v.startTime!);
+      const end = this.combineDateTime(v.endDate!, v.endTime!);
+      if (end <= start) {
+        void this.showError('O horario de termino deve ser apos o inicio.');
+        return false;
+      }
+      return true;
+    }
+    if (step === 'location') {
+      this.form.get('address')?.markAsTouched();
+      return !this.form.get('address')?.invalid;
+    }
+    return true;
+  }
+
+  private restoreDraft(): void {
+    const draft = readFormDraft<EventCreateFormDraft>(EVENT_CREATE_FORM_DRAFT_KEY);
+    if (!draft?.values) return;
+    if (draft.peladaId && this.peladaId && draft.peladaId !== this.peladaId) return;
+    this.currentStepIndex = Math.min(
+      Math.max(0, draft.stepIndex ?? 0),
+      this.wizardSteps.length - 1
+    );
+    const values = draft.values as Record<string, unknown>;
+    this.form.patchValue({
+      ...values,
+      address: (values['address'] as Address) ?? emptyAddress(),
+    });
+  }
+
+  private persistDraft(): void {
+    writeFormDraft<EventCreateFormDraft>(EVENT_CREATE_FORM_DRAFT_KEY, {
+      stepIndex: this.currentStepIndex,
+      peladaId: this.peladaId,
+      values: this.form.getRawValue() as Record<string, unknown>,
+    });
   }
 
   private async confirmZeroParticipationFee(): Promise<boolean> {

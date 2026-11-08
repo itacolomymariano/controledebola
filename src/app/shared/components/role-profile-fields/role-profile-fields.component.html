@@ -8,7 +8,7 @@
         </ion-item>
       } @else if (field.type === 'money') {
         <ion-input
-          class="role-profile-control"
+          class="role-profile-control form-label-wrap"
           fill="outline"
           type="number"
           [label]="field.label"
@@ -21,7 +21,7 @@
         ></ion-input>
       } @else if (field.type === 'textarea') {
         <ion-textarea
-          class="role-profile-control"
+          class="role-profile-control form-label-wrap"
           fill="outline"
           [label]="field.label"
           labelPlacement="stacked"
@@ -32,7 +32,7 @@
       } @else if (field.type === 'pix') {
         <div class="role-profile-pix-row">
           <ion-input
-            class="role-profile-control role-profile-pix-input"
+            class="role-profile-control role-profile-pix-input form-label-wrap"
             fill="outline"
             [label]="field.label"
             labelPlacement="stacked"
@@ -45,7 +45,7 @@
         </div>
       } @else {
         <ion-input
-          class="role-profile-control"
+          class="role-profile-control form-label-wrap"
           fill="outline"
           [label]="field.label"
           labelPlacement="stacked"

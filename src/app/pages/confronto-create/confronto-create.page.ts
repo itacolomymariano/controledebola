@@ -1,8 +1,9 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component, ViewChild } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
 import {
+  Address,
   addressCompleteValidator,
   emptyAddress,
   isAddressComplete,
@@ -17,7 +18,24 @@ import {
   MatchChallengeService,
 } from '../../core/services/match-challenge.service';
 import { TeamService } from '../../core/services/team.service';
+import { I18nService } from '../../core/services/i18n.service';
+import {
+  clearFormDraft,
+  CONFRONTO_FORM_DRAFT_KEY,
+  readFormDraft,
+  writeFormDraft,
+} from '../../core/utils/form-draft.util';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
+import { AddressFormComponent } from '../../shared/components/address-form/address-form.component';
+
+const CONFRONTO_WIZARD_STEPS = ['details', 'schedule', 'convocation'] as const;
+type ConfrontoWizardStep = (typeof CONFRONTO_WIZARD_STEPS)[number];
+
+interface ConfrontoFormDraft {
+  stepIndex: number;
+  challengeId: string;
+  values: Record<string, unknown>;
+}
 
 interface TeamPick {
   id: string;
@@ -46,6 +64,11 @@ export class ConfrontoCreatePage {
   athleteSearching = false;
   selectedAthletes: SelectedAthleteInvite[] = [];
   submitting = false;
+
+  readonly wizardSteps = CONFRONTO_WIZARD_STEPS;
+  currentStepIndex = 0;
+
+  @ViewChild(AddressFormComponent) private addressForm?: AddressFormComponent;
 
   form = this.fb.group({
     name: [''],
@@ -76,8 +99,38 @@ export class ConfrontoCreatePage {
     private readonly router: Router,
     private readonly route: ActivatedRoute,
     private readonly loadingCtrl: LoadingController,
-    private readonly alertCtrl: AlertController
+    private readonly alertCtrl: AlertController,
+    private readonly i18n: I18nService,
+    private readonly cdr: ChangeDetectorRef
   ) {}
+
+  get wizardStep(): ConfrontoWizardStep {
+    return this.wizardSteps[this.currentStepIndex];
+  }
+
+  get wizardProgress(): number {
+    return (this.currentStepIndex + 1) / this.wizardSteps.length;
+  }
+
+  get wizardProgressLabel(): string {
+    return this.i18n.wizardProgress(
+      'confrontoForm.wizard.progress',
+      this.currentStepIndex + 1,
+      this.wizardSteps.length
+    );
+  }
+
+  get wizardStepHelpKey(): string {
+    return `confrontoForm.wizard.step.${this.wizardStep}.help`;
+  }
+
+  get wizardStepTitle(): string {
+    return this.i18n.t(`confrontoForm.wizard.step.${this.wizardStep}.title`);
+  }
+
+  get wizardStepLead(): string {
+    return this.i18n.t(`confrontoForm.wizard.step.${this.wizardStep}.lead`);
+  }
 
   async ionViewWillEnter(): Promise<void> {
     this.challengeId = this.route.snapshot.queryParamMap.get('challengeId') || '';
@@ -117,9 +170,114 @@ export class ConfrontoCreatePage {
       }
       this.prefillScheduleFromChallenge(challenge);
       this.prefillReturnLegFromChallenge(challenge);
+      this.restoreDraft();
+      this.cdr.markForCheck();
     } catch (error: unknown) {
       this.challengeBlockedMessage = parseErrorMessage(error);
     }
+  }
+
+  async exitWizard(): Promise<void> {
+    this.persistDraft();
+    const alert = await this.alertCtrl.create({
+      header: 'Sair do cadastro',
+      message: 'Seu rascunho foi salvo neste aparelho. Você pode continuar depois.',
+      buttons: [
+        { text: 'Continuar preenchendo', role: 'cancel' },
+        { text: 'Sair', role: 'destructive', handler: () => this.cancel() },
+      ],
+    });
+    await alert.present();
+  }
+
+  goWizardNext(): void {
+    if (!this.validateWizardStep()) {
+      this.cdr.markForCheck();
+      return;
+    }
+    this.addressForm?.resetIncompleteHint();
+    if (this.currentStepIndex < this.wizardSteps.length - 1) {
+      this.currentStepIndex += 1;
+      this.persistDraft();
+      this.cdr.markForCheck();
+    }
+  }
+
+  goWizardBack(): void {
+    if (this.currentStepIndex > 0) {
+      this.currentStepIndex -= 1;
+      this.persistDraft();
+      this.cdr.markForCheck();
+    }
+  }
+
+  wizardSubmit(): void {
+    void this.submit();
+  }
+
+  validateWizardStep(): boolean {
+    const step = this.wizardStep;
+    if (step === 'schedule') {
+      const values = this.form.getRawValue();
+      const startTime = this.combineDateTime(values.startDate || '', values.startTime || '');
+      const endTime = this.combineDateTime(values.endDate || '', values.endTime || '');
+      if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
+        void this.showError('Informe data e hora do jogo de ida.');
+        return false;
+      }
+      if (endTime <= startTime) {
+        void this.showError('O termino da ida deve ser apos o inicio.');
+        return false;
+      }
+      if (!isAddressComplete(values.address)) {
+        void this.showError('Informe o endereco completo do jogo de ida.');
+        return false;
+      }
+      if (values.returnLeg) {
+        const returnStart = this.combineDateTime(
+          values.returnStartDate || '',
+          values.returnStartTime || ''
+        );
+        const returnEnd = this.combineDateTime(
+          values.returnEndDate || '',
+          values.returnEndTime || ''
+        );
+        if (Number.isNaN(returnStart.getTime()) || Number.isNaN(returnEnd.getTime())) {
+          void this.showError('Informe data e hora do jogo da volta.');
+          return false;
+        }
+        if (returnEnd <= returnStart) {
+          void this.showError('O termino da volta deve ser apos o inicio.');
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  private restoreDraft(): void {
+    const draft = readFormDraft<ConfrontoFormDraft>(CONFRONTO_FORM_DRAFT_KEY);
+    if (!draft?.values) return;
+    if (draft.challengeId && this.challengeId && draft.challengeId !== this.challengeId) return;
+    this.currentStepIndex = Math.min(
+      Math.max(0, draft.stepIndex ?? 0),
+      this.wizardSteps.length - 1
+    );
+    const values = draft.values as Record<string, unknown>;
+    this.form.patchValue({
+      ...values,
+      address: (values['address'] as Address) ?? emptyAddress(),
+      returnAddress: (values['returnAddress'] as Address) ?? emptyAddress(),
+    });
+  }
+
+  private persistDraft(): void {
+    if (this.challengeBlockedMessage) return;
+    writeFormDraft<ConfrontoFormDraft>(CONFRONTO_FORM_DRAFT_KEY, {
+      stepIndex: this.currentStepIndex,
+      challengeId: this.challengeId,
+      values: this.form.getRawValue() as Record<string, unknown>,
+    });
   }
 
   cancel(): void {
@@ -254,6 +412,7 @@ export class ConfrontoCreatePage {
       });
       await loading.dismiss();
       await this.showCreated(result);
+      clearFormDraft(CONFRONTO_FORM_DRAFT_KEY);
       await this.router.navigate(['/event', result.eventId], { replaceUrl: true });
     } catch (error: unknown) {
       await loading.dismiss();
