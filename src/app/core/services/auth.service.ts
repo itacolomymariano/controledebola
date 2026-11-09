@@ -19,6 +19,7 @@ import { AthleteProfileService } from './athlete-profile.service';
 import { PushNotificationService } from './push-notification.service';
 import { AppStorageService } from './app-storage.service';
 import { getUserAvatarUrl } from '../utils/user-avatar.util';
+import { environment } from '../../../environments/environment';
 
 export interface RegisterPayload {
   name: string;
@@ -332,8 +333,13 @@ export class AuthService {
       void this.pushNotificationService.syncCurrentUser();
       return savedUser;
     } catch (error: unknown) {
-      if (isInvalidCloudFunctionError(error)) {
+      if (isInvalidCloudFunctionError(error) && !environment.production) {
         return this.registerViaClient(payload);
+      }
+      if (isInvalidCloudFunctionError(error) && environment.production) {
+        throw new Error(
+          'Cadastro indisponivel no momento. Tente novamente em instantes ou contate o suporte.'
+        );
       }
       throw new Error(parseErrorMessage(error));
     }

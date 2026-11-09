@@ -2,9 +2,17 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-11-08 (Fase C wizard perfis pro)
+**Ultima atualizacao:** 2026-11-09 (CPF P0, badge, temas, event-detail cards, wizards)
 
 ---
+
+### 2026-11-09 — Plano producao: CPF, UX temas, badge, event-detail
+
+- Cloud: [`02d-user-cpf-integrity.js`](../cloud/source/02d-user-cpf-integrity.js) — `inventoryDuplicateCpfs`, checagem dupla no cadastro; doc [`USER-CPF-INTEGRITY.md`](USER-CPF-INTEGRITY.md); `cloud/main.js` gerado localmente — **publicar Back4App + rodar inventario** (operacao manual).
+- Cliente: `registerViaClient` so fora de `environment.production`; user-bar badge envelope = `countUnread` only; convites badge amarelo separado.
+- Temas: Convidar/Mural por paleta (`resolveHomeDoorInviteMuralTokens`), contraste via `theme-contrast.util`; migracao storage `default` → `controle_de_bola`.
+- Event-detail: [`action-door-card`](../src/app/shared/components/action-door-card/), grid `size="6"`.
+- Wizards: [`account-edit`](../src/app/pages/account-edit/), [`event-register`](../src/app/pages/event-register/); smoke 12a–12c em [`SMOKE-TEST-PRE-INSTALL.md`](SMOKE-TEST-PRE-INSTALL.md).
 
 ### 2026-11-08 — Fase C: wizard role-profile-form (11 perfis pro)
 

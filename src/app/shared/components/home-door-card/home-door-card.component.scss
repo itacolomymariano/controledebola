@@ -43,11 +43,31 @@
 .home-door-card--invite {
   background: var(--cb-door-invite-bg);
   --door-accent: var(--cb-door-invite-accent);
+  color: var(--cb-door-invite-text, var(--cb-playful-text, #1f2937));
+
+  .home-door-card__title {
+    color: var(--cb-door-invite-text, var(--cb-playful-text, #1f2937));
+  }
+
+  .home-door-card__hint {
+    color: var(--cb-door-invite-text-muted, var(--cb-playful-text-muted));
+    opacity: 1;
+  }
 }
 
 .home-door-card--mural {
   background: var(--cb-door-mural-bg);
   --door-accent: var(--cb-door-mural-accent);
+  color: var(--cb-door-mural-text, var(--cb-playful-text, #1f2937));
+
+  .home-door-card__title {
+    color: var(--cb-door-mural-text, var(--cb-playful-text, #1f2937));
+  }
+
+  .home-door-card__hint {
+    color: var(--cb-door-mural-text-muted, var(--cb-playful-text-muted));
+    opacity: 1;
+  }
 }
 
 .home-door-card__icon {

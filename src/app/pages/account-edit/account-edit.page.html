@@ -15,114 +15,134 @@
     </ion-note>
   }
 
-  <ion-note class="ion-margin-bottom">
-    O e-mail e obrigatorio para entrar no app. O endereco e obrigatorio para eventos proximos e rankings
-    por bairro, cidade e estado. Celular e data de nascimento sao opcionais.
-    O botao Salvar alteracoes so e habilitado quando houver mudancas.
-  </ion-note>
-
   @if (!showPasswordSection) {
+    <ion-note class="ion-margin-bottom">
+      O e-mail e obrigatorio para entrar no app. O endereco e obrigatorio para eventos proximos e rankings
+      por bairro, cidade e estado. Celular e data de nascimento sao opcionais.
+    </ion-note>
+
     <form id="accountEditForm" [formGroup]="form" (ngSubmit)="submit()">
-      <ion-list lines="full">
-        <ion-item>
-          <ion-input label="Nome completo" labelPlacement="stacked" formControlName="name"></ion-input>
-        </ion-item>
-        @if (form.get('name')?.touched && form.get('name')?.invalid) {
-          <ion-note color="danger" class="ion-padding-horizontal">Informe o nome completo.</ion-note>
+      <app-form-wizard
+        [progressLabel]="wizardProgressLabel"
+        [progressValue]="wizardProgressValue"
+        [stepTitle]="wizardStepTitle"
+        stepLead="Revise e atualize seus dados em passos curtos."
+        [isFirst]="wizardStepIndex === 0"
+        [isLast]="wizardIsLast"
+        [continueDisabled]="wizardContinueDisabled"
+        [submitDisabled]="!canSubmit"
+        [showExit]="false"
+        (continue)="onWizardContinue()"
+        (back)="onWizardBack()"
+        (submit)="submit()"
+      >
+        @if (accountWizardStep === 'dados') {
+          <ion-list lines="full">
+            <ion-item>
+              <ion-input label="Nome completo" labelPlacement="stacked" formControlName="name"></ion-input>
+            </ion-item>
+            @if (form.get('name')?.touched && form.get('name')?.invalid) {
+              <ion-note color="danger" class="ion-padding-horizontal">Informe o nome completo.</ion-note>
+            }
+
+            <ion-item>
+              <ion-input
+                label="Apelido"
+                labelPlacement="stacked"
+                formControlName="apelido"
+                placeholder="Como voce sera chamado no app"
+              ></ion-input>
+            </ion-item>
+            <ion-note color="medium" class="ion-padding-horizontal">
+              O apelido usado em cada evento permanece o da inscricao naquele evento.
+            </ion-note>
+
+            <app-birth-date-picker
+              formControlName="birthDate"
+              label="Data de nascimento (opcional)"
+            ></app-birth-date-picker>
+            <app-team-picker [control]="$any(form.get('favoriteProTeam'))"></app-team-picker>
+            <app-legend-suggest-input
+              [control]="$any(form.get('proFootballIdol'))"
+              label="Idolo do futebol profissional"
+              suggestType="pro_idol"
+              [inlineSearch]="true"
+              returnUrl="/account/edit"
+              returnField="proFootballIdol"
+            ></app-legend-suggest-input>
+            <app-legend-suggest-input
+              [control]="$any(form.get('amateurFootballIdol'))"
+              label="Idolo do futebol amador"
+              suggestType="idol"
+              [inlineSearch]="true"
+              returnUrl="/account/edit"
+              returnField="amateurFootballIdol"
+            ></app-legend-suggest-input>
+            <app-legend-suggest-input
+              [control]="$any(form.get('favoriteAmateurTeam'))"
+              label="Time de coracao (amador)"
+              placeholder="Ex: Uniao da vila"
+              suggestType="pelada_team"
+              [inlineSearch]="true"
+              returnUrl="/account/edit"
+              returnField="favoriteAmateurTeam"
+            ></app-legend-suggest-input>
+          </ion-list>
         }
 
-        <ion-item>
-          <ion-input
-            label="Apelido"
-            labelPlacement="stacked"
-            formControlName="apelido"
-            placeholder="Como voce sera chamado no app"
-          ></ion-input>
-        </ion-item>
-        <ion-note color="medium" class="ion-padding-horizontal">
-          O apelido usado em cada evento permanece o da inscricao naquele evento.
-        </ion-note>
+        @if (accountWizardStep === 'contato') {
+          <ion-list lines="full">
+            <ion-item>
+              <ion-input label="E-mail" labelPlacement="stacked" formControlName="email" type="email"></ion-input>
+            </ion-item>
+            @if (form.get('email')?.touched && form.get('email')?.hasError('required')) {
+              <ion-note color="danger" class="ion-padding-horizontal">Informe um e-mail.</ion-note>
+            }
+            @if (form.get('email')?.touched && form.get('email')?.hasError('invalidEmail')) {
+              <ion-note color="danger" class="ion-padding-horizontal">Informe um e-mail valido.</ion-note>
+            }
+            <ion-item>
+              <ion-input
+                label="Celular (opcional)"
+                labelPlacement="stacked"
+                formControlName="phone"
+                type="tel"
+              ></ion-input>
+            </ion-item>
+            @if (form.get('phone')?.touched && form.get('phone')?.hasError('invalidPhone')) {
+              <ion-note color="danger" class="ion-padding-horizontal">
+                Celular invalido. Informe DDD + numero (minimo 10 digitos).
+              </ion-note>
+            }
 
-        <ion-item>
-          <ion-input label="E-mail" labelPlacement="stacked" formControlName="email" type="email"></ion-input>
-        </ion-item>
-        @if (form.get('email')?.touched && form.get('email')?.hasError('required')) {
-          <ion-note color="danger" class="ion-padding-horizontal">Informe um e-mail.</ion-note>
+            <ion-item-divider>
+              <ion-label>Privacidade do perfil</ion-label>
+            </ion-item-divider>
+            <ion-item>
+              <ion-toggle formControlName="showPhoneInProfile" labelPlacement="start">
+                Autorizar exibicao do celular no perfil publico
+              </ion-toggle>
+            </ion-item>
+            <ion-item>
+              <ion-toggle formControlName="showEmailInProfile" labelPlacement="start">
+                Autorizar exibicao do e-mail no perfil publico
+              </ion-toggle>
+            </ion-item>
+            <ion-note color="medium" class="ion-padding-horizontal">
+              Por padrao, celular e e-mail ficam restritos para outros usuarios do app.
+            </ion-note>
+          </ion-list>
         }
-        @if (form.get('email')?.touched && form.get('email')?.hasError('invalidEmail')) {
-          <ion-note color="danger" class="ion-padding-horizontal">Informe um e-mail valido.</ion-note>
+
+        @if (accountWizardStep === 'endereco') {
+          <app-address-form
+            formControlName="address"
+            title="Onde voce mora"
+            [required]="true"
+            (addressChange)="onAddressChanged()"
+          ></app-address-form>
         }
-        <ion-item>
-          <ion-input
-            label="Celular (opcional)"
-            labelPlacement="stacked"
-            formControlName="phone"
-            type="tel"
-          ></ion-input>
-        </ion-item>
-        @if (form.get('phone')?.touched && form.get('phone')?.hasError('invalidPhone')) {
-          <ion-note color="danger" class="ion-padding-horizontal">
-            Celular invalido. Informe DDD + numero (minimo 10 digitos).
-          </ion-note>
-        }
-
-        <ion-item-divider>
-          <ion-label>Privacidade do perfil</ion-label>
-        </ion-item-divider>
-        <ion-item>
-          <ion-toggle formControlName="showPhoneInProfile" labelPlacement="start">
-            Autorizar exibicao do celular no perfil publico
-          </ion-toggle>
-        </ion-item>
-        <ion-item>
-          <ion-toggle formControlName="showEmailInProfile" labelPlacement="start">
-            Autorizar exibicao do e-mail no perfil publico
-          </ion-toggle>
-        </ion-item>
-        <ion-note color="medium" class="ion-padding-horizontal">
-          Por padrao, celular e e-mail ficam restritos para outros usuarios do app.
-        </ion-note>
-
-        <!-- NUNCA usar type="date" aqui: calendário nativo inviável para anos antigos.
-             Usar app-birth-date-picker (dia/mês/ano). Ver AGENTS.md e docs/UI-DATAS-NASCIMENTO.md -->
-        <app-birth-date-picker
-          formControlName="birthDate"
-          label="Data de nascimento (opcional)"
-        ></app-birth-date-picker>
-        <app-team-picker [control]="$any(form.get('favoriteProTeam'))"></app-team-picker>
-        <app-legend-suggest-input
-          [control]="$any(form.get('proFootballIdol'))"
-          label="Idolo do futebol profissional"
-          suggestType="pro_idol"
-          [inlineSearch]="true"
-          returnUrl="/account/edit"
-          returnField="proFootballIdol"
-        ></app-legend-suggest-input>
-        <app-legend-suggest-input
-          [control]="$any(form.get('amateurFootballIdol'))"
-          label="Idolo do futebol amador"
-          suggestType="idol"
-          [inlineSearch]="true"
-          returnUrl="/account/edit"
-          returnField="amateurFootballIdol"
-        ></app-legend-suggest-input>
-        <app-legend-suggest-input
-          [control]="$any(form.get('favoriteAmateurTeam'))"
-          label="Time de coracao (amador)"
-          placeholder="Ex: Uniao da vila"
-          suggestType="pelada_team"
-          [inlineSearch]="true"
-          returnUrl="/account/edit"
-          returnField="favoriteAmateurTeam"
-        ></app-legend-suggest-input>
-      </ion-list>
-
-      <app-address-form
-        formControlName="address"
-        title="Onde voce mora"
-        [required]="true"
-        (addressChange)="onAddressChanged()"
-      ></app-address-form>
+      </app-form-wizard>
     </form>
   } @else {
     <form id="accountPasswordForm" [formGroup]="passwordForm" (ngSubmit)="submitPasswordChange()">
@@ -213,9 +233,6 @@
 <ion-footer class="account-edit-footer">
   <ion-toolbar>
     @if (!showPasswordSection) {
-      <ion-button expand="block" type="submit" form="accountEditForm" [disabled]="!canSubmit">
-        Salvar alteracoes
-      </ion-button>
       <ion-button expand="block" fill="outline" type="button" (click)="togglePasswordSection()">
         Alterar senha
       </ion-button>

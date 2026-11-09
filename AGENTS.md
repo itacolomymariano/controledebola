@@ -227,6 +227,7 @@ Inscreva no construtor, recarregue em `ionViewWillEnter`, `unsubscribe` em `ngOn
 | `01d-mail-helpers.js` | SMTP Zoho (`nodemailer`) via classe `MailSettings` |
 | `01e-voter-reliability.js` | Peso de confiabilidade do avaliador no agregado do mural app |
 | `02-core.js` | Conta, login, reset de senha (`requestPasswordResetEmail`, `confirmPasswordReset`), exclusao (`deleteMyAccount`) |
+| `02d-user-cpf-integrity.js` | CPF unico: `inventoryDuplicateCpfs`, `assertCpfUniqueForNewUser` — ver [docs/USER-CPF-INTEGRITY.md](docs/USER-CPF-INTEGRITY.md) |
 | `02b-contact-messages.js` | Criticas/sugestoes e relato de problema (`sendContactMessage`) |
 | `03-push-notifications.js` | Push |
 | `04-auth-signup.js` | Cadastro anti-bot |

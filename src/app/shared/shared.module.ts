@@ -54,6 +54,7 @@ import { FieldHelpComponent } from './components/field-help/field-help.component
 import { RecordIdNoteComponent } from './components/record-id-note/record-id-note.component';
 import { HomeHubHeroComponent } from './components/home-hub-hero/home-hub-hero.component';
 import { HomeDoorCardComponent } from './components/home-door-card/home-door-card.component';
+import { ActionDoorCardComponent } from './components/action-door-card/action-door-card.component';
 import { PlayfulPageComponent } from './components/playful-page/playful-page.component';
 import { PlayfulCardComponent } from './components/playful-card/playful-card.component';
 import { PlayfulGridComponent } from './components/playful-grid/playful-grid.component';
@@ -113,6 +114,7 @@ import { FormWizardComponent } from './components/form-wizard/form-wizard.compon
     RecordIdNoteComponent,
     HomeHubHeroComponent,
     HomeDoorCardComponent,
+    ActionDoorCardComponent,
     PlayfulPageComponent,
     PlayfulCardComponent,
     PlayfulGridComponent,
@@ -173,6 +175,7 @@ import { FormWizardComponent } from './components/form-wizard/form-wizard.compon
     RecordIdNoteComponent,
     HomeHubHeroComponent,
     HomeDoorCardComponent,
+    ActionDoorCardComponent,
     PlayfulPageComponent,
     PlayfulCardComponent,
     PlayfulGridComponent,

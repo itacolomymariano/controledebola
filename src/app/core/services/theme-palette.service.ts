@@ -17,7 +17,9 @@ import {
   THEME_PLAYFUL_DOOR_DARK,
   THEME_PLAYFUL_DOOR_LIGHT,
   THEME_PLAYFUL_LIGHT,
+  resolveHomeDoorInviteMuralTokens,
 } from '../models/theme-playful.model';
+import { pickReadableMutedOn, pickReadableTextOn } from '../utils/theme-contrast.util';
 
 const PALETTE_LABEL_KEYS: Record<ThemePaletteId, string> = {
   controle_de_bola: 'palette.controleDeBola',
@@ -125,5 +127,21 @@ export class ThemePaletteService {
     root.style.setProperty('--cb-door-times-accent', door.timesAccent);
     root.style.setProperty('--cb-door-users-bg', door.usersBg);
     root.style.setProperty('--cb-door-users-accent', door.usersAccent);
+
+    const inviteMural = resolveHomeDoorInviteMuralTokens(this.current, this.surface, door);
+    root.style.setProperty('--cb-door-invite-bg', inviteMural.inviteBg);
+    root.style.setProperty('--cb-door-invite-accent', inviteMural.inviteAccent);
+    root.style.setProperty('--cb-door-mural-bg', inviteMural.muralBg);
+    root.style.setProperty('--cb-door-mural-accent', inviteMural.muralAccent);
+
+    const inviteText = pickReadableTextOn(inviteMural.inviteBg);
+    const muralText = pickReadableTextOn(inviteMural.muralBg);
+    root.style.setProperty('--cb-door-invite-text', inviteText);
+    root.style.setProperty('--cb-door-invite-text-muted', pickReadableMutedOn(inviteMural.inviteBg));
+    root.style.setProperty('--cb-door-mural-text', muralText);
+    root.style.setProperty('--cb-door-mural-text-muted', pickReadableMutedOn(inviteMural.muralBg));
+
+    root.style.setProperty('--cb-playful-text', pickReadableTextOn(playful.card));
+    root.style.setProperty('--cb-playful-text-muted', pickReadableMutedOn(playful.card));
   }
 }

@@ -85,12 +85,15 @@ import {
   EventDetailOverviewViewModel,
 } from '../../shared/components/event-detail-overview/event-detail-overview.component';
 
+import type { HomeDoorVariant } from '../../shared/components/home-door-card/home-door-card.component';
+
 interface EventDetailActionTile {
   id: string;
   label: string;
   icon: string;
   visible: boolean;
   active?: boolean;
+  variant?: HomeDoorVariant;
 }
 
 @Component({
@@ -1809,7 +1812,20 @@ export class EventDetailPage implements OnDestroy {
   }
 
   private buildActionTileRows(tiles: EventDetailActionTile[]): EventDetailActionTile[][] {
-    const visible = tiles.filter((tile) => tile.visible);
+    const doorVariants: HomeDoorVariant[] = [
+      'peladas',
+      'confrontos',
+      'times',
+      'users',
+      'invite',
+      'mural',
+    ];
+    const visible = tiles
+      .filter((tile) => tile.visible)
+      .map((tile, index) => ({
+        ...tile,
+        variant: doorVariants[index % doorVariants.length],
+      }));
     const rows: EventDetailActionTile[][] = [];
     for (let index = 0; index < visible.length; index += 2) {
       rows.push(visible.slice(index, index + 2));

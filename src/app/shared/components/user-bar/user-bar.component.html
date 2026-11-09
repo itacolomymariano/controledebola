@@ -28,8 +28,13 @@
     <app-help-balloon [textKey]="helpKey"></app-help-balloon>
     <ion-button class="inbox-button" (click)="openInbox()" [attr.aria-label]="'Caixa de entrada'">
       <ion-icon name="mail-outline" slot="icon-only"></ion-icon>
-      @if (pendingInvitations > 0) {
-        <ion-badge color="danger" class="inbox-badge">{{ pendingInvitations }}</ion-badge>
+      @if (unreadAppMessages > 0) {
+        <ion-badge color="danger" class="inbox-badge inbox-badge--messages">{{ unreadAppMessages }}</ion-badge>
+      }
+      @if (inboxAttentionCount > 0) {
+        <ion-badge color="warning" class="inbox-badge inbox-badge--attention" [attr.title]="'Convites e pendencias'">
+          {{ inboxAttentionCount }}
+        </ion-badge>
       }
     </ion-button>
     <ion-button (click)="openMenu()" aria-label="Abrir menu">

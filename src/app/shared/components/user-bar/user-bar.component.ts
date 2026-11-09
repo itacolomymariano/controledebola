@@ -23,7 +23,10 @@ export class UserBarComponent implements OnInit, OnDestroy {
 
   apelido = '';
   avatarUrl: string | null = null;
-  pendingInvitations = 0;
+  /** Mensagens AppMessage nao lidas (badge do envelope). */
+  unreadAppMessages = 0;
+  /** Convites, desafios e remarcacoes (indicador separado). */
+  inboxAttentionCount = 0;
   helpKey = '';
 
   private profileSub?: Subscription;
@@ -134,10 +137,10 @@ export class UserBarComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  /** Badge = pendencias que esperam acao + mensagens nao lidas da caixa. */
   private async loadPendingInvitations(): Promise<void> {
     if (!this.auth.isLoggedIn()) {
-      this.pendingInvitations = 0;
+      this.unreadAppMessages = 0;
+      this.inboxAttentionCount = 0;
       return;
     }
     const attention = await this.refereeInvitationService.countPendingForCurrentUser();
@@ -145,10 +148,10 @@ export class UserBarComponent implements OnInit, OnDestroy {
     try {
       unreadMessages = await this.appMessageService.countUnread();
     } catch {
-      // Cloud sem a caixa publicada: mantem o comportamento antigo.
       unreadMessages = 0;
     }
-    this.pendingInvitations = attention + unreadMessages;
+    this.unreadAppMessages = unreadMessages;
+    this.inboxAttentionCount = attention;
     this.cdr.markForCheck();
   }
 }

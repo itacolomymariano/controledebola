@@ -142,6 +142,7 @@ Parse.Cloud.define('registerUser', async (request) => {
     phone: normalizedPhone || undefined,
     cpf: normalizedCpf,
   });
+  await assertCpfUniqueForNewUser(normalizedCpf);
 
   const user = new Parse.User();
   user.set('username', username);
@@ -167,6 +168,7 @@ Parse.Cloud.define('registerUser', async (request) => {
   user.set('signupHoneypot', String(params.signupHoneypot || '').trim());
 
   await user.signUp(null, { useMasterKey: true });
+  await assertCpfUniqueForNewUser(normalizedCpf, user.id);
 
   const loggedIn = await Parse.User.logIn(username, password);
   return { sessionToken: loggedIn.getSessionToken(), objectId: loggedIn.id };
@@ -205,7 +207,18 @@ Parse.Cloud.beforeSave(Parse.User, async (request) => {
     throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Informe um CPF valido.');
   }
   request.object.set('cpf', cpf);
-  await assertContactAvailable({ cpf });
+
+  const username = request.object.getUsername();
+  const email = request.object.get('email');
+  const phone = request.object.get('phone');
+  await assertContactAvailable({
+    username: username || undefined,
+    email: email || undefined,
+    phone: phone || undefined,
+    cpf,
+    excludeUserId: request.object.id,
+  });
+  await assertCpfUniqueForNewUser(cpf, request.object.id);
 
   await validateNewUserSignupAntiBot(request.object, request.ip);
 });

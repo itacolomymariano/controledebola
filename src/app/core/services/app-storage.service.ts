@@ -184,6 +184,10 @@ export class AppStorageService {
   async getPalette(): Promise<ThemePaletteId> {
     await this.init();
     const value = await this.storage.get(PALETTE_KEY);
+    if (value === 'default') {
+      await this.setPalette('controle_de_bola');
+      return 'controle_de_bola';
+    }
     return typeof value === 'string' && (THEME_PALETTE_IDS as readonly string[]).includes(value)
       ? (value as ThemePaletteId)
       : DEFAULT_THEME_PALETTE;

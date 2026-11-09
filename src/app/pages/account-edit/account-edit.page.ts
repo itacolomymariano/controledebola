@@ -36,6 +36,9 @@ function passwordsMatchValidator(control: AbstractControl): ValidationErrors | n
   return newPassword === confirmPassword ? null : { passwordsMismatch: true };
 }
 
+const ACCOUNT_EDIT_WIZARD_STEPS = ['dados', 'contato', 'endereco'] as const;
+type AccountEditWizardStep = (typeof ACCOUNT_EDIT_WIZARD_STEPS)[number];
+
 @Component({
   selector: 'app-account-edit',
   templateUrl: './account-edit.page.html',
@@ -46,6 +49,8 @@ export class AccountEditPage implements OnInit, OnDestroy {
   canSubmit = false;
   canChangePassword = false;
   showPasswordSection = false;
+  readonly accountWizardSteps = ACCOUNT_EDIT_WIZARD_STEPS;
+  wizardStepIndex = 0;
   forcePasswordChange = false;
   readonly minPasswordLength = MIN_PASSWORD_LENGTH;
   showPassword = false;
@@ -154,6 +159,75 @@ export class AccountEditPage implements OnInit, OnDestroy {
 
   cancel(): void {
     void this.router.navigateByUrl('/tabs/profile');
+  }
+
+  get accountWizardStep(): AccountEditWizardStep {
+    return this.accountWizardSteps[this.wizardStepIndex];
+  }
+
+  get wizardProgressLabel(): string {
+    return `Passo ${this.wizardStepIndex + 1} de ${this.accountWizardSteps.length}`;
+  }
+
+  get wizardProgressValue(): number {
+    return (this.wizardStepIndex + 1) / this.accountWizardSteps.length;
+  }
+
+  get wizardStepTitle(): string {
+    const titles: Record<AccountEditWizardStep, string> = {
+      dados: 'Dados pessoais',
+      contato: 'Contato e privacidade',
+      endereco: 'Endereco',
+    };
+    return titles[this.accountWizardStep];
+  }
+
+  get wizardIsLast(): boolean {
+    return this.wizardStepIndex >= this.accountWizardSteps.length - 1;
+  }
+
+  get wizardContinueDisabled(): boolean {
+    if (this.accountWizardStep === 'dados') {
+      return !!(this.form.get('name')?.invalid || this.form.get('apelido')?.invalid);
+    }
+    if (this.accountWizardStep === 'contato') {
+      return !!(this.form.get('email')?.invalid || this.form.get('phone')?.invalid);
+    }
+    const address = this.form.get('address');
+    return !!address?.invalid;
+  }
+
+  onWizardContinue(): void {
+    if (this.wizardContinueDisabled) {
+      this.touchWizardStepControls();
+      this.cdr.markForCheck();
+      return;
+    }
+    if (!this.wizardIsLast) {
+      this.wizardStepIndex += 1;
+      this.cdr.markForCheck();
+    }
+  }
+
+  onWizardBack(): void {
+    if (this.wizardStepIndex > 0) {
+      this.wizardStepIndex -= 1;
+      this.cdr.markForCheck();
+    }
+  }
+
+  private touchWizardStepControls(): void {
+    if (this.accountWizardStep === 'dados') {
+      ['name', 'apelido', 'birthDate'].forEach((key) => this.form.get(key)?.markAsTouched());
+      return;
+    }
+    if (this.accountWizardStep === 'contato') {
+      ['email', 'phone', 'showPhoneInProfile', 'showEmailInProfile'].forEach((key) =>
+        this.form.get(key)?.markAsTouched()
+      );
+      return;
+    }
+    this.form.get('address')?.markAsTouched();
   }
 
   async requestAccountDeletion(): Promise<void> {

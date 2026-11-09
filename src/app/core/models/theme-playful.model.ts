@@ -1,4 +1,4 @@
-import { ThemePaletteId } from './theme-palette.model';
+import { ThemePaletteId, ThemeSurfaceId } from './theme-palette.model';
 
 /** Tons pastel dos cartões “porta” / mock Nicole, por paleta e por superfície (claro/escuro). */
 export interface PlayfulDoorPalette {
@@ -409,3 +409,40 @@ export const THEME_PLAYFUL_DARK: Record<ThemePaletteId, PlayfulSurface> = {
     orbB: 'rgba(200, 16, 46, 0.14)',
   },
 };
+
+export interface HomeDoorInviteMuralTokens {
+  inviteBg: string;
+  inviteAccent: string;
+  muralBg: string;
+  muralAccent: string;
+}
+
+/** Convidar / Mural por paleta (derivado das portas; marca verde/ouro em controle_de_bola). */
+export function resolveHomeDoorInviteMuralTokens(
+  palette: ThemePaletteId,
+  surface: ThemeSurfaceId,
+  door: PlayfulDoorPalette
+): HomeDoorInviteMuralTokens {
+  if (palette === 'controle_de_bola') {
+    if (surface === 'light') {
+      return {
+        inviteBg: '#d9f5e5',
+        inviteAccent: '#1d7a3e',
+        muralBg: '#fff7cc',
+        muralAccent: '#b8860b',
+      };
+    }
+    return {
+      inviteBg: '#123528',
+      inviteAccent: '#34d399',
+      muralBg: '#3d3012',
+      muralAccent: '#f5c400',
+    };
+  }
+  return {
+    inviteBg: door.usersBg,
+    inviteAccent: door.usersAccent,
+    muralBg: door.timesBg,
+    muralAccent: door.timesAccent,
+  };
+}

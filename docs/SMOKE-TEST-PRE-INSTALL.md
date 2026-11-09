@@ -11,6 +11,15 @@ npm run build
 
 Publicar `cloud/main.js` no Back4App quando houver alteração em `cloud/source/`.
 
+## Matriz wizard (cadastros)
+
+| Tela | Modo |
+|------|------|
+| register, profile-setup, pelada/evento/confronto/desafio/team **criar**, perfis atleta/torcedor/pro **criar** | Wizard |
+| **account-edit**, **event-register** | Wizard (2026-11) |
+| pelada-form / team-form **edição** | Formulario unico |
+| legend-*-form, contact/* | Excecao — formulario curto |
+
 ## Fluxos críticos
 
 | # | Fluxo | O que validar |
@@ -35,8 +44,11 @@ Publicar `cloud/main.js` no Back4App quando houver alteração em `cloud/source/
 | 9 | Voto mural evento | Torcedor e porteiro aparecem na votacao e entram no Top 10 da aba correspondente; max. 2 notas 10 por cedula |
 | 10 | Esqueci senha | Enviar codigo → card com e-mail mascarado → digitar codigo no app (nao e link) |
 | 11 | Mural Geral craque | Hint de confianca; card mostra “X pessoas avaliaram” quando houver votos |
-| 12 | Cadastro | Wizard **Criar conta** (5 passos): progresso, Continuar/Voltar; ajuda (?) em apelido/CPF/celular/endereco; criar conta teste ate profile-setup |
-| 12b | Montar perfil | Wizard **profile-setup**: atleta 3 passos; torcedor 2; profissional por etapas (valores/Pix/equip.); Completar depois; rascunho ao voltar |
+| 12 | Cadastro | Wizard **Criar conta** (5 passos): progresso, Continuar/Voltar; ajuda (?) em apelido/CPF/celular/endereco; criar conta teste ate profile-setup; **segundo CPF igual falha** (mensagem amigavel) |
+| 12a | Meus dados | Perfil → **Meus dados**: wizard 3 passos (dados / contato / endereco); Salvar no ultimo passo |
+| 12b | Inscricao evento | Evento → inscricao: wizard **papel** → **confirmacao** (PIX + compromisso); progresso no topo |
+| 12c | User-bar inbox | 1 mensagem nao lida, 0 convites → ler Entrada → badge **vermelho 0**; convite pendente → badge **amarelo** separado (canto esquerdo do envelope) |
+| 12d | Montar perfil | Wizard **profile-setup**: atleta 3 passos; torcedor 2; profissional por etapas (valores/Pix/equip.); Completar depois; rascunho ao voltar |
 | 13 | Pelada ? (toolbar) | Ajuda com botao Ouvir (TTS) no popover |
 | 14 | Separação de times | Salvar desabilitado se nada mudou; desfazer separacao salva (admin) |
 | 15 | Scout + sumula | Gols do juiz aparecem no apontamento; scout so classifica tipo |

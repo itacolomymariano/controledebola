@@ -190,4 +190,9 @@ html.ion-palette-dark {
   --cb-playful-text: rgba(255, 255, 255, 0.95);
   --cb-playful-text-muted: rgba(255, 255, 255, 0.78);
   --cb-playful-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  /* Fallback antes do ThemePaletteService; alinhado a THEME_HOME_DOOR_INVITE_MURAL_DARK */
+  --cb-door-invite-bg: #0f3d45;
+  --cb-door-invite-accent: #2dd4bf;
+  --cb-door-mural-bg: #3d3012;
+  --cb-door-mural-accent: #fbbf24;
 }

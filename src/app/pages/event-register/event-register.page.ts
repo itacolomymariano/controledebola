@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
@@ -26,6 +26,9 @@ import { UserParticipationProfileService } from '../../core/services/user-partic
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
 import { buildMissingFieldsMessage } from '../../core/utils/form-validation.util';
 
+const EVENT_REGISTER_WIZARD_STEPS = ['papel', 'confirmacao'] as const;
+type EventRegisterWizardStep = (typeof EVENT_REGISTER_WIZARD_STEPS)[number];
+
 @Component({
   selector: 'app-event-register',
   templateUrl: './event-register.page.html',
@@ -33,6 +36,9 @@ import { buildMissingFieldsMessage } from '../../core/utils/form-validation.util
   standalone: false,
 })
 export class EventRegisterPage {
+  readonly registerWizardSteps = EVENT_REGISTER_WIZARD_STEPS;
+  wizardStepIndex = 0;
+
   eventId = '';
   roles: { value: ProfileRole; label: string }[] = EVENT_REGISTRATION_ROLES
     .filter((value) => value !== 'referee')
@@ -81,8 +87,78 @@ export class EventRegisterPage {
     private readonly membershipService: PeladaMembershipService,
     private readonly userParticipationProfileService: UserParticipationProfileService,
     private readonly loadingCtrl: LoadingController,
-    private readonly alertCtrl: AlertController
+    private readonly alertCtrl: AlertController,
+    private readonly cdr: ChangeDetectorRef
   ) {}
+
+  get registerWizardStep(): EventRegisterWizardStep {
+    return this.registerWizardSteps[this.wizardStepIndex];
+  }
+
+  get wizardProgressLabel(): string {
+    return `Passo ${this.wizardStepIndex + 1} de ${this.registerWizardSteps.length}`;
+  }
+
+  get wizardProgressValue(): number {
+    return (this.wizardStepIndex + 1) / this.registerWizardSteps.length;
+  }
+
+  get wizardStepTitle(): string {
+    return this.registerWizardStep === 'papel' ? 'Papel neste evento' : 'Confirmar inscricao';
+  }
+
+  get wizardIsLast(): boolean {
+    return this.wizardStepIndex >= this.registerWizardSteps.length - 1;
+  }
+
+  get wizardContinueDisabled(): boolean {
+    if (!this.canSubmit) return true;
+    if (this.registerWizardStep !== 'papel') return false;
+    const apelido = this.form.get('apelido');
+    const role = this.form.get('role');
+    if (apelido?.invalid || role?.invalid) return true;
+    if (this.requiresTeamSide && !this.form.get('teamSide')?.value) return true;
+    if (this.selectedRole === 'athlete' && this.showAthleteForm) {
+      return !this.athleteStepFieldsValid();
+    }
+    return false;
+  }
+
+  get wizardSubmitDisabled(): boolean {
+    return !this.canSubmit || this.form.invalid || !this.form.get('committed')?.value;
+  }
+
+  onRegisterWizardContinue(): void {
+    if (this.wizardContinueDisabled) {
+      this.form.markAllAsTouched();
+      void this.validateAthleteFields();
+      this.cdr.markForCheck();
+      return;
+    }
+    if (!this.wizardIsLast) {
+      this.wizardStepIndex += 1;
+      this.cdr.markForCheck();
+    }
+  }
+
+  onRegisterWizardBack(): void {
+    if (this.wizardStepIndex > 0) {
+      this.wizardStepIndex -= 1;
+      this.cdr.markForCheck();
+    }
+  }
+
+  private athleteStepFieldsValid(): boolean {
+    if (!this.showAthleteForm) return true;
+    const keys = [
+      'primaryPosition',
+      'shoeSize',
+      'heightMeter',
+      'heightCm',
+      'weight',
+    ];
+    return keys.every((key) => !this.form.get(key)?.invalid);
+  }
 
   ionViewWillEnter(): void {
     this.eventId = this.route.snapshot.paramMap.get('id') ?? '';

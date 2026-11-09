@@ -276,16 +276,14 @@
         @for (row of adminActionTileRows; track $index) {
           <ion-row>
             @for (tile of row; track tile.id) {
-              <ion-col size="12" size-sm="6" size-lg="4">
-                <button
-                  type="button"
-                  class="event-action-tile"
-                  [class.event-action-tile-active]="tile.active"
-                  (click)="handleAdminAction(tile.id)"
-                >
-                  <ion-icon [name]="tile.icon" aria-hidden="true"></ion-icon>
-                  <span>{{ tile.label }}</span>
-                </button>
+              <ion-col size="6" size-lg="4">
+                <app-action-door-card
+                  [label]="tile.label"
+                  [icon]="tile.icon"
+                  [variant]="tile.variant || 'peladas'"
+                  [active]="!!tile.active"
+                  (activate)="handleAdminAction(tile.id)"
+                ></app-action-door-card>
               </ion-col>
             }
           </ion-row>
@@ -343,16 +341,14 @@
         @for (row of userActionTileRows; track $index) {
           <ion-row>
             @for (tile of row; track tile.id) {
-              <ion-col size="12" size-sm="6" size-lg="4">
-                <button
-                  type="button"
-                  class="event-action-tile"
-                  [class.event-action-tile-active]="tile.active"
-                  (click)="handleUserAction(tile.id)"
-                >
-                  <ion-icon [name]="tile.icon" aria-hidden="true"></ion-icon>
-                  <span>{{ tile.label }}</span>
-                </button>
+              <ion-col size="6" size-lg="4">
+                <app-action-door-card
+                  [label]="tile.label"
+                  [icon]="tile.icon"
+                  [variant]="tile.variant || 'peladas'"
+                  [active]="!!tile.active"
+                  (activate)="handleUserAction(tile.id)"
+                ></app-action-door-card>
               </ion-col>
             }
           </ion-row>

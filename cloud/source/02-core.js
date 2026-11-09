@@ -173,8 +173,10 @@ async function assertContactAvailable({ username, email, phone, cpf, excludeUser
   if (cpf) {
     const query = new Parse.Query(Parse.User);
     query.equalTo('cpf', cpf);
-    const existing = await query.first({ useMasterKey: true });
-    if (existing && existing.id !== excludeUserId) {
+    query.limit(3);
+    const existingRows = await query.find({ useMasterKey: true });
+    const conflicting = existingRows.filter((row) => row.id !== excludeUserId);
+    if (conflicting.length > 0) {
       throw new Parse.Error(
         Parse.Error.DUPLICATE_VALUE,
         'CPF ja cadastrado. Faca login com a conta existente. Se esqueceu a senha, use Recuperar senha na tela de login.'
