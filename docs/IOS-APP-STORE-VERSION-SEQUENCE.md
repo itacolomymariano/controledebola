@@ -92,13 +92,15 @@ CFBundleVersion = versionCode em .app-release-state.json na main (após push) + 
 | **2026-11-02** | 1.0.9 | **282** | TestFlight | Upload OK; próximo IPA precisa **> 282** |
 | **2026-11-02** | 1.0.9 | **294** (repo) → **295** (CI) | Enviado / reservado | — |
 | **2026-11-07** | 1.0.11 | 313→314 (CI) | Trilha **1.0.11 fechada** | altool **90062** + **90186** |
-| **2026-11-07** | **1.0.12** | **313** (repo) → **314** (CI) | **Próximo `release-ipa` após push** | Só bump marketing; `versionCode` mantido |
+| **2026-11-07** | **1.0.12** | **313** (repo) → **314** (CI) | Trilha fechada | — |
+| **2026-11-12** | **1.0.14** | 357 (CI) | Trilha **1.0.14 fechada** (90062/90186) | Validacao altool falhou; nao subiu |
+| **2026-11-12** | **1.0.15** | **356** (repo) → **357** (CI) | **Proximo `release-ipa` apos push** | Bump so marketing |
 
 ### Próximo build iOS (agents: leia antes de bump)
 
-- **Marketing no repo:** `1.0.12` (`package.json`)
-- **Último build TestFlight:** conferir no Connect; trilha **1.0.11** não aceita mais builds
-- **`versionCode` commitado na main:** **313** — CI gera IPA **314** (build não chegou a subir com 1.0.11)
+- **Marketing no repo:** `1.0.15` (`package.json`)
+- **Trilha 1.0.14:** fechada/aprovada — nao enviar mais IPAs `1.0.14`
+- **`versionCode` commitado na main:** **356** — CI gera IPA **357** (validacao anterior nao concluiu upload)
 - **Se 90062/90186 de novo:** bump **só** `package.json` patch, push, novo workflow
 
 ---
