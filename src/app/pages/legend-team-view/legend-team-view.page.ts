@@ -10,7 +10,12 @@ import { AuthService } from '../../core/services/auth.service';
 import { AmateurLegendService } from '../../core/services/amateur-legend.service';
 import { LegendTeamJoinRequestService } from '../../core/services/legend-team-join-request.service';
 import { I18nService } from '../../core/services/i18n.service';
+import { ImageLightboxService } from '../../core/services/image-lightbox.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
+import {
+  consumeTeamProfileReturnState,
+  TeamProfileReturnState,
+} from '../../core/utils/team-profile-navigation.util';
 
 @Component({
   selector: 'app-legend-team-view',
@@ -25,6 +30,7 @@ export class LegendTeamViewPage {
   errorMessage = '';
   joinBusy = false;
   pendingJoin = false;
+  teamReturn: TeamProfileReturnState | null = null;
 
   constructor(
     private readonly route: ActivatedRoute,
@@ -35,6 +41,7 @@ export class LegendTeamViewPage {
     private readonly loadingCtrl: LoadingController,
     private readonly toastCtrl: ToastController,
     private readonly i18n: I18nService,
+    private readonly imageLightbox: ImageLightboxService,
     private readonly cdr: ChangeDetectorRef
   ) {}
 
@@ -69,8 +76,22 @@ export class LegendTeamViewPage {
   }
 
   ionViewWillEnter(): void {
+    this.teamReturn = consumeTeamProfileReturnState();
     const id = this.route.snapshot.paramMap.get('id') ?? '';
     void this.load(id);
+  }
+
+  goBack(): void {
+    if (this.teamReturn?.returnUrl) {
+      void this.router.navigateByUrl(this.teamReturn.returnUrl);
+      this.teamReturn = null;
+      return;
+    }
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    void this.router.navigateByUrl('/tabs/peladas/times');
   }
 
   relationshipLabel(value: string | undefined): string {
@@ -88,6 +109,12 @@ export class LegendTeamViewPage {
     if (athlete.inMemoriam) return this.i18n.t('legends.inMemoriam');
     if (athlete.age == null) return '—';
     return this.i18n.t('peladas.ageYears', { age: athlete.age });
+  }
+
+  openTeamImage(): void {
+    const url = this.team?.imageUrl?.trim();
+    if (!url) return;
+    void this.imageLightbox.open(url, this.team?.apelido || 'Time lenda');
   }
 
   openAthlete(athlete: LegendTeamAthleteDisplay): void {

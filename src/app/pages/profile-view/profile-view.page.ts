@@ -125,6 +125,15 @@ export class ProfileViewPage implements OnDestroy {
     return this.supportTools.asTrainerStats(this.operationStats);
   }
 
+  get refereeCardStats() {
+    return this.role === 'referee' ? this.profile?.refereeCardStats ?? null : null;
+  }
+
+  formatStatNumber(value: number | undefined): string {
+    if (value == null || Number.isNaN(value)) return '0';
+    return Number.isInteger(value) ? String(value) : value.toFixed(2);
+  }
+
   ionViewWillEnter(): void {
     this.rememberBackUrl();
     const roleParam = this.route.snapshot.paramMap.get('role') as ProfileRole | null;

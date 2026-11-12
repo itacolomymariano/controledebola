@@ -144,6 +144,21 @@ ion-item:has(ion-select[labelPlacement='stacked']) {
   text-align: center;
 }
 
+.mural-athlete-location-line {
+  font-size: 0.85rem;
+  color: var(--ion-color-medium);
+  display: block;
+  line-height: 1.25;
+}
+
+.rank-row__label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
 .mural-playful-rank-meta {
   display: flex;
   flex-direction: column;

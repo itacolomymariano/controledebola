@@ -3,6 +3,7 @@ import Parse from 'parse';
 import { BrazilianTeamOption } from '../../../core/data/brazilian-teams.data';
 import { resolveTeamShieldFromCommons } from '../../../core/utils/team-shield-commons.util';
 import { resolveTeamShieldFromSportsDb } from '../../../core/utils/team-shield-remote.util';
+import { ImageLightboxService } from '../../../core/services/image-lightbox.service';
 import {
   getTeamShieldCandidates,
   teamInitials,
@@ -19,6 +20,7 @@ export class TeamShieldComponent implements OnChanges {
   @Input() teamName = '';
   @Input() team?: Pick<BrazilianTeamOption, 'name' | 'slug'>;
   @Input() size: 'sm' | 'md' = 'md';
+  @Input() zoomable = false;
 
   @HostBinding('attr.data-team-name')
   get dataTeamNameAttr(): string {
@@ -31,7 +33,10 @@ export class TeamShieldComponent implements OnChanges {
   remoteLookupDone = false;
   private remoteLookupToken = 0;
 
-  constructor(private readonly cdr: ChangeDetectorRef) {}
+  constructor(
+    private readonly cdr: ChangeDetectorRef,
+    private readonly imageLightbox: ImageLightboxService
+  ) {}
 
   ngOnChanges(): void {
     this.resetCandidates();
@@ -47,6 +52,11 @@ export class TeamShieldComponent implements OnChanges {
 
   get initials(): string {
     return teamInitials(this.team?.name || this.teamName);
+  }
+
+  onShieldClick(): void {
+    if (!this.zoomable || !this.shieldUrl) return;
+    void this.imageLightbox.open(this.shieldUrl, this.team?.name || this.teamName);
   }
 
   onImageError(): void {

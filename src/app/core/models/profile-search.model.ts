@@ -71,6 +71,15 @@ export interface ProfileSearchResult {
   weightKg?: number;
 }
 
+export interface RefereeCardStats {
+  totalYellowCards: number;
+  totalRedCards: number;
+  avgYellowPelada: number;
+  avgYellowConfronto: number;
+  avgRedPelada: number;
+  avgRedConfronto: number;
+}
+
 export interface RolePublicProfile {
   userId: string;
   role: ProfileRole;
@@ -87,4 +96,5 @@ export interface RolePublicProfile {
   favoriteProTeam?: string;
   roleProfile?: RoleProfile;
   history: RoleParticipationHistory;
+  refereeCardStats?: RefereeCardStats;
 }

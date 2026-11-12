@@ -23,7 +23,15 @@
       @if (useDrilldown) {
         <div class="drilldown-header">
           @if (level !== 'states') {
-            <ion-button fill="clear" size="small" (click)="backLevel()">Voltar</ion-button>
+            <ion-button
+              class="drilldown-back-btn"
+              fill="outline"
+              size="small"
+              (click)="backLevel()"
+            >
+              <ion-icon slot="start" name="chevron-back-outline" aria-hidden="true"></ion-icon>
+              {{ 'common.back' | t }}
+            </ion-button>
           }
           <ion-note>{{ breadcrumb }}</ion-note>
         </div>
@@ -121,7 +129,15 @@
               </ion-item>
             } @else {
               <div class="drilldown-header">
-                <ion-button fill="clear" size="small" (click)="closeNeighborhoods()">Voltar</ion-button>
+                <ion-button
+                  class="drilldown-back-btn"
+                  fill="outline"
+                  size="small"
+                  (click)="closeNeighborhoods()"
+                >
+                  <ion-icon slot="start" name="chevron-back-outline" aria-hidden="true"></ion-icon>
+                  {{ 'common.back' | t }}
+                </ion-button>
                 <ion-note>Por bairro · {{ neighborhoodCount }}</ion-note>
               </div>
               @if (!stats.byNeighborhood.length) {

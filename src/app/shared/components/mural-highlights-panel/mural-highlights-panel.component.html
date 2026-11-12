@@ -46,6 +46,9 @@
     </app-playful-card>
 
     <h3 class="mural-playful-section-title">{{ 'mural.playful.conquistas' | t }}</h3>
+    @if (filterCaption) {
+      <p class="mural-filter-line mural-playful-conquistas-filter">{{ filterCaption }}</p>
+    }
     <app-playful-grid class="mural-playful-conquistas ion-margin-bottom">
       <app-playful-card tone="confrontos" class="mural-playful-tile">
         <ion-icon name="football-outline" class="mural-playful-tile__icon"></ion-icon>
@@ -70,7 +73,10 @@
           <ion-icon name="heart-outline" class="mural-playful-tile__icon"></ion-icon>
           <h4>{{ 'mural.playful.bestTeam' | t }}</h4>
           @if (highlights.timeMaisAmado; as team) {
-            <p class="mural-playful-team">{{ team.teamName }}</p>
+            <div class="mural-playful-team-row">
+              <app-team-shield [teamName]="team.teamName" size="sm"></app-team-shield>
+              <p class="mural-playful-team">{{ team.teamName }}</p>
+            </div>
             <p class="mural-playful-meta">{{ team.count }} torcedor(es)</p>
           } @else {
             <ion-badge color="medium">{{ 'mural.playful.noData' | t }}</ion-badge>
@@ -101,6 +107,12 @@
     </app-playful-grid>
 
     @if (scope === 'pelada') {
+      <app-mural-period-rankings-card
+        mode="legacy"
+        scope="pelada"
+        [scopeId]="scopeId"
+        [filterCaption]="filterCaption"
+      ></app-mural-period-rankings-card>
       <app-playful-card tone="surface" class="ion-margin-bottom">
         <h3 class="mural-playful-section-title">{{ 'mural.playful.ageBandsCraque' | t }}</h3>
         @for (band of ageBands; track band) {

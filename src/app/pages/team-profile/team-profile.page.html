@@ -2,7 +2,11 @@
   <app-user-bar></app-user-bar>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/tabs/peladas/times"></ion-back-button>
+      @if (teamReturn?.returnUrl) {
+        <ion-button (click)="goBack()">{{ teamReturn!.returnLabel || ('athleteProfile.backToAthlete' | t) }}</ion-button>
+      } @else {
+        <ion-back-button defaultHref="/tabs/peladas/times"></ion-back-button>
+      }
     </ion-buttons>
     <ion-title>Perfil do time</ion-title>
     <ion-buttons slot="end">

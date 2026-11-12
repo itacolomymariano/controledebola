@@ -121,6 +121,8 @@ export class AthleteSearchService {
       avatarUrl: row.avatarUrl,
       city: row.city,
       state: row.state,
+      neighborhood: row.neighborhood,
+      age: row.age ?? profile?.age,
       primaryPosition: row.primaryPosition || profile?.primaryPosition,
       peladaRate: row.peladaRate ?? profile?.peladaRate,
       matchRate: row.teamMatchRate ?? profile?.teamMatchRate,
@@ -170,6 +172,10 @@ export class AthleteSearchService {
         avatarUrl: row.avatarUrl ? String(row.avatarUrl) : undefined,
         city: row.city ? String(row.city) : undefined,
         state: row.state ? String(row.state) : undefined,
+        neighborhood: row.neighborhood ? String(row.neighborhood) : undefined,
+        age:
+          row.age != null && !Number.isNaN(Number(row.age)) ? Number(row.age) : undefined,
+        primaryPosition: row.primaryPosition ? String(row.primaryPosition) : undefined,
         peladaRate:
           row.peladaRate != null && !Number.isNaN(Number(row.peladaRate))
             ? Number(row.peladaRate)
@@ -178,7 +184,6 @@ export class AthleteSearchService {
           row.matchRate != null && !Number.isNaN(Number(row.matchRate))
             ? Number(row.matchRate)
             : undefined,
-        primaryPosition: row.primaryPosition ? String(row.primaryPosition) : undefined,
       };
     });
   }

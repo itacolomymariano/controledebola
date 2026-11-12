@@ -20,6 +20,7 @@ import {
   peekProfileReturnNavigationState,
   readProfileReturnNavigationState,
 } from '../../core/utils/profile-return-navigation.util';
+import { playedTeamLinksFromPublicProfile } from '../../core/utils/athlete-played-team.util';
 
 type ProfileSegment = 'info' | 'scout' | 'desempenho';
 
@@ -52,6 +53,15 @@ export class AthleteProfileViewPage {
     private readonly scoutApontamentoService: ScoutApontamentoService,
     private readonly performanceService: AthletePerformanceService
   ) {}
+
+  get playedTeamLinks() {
+    if (!this.profile) return [];
+    return playedTeamLinksFromPublicProfile(this.profile);
+  }
+
+  get teamsReturnUrl(): string {
+    return this.router.url;
+  }
 
   goBack(): void {
     const returnState =

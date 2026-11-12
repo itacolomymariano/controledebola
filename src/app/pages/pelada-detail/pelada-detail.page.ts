@@ -26,7 +26,7 @@ import { MuralShareContext } from '../../core/models/mural-share.model';
 import { buildMissingFieldsMessage } from '../../core/utils/form-validation.util';
 import { PELADA_MEMBERSHIP_ROLE_LABELS, PELADA_MEMBERSHIP_STATUS_LABELS, PeladaMembership } from '../../core/models/pelada-membership.model';
 import { PeladaCotinha, PeladaCotinhaPayment } from '../../core/models/pelada-cotinha.model';
-import { formatPeladaLocation, Pelada, PeladaStatsConflictSource } from '../../core/models/pelada.model';
+import { formatPeladaLocation, Pelada } from '../../core/models/pelada.model';
 import { PeladaCashEntry } from '../../core/models/pelada-cash.model';
 import { PeladaMembershipFee } from '../../core/models/pelada-monthly-fee.model';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
@@ -141,7 +141,6 @@ export class PeladaDetailPage implements OnDestroy {
     caixaMembersOnly: [true],
     maxSocios: [0, [Validators.min(0)]],
     maxAthletesPerEvent: [0, [Validators.min(0)]],
-    statsConflictSource: ['referee' as PeladaStatsConflictSource, Validators.required],
     requireProfilePresentationOnFirstEvent: [false],
     allowTeamSplitAfterEventEnd: [false],
   });
@@ -329,7 +328,6 @@ export class PeladaDetailPage implements OnDestroy {
         caixaMembersOnly: !!values.caixaMembersOnly,
         maxSocios: Number(values.maxSocios ?? 0),
         maxAthletesPerEvent: Number(values.maxAthletesPerEvent ?? 0),
-        statsConflictSource: values.statsConflictSource === 'scout' ? 'scout' : 'referee',
         requireProfilePresentationOnFirstEvent: !!values.requireProfilePresentationOnFirstEvent,
         allowTeamSplitAfterEventEnd: !!values.allowTeamSplitAfterEventEnd,
       });
@@ -860,7 +858,6 @@ export class PeladaDetailPage implements OnDestroy {
       caixaMembersOnly: this.pelada.caixaMembersOnly !== false,
       maxSocios: this.pelada.maxSocios ?? 0,
       maxAthletesPerEvent: this.pelada.maxAthletesPerEvent ?? 0,
-      statsConflictSource: this.pelada.statsConflictSource ?? 'referee',
       requireProfilePresentationOnFirstEvent: !!this.pelada.requireProfilePresentationOnFirstEvent,
       allowTeamSplitAfterEventEnd: !!this.pelada.allowTeamSplitAfterEventEnd,
     });

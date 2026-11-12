@@ -30,6 +30,7 @@
         [avatarUrl]="profile.avatarUrl"
         [alt]="profile.displayName"
         size="lg"
+        [zoomable]="true"
       ></app-user-avatar>
       <div>
         <h1>{{ profile.displayName }}</h1>
@@ -93,6 +94,22 @@
         }
       }
     </ion-list>
+
+    @if (refereeCardStats; as cards) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Cartões na arbitragem</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <p>Cartões amarelos registrados no App: {{ formatStatNumber(cards.totalYellowCards) }}</p>
+          <p>Cartões vermelhos registrados no App: {{ formatStatNumber(cards.totalRedCards) }}</p>
+          <p>Média de cartões amarelos por pelada: {{ formatStatNumber(cards.avgYellowPelada) }}</p>
+          <p>Média de cartões amarelos por confronto: {{ formatStatNumber(cards.avgYellowConfronto) }}</p>
+          <p>Média de cartões vermelhos por pelada: {{ formatStatNumber(cards.avgRedPelada) }}</p>
+          <p>Média de cartões vermelhos por confronto: {{ formatStatNumber(cards.avgRedConfronto) }}</p>
+        </ion-card-content>
+      </ion-card>
+    }
 
     @if (fanStats) {
       <ion-card>

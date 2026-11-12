@@ -45,6 +45,9 @@ export class MuralShareService {
 
     if (context.scope === 'app') {
       lines.push(this.appFilterCaption(context));
+      if (context.periodShareLabel?.trim()) {
+        lines.push(context.periodShareLabel.trim());
+      }
       lines.push(this.formatShareDateTime(new Date()));
     } else if (context.scope === 'pelada') {
       if (context.peladaName?.trim()) lines.push(context.peladaName.trim());

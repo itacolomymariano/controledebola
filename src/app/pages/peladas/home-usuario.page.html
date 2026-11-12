@@ -40,6 +40,7 @@
             [avatarUrl]="user.avatarUrl"
             [alt]="user.displayName || user.apelido"
             size="lg"
+            [zoomable]="true"
           ></app-user-avatar>
           <div>
             <h1>{{ headerDisplayName || ('peladas.userTitle' | t) }}</h1>
@@ -98,7 +99,10 @@
           </app-playful-card>
           <app-playful-card tone="muted" class="ion-margin-bottom">
             <h3 class="usuario-mini-label">{{ 'peladas.athleteTeams' | t }}</h3>
-            <p class="usuario-mini-value">{{ joinNames(athleteProfile.teams) || '—' }}</p>
+            <app-played-team-list
+              [links]="athletePlayedTeamLinks"
+              [returnUrl]="athleteTeamsReturnUrl"
+            ></app-played-team-list>
           </app-playful-card>
         }
       }

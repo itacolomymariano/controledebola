@@ -8,6 +8,7 @@ import {
   APP_INSTALL_ANDROID_URL,
   APP_INSTALL_IOS_URL,
   APP_INVITE_LANDING_URL,
+  buildAppInviteLandingUrl,
   formatAppInviteShareText,
 } from '../config/app-install-links.config';
 
@@ -29,7 +30,7 @@ const STORE_BADGE_HEIGHT = 64;
 const STORE_BADGE_GAP = 16;
 
 /** Links Android + iOS na legenda editavel do share. */
-const SHARE_CAPTION = formatAppInviteShareText();
+const SHARE_CAPTION = formatAppInviteShareText({ src: 'invite', medium: 'share' });
 
 @Injectable({ providedIn: 'root' })
 export class AppInviteShareService {
@@ -50,7 +51,7 @@ export class AppInviteShareService {
         await Share.share({
           title: INVITE_TITLE,
           text: SHARE_CAPTION,
-          url: APP_INVITE_LANDING_URL,
+          url: buildAppInviteLandingUrl({ src: 'invite', medium: 'share' }),
           files: [saved.uri],
           dialogTitle: INVITE_DIALOG,
         });
@@ -63,7 +64,7 @@ export class AppInviteShareService {
         const withFile = {
           title: INVITE_TITLE,
           text: SHARE_CAPTION,
-          url: APP_INVITE_LANDING_URL,
+          url: buildAppInviteLandingUrl({ src: 'invite', medium: 'share' }),
           files: [file],
         };
         if (navigator.canShare?.(withFile)) {
@@ -73,7 +74,7 @@ export class AppInviteShareService {
         await navigator.share({
           title: INVITE_TITLE,
           text: SHARE_CAPTION,
-          url: APP_INVITE_LANDING_URL,
+          url: buildAppInviteLandingUrl({ src: 'invite', medium: 'share' }),
         });
         return;
       }
@@ -89,7 +90,7 @@ export class AppInviteShareService {
           await Share.share({
             title: INVITE_TITLE,
             text: SHARE_CAPTION,
-            url: APP_INVITE_LANDING_URL,
+            url: buildAppInviteLandingUrl({ src: 'invite', medium: 'share' }),
             dialogTitle: INVITE_DIALOG,
           });
           return;
@@ -98,7 +99,7 @@ export class AppInviteShareService {
           await navigator.share({
             title: INVITE_TITLE,
             text: SHARE_CAPTION,
-            url: APP_INVITE_LANDING_URL,
+            url: buildAppInviteLandingUrl({ src: 'invite', medium: 'share' }),
           });
           return;
         }

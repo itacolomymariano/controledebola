@@ -11,6 +11,7 @@ import { MuralShareContext } from '../../../core/models/mural-share.model';
 import {
   MuralAppBucketPayload,
   MuralAppPredictionEntry,
+  MuralLocationFilter,
   MuralRankingEntry,
   MuralTeamMatchBestAttack,
   MuralTeamMatchBestDefense,
@@ -45,6 +46,7 @@ export class MuralAppFeedComponent {
   @Input() dashboardFromCloud = false;
   /** Frase do filtro de regiao, igual a da legenda de compartilhamento. */
   @Input() filterCaption = '';
+  @Input() locationFilter?: MuralLocationFilter;
 
   get supportSections(): MuralAppSupportRoleSection[] {
     return supportRoleSectionsForTab(this.tab);

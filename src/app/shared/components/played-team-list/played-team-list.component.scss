@@ -1,0 +1,21 @@
+.played-team-list__media {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.played-team-list__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+}
+
+.played-team-list__empty {
+  display: block;
+  padding: 0.5rem 0;
+}
+
+.played-team-list__add {
+  margin-top: 0.75rem;
+}

@@ -1,5 +1,16 @@
 <ion-header>
   <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="zoomOut()" [disabled]="!canZoomOut" [attr.aria-label]="'imageLightbox.zoomOut' | t">
+        <ion-icon name="remove-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+      <ion-button (click)="zoomIn()" [attr.aria-label]="'imageLightbox.zoomIn' | t">
+        <ion-icon name="add-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+      <ion-button (click)="resetZoom()" [disabled]="!canResetZoom" [attr.aria-label]="'imageLightbox.reset' | t">
+        <ion-icon name="scan-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
     <ion-buttons slot="end">
       <ion-button (click)="dismiss()" [attr.aria-label]="'imageLightbox.close' | t">
         <ion-icon name="close" slot="icon-only"></ion-icon>
@@ -8,8 +19,29 @@
     <ion-title>{{ imageAlt }}</ion-title>
   </ion-toolbar>
 </ion-header>
-<ion-content class="image-lightbox-content" (click)="dismiss()">
-  <div class="image-lightbox-frame" (click)="$event.stopPropagation()">
-    <img [src]="imageSrc" [alt]="imageAlt" class="image-lightbox-img" />
+<ion-content class="image-lightbox-content" (click)="onContentClick()">
+  <div
+    #viewport
+    class="image-lightbox-viewport"
+    (click)="onViewportClick($event)"
+    (touchstart)="onTouchStart($event)"
+    (touchmove)="onTouchMove($event)"
+    (touchend)="onTouchEnd($event)"
+    (touchcancel)="onTouchEnd($event)"
+    (pointerdown)="onPointerDown($event)"
+    (pointermove)="onPointerMove($event)"
+    (pointerup)="onPointerUp()"
+    (pointercancel)="onPointerUp()"
+  >
+    <div class="image-lightbox-transform" [style.transform]="transformStyle">
+      <img
+        #imageEl
+        [src]="imageSrc"
+        [alt]="imageAlt"
+        class="image-lightbox-img"
+        (load)="onImageLoad()"
+        draggable="false"
+      />
+    </div>
   </div>
 </ion-content>

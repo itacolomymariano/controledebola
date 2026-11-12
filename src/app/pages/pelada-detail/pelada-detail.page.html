@@ -542,16 +542,6 @@
                     min="0"
                   ></ion-input>
                 </ion-item>
-                <ion-item>
-                  <ion-select
-                    label="Em divergencia entre scout e juiz, prevalece"
-                    labelPlacement="stacked"
-                    formControlName="statsConflictSource"
-                  >
-                    <ion-select-option value="referee">Juiz / Arbitro</ion-select-option>
-                    <ion-select-option value="scout">Scout</ion-select-option>
-                  </ion-select>
-                </ion-item>
                 <ion-item-divider>
                   <ion-label>Separacao de times</ion-label>
                 </ion-item-divider>
@@ -663,6 +653,22 @@
           </ion-card>
         }
         @if (!muralLoading) {
+        <ion-accordion-group class="ion-margin-bottom">
+          <ion-accordion value="explore">
+            <ion-item slot="header" color="light">
+              <ion-label>{{ 'mural.app.accordion.explore' | t }}</ion-label>
+            </ion-item>
+            <div slot="content" class="ion-padding-horizontal ion-padding-bottom">
+              <app-mural-explore-curiosities
+                scope="pelada"
+                [scopeId]="peladaId"
+                [shareContext]="muralShareContext"
+                [playfulChrome]="true"
+              ></app-mural-explore-curiosities>
+            </div>
+          </ion-accordion>
+        </ion-accordion-group>
+
         <app-mural-participant-stats
           [stats]="participantStats"
           scope="pelada"
@@ -673,6 +679,7 @@
         <app-mural-highlights-panel
           [highlights]="muralHighlights"
           scope="pelada"
+          [scopeId]="peladaId"
           [shareContext]="muralShareContext"
           [playfulChrome]="true"
         ></app-mural-highlights-panel>
@@ -737,6 +744,9 @@
                 <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="md"></app-user-avatar>
                 <div class="mural-playful-rank-meta">
                   <strong>{{ entry.userName }}</strong>
+                  @if (entry | muralAthleteLocationLine; as loc) {
+                    <span class="mural-athlete-location-line">{{ loc }}</span>
+                  }
                   <span>{{ rankingBadgeLabel(role, entry) }}</span>
                 </div>
               </div>

@@ -20,6 +20,9 @@ import {
 } from '../../core/models/mural.model';
 import { muralFilterCaption } from '../../core/utils/mural-filter-caption.util';
 import {
+  muralLocationFilterFromParts,
+} from '../../core/utils/mural-location-filter.util';
+import {
   displayCityName,
   displayNeighborhoodName,
 } from '../../core/utils/mural-location-drilldown.util';
@@ -55,6 +58,8 @@ export class MuralPage {
   selectedState = '';
   selectedCity = '';
   selectedNeighborhood = '';
+  /** Referencia estavel para filhos OnPush (nao chamar metodo no template). */
+  locationFilter: MuralLocationFilter = {};
   highlightsByTab: Partial<Record<MuralAppTab, MuralHighlights | null>> = {};
   participantStats: MuralParticipantLocationStats | null = null;
   locationTopRankings: MuralLocationTopRankings | null = null;
@@ -126,6 +131,7 @@ export class MuralPage {
     this.selectedNeighborhood = '';
     this.cityOptions = [];
     this.neighborhoodOptions = [];
+    this.syncLocationFilter();
     this.cdr.markForCheck();
     if (value) {
       this.cityOptions = await this.muralService.loadLocationOptions('city', { state: value });
@@ -140,6 +146,7 @@ export class MuralPage {
     this.selectedCity = value;
     this.selectedNeighborhood = '';
     this.neighborhoodOptions = [];
+    this.syncLocationFilter();
     this.cdr.markForCheck();
     if (value) {
       this.neighborhoodOptions = await this.muralService.loadLocationOptions('neighborhood', {
@@ -155,6 +162,7 @@ export class MuralPage {
     const value = this.normalizeSelectValue(event);
     if (value === this.selectedNeighborhood) return;
     this.selectedNeighborhood = value;
+    this.syncLocationFilter();
     this.cdr.markForCheck();
     await this.load();
   }
@@ -166,6 +174,7 @@ export class MuralPage {
     this.selectedNeighborhood = '';
     this.cityOptions = [];
     this.neighborhoodOptions = [];
+    this.syncLocationFilter();
     this.cdr.markForCheck();
     await this.load();
   }
@@ -181,12 +190,16 @@ export class MuralPage {
     this.cdr.markForCheck();
   }
 
-  private activeLocationFilter(): MuralLocationFilter {
-    return {
-      state: this.selectedState || undefined,
-      city: this.selectedCity || undefined,
-      neighborhood: this.selectedNeighborhood || undefined,
-    };
+  activeLocationFilter(): MuralLocationFilter {
+    return muralLocationFilterFromParts(
+      this.selectedState || undefined,
+      this.selectedCity || undefined,
+      this.selectedNeighborhood || undefined
+    );
+  }
+
+  private syncLocationFilter(): void {
+    this.locationFilter = this.activeLocationFilter();
   }
 
   private stateLabel(key: string): string {
@@ -286,13 +299,14 @@ export class MuralPage {
 
   private async load(): Promise<void> {
     const generation = ++this.muralLoadSeq;
+    this.syncLocationFilter();
     this.loading = true;
     this.errorMessage = '';
     this.cdr.markForCheck();
 
     let dashboard: MuralAppDashboard;
     try {
-      const filter = this.activeLocationFilter();
+      const filter = this.locationFilter;
       const [appDashboard, teamMatchDashboard] = await Promise.all([
         this.muralService.loadAppDashboard(filter),
         this.muralService.loadTeamMatchDashboard(filter),

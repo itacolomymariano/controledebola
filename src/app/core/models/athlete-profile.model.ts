@@ -1,3 +1,5 @@
+import { AthletePlayedTeamLink } from './athlete-played-team.model';
+
 export type AthleteMaritalStatus = 'casado' | 'solteiro';
 
 export type AthleteFootPreference = import('./athlete-performance.model').AthleteFootPreference;
@@ -32,6 +34,7 @@ export interface AthleteProfile {
   peladaRate?: number;
   teamMatchRate?: number;
   playedAmateurTeams?: string[];
+  playedTeamLinks?: AthletePlayedTeamLink[];
   attendanceScore: number;
 }
 
@@ -50,7 +53,29 @@ export interface CreateAthleteProfilePayload {
   peladaRate?: number;
   teamMatchRate?: number;
   playedAmateurTeams?: string[];
+  playedTeamLinks?: AthletePlayedTeamLink[];
 }
+
+export type UpdateAthleteProfilePayload = Partial<
+  Pick<
+    AthleteProfile,
+    | 'primaryPosition'
+    | 'secondaryPosition'
+    | 'thirdPosition'
+    | 'shoeSize'
+    | 'height'
+    | 'weight'
+    | 'maritalStatus'
+    | 'footPreference'
+    | 'personalTrainerUserId'
+    | 'personalScoutUserId'
+    | 'personalStatsConflictSource'
+    | 'peladaRate'
+    | 'teamMatchRate'
+    | 'playedAmateurTeams'
+    | 'playedTeamLinks'
+  >
+>;
 
 export const FOOTBALL_POSITIONS = [
   'Goleiro',

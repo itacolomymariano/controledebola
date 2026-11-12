@@ -1,5 +1,13 @@
 /** Pelada — socios, participantes e apresentacao de perfil */
 
+Parse.Cloud.beforeSave('Pelada', (request) => {
+  const pelada = request.object;
+  if (!pelada) return;
+  if (pelada.get('statsConflictSource') === 'scout') {
+    pelada.set('statsConflictSource', 'referee');
+  }
+});
+
 // Participantes da pelada
 Parse.Cloud.define('listPeladaEventParticipants', async (request) => {
   const peladaId = request.params.peladaId;
@@ -271,7 +279,7 @@ Parse.Cloud.define('listPeladasForFeed', async (request) => {
       caixaMembersOnly: pelada.get('caixaMembersOnly') !== false,
       maxSocios: Number(pelada.get('maxSocios') || 0),
       maxAthletesPerEvent: Number(pelada.get('maxAthletesPerEvent') || 0),
-      statsConflictSource: pelada.get('statsConflictSource') === 'scout' ? 'scout' : 'referee',
+      statsConflictSource: 'referee',
       requireProfilePresentationOnFirstEvent: !!pelada.get(
         'requireProfilePresentationOnFirstEvent'
       ),

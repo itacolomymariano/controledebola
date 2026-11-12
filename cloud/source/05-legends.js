@@ -41,6 +41,19 @@ function mapLegendAthleteRow(row) {
   };
 }
 
+function formatAthleteRefPickerSubtitle(position, age, state, city, neighborhood) {
+  const parts = [];
+  if (position) parts.push(String(position).trim());
+  if (age != null && age >= 0) parts.push(`${age} anos`);
+  const uf = String(state || '').trim();
+  const cidade = String(city || '').trim();
+  const bairro = String(neighborhood || '').trim();
+  if (uf) parts.push(uf);
+  if (cidade) parts.push(cidade);
+  if (bairro) parts.push(bairro);
+  return parts.length ? parts.join(' · ') : '';
+}
+
 function ageFromBirthDate(value) {
   if (!value) return null;
   const birth = value instanceof Date ? value : new Date(value);
@@ -362,7 +375,8 @@ Parse.Cloud.define('createAmateurLegendTeam', async (request) => {
   row.set('name', name);
   row.set('apelido', apelido);
   row.set('relationship', relationship);
-  row.set('athleteRefs', Array.isArray(request.params.athleteRefs) ? request.params.athleteRefs : []);
+  const createAthleteRefs = normalizeAthleteRefs(request.params.athleteRefs);
+  row.set('athleteRefs', createAthleteRefs);
   row.set('registeredByUser', user);
   row.set('registeredByName', user.get('apelido') || user.get('name') || user.getUsername());
   row.set('registeredAt', new Date());
@@ -382,6 +396,9 @@ Parse.Cloud.define('createAmateurLegendTeam', async (request) => {
 
   row.setACL(legendPublicAcl(user));
   await row.save(null, { useMasterKey: true });
+  if (typeof syncAthletePlayedLinksForLegendTeamChange === 'function') {
+    await syncAthletePlayedLinksForLegendTeamChange(row, [], createAthleteRefs);
+  }
   return mapLegendTeamRow(row);
 });
 
@@ -493,10 +510,13 @@ Parse.Cloud.define('updateAmateurLegendTeam', async (request) => {
     );
   }
 
+  const previousRefs = row.get('athleteRefs');
+  const nextAthleteRefs = normalizeAthleteRefs(request.params.athleteRefs);
+
   row.set('name', name);
   row.set('apelido', apelido);
   row.set('relationship', relationship);
-  row.set('athleteRefs', normalizeAthleteRefs(request.params.athleteRefs));
+  row.set('athleteRefs', nextAthleteRefs);
 
   if (request.params.imageUrl) row.set('imageUrl', String(request.params.imageUrl));
   if (request.params.location) row.set('location', request.params.location);
@@ -514,6 +534,9 @@ Parse.Cloud.define('updateAmateurLegendTeam', async (request) => {
   }
 
   await row.save(null, { useMasterKey: true });
+  if (typeof syncAthletePlayedLinksForLegendTeamChange === 'function') {
+    await syncAthletePlayedLinksForLegendTeamChange(row, previousRefs, nextAthleteRefs);
+  }
   return mapLegendTeamRow(row);
 });
 
@@ -930,11 +953,21 @@ Parse.Cloud.define('searchLegendAthleteRefs', async (request) => {
   legendQuery.limit(limit);
   for (const row of await legendQuery.find({ useMasterKey: true })) {
     const label = row.get('apelido') || row.get('name');
-    if (search && !`${label} ${row.get('name')}`.toLowerCase().includes(search)) continue;
+    const haystack = `${label} ${row.get('name')} ${row.get('position') || ''}`.toLowerCase();
+    if (search && !haystack.includes(search)) continue;
+    const addr = row.get('address') || {};
+    const subtitle =
+      formatAthleteRefPickerSubtitle(
+        row.get('position'),
+        ageFromBirthDate(row.get('birthDate')),
+        addr.state,
+        addr.city,
+        addr.neighborhood
+      ) || 'Lenda cadastrada';
     suggestions.push({
       id: row.id,
       label,
-      subtitle: 'Lenda cadastrada',
+      subtitle,
       source: 'legend_athlete',
       imageUrl: row.get('imageUrl') || undefined,
     });
@@ -942,7 +975,7 @@ Parse.Cloud.define('searchLegendAthleteRefs', async (request) => {
 
   const athleteQuery = new Parse.Query('AthleteProfile');
   athleteQuery.include('user');
-  athleteQuery.limit(limit);
+  athleteQuery.limit(Math.min(limit * 10, 200));
   for (const profile of await athleteQuery.find({ useMasterKey: true })) {
     const profileUser = profile.get('user');
     if (!profileUser?.id) continue;
@@ -951,13 +984,26 @@ Parse.Cloud.define('searchLegendAthleteRefs', async (request) => {
       .catch(() => null);
     if (!fullUser) continue;
     const label = fullUser.get('apelido') || fullUser.get('name') || 'Atleta';
-    if (search && !label.toLowerCase().includes(search)) continue;
+    const haystack = `${label} ${fullUser.get('name') || ''} ${
+      profile.get('primaryPosition') || ''
+    }`.toLowerCase();
+    if (search && !haystack.includes(search)) continue;
+    const addr = fullUser.get('address') || {};
+    const subtitle =
+      formatAthleteRefPickerSubtitle(
+        profile.get('primaryPosition'),
+        ageFromBirthDate(fullUser.get('birthDate')),
+        addr.state,
+        addr.city,
+        addr.neighborhood
+      ) || 'Atleta no app';
     suggestions.push({
       id: fullUser.id,
       label,
-      subtitle: 'Atleta no app',
+      subtitle,
       source: 'app_athlete',
-      imageUrl: fullUser.get('avatarUrl') || undefined,
+      imageUrl:
+        profile.get('userAvatarUrl') || fullUser.get('avatarUrl') || undefined,
     });
   }
 
@@ -1281,9 +1327,13 @@ Parse.Cloud.define('respondLegendTeamJoin', async (request) => {
   }
 
   const label = String(athlete.get('apelido') || athlete.get('name') || 'Atleta').trim();
+  const refsBeforePush = refs.slice();
   refs.push({ type: 'app_athlete', id: athlete.id, label });
   teamFull.set('athleteRefs', refs);
   await teamFull.save(null, { useMasterKey: true });
+  if (typeof syncAthletePlayedLinksForLegendTeamChange === 'function') {
+    await syncAthletePlayedLinksForLegendTeamChange(teamFull, refsBeforePush, refs);
+  }
 
   row.set('status', 'accepted');
   await row.save(null, { useMasterKey: true });

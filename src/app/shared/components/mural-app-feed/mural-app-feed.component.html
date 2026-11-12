@@ -241,6 +241,9 @@
         <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="md"></app-user-avatar>
         <div class="mural-playful-rank-meta">
           <strong>{{ entry.userName }}</strong>
+          @if (entry | muralAthleteLocationLine; as loc) {
+            <span class="mural-athlete-location-line">{{ loc }}</span>
+          }
           <span>{{ badge('athlete', entry) }}</span>
         </div>
       </div>
@@ -268,7 +271,12 @@
     @for (entry of athleteEntries(); track entry.userId; let i = $index) {
       <div class="rank-row ion-margin-bottom">
         <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="sm"></app-user-avatar>
-        <span>{{ i + 1 }}. {{ entry.userName }}</span>
+        <div class="rank-row__label">
+          <span>{{ i + 1 }}. {{ entry.userName }}</span>
+          @if (entry | muralAthleteLocationLine; as loc) {
+            <small class="mural-athlete-location-line">{{ loc }}</small>
+          }
+        </div>
         <ion-badge>{{ badge('athlete', entry) }}</ion-badge>
       </div>
     }
@@ -453,6 +461,13 @@
       <ion-label>{{ 'mural.app.accordion.explore' | t }}</ion-label>
     </ion-item>
     <div slot="content" class="ion-padding">
+      <app-mural-explore-curiosities
+        scope="app"
+        [shareContext]="shareContext"
+        [filterCaption]="filterCaption"
+        [locationFilter]="locationFilter"
+      ></app-mural-explore-curiosities>
+
       <app-mural-participant-stats
         [stats]="participantStats"
         scope="app"
@@ -481,6 +496,22 @@
       <app-mural-fan-highlights scope="app" [shareContext]="shareContext" [filterCaption]="filterCaption"></app-mural-fan-highlights>
     </div>
   </ion-accordion>
+
+  @if (tab === 'geral') {
+    <ion-accordion value="period-results">
+      <ion-item slot="header" color="light">
+        <ion-label>Resultados por período</ion-label>
+      </ion-item>
+      <div slot="content" class="ion-padding">
+        <app-mural-period-rankings-card
+          [shareContext]="shareContext"
+          [filterCaption]="filterCaption"
+          [locationFilter]="locationFilter"
+          [appBucketTab]="tab"
+        ></app-mural-period-rankings-card>
+      </div>
+    </ion-accordion>
+  }
 </ion-accordion-group>
 
 <ng-template #peladaTopCard>

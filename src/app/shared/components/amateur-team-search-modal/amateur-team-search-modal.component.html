@@ -58,7 +58,7 @@
       } @else {
         <ion-list>
           @for (row of filteredRows; track row.id) {
-            <ion-item button (click)="selectRow(row)">
+            <ion-item>
               @if (row.imageUrl) {
                 <app-user-avatar slot="start" [avatarUrl]="row.imageUrl" [alt]="row.name" size="md"></app-user-avatar>
               }
@@ -71,6 +71,14 @@
                   <p>Media de idade: {{ row.averageAge }} anos</p>
                 }
               </ion-label>
+              <div slot="end" class="amateur-team-modal__actions">
+                <ion-button size="small" fill="clear" (click)="previewRow(row, $event)">
+                  {{ 'common.viewProfile' | t }}
+                </ion-button>
+                <ion-button size="small" (click)="selectRow(row)">
+                  {{ 'common.linkTeam' | t }}
+                </ion-button>
+              </div>
             </ion-item>
           }
         </ion-list>

@@ -29,6 +29,7 @@
         [avatarUrl]="profile.avatarUrl"
         [alt]="profile.displayName"
         size="lg"
+        [zoomable]="true"
       ></app-user-avatar>
       <div>
         <h1>{{ profile.displayName }}</h1>
@@ -82,17 +83,15 @@
             }
           </ion-label>
         </ion-item>
-        <ion-item>
+        <ion-item lines="none">
           <ion-label class="ion-text-wrap">
             <h3>Times que joga</h3>
-            @if (!profile.teams.length) {
-              <p>Nenhum time registrado.</p>
-            }
-            @for (team of profile.teams; track team) {
-              <p>{{ team }}</p>
-            }
           </ion-label>
         </ion-item>
+        <app-played-team-list
+          [links]="playedTeamLinks"
+          [returnUrl]="teamsReturnUrl"
+        ></app-played-team-list>
         <ion-item>
           <ion-label class="ion-text-wrap">
             <h3>Time profissional do coração</h3>

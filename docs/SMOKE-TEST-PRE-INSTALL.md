@@ -57,6 +57,21 @@ Publicar `cloud/main.js` no Back4App quando houver alteração em `cloud/source/
 | 18 | Time lenda | Elenco com foto, apelido, idade ou **in memoriam**; **Solicitar participacao**; inbox (2 responsaveis) aceitar + **Ver perfil do atleta**; segundo aceite sem duplicar atleta |
 | 19 | Busca | Resultados ordenados por proximidade (endereco do usuario); busca por **objectId** 24 hex (perfil/time lenda) |
 | 20 | ID cadastro | Telas de visualizacao exibem **ID do cadastro** copiavel (time ativo/lenda, atleta lenda, usuario Home) |
+| L1 | Vinculo time lenda → atleta | Associar `app_athlete` no elenco do time lenda → **Home usuário** e **Perfil atleta** listam o time (apos deploy Cloud + `reconcilePlayedTeamLinksFromRosters` se dados antigos) |
+| L2 | Lista + voltar | Perfil atleta (edição): **Ver perfil** → time lenda/ativo → toolbar **Voltar ao atleta** |
+| L3 | Desvincular | Atleta **Desvincular** remove da lista e, se `roster`, sai do elenco do time lenda |
+| L4 | Adicionar time | Modal adicionar: busca ≥2 chars, **Ver perfil** antes de **Vincular** |
+| L5 | Meus dados / sugestões | `legend-suggest-input`: sugestão com ID → **Ver perfil** sem selecionar |
+| P1 | Escudo Sport | Time coração **Sport** → escudo do Sport Club do Recife (não outro clube) |
+| P2 | Ampliação in-app | Home / perfil usuário / lista de times: toque na foto ou escudo → modal in-app |
+| P3 | Rankings período (pelada) | Mural da pelada: card legacy semana/mês/ano + gols/amarelos/vermelhos com avatar |
+| P4 | Acordeão período (app) | Mural **Geral** → abaixo de **Explorar / Curiosidades**: acordeão **Resultados por período**; 6 abas (craque, goleador, melhor goleiro, juiz, amarelos, vermelhos); share com legenda do período; **goleador/cartões** só com súmula salva (evento só com scout não conta) |
+| P4b | Goleador só súmula | Mesmo evento: scout com gols **sem** súmula → goleador no mural/périodo não lista o atleta; após juiz salvar súmula → totais batem com a súmula |
+| E1 | Explorar — gols scout | Mural **Geral** → Explorar/Curiosidades: card pé direito (ou falta) mostra atleta após apontamento scout; `?` abre regra |
+| E1a | Explorar — altura/mapa | Mesmo acordeão: **Altura** (mais alto/baixo com `height` no AthleteProfile) e **Mapeamento** (UF/cidade com atletas cadastrados), sem depender de inscrição recente em evento |
+| E2 | Explorar — filtro UF | Com filtro de estado ativo, cards Explorar mudam (ou “sem dados”) vs Brasil inteiro |
+| E3 | Explorar — craque 50+ | Atleta ≥50 com votos no recorte aparece em Craque MASTER (Explorar); Conquistas Promessa/Master continuam por idade extrema |
+| P5 | Perfil juiz — cartões | Buscar → perfil **Juiz**: card com totais e médias amarelo/vermelho (pelada vs confronto) |
 
 ## Quando rodar
 

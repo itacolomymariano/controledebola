@@ -19,6 +19,7 @@ import { MuralAppTab } from '../../../core/config/mural-app-sections.config';
 export class MuralHighlightsPanelComponent {
   @Input() highlights: MuralHighlights | null = null;
   @Input() scope: 'app' | 'pelada' | 'event' = 'pelada';
+  @Input() scopeId = '';
   @Input() shareContext: MuralShareContext | null = null;
   /** Mural global por aba (Peladas / Confrontos / Geral). */
   @Input() appBucketTab: MuralAppTab | null = null;

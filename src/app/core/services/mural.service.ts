@@ -27,6 +27,8 @@ import {
   MuralVote,
   MuralVoteAggregates,
 } from '../models/mural.model';
+import { MuralExploreCuriosities } from '../models/mural-explore-curiosities.model';
+import { MuralShowcaseEntry } from '../models/mural-highlights.model';
 import { isInvalidCloudFunctionError, parseErrorMessage } from '../utils/parse-error.util';
 import { isGoalkeeperPosition, normalizeVoteTargetRole } from '../utils/mural-role.util';
 import { EventPerformanceService } from './event-performance.service';
@@ -35,6 +37,38 @@ import { ParseService } from './parse.service';
 import { RegistrationService } from './registration.service';
 
 const CLASS = 'MuralVote';
+
+export type MuralPeriodSpotlightKey =
+  | 'craque'
+  | 'goleador'
+  | 'melhorGoleiro'
+  | 'melhorJuiz'
+  | 'yellowCards'
+  | 'redCards';
+
+export const MURAL_PERIOD_SPOTLIGHT_KEYS: MuralPeriodSpotlightKey[] = [
+  'craque',
+  'goleador',
+  'melhorGoleiro',
+  'melhorJuiz',
+  'yellowCards',
+  'redCards',
+];
+
+export interface MuralPeriodSpotlightEntry {
+  userId: string;
+  userName: string;
+  avatarUrl?: string;
+  value: number;
+}
+
+export interface MuralPeriodSpotlightsPayload {
+  period: string;
+  periodShareLabel: string;
+  windowStart: string;
+  windowEnd: string;
+  winners: Partial<Record<MuralPeriodSpotlightKey, MuralPeriodSpotlightEntry>>;
+}
 
 @Injectable({ providedIn: 'root' })
 export class MuralService {
@@ -409,6 +443,11 @@ export class MuralService {
         combinedScore: Number(entry['combinedScore']) || 0,
         distinctVoterCount:
           entry['distinctVoterCount'] != null ? Number(entry['distinctVoterCount']) : undefined,
+        locationState: entry['locationState'] ? String(entry['locationState']) : undefined,
+        locationCity: entry['locationCity'] ? String(entry['locationCity']) : undefined,
+        locationNeighborhood: entry['locationNeighborhood']
+          ? String(entry['locationNeighborhood'])
+          : undefined,
       };
     });
   }
@@ -1217,5 +1256,184 @@ export class MuralService {
     if (explicit) return explicit;
     const user = registration.get('user') as Parse.User | undefined;
     return user?.id ?? '';
+  }
+
+  async getPeriodSpotlights(
+    period: 'week' | 'month' | 'year',
+    filter?: MuralLocationFilter,
+    appBucketTab: 'geral' | 'peladas' | 'confrontos' = 'geral'
+  ): Promise<MuralPeriodSpotlightsPayload> {
+    try {
+      const result = await Parse.Cloud.run('getMuralPeriodSpotlights', {
+        period,
+        appBucketTab,
+        ...this.locationParams(filter),
+      });
+      const raw = result as Record<string, unknown>;
+      const winnersRaw = (raw['winners'] as Record<string, unknown>) || {};
+      const winners: Partial<Record<MuralPeriodSpotlightKey, MuralPeriodSpotlightEntry>> = {};
+      for (const key of MURAL_PERIOD_SPOTLIGHT_KEYS) {
+        const row = winnersRaw[key];
+        if (!row || typeof row !== 'object') continue;
+        const entry = row as Record<string, unknown>;
+        const userId = String(entry['userId'] || '');
+        const value = Number(entry['value'] || 0);
+        if (!userId || value <= 0) continue;
+        winners[key] = {
+          userId,
+          userName: String(entry['userName'] || 'Participante'),
+          avatarUrl:
+            typeof entry['avatarUrl'] === 'string' && entry['avatarUrl'].trim()
+              ? entry['avatarUrl'].trim()
+              : undefined,
+          value,
+        };
+      }
+      return {
+        period: String(raw['period'] || period),
+        periodShareLabel: String(raw['periodShareLabel'] || ''),
+        windowStart: String(raw['windowStart'] || ''),
+        windowEnd: String(raw['windowEnd'] || ''),
+        winners,
+      };
+    } catch {
+      return {
+        period,
+        periodShareLabel: '',
+        windowStart: '',
+        windowEnd: '',
+        winners: {},
+      };
+    }
+  }
+
+  async getPeriodRankings(
+    scope: MuralScope,
+    scopeId: string | undefined,
+    period: 'week' | 'month' | 'year' | 'two_years',
+    metric: 'goals' | 'yellowCards' | 'redCards' | 'goalsHeader' = 'goals',
+    topN = 10
+  ): Promise<Array<{ userId: string; userName: string; avatarUrl?: string; value: number }>> {
+    try {
+      const result = await Parse.Cloud.run('getMuralPeriodRankings', {
+        scope,
+        scopeId,
+        period,
+        metric,
+        topN,
+      });
+      const entries = (result as { entries?: unknown })?.entries;
+      if (!Array.isArray(entries)) return [];
+      return entries
+        .map((row) => {
+          const entry = row as Record<string, unknown>;
+          const avatar = entry['avatarUrl'];
+          return {
+            userId: String(entry['userId'] || ''),
+            userName: String(entry['userName'] || 'Atleta'),
+            avatarUrl: typeof avatar === 'string' && avatar.trim() ? avatar.trim() : undefined,
+            value: Number(entry['value'] || 0),
+          };
+        })
+        .filter((row) => row.userId && row.value > 0);
+    } catch {
+      return [];
+    }
+  }
+
+  async loadExploreCuriosities(
+    scope: MuralScope,
+    scopeId?: string,
+    filter?: MuralLocationFilter
+  ): Promise<MuralExploreCuriosities | null> {
+    try {
+      const result = await Parse.Cloud.run('getMuralExploreCuriosities', {
+        scope,
+        ...(scopeId ? { scopeId } : {}),
+        ...this.locationParams(filter),
+      });
+      if (!result || typeof result !== 'object') {
+        return null;
+      }
+      return this.normalizeExploreCuriosities(result);
+    } catch (error: unknown) {
+      if (!isInvalidCloudFunctionError(error)) {
+        console.warn('getMuralExploreCuriosities failed', error);
+      }
+      return null;
+    }
+  }
+
+  private normalizeExploreCuriosities(raw: unknown): MuralExploreCuriosities {
+    const row = raw as Record<string, unknown>;
+    const goalRaw = (row['goalDetails'] || {}) as Record<string, unknown>;
+    const mapRaw = (row['athleteMap'] || {}) as Record<string, unknown>;
+  const goalDetails = {
+      rightFoot: this.normalizeExploreShowcaseEntry(goalRaw['rightFoot']),
+      leftFoot: this.normalizeExploreShowcaseEntry(goalRaw['leftFoot']),
+      header: this.normalizeExploreShowcaseEntry(goalRaw['header']),
+      freeKick: this.normalizeExploreShowcaseEntry(goalRaw['freeKick']),
+      penalty: this.normalizeExploreShowcaseEntry(goalRaw['penalty']),
+      penaltySaver: this.normalizeExploreShowcaseEntry(goalRaw['penaltySaver']),
+    };
+    const topStateRaw = mapRaw['topState'] as Record<string, unknown> | null | undefined;
+    const topCityRaw = mapRaw['topCity'] as Record<string, unknown> | null | undefined;
+    const topNeighborhoodRaw = mapRaw['topNeighborhood'] as Record<string, unknown> | null | undefined;
+    return {
+      goalDetails,
+      craqueMaster: this.normalizeExploreShowcaseEntry(row['craqueMaster']),
+      craquePromessa: this.normalizeExploreShowcaseEntry(row['craquePromessa']),
+      goleiroMaster: this.normalizeExploreShowcaseEntry(row['goleiroMaster']),
+      goleiroPromessa: this.normalizeExploreShowcaseEntry(row['goleiroPromessa']),
+      tallest: this.normalizeExploreShowcaseEntry(row['tallest']),
+      shortest: this.normalizeExploreShowcaseEntry(row['shortest']),
+      athleteMap: {
+        topState: topStateRaw?.['uf']
+          ? { uf: String(topStateRaw['uf']), count: Number(topStateRaw['count'] || 0) }
+          : null,
+        topCity:
+          topCityRaw?.['city'] && topCityRaw?.['uf']
+            ? {
+                uf: String(topCityRaw['uf']),
+                city: String(topCityRaw['city']),
+                count: Number(topCityRaw['count'] || 0),
+              }
+            : null,
+        topNeighborhood:
+          topNeighborhoodRaw?.['neighborhood'] &&
+          topNeighborhoodRaw?.['city'] &&
+          topNeighborhoodRaw?.['uf']
+            ? {
+                uf: String(topNeighborhoodRaw['uf']),
+                city: String(topNeighborhoodRaw['city']),
+                neighborhood: String(topNeighborhoodRaw['neighborhood']),
+                count: Number(topNeighborhoodRaw['count'] || 0),
+              }
+            : null,
+      },
+    };
+  }
+
+  private normalizeExploreShowcaseEntry(raw: unknown): MuralShowcaseEntry | null {
+    if (!raw || typeof raw !== 'object') return null;
+    const entry = raw as Record<string, unknown>;
+    const userId = String(entry['userId'] || '').trim();
+    if (!userId) return null;
+    const displayName = String(entry['displayName'] || entry['userName'] || 'Participante').trim();
+    const avatarUrl = String(entry['avatarUrl'] || '').trim();
+    const score = Number(entry['score'] ?? 0);
+    return {
+      userId,
+      displayName,
+      avatarUrl: avatarUrl || undefined,
+      profileLabel: String(entry['profileLabel'] || 'Atleta').trim(),
+      score: Number.isFinite(score) ? score : 0,
+      scoreLabel: String(entry['scoreLabel'] || '').trim() || undefined,
+      locationState: entry['locationState'] ? String(entry['locationState']) : undefined,
+      locationCity: entry['locationCity'] ? String(entry['locationCity']) : undefined,
+      locationNeighborhood: entry['locationNeighborhood']
+        ? String(entry['locationNeighborhood'])
+        : undefined,
+    };
   }
 }

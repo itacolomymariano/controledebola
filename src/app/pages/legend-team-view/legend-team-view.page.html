@@ -1,7 +1,11 @@
 <ion-header>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/tabs/peladas/times"></ion-back-button>
+      @if (teamReturn?.returnUrl) {
+        <ion-button (click)="goBack()">{{ teamReturn!.returnLabel || ('athleteProfile.backToAthlete' | t) }}</ion-button>
+      } @else {
+        <ion-back-button defaultHref="/tabs/peladas/times"></ion-back-button>
+      }
     </ion-buttons>
     <ion-title>Time lenda</ion-title>
     <ion-buttons slot="end">
@@ -28,7 +32,7 @@
     <app-record-id-note [recordId]="team.id"></app-record-id-note>
     <div class="profile-header">
       @if (team.imageUrl) {
-        <ion-avatar class="legend-avatar">
+        <ion-avatar class="legend-avatar legend-avatar--zoomable" (click)="openTeamImage()">
           <img [src]="team.imageUrl" [alt]="team.apelido" />
         </ion-avatar>
       } @else {
@@ -95,6 +99,7 @@
               [avatarUrl]="athlete.imageUrl"
               [alt]="athlete.apelido"
               size="sm"
+              [zoomable]="true"
             ></app-user-avatar>
             <ion-label>
               <h3>{{ athlete.apelido }}</h3>

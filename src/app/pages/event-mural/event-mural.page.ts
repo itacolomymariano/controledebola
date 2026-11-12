@@ -55,7 +55,8 @@ export type EventMuralViewId =
   | 'curiosities-pro-team'
   | 'curiosities-amateur-team'
   | 'curiosities-height'
-  | 'curiosities-fan-checkins';
+  | 'curiosities-fan-checkins'
+  | 'curiosities-explore';
 
 export interface EventMuralStackFrame {
   id: EventMuralViewId;

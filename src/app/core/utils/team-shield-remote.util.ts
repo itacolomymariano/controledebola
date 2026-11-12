@@ -1,7 +1,7 @@
 import { TEAM_SHIELD_SEARCH_ALIASES } from '../data/team-shield-aliases.data';
 import { teamSlug } from './team-shield.util';
 
-const SPORTSDB_API = 'https://www.thesportsdb.com/api/v1/json/3/searchteams.php';
+const SPORTSDB_API = 'https://www.thesportsdb.com/api/v1/json/123/searchteams.php';
 
 interface SportsDbTeam {
   strTeam?: string;
@@ -39,6 +39,20 @@ function normalizeSearchText(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
+}
+
+function acceptSportsDbTeamForSlug(slug: string, team: SportsDbTeam): boolean {
+  const normalizedSlug = String(slug || '').trim().toLowerCase();
+  if (normalizedSlug !== 'sport') return true;
+
+  const names = [team.strTeam, team.strTeamAlternate]
+    .map((value) => normalizeSearchText(String(value || '')))
+    .filter(Boolean);
+  return names.some(
+    (name) =>
+      name.includes('recife') &&
+      (name.includes('sport club') || name.includes('sport recife') || name === 'sport')
+  );
 }
 
 function scoreSportsDbMatch(team: SportsDbTeam, queries: string[]): number {
@@ -109,12 +123,14 @@ export async function resolveTeamShieldFromSportsDb(
   teamName: string,
   slug?: string
 ): Promise<string | null> {
-  const queries = buildTeamShieldSearchQueries(teamName, slug);
+  const resolvedSlug = slug || teamSlug(teamName);
+  const queries = buildTeamShieldSearchQueries(teamName, resolvedSlug);
   const candidates = new Map<string, { team: SportsDbTeam; score: number }>();
 
   for (const query of queries) {
     const teams = await searchSportsDbTeams(query);
     for (const team of teams) {
+      if (!acceptSportsDbTeamForSlug(resolvedSlug, team)) continue;
       const score = scoreSportsDbMatch(team, queries);
       if (score < 30) continue;
       const key = String(team.strTeam || '') + '|' + String(team.strCountry || '');

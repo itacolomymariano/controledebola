@@ -24,12 +24,14 @@ import { UserBarComponent } from './components/user-bar/user-bar.component';
 import { LegendSuggestInputComponent } from './components/legend-suggest-input/legend-suggest-input.component';
 import { AmateurTeamSearchModalComponent } from './components/amateur-team-search-modal/amateur-team-search-modal.component';
 import { MuralHighlightsPanelComponent } from './components/mural-highlights-panel/mural-highlights-panel.component';
+import { MuralPeriodRankingsCardComponent } from './components/mural-period-rankings-card/mural-period-rankings-card.component';
 import { MuralShowcaseEntryComponent } from './components/mural-showcase-entry/mural-showcase-entry.component';
 import { EventRoleHiringPanelComponent } from './components/event-role-hiring-panel/event-role-hiring-panel.component';
 import { MuralParticipantStatsComponent } from './components/mural-participant-stats/mural-participant-stats.component';
 import { MuralLocationTopRankingsComponent } from './components/mural-location-top-rankings/mural-location-top-rankings.component';
 import { MuralPredictionRankingsComponent } from './components/mural-prediction-rankings/mural-prediction-rankings.component';
 import { MuralFanHighlightsComponent } from './components/mural-fan-highlights/mural-fan-highlights.component';
+import { MuralExploreCuriositiesComponent } from './components/mural-explore-curiosities/mural-explore-curiosities.component';
 import { MuralSupportOpsCardComponent } from './components/mural-support-ops-card/mural-support-ops-card.component';
 import { ScoutAthleteStripComponent } from './components/scout-athlete-strip/scout-athlete-strip.component';
 import { ScoutStatCounterComponent } from './components/scout-stat-counter/scout-stat-counter.component';
@@ -44,6 +46,7 @@ import { MuralMediaTopCardComponent } from './components/mural-media-top-card/mu
 import { MuralShareButtonComponent } from './components/mural-share-button/mural-share-button.component';
 import { MuralEventContextComponent } from './components/mural-event-context/mural-event-context.component';
 import { TranslatePipe } from './pipes/translate.pipe';
+import { MuralAthleteLocationLinePipe } from './pipes/mural-athlete-location-line.pipe';
 import { CoachHintComponent } from './components/coach-hint/coach-hint.component';
 import { AppScreenHelpComponent } from './components/app-screen-help/app-screen-help.component';
 import { LocaleFlagsComponent } from './components/locale-flags/locale-flags.component';
@@ -60,6 +63,7 @@ import { PlayfulCardComponent } from './components/playful-card/playful-card.com
 import { PlayfulGridComponent } from './components/playful-grid/playful-grid.component';
 import { ImageLightboxComponent } from './components/image-lightbox/image-lightbox.component';
 import { FormWizardComponent } from './components/form-wizard/form-wizard.component';
+import { PlayedTeamListComponent } from './components/played-team-list/played-team-list.component';
 
 @NgModule({
   declarations: [
@@ -85,12 +89,14 @@ import { FormWizardComponent } from './components/form-wizard/form-wizard.compon
     LegendSuggestInputComponent,
     AmateurTeamSearchModalComponent,
     MuralHighlightsPanelComponent,
+    MuralPeriodRankingsCardComponent,
     MuralShowcaseEntryComponent,
     EventRoleHiringPanelComponent,
     MuralParticipantStatsComponent,
     MuralLocationTopRankingsComponent,
     MuralPredictionRankingsComponent,
     MuralFanHighlightsComponent,
+    MuralExploreCuriositiesComponent,
     MuralSupportOpsCardComponent,
     ScoutAthleteStripComponent,
     ScoutStatCounterComponent,
@@ -120,7 +126,9 @@ import { FormWizardComponent } from './components/form-wizard/form-wizard.compon
     PlayfulGridComponent,
     ImageLightboxComponent,
     FormWizardComponent,
+    PlayedTeamListComponent,
     TranslatePipe,
+    MuralAthleteLocationLinePipe,
   ],
   imports: [CommonModule, FormsModule, ReactiveFormsModule, IonicModule],
   exports: [
@@ -146,12 +154,14 @@ import { FormWizardComponent } from './components/form-wizard/form-wizard.compon
     LegendSuggestInputComponent,
     AmateurTeamSearchModalComponent,
     MuralHighlightsPanelComponent,
+    MuralPeriodRankingsCardComponent,
     MuralShowcaseEntryComponent,
     EventRoleHiringPanelComponent,
     MuralParticipantStatsComponent,
     MuralLocationTopRankingsComponent,
     MuralPredictionRankingsComponent,
     MuralFanHighlightsComponent,
+    MuralExploreCuriositiesComponent,
     MuralSupportOpsCardComponent,
     ScoutAthleteStripComponent,
     ScoutStatCounterComponent,
@@ -181,7 +191,9 @@ import { FormWizardComponent } from './components/form-wizard/form-wizard.compon
     PlayfulGridComponent,
     ImageLightboxComponent,
     FormWizardComponent,
+    PlayedTeamListComponent,
     TranslatePipe,
+    MuralAthleteLocationLinePipe,
   ],
 })
 export class SharedModule {}

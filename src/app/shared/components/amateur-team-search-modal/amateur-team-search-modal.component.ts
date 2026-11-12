@@ -6,8 +6,14 @@ import {
   Input,
   Output,
 } from '@angular/core';
+import { AthletePlayedTeamPick } from '../../../core/models/athlete-played-team.model';
 import { DirectoryTeamPickerRow, TeamDirectoryKind } from '../../../core/models/team.model';
 import { AmateurLegendService } from '../../../core/services/amateur-legend.service';
+import { Router } from '@angular/router';
+import {
+  navigateToTeamProfile,
+  TeamProfileReturnState,
+} from '../../../core/utils/team-profile-navigation.util';
 
 @Component({
   selector: 'app-amateur-team-search-modal',
@@ -21,8 +27,9 @@ export class AmateurTeamSearchModalComponent {
   @Input() titleKey = 'athleteProfile.addPlayedTeam';
   @Input() allowFreeText = true;
   @Input() showCreateLegendTeam = false;
+  @Input() profilePreviewReturnUrl = '';
 
-  @Output() readonly picked = new EventEmitter<string>();
+  @Output() readonly picked = new EventEmitter<string | AthletePlayedTeamPick>();
   @Output() readonly createLegendTeam = new EventEmitter<string>();
   @Output() readonly dismissed = new EventEmitter<void>();
 
@@ -34,6 +41,7 @@ export class AmateurTeamSearchModalComponent {
 
   constructor(
     private readonly legendService: AmateurLegendService,
+    private readonly router: Router,
     private readonly cdr: ChangeDetectorRef
   ) {}
 
@@ -77,8 +85,25 @@ export class AmateurTeamSearchModalComponent {
   }
 
   selectRow(row: DirectoryTeamPickerRow): void {
-    this.picked.emit(row.name);
+    this.picked.emit({
+      id: row.id,
+      kind: this.teamKind,
+      name: row.name,
+      imageUrl: row.imageUrl,
+    });
     this.resetState();
+  }
+
+  previewRow(row: DirectoryTeamPickerRow, event: Event): void {
+    event.stopPropagation();
+    const returnState: TeamProfileReturnState | undefined = this.profilePreviewReturnUrl
+      ? { returnUrl: this.profilePreviewReturnUrl }
+      : undefined;
+    navigateToTeamProfile(
+      this.router,
+      { kind: this.teamKind, teamId: row.id },
+      returnState
+    );
   }
 
   useTypedName(): void {

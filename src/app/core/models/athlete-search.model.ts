@@ -6,6 +6,8 @@ export interface AthleteSearchResult {
   primaryPosition: string;
   city?: string;
   state?: string;
+  neighborhood?: string;
+  age?: number;
   avatarUrl?: string;
   /** AthleteProfile.height, em centimetros. */
   heightCm?: number;
@@ -23,6 +25,8 @@ export interface SumulaObservationEntry {
   redCards?: number;
 }
 
+import { AthletePlayedTeamLink } from './athlete-played-team.model';
+
 export interface AthletePublicProfile {
   userId: string;
   displayName: string;
@@ -35,6 +39,7 @@ export interface AthletePublicProfile {
   age?: number;
   peladas: string[];
   teams: string[];
+  teamLinks?: AthletePlayedTeamLink[];
   favoriteProTeam?: string;
   favoriteAmateurTeam?: string;
   goals: number;

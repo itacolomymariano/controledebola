@@ -3,6 +3,15 @@
   <div class="showcase-details">
     <h4>{{ entry.displayName }}</h4>
     <p><strong>Posição:</strong> {{ entry.profileLabel }}</p>
+    @if (entry.locationState) {
+      <p><strong>Estado:</strong> {{ entry.locationState }}</p>
+    }
+    @if (entry.locationCity) {
+      <p><strong>Cidade:</strong> {{ entry.locationCity }}</p>
+    }
+    @if (entry.locationNeighborhood) {
+      <p><strong>Bairro:</strong> {{ entry.locationNeighborhood }}</p>
+    }
     @if (entry.favoriteProTeam) {
       <p class="showcase-team-row">
         <strong>Time profissional do coração:</strong>

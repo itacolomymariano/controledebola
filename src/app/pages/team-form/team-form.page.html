@@ -186,7 +186,7 @@
       @if (athleteResults.length) {
         <ion-list>
           @for (athlete of athleteResults; track athlete.userId) {
-            <ion-item button (click)="addAthlete(athlete)">
+            <ion-item>
               <app-user-avatar
                 slot="start"
                 [avatarUrl]="athlete.avatarUrl"
@@ -195,9 +195,23 @@
               ></app-user-avatar>
               <ion-label>
                 <h2>{{ athlete.apelido || athlete.userName }}</h2>
-                <p>{{ athlete.fullName || athlete.userName }}</p>
+                @if (athletePickerMeta(athlete)) {
+                  <p>{{ athletePickerMeta(athlete) }}</p>
+                } @else {
+                  <p>{{ athlete.fullName || athlete.userName }}</p>
+                }
               </ion-label>
-              <ion-button fill="clear" slot="end">Adicionar</ion-button>
+              <ion-button
+                fill="clear"
+                size="small"
+                slot="end"
+                (click)="previewAthleteProfile(athlete, $event)"
+              >
+                {{ 'common.viewProfile' | t }}
+              </ion-button>
+              <ion-button fill="solid" size="small" slot="end" (click)="addAthlete(athlete)">
+                Adicionar
+              </ion-button>
             </ion-item>
           }
         </ion-list>

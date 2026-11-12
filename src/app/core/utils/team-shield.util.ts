@@ -1,4 +1,5 @@
 import { BrazilianTeamOption } from '../data/brazilian-teams.data';
+import { TEAM_SHIELD_BUNDLED } from '../data/team-shield-bundled.data';
 import { TEAM_SHIELD_FILES } from '../data/team-shield-files.data';
 
 export function teamSlug(name: string): string {
@@ -51,13 +52,25 @@ export function getTeamShieldCandidates(
   const candidates: string[] = [];
   const seen = new Set<string>();
 
-  const addFile = (file: string) => {
-    const url = shieldUrlFromFile(file);
+  const addUrl = (url: string) => {
     if (!seen.has(url)) {
       seen.add(url);
       candidates.push(url);
     }
   };
+
+  const addFile = (file: string) => addUrl(shieldUrlFromFile(file));
+
+  const bundled = TEAM_SHIELD_BUNDLED[slug];
+  if (bundled) {
+    if (bundled.startsWith('http://') || bundled.startsWith('https://')) {
+      addUrl(bundled);
+    } else if (bundled.startsWith('/')) {
+      addUrl(bundled);
+    } else {
+      addUrl(`/${bundled}`);
+    }
+  }
 
   const entry = TEAM_SHIELD_FILES[slug];
   if (entry) {

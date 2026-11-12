@@ -252,12 +252,6 @@ export class PeladaService {
     if (payload.maxAthletesPerEvent !== undefined) {
       pelada.set('maxAthletesPerEvent', Math.max(0, Number(payload.maxAthletesPerEvent)));
     }
-    if (payload.statsConflictSource !== undefined) {
-      pelada.set(
-        'statsConflictSource',
-        payload.statsConflictSource === 'scout' ? 'scout' : 'referee'
-      );
-    }
     if (payload.requireProfilePresentationOnFirstEvent !== undefined) {
       pelada.set(
         'requireProfilePresentationOnFirstEvent',

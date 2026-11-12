@@ -15,7 +15,15 @@
   }
   <div class="drilldown-header">
     @if (level !== 'states') {
-      <ion-button fill="clear" size="small" (click)="backLevel()">Voltar</ion-button>
+      <ion-button
+        class="drilldown-back-btn"
+        fill="outline"
+        size="small"
+        (click)="backLevel()"
+      >
+        <ion-icon slot="start" name="chevron-back-outline" aria-hidden="true"></ion-icon>
+        {{ 'common.back' | t }}
+      </ion-button>
     }
     <ion-note>{{ breadcrumb }}</ion-note>
   </div>
@@ -130,7 +138,12 @@
                   [alt]="entry.userName"
                   size="sm"
                 ></app-user-avatar>
-                <span>{{ i + 1 }}. {{ entry.userName }}</span>
+                <div class="rank-row__label">
+                  <span>{{ i + 1 }}. {{ entry.userName }}</span>
+                  @if (entry | muralAthleteLocationLine; as loc) {
+                    <small class="mural-athlete-location-line">{{ loc }}</small>
+                  }
+                </div>
                 <ion-badge>{{ rankingScore(entry).toFixed(1) }}</ion-badge>
               </div>
             }

@@ -16,6 +16,8 @@ export interface EventInviteCandidate {
   avatarUrl?: string;
   city?: string;
   state?: string;
+  neighborhood?: string;
+  age?: number;
   proximityScore?: number;
   peladaRate?: number;
   matchRate?: number;

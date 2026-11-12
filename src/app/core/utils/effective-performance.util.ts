@@ -59,22 +59,10 @@ function hasScoutApontamentoSaved(obj: Parse.Object): boolean {
 
 export function resolveEffectiveGoalsFromParse(
   obj: Parse.Object,
-  priority: PeladaStatsConflictSource = 'referee'
+  _priority: PeladaStatsConflictSource = 'referee'
 ): number {
-  const scoutGoals = readScoutGoalsFromParse(obj);
-  const refereeGoals = readRefereeGoalsFromParse(obj);
-  const scoutSaved = hasScoutApontamentoSaved(obj);
-  const refereeSaved = hasRefereeSumulaSaved(obj);
-  const useScoutFirst = priority === 'scout';
-
-  if (useScoutFirst) {
-    if (scoutSaved) return scoutGoals;
-    if (refereeSaved) return refereeGoals;
-  } else {
-    if (refereeSaved) return refereeGoals;
-    if (scoutSaved) return scoutGoals;
-  }
-  return Math.max(scoutGoals, refereeGoals);
+  if (!hasRefereeSumulaSaved(obj)) return 0;
+  return readRefereeGoalsFromParse(obj);
 }
 
 export function resolvePerformanceUserId(obj: Parse.Object): string {

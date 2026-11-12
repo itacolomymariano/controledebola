@@ -52,6 +52,9 @@ export interface MuralRankingEntry {
   rankingScore?: number;
   /** Avaliadores distintos (mural app, anticorrupcao). */
   distinctVoterCount?: number;
+  locationState?: string;
+  locationCity?: string;
+  locationNeighborhood?: string;
 }
 
 export interface CreateMuralVotePayload {

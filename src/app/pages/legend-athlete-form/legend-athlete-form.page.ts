@@ -111,7 +111,8 @@ export class LegendAthleteFormPage {
     this.teamPickerOpen = false;
   }
 
-  onTeamPicked(name: string): void {
+  onTeamPicked(value: string | { name: string }): void {
+    const name = typeof value === 'string' ? value : value.name;
     this.addAmateurTeamName(name);
     this.closeTeamPicker();
   }

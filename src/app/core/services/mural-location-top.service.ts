@@ -76,6 +76,9 @@ export class MuralLocationTopService {
           performanceScore: Number(entry.performanceScore) || 0,
           combinedScore: Number(entry.combinedScore) || 0,
           avatarUrl: entry.avatarUrl ? String(entry.avatarUrl) : undefined,
+          locationState: entry.locationState,
+          locationCity: entry.locationCity,
+          locationNeighborhood: entry.locationNeighborhood,
         }));
     }
 

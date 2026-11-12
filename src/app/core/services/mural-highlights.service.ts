@@ -28,6 +28,7 @@ import { MuralService } from './mural.service';
 import { ParseFileService } from './parse-file.service';
 import { ParseService } from './parse.service';
 import { I18nService } from './i18n.service';
+import { muralAthleteLocationFieldsFromAddress } from '../utils/mural-athlete-location.util';
 
 interface ParticipantProfile {
   userId: string;
@@ -43,6 +44,9 @@ interface ParticipantProfile {
   age: number | null;
   ageBand: MuralAgeBand | null;
   heightCm?: number;
+  locationState?: string;
+  locationCity?: string;
+  locationNeighborhood?: string;
 }
 
 interface CloudMuralParticipantProfile {
@@ -59,6 +63,9 @@ interface CloudMuralParticipantProfile {
   age?: number | null;
   ageBand?: MuralAgeBand | null;
   heightCm?: number;
+  locationState?: string;
+  locationCity?: string;
+  locationNeighborhood?: string;
 }
 
 const AGE_BANDS: MuralAgeBand[] = ['sub30', 'sub60', 'plus60'];
@@ -1411,6 +1418,9 @@ export class MuralHighlightsService {
       score,
       scoreLabel,
       age: profile.age ?? undefined,
+      locationState: profile.locationState,
+      locationCity: profile.locationCity,
+      locationNeighborhood: profile.locationNeighborhood,
     };
   }
 
@@ -1507,6 +1517,7 @@ export class MuralHighlightsService {
       age,
       ageBand: age !== null ? this.getAgeBand(age) : null,
       heightCm: participant.heightCm,
+      ...muralAthleteLocationFieldsFromAddress(participant.address),
     };
   }
 
@@ -1536,6 +1547,7 @@ export class MuralHighlightsService {
         age,
         ageBand: age !== null ? this.getAgeBand(age) : null,
         heightCm: participant.heightCm,
+        ...muralAthleteLocationFieldsFromAddress(participant.address),
       });
     }
     return map;
@@ -1561,6 +1573,9 @@ export class MuralHighlightsService {
         age,
         ageBand: row.ageBand ?? (age !== null ? this.getAgeBand(age) : null),
         heightCm: row.heightCm != null && row.heightCm > 0 ? row.heightCm : undefined,
+        locationState: row.locationState,
+        locationCity: row.locationCity,
+        locationNeighborhood: row.locationNeighborhood,
       });
     }
     return map;
@@ -1607,6 +1622,9 @@ export class MuralHighlightsService {
       const profileLabel = this.buildProfileLabelFromParseUser(user, athlete);
 
       const heightRaw = Number(athlete?.get('height') || 0);
+      const locationFields = muralAthleteLocationFieldsFromAddress(
+        user.get('address') as Record<string, unknown> | undefined
+      );
       map.set(user.id, {
         userId: user.id,
         displayName:
@@ -1631,6 +1649,7 @@ export class MuralHighlightsService {
         age,
         ageBand: age !== null ? this.getAgeBand(age) : null,
         heightCm: heightRaw > 0 ? heightRaw : undefined,
+        ...locationFields,
       });
     }
 

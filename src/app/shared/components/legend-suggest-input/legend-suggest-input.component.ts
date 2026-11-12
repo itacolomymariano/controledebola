@@ -8,6 +8,11 @@ import {
   LegendFormReturnField,
   persistLegendFormReturnState,
 } from '../../../core/utils/legend-form-navigation.util';
+import {
+  legendSuggestionProfileRoute,
+  navigateToLegendSuggestionProfile,
+  TeamProfileReturnState,
+} from '../../../core/utils/team-profile-navigation.util';
 
 type LegendSuggestFilter = 'all' | 'legend' | 'app';
 type PeladaTeamSuggestFilter = 'active' | 'legend';
@@ -203,6 +208,24 @@ export class LegendSuggestInputComponent implements OnInit, OnDestroy {
     this.blurTimer = setTimeout(() => {
       this.inlinePanelOpen = false;
     }, 200);
+  }
+
+  canPreviewProfile(item: LegendSuggestion): boolean {
+    return !!item.id?.trim() && !!legendSuggestionProfileRoute(item);
+  }
+
+  previewSuggestion(item: LegendSuggestion, event: Event): void {
+    event.stopPropagation();
+    if (!this.canPreviewProfile(item)) return;
+    const returnUrl = this.profilePreviewReturnUrl || this.returnUrl;
+    const returnState: TeamProfileReturnState | undefined = returnUrl
+      ? { returnUrl }
+      : undefined;
+    navigateToLegendSuggestionProfile(this.router, item, returnState);
+  }
+
+  get profilePreviewReturnUrl(): string {
+    return this.returnUrl || this.router.url;
   }
 
   selectSuggestion(item: LegendSuggestion): void {

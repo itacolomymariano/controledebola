@@ -11,6 +11,7 @@ import { HomeDirectoryService, HomeDirectoryUser } from '../../core/services/hom
 import { I18nService } from '../../core/services/i18n.service';
 import { ParseService } from '../../core/services/parse.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
+import { playedTeamLinksFromPublicProfile } from '../../core/utils/athlete-played-team.util';
 import { formatPlaceLine } from './home-directory.util';
 import { PlayfulCardTone } from '../../shared/components/playful-card/playful-card.component';
 
@@ -74,6 +75,15 @@ export class HomeUsuarioPage implements OnDestroy {
     const age = this.athleteProfile?.age;
     if (age == null) return '—';
     return this.i18n.t('peladas.ageYears', { age });
+  }
+
+  get athletePlayedTeamLinks() {
+    if (!this.athleteProfile) return [];
+    return playedTeamLinksFromPublicProfile(this.athleteProfile);
+  }
+
+  get athleteTeamsReturnUrl(): string {
+    return this.router.url;
   }
 
   get headerDisplayName(): string {

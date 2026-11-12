@@ -169,11 +169,31 @@
       } @else {
         <ion-list>
           @for (item of filteredAthleteSuggestions; track item.id + item.source) {
-            <ion-item button (click)="addAthleteRef(item)">
+            <ion-item>
+              @if (item.imageUrl) {
+                <ion-avatar slot="start">
+                  <img [src]="item.imageUrl" [alt]="item.label" />
+                </ion-avatar>
+              }
               <ion-label>
                 <h2>{{ item.label }}</h2>
-                <p>{{ item.subtitle }}</p>
+                @if (item.subtitle) {
+                  <p>{{ item.subtitle }}</p>
+                }
               </ion-label>
+              @if (canPreviewAthleteRef(item)) {
+                <ion-button
+                  fill="clear"
+                  size="small"
+                  slot="end"
+                  (click)="previewAthleteRef(item, $event)"
+                >
+                  {{ 'common.viewProfile' | t }}
+                </ion-button>
+              }
+              <ion-button fill="solid" size="small" slot="end" (click)="addAthleteRef(item)">
+                Adicionar
+              </ion-button>
             </ion-item>
           }
         </ion-list>

@@ -342,6 +342,10 @@
         <app-playful-card tone="users" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('curiosities-height')">
           <h2 class="mural-event-hub__title">Atleta mais alto e mais baixo</h2>
         </app-playful-card>
+        <app-playful-card tone="surface" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('curiosities-explore')">
+          <h2 class="mural-event-hub__title">Detalhes e curiosidades dos atletas</h2>
+          <p class="mural-event-hub__subtitle">Gols por tipo (scout), faixas etárias, altura e mapa</p>
+        </app-playful-card>
         <app-playful-card tone="surface" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('curiosities-fan-checkins')">
           <h2 class="mural-event-hub__title">Torcedores com check-in</h2>
         </app-playful-card>
@@ -436,6 +440,15 @@
         </ion-card>
       }
 
+      @case ('curiosities-explore') {
+        <app-mural-explore-curiosities
+          scope="event"
+          [scopeId]="eventId"
+          [shareContext]="shareContext"
+          [playfulChrome]="true"
+        ></app-mural-explore-curiosities>
+      }
+
       @case ('curiosities-fan-checkins') {
         <ion-card>
           <ion-card-header>
@@ -482,6 +495,9 @@
         <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="md"></app-user-avatar>
         <div class="mural-playful-rank-meta">
           <strong>{{ entry.userName }}</strong>
+          @if (entry | muralAthleteLocationLine; as loc) {
+            <span class="mural-athlete-location-line">{{ loc }}</span>
+          }
           <span>{{ entry.badgeLabel }}</span>
         </div>
       </div>

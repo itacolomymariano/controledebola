@@ -17,6 +17,12 @@ import {
   readFormDraft,
   writeFormDraft,
 } from '../../core/utils/form-draft.util';
+import { AthletePlayedTeamLink, AthletePlayedTeamPick } from '../../core/models/athlete-played-team.model';
+import {
+  addPlayedTeamPick,
+  playedTeamLinksFromAthleteProfile,
+  teamNamesFromLinks,
+} from '../../core/utils/athlete-played-team.util';
 import { buildMissingFieldsMessage } from '../../core/utils/form-validation.util';
 
 const ATHLETE_WIZARD_STEPS = ['positions', 'measures', 'extras', 'teams'] as const;
@@ -36,6 +42,8 @@ interface AthleteFormDraft {
 export class AthleteProfileFormPage {
   hasProfile = false;
   teamPickerOpen = false;
+  playedTeamLinks: AthletePlayedTeamLink[] = [];
+  readonly teamPickerReturnUrl = '/athlete-profile-form';
 
   readonly wizardSteps = ATHLETE_WIZARD_STEPS;
   currentStepIndex = 0;
@@ -117,6 +125,7 @@ export class AthleteProfileFormPage {
         teamMatchRate: profile.teamMatchRate ?? null,
         playedAmateurTeams: profile.playedAmateurTeams ?? [],
       });
+      this.playedTeamLinks = playedTeamLinksFromAthleteProfile(profile);
     } else {
       this.restoreDraft();
       this.cdr.markForCheck();
@@ -131,27 +140,22 @@ export class AthleteProfileFormPage {
     this.teamPickerOpen = false;
   }
 
-  onTeamPicked(name: string): void {
-    this.addPlayedTeamName(name);
+  onTeamPicked(value: string | AthletePlayedTeamPick): void {
+    this.playedTeamLinks = addPlayedTeamPick(this.playedTeamLinks, value);
+    this.syncPlayedTeamsForm();
     this.closeTeamPicker();
+    this.cdr.markForCheck();
   }
 
-  removePlayedTeam(index: number): void {
-    const teams = [...this.playedAmateurTeams];
-    teams.splice(index, 1);
-    this.form.patchValue({ playedAmateurTeams: teams });
+  onPlayedTeamLinksChange(links: AthletePlayedTeamLink[]): void {
+    this.playedTeamLinks = links;
+    this.syncPlayedTeamsForm();
+    this.cdr.markForCheck();
+  }
+
+  private syncPlayedTeamsForm(): void {
+    this.form.patchValue({ playedAmateurTeams: teamNamesFromLinks(this.playedTeamLinks) });
     this.persistDraft();
-  }
-
-  private addPlayedTeamName(name: string): void {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    const teams = [...this.playedAmateurTeams];
-    if (!teams.includes(trimmed)) {
-      teams.push(trimmed);
-      this.form.patchValue({ playedAmateurTeams: teams });
-      this.persistDraft();
-    }
   }
 
   cancel(): void {
@@ -247,7 +251,8 @@ export class AthleteProfileFormPage {
         maritalStatus: this.normalizeMaritalStatus(v.maritalStatus),
         peladaRate: v.peladaRate != null ? Number(v.peladaRate) : undefined,
         teamMatchRate: v.teamMatchRate != null ? Number(v.teamMatchRate) : undefined,
-        playedAmateurTeams: v.playedAmateurTeams ?? [],
+        playedAmateurTeams: teamNamesFromLinks(this.playedTeamLinks),
+        playedTeamLinks: this.playedTeamLinks,
       };
 
       if (this.hasProfile) {

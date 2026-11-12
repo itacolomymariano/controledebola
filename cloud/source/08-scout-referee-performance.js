@@ -333,6 +333,29 @@ function performanceHasRefereeSumulaData(perf) {
   );
 }
 
+/** Gols/cartoes em rankings e destaques do mural: somente sumula do juiz salva. */
+function resolveMuralRefereeOnlyStat(perf, field) {
+  if (!perf || !performanceHasRefereeSumulaData(perf)) return 0;
+  const metric = String(field || 'goals');
+  if (metric === 'goals' || metric === 'yellowCards' || metric === 'redCards') {
+    return Math.max(0, Number(readRefereeOverlapStat(perf, metric) || 0));
+  }
+  return 0;
+}
+
+function computeMuralRefereePerformanceScore(perf) {
+  if (!perf) return 0;
+  const goals = resolveMuralRefereeOnlyStat(perf, 'goals');
+  const yellowCards = resolveMuralRefereeOnlyStat(perf, 'yellowCards');
+  const redCards = resolveMuralRefereeOnlyStat(perf, 'redCards');
+  const assists = Number(perf.get('assists') || 0);
+  const saves = Number(perf.get('saves') || 0);
+  const points = Number(perf.get('points') || 0);
+  return (
+    points + goals * 3 + assists * 2 + saves * 2 - yellowCards - redCards * 3
+  );
+}
+
 function buildMergedRefereeStatsByParticipantId(performances) {
   const byId = new Map();
   for (const perf of performances) {

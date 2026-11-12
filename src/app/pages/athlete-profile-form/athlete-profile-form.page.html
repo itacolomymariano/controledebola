@@ -30,22 +30,13 @@
             <p>{{ 'athleteProfile.playedTeamsHint' | t }}</p>
           </ion-label>
         </ion-item>
-        @if (playedAmateurTeams.length) {
-          <ion-item lines="none">
-            <div class="played-teams-chips">
-              @for (team of playedAmateurTeams; track team; let index = $index) {
-                <ion-chip (click)="removePlayedTeam(index)">
-                  <ion-label>{{ team }}</ion-label>
-                  <ion-icon name="close-circle"></ion-icon>
-                </ion-chip>
-              }
-            </div>
-          </ion-item>
-        }
-        <ion-item button (click)="openTeamPicker()" detail="false">
-          <ion-icon name="add-circle-outline" slot="start"></ion-icon>
-          <ion-label>{{ 'athleteProfile.addPlayedTeam' | t }}</ion-label>
-        </ion-item>
+        <app-played-team-list
+          [links]="playedTeamLinks"
+          [editable]="true"
+          [returnUrl]="teamPickerReturnUrl"
+          (linksChange)="onPlayedTeamLinksChange($event)"
+          (addRequested)="openTeamPicker()"
+        ></app-played-team-list>
       </ion-list>
       <ion-button expand="block" type="submit" class="ion-margin-top">
         Salvar alteracoes
@@ -92,22 +83,13 @@
                 <p>{{ 'athleteProfile.playedTeamsHint' | t }}</p>
               </ion-label>
             </ion-item>
-            @if (playedAmateurTeams.length) {
-              <ion-item lines="none">
-                <div class="played-teams-chips">
-                  @for (team of playedAmateurTeams; track team; let index = $index) {
-                    <ion-chip (click)="removePlayedTeam(index)">
-                      <ion-label>{{ team }}</ion-label>
-                      <ion-icon name="close-circle"></ion-icon>
-                    </ion-chip>
-                  }
-                </div>
-              </ion-item>
-            }
-            <ion-item button (click)="openTeamPicker()" detail="false">
-              <ion-icon name="add-circle-outline" slot="start"></ion-icon>
-              <ion-label>{{ 'athleteProfile.addPlayedTeam' | t }}</ion-label>
-            </ion-item>
+            <app-played-team-list
+              [links]="playedTeamLinks"
+              [editable]="true"
+              [returnUrl]="teamPickerReturnUrl"
+              (linksChange)="onPlayedTeamLinksChange($event)"
+              (addRequested)="openTeamPicker()"
+            ></app-played-team-list>
           }
         }
       </app-form-wizard>
@@ -119,6 +101,7 @@
 <app-amateur-team-search-modal
   [isOpen]="teamPickerOpen"
   titleKey="athleteProfile.addPlayedTeam"
+  [profilePreviewReturnUrl]="teamPickerReturnUrl"
   (picked)="onTeamPicked($event)"
   (dismissed)="closeTeamPicker()"
 ></app-amateur-team-search-modal>

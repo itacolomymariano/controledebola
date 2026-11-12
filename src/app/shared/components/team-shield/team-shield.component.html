@@ -3,8 +3,10 @@
     class="team-shield"
     [class.team-shield-sm]="size === 'sm'"
     [class.team-shield-md]="size === 'md'"
+    [class.team-shield-zoomable]="zoomable"
     [src]="shieldUrl"
     [alt]="team?.name || teamName"
+    (click)="onShieldClick()"
     (error)="onImageError()"
   />
 } @else {

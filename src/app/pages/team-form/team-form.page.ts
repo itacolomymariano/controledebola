@@ -18,6 +18,7 @@ import { AthleteSearchService } from '../../core/services/athlete-search.service
 import { TeamService } from '../../core/services/team.service';
 import { WizardTourService } from '../../core/services/wizard-tour.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
+import { persistTeamProfileReturnState } from '../../core/utils/team-profile-navigation.util';
 import { buildMissingFieldsMessage } from '../../core/utils/form-validation.util';
 import { birthDateToIsoString, parseBirthDateIso } from '../../core/utils/birth-date.util';
 
@@ -230,6 +231,26 @@ export class TeamFormPage {
     this.athleteSearchTimer = setTimeout(() => {
       void this.searchAthletes(trimmed);
     }, 280);
+  }
+
+  athletePickerMeta(candidate: EventInviteCandidate): string {
+    const parts = [
+      candidate.primaryPosition?.trim(),
+      candidate.age != null && candidate.age > 0 ? `${candidate.age} anos` : '',
+      candidate.state?.trim(),
+      candidate.city?.trim(),
+      candidate.neighborhood?.trim(),
+    ].filter(Boolean);
+    return parts.join(' · ');
+  }
+
+  previewAthleteProfile(candidate: EventInviteCandidate, event: Event): void {
+    event.stopPropagation();
+    persistTeamProfileReturnState({
+      returnUrl: this.router.url,
+      returnLabel: 'Voltar ao time',
+    });
+    void this.router.navigate(['/athlete', candidate.userId]);
   }
 
   async addAthlete(candidate: EventInviteCandidate): Promise<void> {

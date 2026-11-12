@@ -2,6 +2,12 @@
   display: block;
 }
 
+.legend-suggest__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
 .legend-inline-search {
   position: relative;
 }

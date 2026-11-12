@@ -50,7 +50,7 @@
           }
           <ion-list lines="full">
             @for (item of filteredSuggestions; track item.id + item.source) {
-              <ion-item button (click)="selectSuggestion(item)">
+              <ion-item>
                 @if (item.imageUrl) {
                   <ion-avatar slot="start">
                     <img [src]="item.imageUrl" [alt]="item.label" />
@@ -62,6 +62,14 @@
                     <p>{{ item.subtitle }}</p>
                   }
                 </ion-label>
+                <div slot="end" class="legend-suggest__actions">
+                  @if (canPreviewProfile(item)) {
+                    <ion-button size="small" fill="clear" (click)="previewSuggestion(item, $event)">
+                      {{ 'common.viewProfile' | t }}
+                    </ion-button>
+                  }
+                  <ion-button size="small" (click)="selectSuggestion(item)">Selecionar</ion-button>
+                </div>
               </ion-item>
             }
           </ion-list>
@@ -155,7 +163,7 @@
           }
           <ion-list>
             @for (item of filteredSuggestions; track item.id + item.source) {
-              <ion-item button (click)="selectSuggestion(item)">
+              <ion-item>
                 @if (item.imageUrl) {
                   <ion-avatar slot="start">
                     <img [src]="item.imageUrl" [alt]="item.label" />
@@ -167,6 +175,14 @@
                     <p>{{ item.subtitle }}</p>
                   }
                 </ion-label>
+                <div slot="end" class="legend-suggest__actions">
+                  @if (canPreviewProfile(item)) {
+                    <ion-button size="small" fill="clear" (click)="previewSuggestion(item, $event)">
+                      {{ 'common.viewProfile' | t }}
+                    </ion-button>
+                  }
+                  <ion-button size="small" (click)="selectSuggestion(item)">Selecionar</ion-button>
+                </div>
               </ion-item>
             }
           </ion-list>

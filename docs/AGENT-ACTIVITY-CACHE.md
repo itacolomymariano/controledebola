@@ -2,9 +2,77 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-11-09 (CPF P0, badge, temas, event-detail cards, wizards)
+**Ultima atualizacao:** 2026-11-12 (lightbox zoom pinça/botoes)
 
 ---
+
+### 2026-11-12 — Lightbox: zoom com botoes, pinça e arraste
+
+- [`image-lightbox.component`](src/app/shared/components/image-lightbox/): +/−/ajustar, pinch/pan, toque no fundo fecha só em scale 1.
+- i18n `imageLightbox.*` em pt-BR, en-GB, es-ES. Sem Cloud; APK após build.
+
+### 2026-11-12 — Mural: Estado/Cidade/Bairro nos cards individuais (App, Pelada, Evento)
+
+- Cloud `07-mural.js`: `muralAthleteLocationFieldsFromAddress` em rankings (`enrichMuralRankingNames`), conquistas/curiosidades (`buildMuralShowcaseFromParticipantRow`, `enrichExploreShowcaseWinner`), `getMuralParticipantProfiles`.
+- UI: `app-mural-showcase-entry` (Estado/Cidade/Bairro); pipe `muralAthleteLocationLine` nos top rankings (app, pelada, evento).
+- **Deploy:** republicar `cloud/main.js`; APK build **0351** apos Cloud.
+
+### 2026-11-12 — Explorar altura/mapa, picker de atleta, desempate `User.createdAt`
+
+- Cloud `getMuralExploreCuriosities`: app scope usa `loadExploreAthleteProfileRows` (AthleteProfile + User.address), nao so EventRegistration.
+- Cloud mural: desempate cadastro mais antigo em rankings, spotlights periodo, top local e analytics performance.
+- `listAthleteHiringCandidates` / `searchLegendAthleteRefs`: idade, bairro, posicao; UI `team-form` + `legend-team-form` com Ver perfil.
+- **Deploy:** republicar `cloud/main.js` (07 + 05 + 11); APK apos Cloud.
+
+### 2026-11-11 — Mural app: spinner infinito em Explorar / Curiosidades
+
+- **Causa:** `[locationFilter]="activeLocationFilter()"` em `mural.page.html` criava objeto novo a cada CD → `app-mural-explore-curiosities` chamava `reload()` em loop.
+- **Correcao:** propriedade estavel `locationFilter` em `mural.page.ts` + `muralLocationFiltersEqual` no `ngOnChanges` do componente; mensagem `mural.explore.loadFailed` se Cloud falhar.
+- **Drill-down:** botao Voltar (`common.back`, outline + chevron) em `mural-participant-stats` e `mural-location-top-rankings` (ja existia `backLevel`, UI reforcada).
+- **Escopo do bug:** mural **app** (aba Geral/Peladas/Confrontos); pelada/evento nao passam filtro instavel.
+- APK sugerido: build **0345** apos `npm run install:android`.
+
+### 2026-11-11 — Explorar/Curiosidades: cards scout + faixa etaria + mapa
+
+- Cloud: `getMuralExploreCuriosities` em `07-mural.js` (scout goal types, votos 50+/sub20, altura, UF/cidade/bairro; desempate `User.createdAt`).
+- UI: `app-mural-explore-curiosities` em mural app (accordion), pelada (accordion) e evento (hub curiosities).
+- i18n: `mural.explore.*`, `mural.rule.explore.*` (pt/en/es).
+- **Deploy:** republicar `cloud/main.js` + APK build **0342**.
+
+### 2026-11-11 — Mural: gols e cartoes so da sumula do juiz (Producao)
+
+- Cloud: `resolveMuralRefereeOnlyStat`, `computeMuralRefereePerformanceScore` em `08-scout-referee-performance.js`; `07-mural.js` sem `statsConflictSource`/scout fallback em rankings, periodo, Melhor Pelada; `beforeSave Pelada` força `referee`.
+- UI: removido select divergencia scout/juiz em `pelada-detail`; `effective-performance.util` mostra gols so com sumula.
+- i18n: `mural.rule.goleador.*`, `mural.rule.period.*`, `coach.hint.scoutBody` (pt/en/es).
+- **Deploy:** `npm run build:cloud` + publicar `cloud/main.js`; smoke P4/P4b.
+
+### 2026-11-11 — Acordeao Resultados por periodo + perfil juiz (cartoes)
+
+- Cloud: `getMuralPeriodSpotlights`, `muralPeriodWindow` (sem dom-sab, mes, ano), `refereeCardStats` em `getRolePublicProfile`.
+- UI: acordeao abaixo de Explorar (aba Geral); 6 metricas + share/`?`; pelada mantem card legacy.
+- Smoke P4/P5 em [`SMOKE-TEST-PRE-INSTALL.md`](SMOKE-TEST-PRE-INSTALL.md).
+
+### 2026-11-10 — Mural Geral: Resultados por periodo + filtros (Primeiro Coordenador)
+
+- Card `app-mural-period-rankings-card` em **Explorar / Curiosidades** (aba Geral); removido do hero.
+- Titulo fixo; abas GOLS / AMARELOS / VERMELHOS (sem cabeca); linha `Período: …` + `filterCaption`; lista com avatar + apelido + total.
+- Conquistas playful: `filterCaption` na secao; **Time mais amado** com `app-team-shield` no tile.
+- Cloud: `getMuralPeriodRankings` retorna `avatarUrl` — republicar `cloud/main.js`.
+
+### 2026-11-10 — Producao UX (escudos, lightbox, times, growth, mural periodo)
+
+- Escudos: `TEAM_SHIELD_BUNDLED.sport` (Wikipedia PT), guard TheSportsDB `sport`, API key `123`, script `npm run audit:team-shields`.
+- Lightbox: `user-avatar`/`team-shield` `[zoomable]`; Home, perfis, lista de times, time lenda.
+- Cloud: `05b` `imageUrl` em `teamLinks`; `getMuralPeriodRankings` em `07-mural.js`.
+- Doc: [`USER-ACQUISITION-GROWTH.md`](USER-ACQUISITION-GROWTH.md); convite com UTM.
+- Smoke P1–P3 + L1–L5 em [`SMOKE-TEST-PRE-INSTALL.md`](SMOKE-TEST-PRE-INSTALL.md).
+
+### 2026-11-10 — Vinculo atleta ↔ times (lenda roster + membership)
+
+- Cloud: [`05b-athlete-played-teams.js`](../cloud/source/05b-athlete-played-teams.js) — `getAthletePublicProfile.teamLinks`, sync em `05-legends.js` (`updateAmateurLegendTeam`/join), `removeAthletePlayedTeamLink`, `reconcilePlayedTeamLinksFromRosters` (Master/`PROD_PURGE_SECRET`).
+- Cliente: [`played-team-list`](../src/app/shared/components/played-team-list/), [`athlete-played-team.model.ts`](../src/app/core/models/athlete-played-team.model.ts), modal [`amateur-team-search-modal`](../src/app/shared/components/amateur-team-search-modal/) Ver perfil + Vincular; [`legend-suggest-input`](../src/app/shared/components/legend-suggest-input/) Ver perfil.
+- Gotcha: elenco lenda **nao** refletia no perfil ate agregar roster + backfill; publicar `cloud/main.js` e rodar **reconcile** uma vez em prod (API Console).
+- Smoke: L1–L5 em [`SMOKE-TEST-PRE-INSTALL.md`](SMOKE-TEST-PRE-INSTALL.md).
 
 ### 2026-11-09 — Plano producao: CPF, UX temas, badge, event-detail
 

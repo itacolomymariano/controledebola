@@ -21,11 +21,11 @@ export const TEAM_SHIELD_FILES: Record<string, string | string[]> = {
   remo: 'Clube_do_Remo_logo.svg',
   mirassol: 'Mirassol_Futebol_Clube_logo.svg',
   chapecoense: 'Chapecoense_logo.svg',
+  sport: ['Sport-clube-recife.svg', 'Sport_Recife_(Brasao_Antigo).png'],
 
   // Serie B
   'vila-nova': 'Vila_Nova_Futebol_Clube_logo.svg',
   'sao-bernardo': 'Sao_Bernardo_Futebol_Clube_logo.svg',
-  // Sport: escudo via TheSportsDB (arquivo Wikimedia mapeado não existe)
   fortaleza: 'Fortaleza_Esporte_Clube_logo.svg',
   novorizontino: 'Gremio_Novo_Horizontino_logo.svg',
   criciuma: 'Criciuma_Esporte_Clube_logo.svg',

@@ -1,12 +1,14 @@
 import { Injectable } from '@angular/core';
 import Parse from 'parse';
 import { Address } from '../models/address.model';
+import { AthletePlayedTeamLink } from '../models/athlete-played-team.model';
 import {
   AthleteFootPreference,
   AthleteMaritalStatus,
   AthletePersonalStatsConflictSource,
   AthleteProfile,
   CreateAthleteProfilePayload,
+  UpdateAthleteProfilePayload,
 } from '../models/athlete-profile.model';
 import { getUserAvatarUrl } from '../utils/user-avatar.util';
 import { parseErrorMessage } from '../utils/parse-error.util';
@@ -15,25 +17,23 @@ import { ParseService } from './parse.service';
 
 const CLASS = 'AthleteProfile';
 
-export type UpdateAthleteProfilePayload = Partial<
-  Pick<
-    CreateAthleteProfilePayload,
-    | 'primaryPosition'
-    | 'secondaryPosition'
-    | 'thirdPosition'
-    | 'shoeSize'
-    | 'height'
-    | 'weight'
-    | 'maritalStatus'
-    | 'footPreference'
-    | 'personalTrainerUserId'
-    | 'personalScoutUserId'
-    | 'personalStatsConflictSource'
-    | 'peladaRate'
-    | 'teamMatchRate'
-    | 'playedAmateurTeams'
-  >
->;
+function normalizePlayedTeamLinks(raw: unknown): AthletePlayedTeamLink[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((row) => {
+      const entry = row as Record<string, unknown>;
+      const kind = entry['kind'] === 'active' ? 'active' : 'legend';
+      const teamId = String(entry['teamId'] ?? '').trim();
+      const label = String(entry['label'] ?? '').trim();
+      const sourceRaw = entry['source'];
+      const source =
+        sourceRaw === 'roster' || sourceRaw === 'self' || sourceRaw === 'manual' ? sourceRaw : 'manual';
+      const imageUrl = entry['imageUrl'] ? String(entry['imageUrl']) : undefined;
+      if (!label && !teamId) return null;
+      return { kind, teamId, label, source, imageUrl } as AthletePlayedTeamLink;
+    })
+    .filter((row): row is AthletePlayedTeamLink => row != null);
+}
 
 @Injectable({ providedIn: 'root' })
 export class AthleteProfileService {
@@ -88,6 +88,9 @@ export class AthleteProfileService {
         'playedAmateurTeams',
         payload.playedAmateurTeams.map((name) => String(name).trim()).filter(Boolean)
       );
+    }
+    if (payload.playedTeamLinks != null) {
+      profile.set('playedTeamLinks', normalizePlayedTeamLinks(payload.playedTeamLinks));
     }
     profile.set('attendanceScore', 100);
     profile.set('totalPresent', 0);
@@ -153,6 +156,9 @@ export class AthleteProfileService {
         payload.playedAmateurTeams.map((name) => String(name).trim()).filter(Boolean)
       );
     }
+    if (payload.playedTeamLinks !== undefined) {
+      profile.set('playedTeamLinks', normalizePlayedTeamLinks(payload.playedTeamLinks));
+    }
     this.applyUserDisplayFields(profile, user);
 
     try {
@@ -199,6 +205,20 @@ export class AthleteProfileService {
     else profile.unset('userAvatarUrl');
   }
 
+  async removePlayedTeamLink(link: Pick<AthletePlayedTeamLink, 'kind' | 'teamId' | 'label'>): Promise<void> {
+    const user = Parse.User.current();
+    if (!user) throw new Error('Faca login.');
+    try {
+      await Parse.Cloud.run('removeAthletePlayedTeamLink', {
+        kind: link.kind,
+        teamId: link.teamId || undefined,
+        label: link.label || undefined,
+      });
+    } catch (error: unknown) {
+      throw new Error(parseErrorMessage(error));
+    }
+  }
+
   private toProfile(obj: Parse.Object): AthleteProfile {
     return {
       objectId: obj.id!,
@@ -220,6 +240,7 @@ export class AthleteProfileService {
       playedAmateurTeams: Array.isArray(obj.get('playedAmateurTeams'))
         ? (obj.get('playedAmateurTeams') as string[]).map(String)
         : undefined,
+      playedTeamLinks: normalizePlayedTeamLinks(obj.get('playedTeamLinks')),
       attendanceScore: (obj.get('attendanceScore') as number) ?? 100,
     };
   }

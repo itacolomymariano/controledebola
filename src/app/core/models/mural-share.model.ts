@@ -37,6 +37,8 @@ export interface MuralShareContext {
   awayScore?: number | null;
   /** Reportagem / jornal do evento. */
   journalistName?: string;
+  /** Legenda do recorte temporal (Resultados por período). */
+  periodShareLabel?: string;
 }
 
 export const MURAL_SHARE_BRAND = 'Controle de Bola App';

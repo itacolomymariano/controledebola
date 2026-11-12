@@ -18,6 +18,10 @@ import {
 } from '../../core/utils/legend-form-navigation.util';
 import { collectLegendFormValidationMessages } from '../../core/utils/legend-form-validation.util';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
+import {
+  navigateToLegendSuggestionProfile,
+  persistTeamProfileReturnState,
+} from '../../core/utils/team-profile-navigation.util';
 
 @Component({
   selector: 'app-legend-team-form',
@@ -156,6 +160,19 @@ export class LegendTeamFormPage {
     }
     this.athleteRefs = [...this.athleteRefs, { type, id: item.id, label: item.label }];
     this.closeAthletePicker();
+  }
+
+  canPreviewAthleteRef(item: LegendSuggestion): boolean {
+    return item.source === 'app_athlete' || item.source === 'legend_athlete';
+  }
+
+  previewAthleteRef(item: LegendSuggestion, event: Event): void {
+    event.stopPropagation();
+    persistTeamProfileReturnState({
+      returnUrl: this.router.url,
+      returnLabel: 'Voltar ao time',
+    });
+    navigateToLegendSuggestionProfile(this.router, item);
   }
 
   removeAthleteRef(index: number): void {

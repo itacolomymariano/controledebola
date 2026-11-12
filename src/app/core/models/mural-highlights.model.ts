@@ -22,6 +22,9 @@ export interface MuralShowcaseEntry {
   tenureLabel?: string;
   /** Ex.: "12 pessoas avaliaram" — mural geral. */
   evaluatorCountLabel?: string;
+  locationState?: string;
+  locationCity?: string;
+  locationNeighborhood?: string;
 }
 
 export interface MuralBirthdayEntry extends MuralShowcaseEntry {

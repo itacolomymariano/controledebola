@@ -91,7 +91,6 @@ function computePerformanceScore(perf) {
 
 async function getTopAthleteUserIdForPelada(peladaId) {
   const pelada = Parse.Object.extend('Pelada').createWithoutData(peladaId);
-  const statsPriority = await loadPeladaStatsConflictSource(peladaId);
 
   const perfQuery = new Parse.Query('EventPerformance');
   perfQuery.equalTo('pelada', pelada);
@@ -110,7 +109,10 @@ async function getTopAthleteUserIdForPelada(peladaId) {
     if (perf.get('role') !== 'athlete') continue;
     const userId = getPerformanceParticipantId(perf);
     if (!userId) continue;
-    const score = computeEffectivePerformanceScore(perf, statsPriority);
+    const score =
+      typeof computeMuralRefereePerformanceScore === 'function'
+        ? computeMuralRefereePerformanceScore(perf)
+        : computeEffectivePerformanceScore(perf, 'referee');
     perfScores.set(userId, (perfScores.get(userId) || 0) + score);
   }
 
@@ -279,6 +281,12 @@ function mapAthleteProfileToHiringCandidate(profile, user) {
     profile.get('userName') || apelido || fullName || username || 'Atleta';
   const address = user.get('address') || {};
 
+  const birthDate = user.get('birthDate');
+  const age =
+    birthDate && typeof calcAgeFromBirthDate === 'function'
+      ? calcAgeFromBirthDate(birthDate)
+      : null;
+
   return {
     userId: user.id,
     userName: fullName || displayName,
@@ -286,6 +294,8 @@ function mapAthleteProfileToHiringCandidate(profile, user) {
     avatarUrl: profile.get('userAvatarUrl') || user.get('avatarUrl') || undefined,
     city: profile.get('userCity') || address.city || undefined,
     state: profile.get('userState') || address.state || undefined,
+    neighborhood: address.neighborhood || undefined,
+    age: age != null && !Number.isNaN(age) ? age : undefined,
     peladaRate: profile.get('peladaRate') ?? undefined,
     matchRate: profile.get('teamMatchRate') ?? undefined,
     primaryPosition: profile.get('primaryPosition') || undefined,
@@ -564,6 +574,11 @@ Parse.Cloud.define('getAthletePublicProfile', async (request) => {
       ? await collectRefereeObservationsForUser(userId)
       : [];
 
+  let teamLinks = [];
+  if (typeof buildAthleteTeamLinksForPublicProfile === 'function') {
+    teamLinks = await buildAthleteTeamLinksForPublicProfile(userId, athleteProfile, teamNames);
+  }
+
   return {
     userId,
     displayName,
@@ -579,6 +594,7 @@ Parse.Cloud.define('getAthletePublicProfile', async (request) => {
     age: calcAgeFromBirthDate(birthDate),
     peladas: Array.from(peladaNames).sort((a, b) => a.localeCompare(b, 'pt-BR')),
     teams: Array.from(teamNames).sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    teamLinks,
     favoriteProTeam: readUserFavoriteProTeam(user, athleteProfile.get('favoriteProTeam')),
     favoriteAmateurTeam,
     goals,
@@ -1453,6 +1469,101 @@ function refereeSumulaProfileScore(perf) {
   return stored > 0 ? stored : fromSumula;
 }
 
+async function buildRefereeCardStatsForUser(userId) {
+  const registrations = await loadProfileRegistrationsForUser(userId, 'referee');
+  const events = [];
+  const seen = new Set();
+  for (const registration of registrations) {
+    const event = registration.get('event');
+    if (!event || !event.id || seen.has(event.id)) continue;
+    seen.add(event.id);
+    events.push(event);
+  }
+  if (!events.length) {
+    return {
+      totalYellowCards: 0,
+      totalRedCards: 0,
+      avgYellowPelada: 0,
+      avgYellowConfronto: 0,
+      avgRedPelada: 0,
+      avgRedConfronto: 0,
+    };
+  }
+
+  const perfs = await findPerformancesForLoadedEvents(events);
+  const perfsByEvent = new Map();
+  for (const perf of perfs) {
+    const event = perf.get('event');
+    const eventId = event && event.id ? event.id : '';
+    if (!eventId) continue;
+    if (!perfsByEvent.has(eventId)) perfsByEvent.set(eventId, []);
+    perfsByEvent.get(eventId).push(perf);
+  }
+
+  let totalYellowCards = 0;
+  let totalRedCards = 0;
+  let peladaEvents = 0;
+  let confrontoEvents = 0;
+  let peladaYellow = 0;
+  let peladaRed = 0;
+  let confrontoYellow = 0;
+  let confrontoRed = 0;
+
+  for (const event of events) {
+    const eventId = event.id;
+    const eventPerfs = perfsByEvent.get(eventId) || [];
+    let eventYellow = 0;
+    let eventRed = 0;
+    let hasSumula = false;
+    for (const perf of eventPerfs) {
+      const hasData =
+        typeof performanceHasRefereeSumulaData === 'function'
+          ? performanceHasRefereeSumulaData(perf)
+          : !!(
+              perf.get('refereeSumulaSaved') ||
+              Number(perf.get('refereeYellowCards') || 0) > 0 ||
+              Number(perf.get('refereeRedCards') || 0) > 0
+            );
+      if (!hasData) continue;
+      hasSumula = true;
+      const yellow =
+        typeof readRefereeOverlapStat === 'function'
+          ? readRefereeOverlapStat(perf, 'yellowCards')
+          : Number(perf.get('refereeYellowCards') || 0);
+      const red =
+        typeof readRefereeOverlapStat === 'function'
+          ? readRefereeOverlapStat(perf, 'redCards')
+          : Number(perf.get('refereeRedCards') || 0);
+      eventYellow += Math.max(0, Number(yellow || 0));
+      eventRed += Math.max(0, Number(red || 0));
+    }
+    if (!hasSumula) continue;
+    totalYellowCards += eventYellow;
+    totalRedCards += eventRed;
+    const isConfronto = event.get('type') === 'team_match';
+    if (isConfronto) {
+      confrontoEvents += 1;
+      confrontoYellow += eventYellow;
+      confrontoRed += eventRed;
+    } else {
+      peladaEvents += 1;
+      peladaYellow += eventYellow;
+      peladaRed += eventRed;
+    }
+  }
+
+  const average = (total, count) => (count > 0 ? Math.round((total / count) * 100) / 100 : 0);
+
+  return {
+    totalYellowCards,
+    totalRedCards,
+    avgYellowPelada: average(peladaYellow, peladaEvents),
+    avgYellowConfronto: average(confrontoYellow, confrontoEvents),
+    avgRedPelada: average(peladaRed, peladaEvents),
+    avgRedConfronto: average(confrontoRed, confrontoEvents),
+  };
+}
+
 function scoreHistoryEvent(userId, role, perfs) {
   const seen = new Set();
   let total = 0;
@@ -1994,6 +2105,7 @@ Parse.Cloud.define('getRolePublicProfile', async (request) => {
   const birthDate = user && user.get('birthDate');
   const roleProfilePayload = roleProfileToPayload(roleProfileRow, role);
   const history = await buildRoleParticipationHistory(userId, role);
+  const refereeCardStats = role === 'referee' ? await buildRefereeCardStatsForUser(userId) : undefined;
 
   return {
     userId,
@@ -2021,6 +2133,7 @@ Parse.Cloud.define('getRolePublicProfile', async (request) => {
     ),
     roleProfile: roleProfilePayload,
     history,
+    refereeCardStats,
   };
 });
 
@@ -2124,6 +2237,19 @@ function isBrazilianSportsDbTeam(team) {
   );
 }
 
+function acceptSportsDbTeamForSlug(slug, team) {
+  const normalizedSlug = String(slug || '').trim().toLowerCase();
+  if (normalizedSlug !== 'sport') return true;
+  const names = [team.strTeam, team.strTeamAlternate]
+    .map((value) => normalizeTeamShieldSearchText(String(value || '')))
+    .filter(Boolean);
+  return names.some(
+    (name) =>
+      name.includes('recife') &&
+      (name.includes('sport club') || name.includes('sport recife') || name === 'sport')
+  );
+}
+
 function scoreSportsDbTeamMatch(team, queries) {
   let score = 0;
   if (isBrazilianSportsDbTeam(team)) score += 100;
@@ -2148,7 +2274,7 @@ function scoreSportsDbTeamMatch(team, queries) {
 
 async function searchSportsDbTeams(query) {
   const response = await Parse.Cloud.httpRequest({
-    url: `https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${encodeURIComponent(query)}`,
+    url: `https://www.thesportsdb.com/api/v1/json/123/searchteams.php?t=${encodeURIComponent(query)}`,
     followRedirects: true,
   });
   const body = response.data || {};
@@ -2156,12 +2282,14 @@ async function searchSportsDbTeams(query) {
 }
 
 async function resolveTeamShieldUrlFromSportsDb(teamName, slug) {
-  const queries = buildTeamShieldSearchQueries(teamName, slug);
+  const resolvedSlug = slug ? String(slug).trim() : teamShieldSlug(teamName);
+  const queries = buildTeamShieldSearchQueries(teamName, resolvedSlug);
   const candidates = new Map();
 
   for (const query of queries) {
     const teams = await searchSportsDbTeams(query);
     for (const team of teams) {
+      if (!acceptSportsDbTeamForSlug(resolvedSlug, team)) continue;
       const score = scoreSportsDbTeamMatch(team, queries);
       if (score < 30) continue;
       const key = String(team.idTeam || team.strTeam || '');
