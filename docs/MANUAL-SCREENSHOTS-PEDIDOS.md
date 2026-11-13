@@ -26,7 +26,7 @@ Onde a tela mudou, a foto antiga foi tirada do MDX. O capítulo ficou com `{/* p
 | `p57-cinegrafista-video.jpeg` | Cinegrafista enviando o vídeo | 08 |
 | `p58-hub-midia-video.jpeg` | Hub de mídia, quem assiste ao vídeo | 08 |
 | `p60-confrontos-proximo.jpeg` | Aba Confrontos com o selo **Próximo** e um desafio aceito ainda sem data | 10 |
-| `p23-home-portas.jpeg` | Home com as quatro portas (Peladas, Confrontos, Times, Usuários). **Um** header: logo + avatar + apelido + **?** + home + inbox + menu. **Sem** segunda faixa azul com titulo do app; sem bandeiras nem tema no topo | 01 |
+| `p23-home-portas.jpeg` | Home (aba **Início**): hero roxo + **6 portas** em grid 2×3 (Peladas, Confrontos, Times, Usuários, Convidar, Mural do app). Header: logo + apelido + **?** + caixa + menu | 01 |
 | `p-lista-peladas.jpeg` | Lista de peladas aberta pela porta **Peladas** | 02 |
 | `p50-mural-confrontos.jpeg` | Mural, aba Confrontos: **Melhor time do app**, **Maior invencibilidade**, **Melhor ataque** e **Melhor defesa** | 06 |
 | `p56-caixa-card.jpeg` | Caixa: card só com apelido, nome entre parênteses, data e hora | 07 e 14 |
@@ -59,6 +59,18 @@ Placeholders `{/* print */}` no MDX até as fotos chegarem.
 | `p-mural-confianca.jpeg` | Mural aba **Geral**: hint de confiança + Craque com **X pessoas avaliaram** | 06 |
 | `p-evento-participantes-confirmado.jpeg` | Admin: inscrito confirmado, card compacto + **Chegou** abaixo | 05 |
 | `p-home-ajuda-balao.jpeg` | Home com balão **?** aberto (opcional se `p24-balao-ajuda.jpeg` bastar) | 01 |
+
+### Layout playful + mural nov/2026 (build ≥356)
+
+| Arquivo sugerido | O que mostrar | Capítulo |
+|------------------|---------------|----------|
+| `p-home-lightbox.jpeg` | Home ou lista Times: toque no avatar/escudo → modal com **+**, **−** e **ajustar à tela** | 01 |
+| `p-mural-hero-conquistas.jpeg` | Mural → Geral: hero **Craque do App** + grade **Conquistas** | 06 |
+| `p-mural-explorar-curiosidades.jpeg` | Mural → Geral: acordeão **Explorar / Curiosidades** aberto (ex. gol de pé direito) | 06 |
+| `p-mural-periodo.jpeg` | Mural → Geral: acordeão **Resultados por período** com abas (Craque, Goleador…) | 06 |
+| `p-mural-local-linha.jpeg` | Mural Geral: card Top 10 com linha **UF · cidade · bairro** sob o atleta | 06 |
+
+**Refazer no site (layout antigo):** `p49-mural-geral.jpeg`, `p52-1-explorar.jpeg`, `p52-2-explorar.jpeg` — substituir ou complementar pelos arquivos acima.
 
 ### Obsoleto na pasta local `imagens\Manual\Novas`
 

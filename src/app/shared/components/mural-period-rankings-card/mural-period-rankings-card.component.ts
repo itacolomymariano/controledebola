@@ -1,4 +1,12 @@
-import { ChangeDetectorRef, Component, Input, OnInit } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  Input,
+  OnChanges,
+  OnInit,
+  SimpleChanges,
+} from '@angular/core';
+import { muralLocationFiltersEqual } from '../../../core/utils/mural-location-filter.util';
 import { MuralAppTab } from '../../../core/config/mural-app-sections.config';
 import { MuralLocationFilter } from '../../../core/models/mural.model';
 import { MuralShareContext } from '../../../core/models/mural-share.model';
@@ -16,7 +24,7 @@ export type MuralPeriodRankMetric = 'goals' | 'yellowCards' | 'redCards';
   styleUrls: ['./mural-period-rankings-card.component.scss'],
   standalone: false,
 })
-export class MuralPeriodRankingsCardComponent implements OnInit {
+export class MuralPeriodRankingsCardComponent implements OnInit, OnChanges {
   @Input() mode: 'spotlights' | 'legacy' = 'spotlights';
   @Input() scope: 'app' | 'pelada' = 'app';
   @Input() scopeId = '';
@@ -46,6 +54,22 @@ export class MuralPeriodRankingsCardComponent implements OnInit {
       this.periodMetric = 'goals';
     }
     void this.reload();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    const filterChange = changes['locationFilter'];
+    const filterChanged =
+      !!filterChange &&
+      !filterChange.firstChange &&
+      !muralLocationFiltersEqual(
+        filterChange.previousValue as MuralLocationFilter | undefined,
+        filterChange.currentValue as MuralLocationFilter | undefined
+      );
+    const tabChange = changes['appBucketTab'];
+    const tabChanged = !!tabChange && !tabChange.firstChange;
+    if (filterChanged || tabChanged) {
+      void this.reload();
+    }
   }
 
   get isLegacyPelada(): boolean {

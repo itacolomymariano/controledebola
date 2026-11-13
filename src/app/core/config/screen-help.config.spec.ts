@@ -6,8 +6,9 @@ describe('resolveScreenHelpKey', () => {
     expect(resolveScreenHelpKey('/tabs/peladas')).toBe('screen.help.home');
   });
 
-  it('maps peladas lista', () => {
+  it('maps lista peladas separately from home hub', () => {
     expect(resolveScreenHelpKey('/tabs/peladas/lista')).toBe('screen.help.peladas');
+    expect(resolveScreenHelpKey('/tabs/home')).not.toBe('screen.help.peladas');
   });
 
   it('maps directory doors', () => {

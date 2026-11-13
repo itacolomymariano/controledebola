@@ -5,7 +5,9 @@ NÃO usar o APK Demo (sandbox).
 
 REGRAS
 - Celular Samsung, retrato, tela cheia, SEM teclado na foto
-- Tema padrão do app (verde/ouro), português
+- APK produção com.minhapelada.app — build ≥ 356 (Sobre: versão 1.0.14+)
+- Idioma português; paleta “Controle de Bola” no menu (ou padrão escuro)
+- Home: hero roxo/lilás + 6 portas pastéis; listas em cartões coloridos (layout playful)
 - Salvar como JPG; renomear EXATAMENTE como abaixo
 - Enviar para: D:\Ita\Projetos\Minha_Pelada_Controle_de_Bola\imagens\Manual\Novas
 - Ordem sugerida: do 1 ao 27 (mais fácil primeiro)
@@ -37,7 +39,7 @@ Na foto: e-mail mascarado (ex.: t***@...), campo para código de 6 dígitos, SEM
 4) p23-home-portas.jpeg — Cap. 01 Home
 ────────────────────────────────────────────────────────────
 Como chegar: Login → tocar aba INÍCIO no rodapé (ícone casa) — fica em /tabs/home.
-Na foto: hero roxo com avatar + apelido; 4 portas em GRID 2×2 (Peladas lilás, Confrontos verde, Times laranja, Usuários rosa), cada uma com botão circular de seta; barra global com logo + apelido + ? + ícones; aba Início no rodapé (pode ou não aparecer destacada conforme tema Ionic).
+Na foto: hero roxo com avatar + apelido (toque na foto abre zoom — não precisa mostrar); 6 portas em GRID 2×3: Peladas, Confrontos, Times, Usuários, Convidar amigos, Mural do app; cada cartão com cor pastel + botão circular de seta; barra com logo + apelido + ? + caixa + menu; aba Início no rodapé destacada.
 
 ────────────────────────────────────────────────────────────
 5) p-lista-peladas.jpeg — Cap. 01 e 02 Lista
@@ -172,5 +174,35 @@ Só se p24-balao-ajuda.jpeg não bastar: Home → tocar ? → balão aberto com 
 - Trocar no site depois: 03-criar-conta.jpeg → usar p-register-wizard-step
 - p27-montagem-perfil.jpeg → pode manter OU usar print do último passo do wizard
 
-FIM — 25 obrigatórios + 1 opcional + 2 substituições editoriais
+────────────────────────────────────────────────────────────
+28) p-home-lightbox.jpeg — Cap. 01 Ampliar foto
+────────────────────────────────────────────────────────────
+Como chegar: Home (Início) → tocar no AVATAR do hero OU lista Times → tocar escudo.
+Na foto: modal escuro com imagem grande e barra com +, −, ajustar e X (sem dedos no meio).
+
+────────────────────────────────────────────────────────────
+29) p-mural-hero-conquistas.jpeg — Cap. 06 Mural geral (hero)
+────────────────────────────────────────────────────────────
+Como chegar: Rodapé Mural → aba GERAL → topo da tela.
+Na foto: hero Craque do App + grid Conquistas (craque, goleador, goleiro…).
+
+────────────────────────────────────────────────────────────
+30) p-mural-explorar-curiosidades.jpeg — Cap. 06 Explorar
+────────────────────────────────────────────────────────────
+Como chegar: Mural → Geral → role até Explorar / Curiosidades → abrir acordeão.
+Na foto: seção visível (ex. Detalhes dos gols) com ao menos um card.
+
+────────────────────────────────────────────────────────────
+31) p-mural-periodo.jpeg — Cap. 06 Período
+────────────────────────────────────────────────────────────
+Como chegar: Mural → Geral → abrir Resultados por período → abas Craque/Goleador.
+Na foto: abas de métrica + um card de destaque do período.
+
+────────────────────────────────────────────────────────────
+32) p-mural-local-linha.jpeg — Cap. 06 Local no card
+────────────────────────────────────────────────────────────
+Como chegar: Mural → Geral → Top 10 Atletas (deixe filtro Brasil ou UF com dados).
+Na foto: linha Estado · Cidade · Bairro abaixo do nome em um card.
+
+FIM — 31 obrigatórios + 1 opcional + 2 substituições editoriais
 Dúvidas: docs/MANUAL-SITE-INTEGRATE.md no repo minhapelada

@@ -2,9 +2,16 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-11-12 (lightbox zoom pinça/botoes)
+**Ultima atualizacao:** 2026-11-13 (ajuda build 356 + manual roteiro)
 
 ---
+
+### 2026-11-13 — Revisao ajuda/manual build 356 (fase 1 app)
+
+- i18n: `screen.help.home` (6 portas + Início), `screen.help.mural` (Explorar/período/local), `screen.help.peladas`, `mural.app.help`, `about` (lightbox); en/es chaves `legend-*-edit` / `legend-team-view`.
+- Bugs P1: lightbox toque fecha em scale 1; `mural-period-rankings-card` recarrega ao mudar `locationFilter` / `appBucketTab`.
+- Docs: [MANUAL-SITE-GAP-LIST-2026-11.md](MANUAL-SITE-GAP-LIST-2026-11.md), matriz/captura WhatsApp (+6 prints playful), status 31 obrigatórios.
+- **Pendente:** site `controledebolasite` fase 2; JPEGs familia; commit opcional app.
 
 ### 2026-11-12 — Lightbox: zoom com botoes, pinça e arraste
 

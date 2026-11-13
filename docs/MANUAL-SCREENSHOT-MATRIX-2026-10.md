@@ -1,4 +1,4 @@
-# Matriz de screenshots — manual / site (2026-10-29, rev. 2026-11-05)
+# Matriz de screenshots — manual / site (2026-10-29, rev. 2026-11-13)
 
 Fontes: [MANUAL-SCREENSHOTS-PEDIDOS.md](MANUAL-SCREENSHOTS-PEDIDOS.md), pasta local `D:\Ita\Projetos\Minha_Pelada_Controle_de_Bola\imagens\Manual`, `controledebolasite/public/guia/`, [MANUAL-MDX-INVENTORY-2026-11.md](MANUAL-MDX-INVENTORY-2026-11.md).
 
@@ -6,8 +6,8 @@ Fontes: [MANUAL-SCREENSHOTS-PEDIDOS.md](MANUAL-SCREENSHOTS-PEDIDOS.md), pasta lo
 
 | Status | Qtd |
 |--------|-----|
-| **missing** (fotografar) | **25** (+1 opcional `p-home-ajuda-balao`) |
-| **refazer** (layout antigo local) | 4 |
+| **missing** (fotografar) | **31** (+1 opcional `p-home-ajuda-balao`) |
+| **refazer** (layout playful / build ≥356) | **10** (incl. `p49`, `p52-*`, lista peladas) |
 | **obsoleto** (não publicar) | 6 (+ 4 órfãos em public — ver inventário) |
 | **OK** (já no site, MDX referencia) | 88 refs · 0 quebradas |
 
@@ -18,7 +18,12 @@ Fontes: [MANUAL-SCREENSHOTS-PEDIDOS.md](MANUAL-SCREENSHOTS-PEDIDOS.md), pasta lo
 | `p-register-wizard-step.jpeg` | — | no | 01 | **missing** |
 | `p-profile-setup-atleta-step.jpeg` | — | no | 01 | **missing** |
 | `p-login-reset-enviado.jpeg` | 21 = passo anterior | no | 01 | **missing** |
-| `p23-home-portas.jpeg` | — | no | 01 | **missing** |
+| `p23-home-portas.jpeg` | — | no | 01 | **missing** — **6 portas** 2×3 + hero |
+| `p-home-lightbox.jpeg` | — | no | 01, 06 | **missing** |
+| `p-mural-hero-conquistas.jpeg` | — | no | 06 | **missing** |
+| `p-mural-explorar-curiosidades.jpeg` | — | no | 06 | **missing** (subst. texto `p52-*`) |
+| `p-mural-periodo.jpeg` | — | no | 06 | **missing** |
+| `p-mural-local-linha.jpeg` | — | no | 06 | **missing** |
 | `p-lista-peladas.jpeg` | `5 Peladas (lista).jpeg`? | no | 01, 02 | **refazer** |
 | `p-wizard-lista-peladas.jpeg` | — | no | 01 | **missing** |
 | `p-menu-idioma-tema.jpeg` | — | no | 01, 11 | **missing** |

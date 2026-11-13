@@ -79,6 +79,10 @@ export class ImageLightboxComponent {
   }
 
   onViewportClick(event: MouseEvent): void {
+    if (this.scale <= MIN_SCALE) {
+      this.dismiss();
+      return;
+    }
     event.stopPropagation();
   }
 

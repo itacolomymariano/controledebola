@@ -1,12 +1,12 @@
 # Status capturas manual — produção
 
-**Atualizado:** 2026-11-05
+**Atualizado:** 2026-11-13
 
 | Fase | Responsável | Status |
 |------|-------------|--------|
 | Inventário MDX / matriz | Agent | Concluído |
 | Roteiro WhatsApp | Agent | [MANUAL-CAPTURA-WHATSAPP-PRODUCAO.txt](MANUAL-CAPTURA-WHATSAPP-PRODUCAO.txt) |
-| **Capturas Samsung** | **Filhos / família** | **Pendente** (0/25 obrigatórios) |
+| **Capturas Samsung** | **Filhos / família** | **Pendente** (0/31 obrigatórios; build ≥356 playful) |
 | Copiar → site + MDX | Agent ou adulto | Aguardando JPEGs ([MANUAL-SITE-INTEGRATE.md](MANUAL-SITE-INTEGRATE.md)) |
 
 ## Agents e screenshots
