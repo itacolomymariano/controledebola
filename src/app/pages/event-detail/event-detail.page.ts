@@ -61,6 +61,7 @@ import { EventRoleHiringPanelComponent } from '../../shared/components/event-rol
 import { EventGateTicket } from '../../core/models/event-gate-ticket.model';
 import { EventGateTicketService } from '../../core/services/event-gate-ticket.service';
 import { PushNotificationService } from '../../core/services/push-notification.service';
+import { AppInviteShareService } from '../../core/services/app-invite-share.service';
 import { RefereeInvitationService } from '../../core/services/referee-invitation.service';
 import {
   ParticipationReviewProfile,
@@ -164,6 +165,7 @@ export class EventDetailPage implements OnDestroy {
   showMyGateTicketView = false;
   loadingMyGateTicket = false;
   sendingParticipantNotification = false;
+  inviteAfterEventBusy = false;
 
   canManageTeamMatchSchedule = false;
   myTeamMatchTeamIds: string[] = [];
@@ -371,6 +373,7 @@ export class EventDetailPage implements OnDestroy {
     private readonly profilePresentationRequestService: ProfilePresentationRequestService,
     private readonly materialInventoryService: MaterialInventoryService,
     private readonly pushNotificationService: PushNotificationService,
+    private readonly appInviteShare: AppInviteShareService,
     private readonly teamService: TeamService,
     private readonly teamMatchJoinRequestService: TeamMatchJoinRequestService,
     private readonly userParticipationProfileService: UserParticipationProfileService,
@@ -1909,6 +1912,19 @@ export class EventDetailPage implements OnDestroy {
       ],
     });
     await alert.present();
+  }
+
+  async shareAfterEvent(): Promise<void> {
+    if (this.inviteAfterEventBusy) return;
+    this.inviteAfterEventBusy = true;
+    this.cdr.markForCheck();
+    try {
+      const title = this.event?.name || this.event?.peladaName;
+      await this.appInviteShare.shareInviteAfterEvent(title);
+    } finally {
+      this.inviteAfterEventBusy = false;
+      this.cdr.markForCheck();
+    }
   }
 
   private async sendParticipantNotification(title: string, message: string): Promise<void> {

@@ -36,6 +36,42 @@ const SHARE_CAPTION = formatAppInviteShareText({ src: 'invite', medium: 'share' 
 export class AppInviteShareService {
   constructor(private readonly toastCtrl: ToastController) {}
 
+  /** Convite após evento (UTM `utm_source=event`). */
+  async shareInviteAfterEvent(eventTitle?: string): Promise<void> {
+    const label = eventTitle?.trim();
+    const intro = label
+      ? `Bora de pelada de novo? ${label} — chama a galera no Controle de Bola:`
+      : 'Chama a galera pro Controle de Bola App:';
+    const caption = [intro, '', formatAppInviteShareText({ src: 'event', medium: 'share' })].join('\n');
+    const url = buildAppInviteLandingUrl({ src: 'event', medium: 'share' });
+    try {
+      if (Capacitor.isNativePlatform()) {
+        await Share.share({ title: INVITE_TITLE, text: caption, url, dialogTitle: INVITE_DIALOG });
+        return;
+      }
+      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+        await navigator.share({ title: INVITE_TITLE, text: caption, url });
+        return;
+      }
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(`${caption}\n${url}`);
+        const toast = await this.toastCtrl.create({
+          message: 'Link copiado para convidar a galera.',
+          duration: 2200,
+          color: 'success',
+        });
+        await toast.present();
+        return;
+      }
+      throw new Error('share_unavailable');
+    } catch (error: unknown) {
+      if (this.isShareCancelled(error)) {
+        return;
+      }
+      await this.copyInstallUrl();
+    }
+  }
+
   async shareInvite(): Promise<void> {
     try {
       const shareDataUrl = await this.composeInviteImage();

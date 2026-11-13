@@ -9,12 +9,15 @@ Matriz de ações para crescer a base de usuários (produção), combinando **ap
 | Convite com landing | `AppInviteShareService` → `https://controledebola.com/app` |
 | Deep links / App Links | `DeepLinkService`, `docs/DEEP-LINKS-APP-LINKS.md` |
 | UTM no convite | `formatAppInviteShareText({ src: 'invite' })` — rastreio na URL |
+| UTM pós-evento | Detalhe do evento encerrado → **Chame a galera** (`utm_source=event`) |
+| Atribuição cadastro | `signupSource` / utm em `_User` via `registerUser` + `SignupAttributionService` |
+| KPI semanal | [`GROWTH-KPI-WEEKLY.md`](GROWTH-KPI-WEEKLY.md) + Cloud `getGrowthSignupStats` |
 
 ## Fase 30 dias (baixo custo dev)
 
 1. **Nicole — Play Console:** revisar vitals (ANR/crash), screenshots reais de pelada, palavras-chave (futebol amador, pelada, súmula).
 2. **Site (`controledebolasite`):** OG image em `/app`, página `/download` com links Play + App Store.
-3. **App:** CTA pós-evento “Chame a galera” (share com UTM `src=event`).
+3. **App:** CTA pós-evento “Chame a galera” (share com UTM `src=event`) — **implementado** em `event-detail`.
 4. **Teste interno → aberto:** atualizar `APP_INSTALL_ANDROID_URL` quando a listagem pública estiver ativa.
 
 ## Fase 90 dias
@@ -29,8 +32,9 @@ Matriz de ações para crescer a base de usuários (produção), combinando **ap
 
 ## Opcional (produto)
 
-- Campo `signupSource` em `_User` no cadastro (Cloud `04-auth-signup.js`) a partir de query `src` na landing.
-- Firebase / GA4 no site e eventos de conversão no app (instalação, cadastro, 1ª pelada).
+- ~~Campo `signupSource`~~ **Feito:** Cloud `04-auth-signup.js` + deep link (`SignupAttributionService`).
+- Cloudflare Web Analytics no site (`PUBLIC_CF_WEB_ANALYTICS_TOKEN`) — ver `controledebolasite` BaseLayout.
+- Firebase / GA4 no app (instalação, cadastro, 1ª pelada) — opcional futuro.
 
 ## Métricas de sucesso
 

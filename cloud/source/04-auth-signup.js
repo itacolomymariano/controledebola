@@ -4,6 +4,12 @@ const SIGNUP_MIN_DURATION_MS = 8000;
 const SIGNUP_MAX_PER_IP_PER_HOUR = 5;
 const LOCAL_SIGNUP_CHALLENGE_ID = 'local';
 
+function sanitizeSignupTag(value, maxLen) {
+  const s = String(value || '').trim().slice(0, maxLen);
+  if (!s) return '';
+  return /^[\w.-]+$/.test(s) ? s : '';
+}
+
 function parseSignupStartedAt(value) {
   if (!value) return null;
   if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
@@ -167,6 +173,13 @@ Parse.Cloud.define('registerUser', async (request) => {
   user.set('signupStartedAt', parseSignupStartedAt(params.signupStartedAt));
   user.set('signupHoneypot', String(params.signupHoneypot || '').trim());
 
+  const signupSource = sanitizeSignupTag(params.signupSource, 48);
+  const signupUtmMedium = sanitizeSignupTag(params.signupUtmMedium, 48);
+  const signupUtmCampaign = sanitizeSignupTag(params.signupUtmCampaign, 96);
+  if (signupSource) user.set('signupSource', signupSource);
+  if (signupUtmMedium) user.set('signupUtmMedium', signupUtmMedium);
+  if (signupUtmCampaign) user.set('signupUtmCampaign', signupUtmCampaign);
+
   await user.signUp(null, { useMasterKey: true });
   await assertCpfUniqueForNewUser(normalizedCpf, user.id);
 
@@ -187,6 +200,9 @@ Parse.Cloud.beforeSave(Parse.User, async (request) => {
       'contactMessageHourStartedAt',
       'contactMessageHourCount',
       'cpf',
+      'signupSource',
+      'signupUtmMedium',
+      'signupUtmCampaign',
     ];
     for (const key of locked) {
       if (key === 'cpf' && request.object.isNew()) {

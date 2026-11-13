@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { App, URLOpenListenerEvent } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import Parse from 'parse';
+import { SignupAttributionService } from './signup-attribution.service';
 
 /** Hosts verificados via App Links / Universal Links. */
 export const APP_LINK_HOSTS = new Set(['controledebola.com', 'www.controledebola.com']);
@@ -14,7 +15,10 @@ const APP_LINK_PATH_PREFIXES = ['/app', '/invite', '/download'];
 export class DeepLinkService {
   private started = false;
 
-  constructor(private readonly router: Router) {}
+  constructor(
+    private readonly router: Router,
+    private readonly signupAttribution: SignupAttributionService
+  ) {}
 
   /** Escuta cold start + taps em links enquanto o app esta aberto. */
   async start(): Promise<void> {
@@ -42,6 +46,8 @@ export class DeepLinkService {
     if (!path) {
       return;
     }
+
+    this.signupAttribution.captureFromUrl(rawUrl);
 
     // Convite / download / open → home do app (ou login se sem sessao).
     if (

@@ -1,0 +1,84 @@
+CONTROLE DE BOLA — FOTOS RODADA 2 (Suiane)
+=============================================
+Data: 2026-11-13 · Rodada após integração de 17 prints no guia online
+App: com.minhapelada.app (produção) — build ≥ 357 / versão 1.0.15+
+NÃO usar APK Demo (sandbox).
+
+REGRAS
+- Celular Samsung, retrato, tela cheia, SEM teclado na foto
+- Idioma português
+- Salvar como JPG; renomear EXATAMENTE como abaixo
+- Pasta de envio: D:\Ita\Projetos\Minha_Pelada_Controle_de_Bola\imagens\Manual\Novas
+- Roteiro completo (todos os itens): MANUAL-CAPTURA-WHATSAPP-PRODUCAO.txt
+
+RESUMO RODADA 2
+- Refazer: 1 (lista peladas)
+- Novas capturas: 13
+- Opcional: 1 (ajuda balão)
+
+────────────────────────────────────────────────────────────
+MENSAGEM WHATSAPP (copiar e colar)
+────────────────────────────────────────────────────────────
+
+Oi, Suiane! Muito obrigado pelo lote de fotos — 17 já estão no manual online (Home, cadastro, reset, menu/tema, busca de usuários e mural novo). Você mandou muito bem.
+
+Faltam só refazer 1 e fotografar mais 13 (papai/mamãe ajuda nas telas de admin/evento/confronto, se precisar).
+
+REGRAS (igual antes)
+• Samsung, retrato, tela cheia, sem teclado
+• App produção com.minhapelada.app (não o Demo) — versão 1.0.15 / build 357+
+• Português
+• Salvar como JPG e renomear exatamente o nome abaixo
+• Enviar para: D:\Ita\Projetos\Minha_Pelada_Controle_de_Bola\imagens\Manual\Novas
+
+── REFAZER (prioridade 1) ──
+
+1) p-lista-peladas.jpeg
+Antes veio foto da Nova pelada (wizard) ou da lista com aba Início ativa.
+Como: toque a aba PELADAS no rodapé (ela fica destacada) → tire a lista de peladas em cartões coloridos. Não abrir “Criar pelada”.
+
+── AINDA FALTAM (nessa ordem) ──
+
+2) p-profile-setup-atleta-step.jpeg — Montar perfil atleta, passo Posições (1 de 3).
+3) p-wizard-lista-peladas.jpeg — Menu → Usar o Wizard → Ver peladas (pode ser igual ao item 1).
+4) p-home-lightbox.jpeg — Home → toque avatar do hero → modal com +, −, X.
+5) p56-caixa-card.jpeg — Envelope no topo → card compacto (apelido, data/hora).
+6) p62-desafio-card.jpeg — Presidente de time → desafio recebido na caixa (card compacto).
+7) p-aceite-ida-volta.jpeg — Caixa → aceite ida e volta → data/hora/local da volta.
+8) p60-confrontos-proximo.jpeg — Aba Confrontos → selo PRÓXIMO (sem data marcada).
+9) p-evento-participantes-confirmado.jpeg — Admin evento → confirmado + Chegou.
+10) p39-separacao-media-cb.jpeg — Admin → separar times → média CB visível.
+11) p46-portaria-entradas.jpeg — Admin → lista de entradas (não QR).
+12) p-evento-votacao-contador-10.jpeg — Votação → “Notas 10 restantes neste evento: X”.
+13) p57-cinegrafista-video.jpeg — Cinegrafista → enviar vídeo.
+14) p58-hub-midia-video.jpeg — Mídia do evento → hub → aba Vídeo.
+
+OPCIONAL: p-home-ajuda-balao.jpeg — Home → ? → balão com Ouvir (refazer se texto da ajuda estiver antigo).
+
+Dúvidas: itens 2, 5–6, 11–20 e 28 em MANUAL-CAPTURA-WHATSAPP-PRODUCAO.txt no repo.
+
+Obrigado de novo!
+
+────────────────────────────────────────────────────────────
+DETALHE POR ARQUIVO (referência MANUAL-CAPTURA-WHATSAPP-PRODUCAO.txt)
+────────────────────────────────────────────────────────────
+
+| # | Arquivo | Ref. roteiro | Cap. |
+|---|---------|--------------|------|
+| R1 | p-lista-peladas.jpeg | item 5 | 01, 02 |
+| 2 | p-profile-setup-atleta-step.jpeg | item 2 | 01 |
+| 3 | p-wizard-lista-peladas.jpeg | item 6 | 01 |
+| 4 | p-home-lightbox.jpeg | item 28 | 01 |
+| 5 | p56-caixa-card.jpeg | item 11 | 07, 14 |
+| 6 | p62-desafio-card.jpeg | item 12 | 10, 14 |
+| 7 | p-aceite-ida-volta.jpeg | item 13 | 10 |
+| 8 | p60-confrontos-proximo.jpeg | item 14 | 10 |
+| 9 | p-evento-participantes-confirmado.jpeg | item 15 | 05 |
+| 10 | p39-separacao-media-cb.jpeg | item 16 | 05 |
+| 11 | p46-portaria-entradas.jpeg | item 17 | 05 |
+| 12 | p-evento-votacao-contador-10.jpeg | item 18 | 05, 06 |
+| 13 | p57-cinegrafista-video.jpeg | item 19 | 08 |
+| 14 | p58-hub-midia-video.jpeg | item 20 | 08 |
+| O | p-home-ajuda-balao.jpeg | item 26 | 01 (opc.) |
+
+Relatório técnico: MANUAL-SCREENSHOT-REPORT-2026-11-13.md

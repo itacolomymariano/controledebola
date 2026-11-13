@@ -18,6 +18,7 @@ import { RoleProfileService } from './role-profile.service';
 import { AthleteProfileService } from './athlete-profile.service';
 import { PushNotificationService } from './push-notification.service';
 import { AppStorageService } from './app-storage.service';
+import { SignupAttributionService } from './signup-attribution.service';
 import { getUserAvatarUrl } from '../utils/user-avatar.util';
 import { environment } from '../../../environments/environment';
 
@@ -71,7 +72,8 @@ export class AuthService {
     private readonly roleProfileService: RoleProfileService,
     private readonly athleteProfileService: AthleteProfileService,
     private readonly pushNotificationService: PushNotificationService,
-    private readonly storage: AppStorageService
+    private readonly storage: AppStorageService,
+    private readonly signupAttribution: SignupAttributionService
   ) {
     this.parseService.init();
   }
@@ -312,6 +314,8 @@ export class AuthService {
       throw new Error('Informe um CPF valido.');
     }
 
+    const attribution = this.signupAttribution.getForRegister();
+
     try {
       await Parse.Cloud.run('registerUser', {
         name,
@@ -326,10 +330,14 @@ export class AuthService {
         signupCaptchaAnswer: payload.signupCaptchaAnswer,
         signupStartedAt: payload.signupStartedAt,
         signupHoneypot: payload.signupHoneypot || '',
+        signupSource: attribution?.signupSource,
+        signupUtmMedium: attribution?.signupUtmMedium,
+        signupUtmCampaign: attribution?.signupUtmCampaign,
       });
 
       const username = this.resolveUsername(payload.email, payload.phone);
       const savedUser = await Parse.User.logIn(username, payload.password);
+      this.signupAttribution.clearAfterRegister();
       void this.pushNotificationService.syncCurrentUser();
       return savedUser;
     } catch (error: unknown) {

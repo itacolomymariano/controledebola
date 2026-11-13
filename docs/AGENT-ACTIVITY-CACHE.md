@@ -2,7 +2,18 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-11-13 (screenshots Suiane → site)
+**Ultima atualizacao:** 2026-11-13 (growth: KPI, signupSource, funil convite)
+
+### 2026-11-13 — Growth: medicao e funil convite
+
+- Cliente: `SignupAttributionService`, deep link utm; `event-detail` **Chame a galera**; `shareInviteAfterEvent`.
+- Cloud: `signupSource` em `04-auth-signup.js`; `getGrowthSignupStats` em `02-core.js` — **publicar** `cloud/main.js`.
+- Docs: `GROWTH-KPI-WEEKLY.md`, `GROWTH-DELIVERY-AUDIT-2026-11-13.md`, `GROWTH-SEO-GUIA.md`.
+- Site (repo controledebolasite): CF Web Analytics token, OG `/app`, SEO Recife.
+
+---
+
+### 2026-11-13 — Screenshots Suiane → site
 
 ---
 

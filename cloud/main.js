@@ -1,6 +1,6 @@
 /**
  * Cloud Code — gerado por npm run build:cloud
- * Gerado em: 2026-11-12T09:01:14.061Z
+ * Gerado em: 2026-11-13T18:10:30.033Z
  * Copie o conteudo deste arquivo no Back4App (Server Settings > Cloud Code).
  * Fontes modulares em cloud/source/
  * NAO edite este arquivo direto — edite cloud/source/ e rode npm run build:cloud
@@ -1226,6 +1226,52 @@ Parse.Cloud.define('deleteMyAccount', async (request) => {
 
   await user.destroy({ useMasterKey: true });
   return { ok: true };
+});
+
+function isoWeekKey(date) {
+  const d = new Date(date.getTime());
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const week = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return `${d.getFullYear()}-W${String(week).padStart(2, '0')}`;
+}
+
+/** Relatorio de cadastros para KPI (somente Master Key). */
+Parse.Cloud.define('getGrowthSignupStats', async (request) => {
+  if (!request.master) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Master Key required.');
+  }
+  const sinceParam = request.params?.since;
+  const since = sinceParam ? new Date(sinceParam) : new Date('2026-11-10T00:00:00.000Z');
+  if (Number.isNaN(since.getTime())) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Parametro since invalido.');
+  }
+
+  const query = new Parse.Query(Parse.User);
+  query.greaterThanOrEqualTo('createdAt', since);
+  query.ascending('createdAt');
+  query.select(['createdAt', 'signupSource']);
+  query.limit(5000);
+  const users = await query.find({ useMasterKey: true });
+
+  const byWeek = {};
+  const bySource = {};
+  for (const user of users) {
+    const createdAt = user.get('createdAt');
+    if (!createdAt) continue;
+    const week = isoWeekKey(createdAt);
+    byWeek[week] = (byWeek[week] || 0) + 1;
+    const source = String(user.get('signupSource') || 'organic').trim() || 'organic';
+    bySource[source] = (bySource[source] || 0) + 1;
+  }
+
+  return {
+    since: since.toISOString(),
+    total: users.length,
+    byWeek,
+    bySource,
+  };
 });
 
 // --- 02b-contact-messages.js ---
@@ -3014,6 +3060,12 @@ const SIGNUP_MIN_DURATION_MS = 8000;
 const SIGNUP_MAX_PER_IP_PER_HOUR = 5;
 const LOCAL_SIGNUP_CHALLENGE_ID = 'local';
 
+function sanitizeSignupTag(value, maxLen) {
+  const s = String(value || '').trim().slice(0, maxLen);
+  if (!s) return '';
+  return /^[\w.-]+$/.test(s) ? s : '';
+}
+
 function parseSignupStartedAt(value) {
   if (!value) return null;
   if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
@@ -3177,6 +3229,13 @@ Parse.Cloud.define('registerUser', async (request) => {
   user.set('signupStartedAt', parseSignupStartedAt(params.signupStartedAt));
   user.set('signupHoneypot', String(params.signupHoneypot || '').trim());
 
+  const signupSource = sanitizeSignupTag(params.signupSource, 48);
+  const signupUtmMedium = sanitizeSignupTag(params.signupUtmMedium, 48);
+  const signupUtmCampaign = sanitizeSignupTag(params.signupUtmCampaign, 96);
+  if (signupSource) user.set('signupSource', signupSource);
+  if (signupUtmMedium) user.set('signupUtmMedium', signupUtmMedium);
+  if (signupUtmCampaign) user.set('signupUtmCampaign', signupUtmCampaign);
+
   await user.signUp(null, { useMasterKey: true });
   await assertCpfUniqueForNewUser(normalizedCpf, user.id);
 
@@ -3197,6 +3256,9 @@ Parse.Cloud.beforeSave(Parse.User, async (request) => {
       'contactMessageHourStartedAt',
       'contactMessageHourCount',
       'cpf',
+      'signupSource',
+      'signupUtmMedium',
+      'signupUtmCampaign',
     ];
     for (const key of locked) {
       if (key === 'cpf' && request.object.isNew()) {

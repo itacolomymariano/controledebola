@@ -45,6 +45,28 @@
       }
     </app-event-detail-overview>
 
+    @if (isEventFinished) {
+      <ion-card class="ion-margin-top">
+        <ion-card-header>
+          <ion-card-title>Chame a galera</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <p class="ion-text-wrap">
+            Convide quem faltou ou amigos da pelada para o proximo jogo no Controle de Bola.
+          </p>
+          <ion-button
+            expand="block"
+            class="ion-margin-top"
+            [disabled]="inviteAfterEventBusy"
+            (click)="shareAfterEvent()"
+          >
+            <ion-icon name="share-social-outline" slot="start"></ion-icon>
+            Compartilhar convite
+          </ion-button>
+        </ion-card-content>
+      </ion-card>
+    }
+
     @if (event?.type === 'team_match' && matchdaySummary) {
       <ion-card class="ion-margin-top">
         <ion-card-header>
