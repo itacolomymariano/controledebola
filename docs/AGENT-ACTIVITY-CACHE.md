@@ -2,9 +2,15 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-11-13 (ajuda build 356 + manual roteiro)
+**Ultima atualizacao:** 2026-11-13 (screenshots Suiane → site)
 
 ---
+
+### 2026-11-13 — Manual site: lote Suiane Rana (17 JPEGs)
+
+- Renomeados `.jpg.jpeg` em `imagens/Manual/Novas`; QA: lista errada (wizard nova pelada) + `p-lista` com aba Início.
+- `controledebolasite` `98c6439`: caps 01/06/11/15 + 17 arquivos `public/guia/`; 16 placeholders MDX restantes.
+- Relatorio: [MANUAL-SCREENSHOT-REPORT-2026-11-13.md](MANUAL-SCREENSHOT-REPORT-2026-11-13.md).
 
 ### 2026-11-13 — Revisao ajuda/manual build 356 (fase 1 app)
 

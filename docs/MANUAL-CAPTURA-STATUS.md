@@ -1,13 +1,13 @@
 # Status capturas manual — produção
 
-**Atualizado:** 2026-11-13
+**Atualizado:** 2026-11-13 (integração Suiane)
 
 | Fase | Responsável | Status |
 |------|-------------|--------|
 | Inventário MDX / matriz | Agent | Concluído |
 | Roteiro WhatsApp | Agent | [MANUAL-CAPTURA-WHATSAPP-PRODUCAO.txt](MANUAL-CAPTURA-WHATSAPP-PRODUCAO.txt) |
-| **Capturas Samsung** | **Filhos / família** | **Pendente** (0/31 obrigatórios; build ≥356 playful) |
-| Copiar → site + MDX | Agent ou adulto | Aguardando JPEGs ([MANUAL-SITE-INTEGRATE.md](MANUAL-SITE-INTEGRATE.md)) |
+| **Capturas Samsung** | **Suiane Rana** | **17/31** integrados — ver [MANUAL-SCREENSHOT-REPORT-2026-11-13.md](MANUAL-SCREENSHOT-REPORT-2026-11-13.md) |
+| Copiar → site + MDX | Agent | **Site publicado** `controledebolasite` `98c6439` |
 
 ## Agents e screenshots
 
