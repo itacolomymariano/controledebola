@@ -23,6 +23,7 @@
     "audit:team-shields": "node scripts/audit-team-shields.js",
     "check:cloud-parity": "node scripts/cloud-client-parity.js",
     "probe:sandbox-cloud": "node scripts/probe-sandbox-cloud-functions.js",
+    "verify:growth-cloud": "node scripts/verify-growth-cloud-deployed.js",
     "sync:play-assetlinks": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-play-assetlinks.ps1"
   },
   "private": true,

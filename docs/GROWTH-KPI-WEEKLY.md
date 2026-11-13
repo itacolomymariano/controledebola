@@ -44,6 +44,11 @@ Resposta: totais por semana ISO e contagem por `signupSource`.
 
 Ver [BACK4APP-CLOUD-FUNCTIONS-CONSOLE.md](BACK4APP-CLOUD-FUNCTIONS-CONSOLE.md).
 
+**Publicar Cloud Code (após cada bump em `cloud/main.js`):**
+
+1. Back4App → app **MinhaPelada** → **Cloud Code** → colar `cloud/main.js` → Deploy.
+2. Local: `npm run verify:growth-cloud` (com `PARSE_SERVER_URL`, `PARSE_APP_ID`, `PARSE_MASTER_KEY` no ambiente).
+
 ## Play / App Store — onde clicar
 
 | Loja | Caminho |
