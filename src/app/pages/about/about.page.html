@@ -1,9 +1,9 @@
 <ion-header>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/tabs/peladas"></ion-back-button>
+      <ion-back-button [text]="'common.back' | t" defaultHref="/tabs/peladas"></ion-back-button>
     </ion-buttons>
-    <ion-title>Sobre</ion-title>
+    <ion-title>{{ 'about.title' | t }}</ion-title>
     <ion-buttons slot="end">
       <app-help-balloon textKey="screen.help.about"></app-help-balloon>
     </ion-buttons>
@@ -19,44 +19,46 @@
     <ion-list lines="none" class="about-list playful-elevated-list">
     <ion-item>
       <ion-label>
-        <h3>Versao do build</h3>
+        <h3>{{ 'about.buildVersion' | t }}</h3>
         <p>{{ appVersion }} ({{ buildNumber }})</p>
       </ion-label>
     </ion-item>
     <ion-item>
       <ion-label>
-        <h3>Release do app</h3>
+        <h3>{{ 'about.release' | t }}</h3>
         <p>{{ appRelease }}</p>
       </ion-label>
     </ion-item>
     <ion-item>
       <ion-label>
-        <h3>Plataforma</h3>
+        <h3>{{ 'about.platform' | t }}</h3>
         <p>{{ platformLabel }}</p>
       </ion-label>
     </ion-item>
     <ion-item>
       <ion-label class="ion-text-wrap">
-        <h3>Desenvolvido por</h3>
+        <h3>{{ 'about.developedBy' | t }}</h3>
         <p>{{ companyName }}</p>
-        <ion-note color="medium">Autoria intelectual</ion-note>
+        <ion-note color="medium">{{ 'about.intellectualProperty' | t }}</ion-note>
       </ion-label>
     </ion-item>
   </ion-list>
 
   <div class="about-section">
-    <h2>Site</h2>
+    <h2>{{ 'about.site' | t }}</h2>
     <a [href]="siteUrl" target="_blank" rel="noopener noreferrer" class="about-link">{{ siteLabel }}</a>
     <p class="about-guide">
-      <a [href]="guideUrl" target="_blank" rel="noopener noreferrer" class="about-link">Manual de uso</a>
+      <a [href]="guideUrl" target="_blank" rel="noopener noreferrer" class="about-link">{{
+        'about.userGuide' | t
+      }}</a>
     </p>
   </div>
 
   <div class="about-section">
-    <h2>Divulgar</h2>
+    <h2>{{ 'about.share' | t }}</h2>
     <ion-button expand="block" [disabled]="inviteShareBusy" (click)="inviteFriends()">
       <ion-icon name="share-social-outline" slot="start"></ion-icon>
-      Convidar Amigos
+      {{ 'about.inviteFriends' | t }}
     </ion-button>
     <ion-note color="medium" class="ion-margin-top">
       {{ 'invite.downloadHint' | t }}
@@ -64,22 +66,22 @@
   </div>
 
   <div class="about-section">
-    <h2>Fale conosco</h2>
+    <h2>{{ 'about.contactUs' | t }}</h2>
     <ion-button expand="block" fill="outline" routerLink="/contact/feedback">
-      Criticas, sugestoes ou elogios
+      {{ 'about.feedback' | t }}
     </ion-button>
     <ion-button expand="block" fill="outline" class="ion-margin-top" routerLink="/contact/support">
-      Relatar um problema
+      {{ 'about.reportProblem' | t }}
     </ion-button>
   </div>
 
   <div class="about-section">
-    <h2>Redes sociais</h2>
+    <h2>{{ 'about.socialNetworks' | t }}</h2>
     @for (link of socialLinks; track link.id) {
       <ion-button
         expand="block"
         fill="outline"
-        class="ion-margin-bottom"
+        class="ion-margin-top"
         [href]="link.url"
         target="_blank"
         rel="noopener noreferrer"
@@ -88,7 +90,6 @@
         {{ link.label }}
       </ion-button>
     }
-    <ion-note color="medium">Outras redes em breve</ion-note>
   </div>
   </app-playful-page>
 </ion-content>

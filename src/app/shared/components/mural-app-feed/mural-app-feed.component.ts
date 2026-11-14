@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import {
-  highlightTitlesForTab,
+  highlightTitleKeysForTab,
   MuralAppSupportRoleSection,
   MuralAppTab,
   supportRoleSectionsForTab,
@@ -25,6 +25,7 @@ import {
   MuralPerformanceAnalytics,
 } from '../../../core/services/athlete-performance.service';
 import { muralRankingBadgeLabel, athleteRankingDisplayNote } from '../../../core/utils/mural-ranking.util';
+import { I18nService } from '../../../core/services/i18n.service';
 
 @Component({
   selector: 'app-mural-app-feed',
@@ -34,6 +35,8 @@ import { muralRankingBadgeLabel, athleteRankingDisplayNote } from '../../../core
   standalone: false,
 })
 export class MuralAppFeedComponent {
+  constructor(private readonly i18n: I18nService) {}
+
   @Input({ required: true }) tab!: MuralAppTab;
   @Input() bucket: MuralAppBucketPayload | null = null;
   @Input() highlights: MuralHighlights | null = null;
@@ -76,17 +79,31 @@ export class MuralAppFeedComponent {
   unbeatenText(entry: MuralTeamMatchUnbeatenStreak): string {
     const label = entry.unbeatenLabel?.trim();
     if (label) return label;
-    return `${entry.unbeatenDays} dia(s)`;
+    return this.i18n.t('common.daysCount', { days: entry.unbeatenDays });
   }
 
   formatAverage(value: number): string {
     const num = Number(value);
     if (!Number.isFinite(num)) return '0,00';
-    return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const locale = this.i18n.locale === 'en-GB' ? 'en-GB' : this.i18n.locale === 'es-ES' ? 'es-ES' : 'pt-BR';
+    return num.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  get titles() {
-    return highlightTitlesForTab(this.tab);
+  get titleKeys() {
+    return highlightTitleKeysForTab(this.tab);
+  }
+
+  titleText(key: string): string {
+    return this.i18n.t(key);
+  }
+
+  get highlightTitleOverrides(): { craque: string; goalkeeper: string; scorer: string } {
+    const k = this.titleKeys;
+    return {
+      craque: this.titleText(k.craque),
+      goalkeeper: this.titleText(k.goalkeeper),
+      scorer: this.titleText(k.scorer),
+    };
   }
 
   showTeamCoachBlocks(): boolean {
@@ -132,10 +149,15 @@ export class MuralAppFeedComponent {
   formatFoundedAt(iso: string): string {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return iso;
-    return d.toLocaleDateString('pt-BR');
+    const locale = this.i18n.locale === 'en-GB' ? 'en-GB' : this.i18n.locale === 'es-ES' ? 'es-ES' : 'pt-BR';
+    return d.toLocaleDateString(locale);
   }
 
   yesNo(value: boolean | undefined): string {
-    return value ? 'Sim' : 'Não';
+    return this.i18n.t(value ? 'common.yes' : 'common.no');
+  }
+
+  ageYears(age: number): string {
+    return this.i18n.t('mural.app.coach.ageYears', { age });
   }
 }

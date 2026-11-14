@@ -1,4 +1,4 @@
-# Auditoria Play Console e i18n — 2026-10-08 (atualizado 2026-10-09)
+# Auditoria Play Console e i18n — 2026-10-08 (atualizado 2026-11-14)
 
 Escopo: revisão orientada a release (sem substituir smoke humano nem revisação jurídica da Play).
 
@@ -23,9 +23,14 @@ Escopo: revisão orientada a release (sem substituir smoke humano nem revisaçã
 | `coach.wizard.*` | — | Paridade 3 idiomas | OK |
 | `team.requestJoin*` | — | Paridade 3 idiomas | OK |
 | Inbox UI + alertas TS | — | `inbox.*` (~140 chaves) pt/en/es; página migrada | **OK** (2026-10-09) |
-| `event-detail` alertas | Alta | Confronto/participação/cancelamento/remarcação + headers Erro/Sucesso | **Parcial** (2026-10-09) |
+| `event-detail` alertas | Alta | Confronto/participação/cancelamento/remarcação + headers Erro/Sucesso | **Parcial** — headers OK; corpo de alertas TS ainda PT |
+| Paridade JSON pt/en/es | Alta | ~172 chaves só em pt-BR | **OK** (2026-11-13) — `npm run check:i18n` |
+| Cards mural / período / convite evento | Alta | Hardcoded PT | **Parcial** (2026-11-14) — highlights/filtros/P0; `npm run check:i18n:scan` |
+| Splash + Entrar + tabs pelada | Alta | PT fixo | **OK** (2026-11-14) |
+| Voltar (`ion-back-button`) | Média | Rótulo sistema | **OK** (2026-11-14) — `common.back` |
+| `profile` menu | Média | Labels PT | **OK** (2026-11-13) — itens principais |
+| `account-edit` | Alta | Exclusão/senha/logout em PT | **Parcial** — cabeçalho/validações curtas OK; wizard longo pendente |
 | `event-role-hiring-panel` | Alta | Convite, conflito de agenda, toasts | **OK** (2026-10-09) |
-| `account-edit` / `profile` | Alta | Exclusão/senha/logout em PT | Pendente |
 | Painéis evento (convocação, participantes, admin) | Média | Status/labels inline PT | Pendente |
 | `team-profile` toast join | Média | Sucesso só em PT (botão já i18n) | Pendente |
 | `team-form` | Média | Loading/erros PT | Pendente |

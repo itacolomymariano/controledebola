@@ -2,7 +2,36 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-11-13 (growth: KPI, signupSource, funil convite)
+**Ultima atualizacao:** 2026-11-14 (i18n onda 3)
+
+### 2026-11-14 — i18n onda 3 (core, pelada, about, gate scan)
+
+- `scripts/i18n-wave3-extra.js`; **1691** chaves; `locale-datetime.util`, `event-status-i18n.util`, overview/participants/about/event-mural views.
+- `event-detail` locale$ + fechamento inscrições i18n; chip pelada usa `registrationsOpen` (sem comparar PT).
+- `npm run check:i18n:strict` (P0+P1 gate); `audit:i18n:pt-accents` → `docs/I18N-PT-BR-ORTHOGRAPHY.md`.
+- Scan ~360 hits (P0 mural-highlights/cotinha admin ainda abertos). Build **0371**.
+- Pendente: mural-highlights empty states; cotinhas labels pelada-detail; `formatEffectiveMembershipLabel` i18n.
+
+### 2026-11-14 — i18n onda 2 (analytics, account-edit, event-detail, event-mural hub)
+
+- `scripts/i18n-wave2-extra.js` (+~190 chaves); **1502** chaves; scan **370** hits (era 389).
+- `mural-performance-analytics` HTML completo + goal types; `mural-participant-stats` drilldown/empty states.
+- `account-edit` wizard HTML + alertas TS; `event-detail` tiles/ações + toasts principais (notify, voting, gate, material, GK).
+- `event-mural` título, hub Top 10, quorum, retry. Build **0369** OK.
+- Pendente: `event-mural` drill-down restante, `team-form`, wizards cadastro, HTML `event-detail`.
+
+### 2026-11-14 — i18n cobertura (P0/P1)
+
+- `scripts/scan-i18n-hardcoded.js`, `npm run check:i18n:scan`; onda 1 P0 mural/pelada.
+- `profileRole.*` + `ion-back-button` `common.back`.
+
+### 2026-11-13 — i18n completo (Xaiana / Play)
+
+- `npm run check:i18n` — 1220 chaves pt/en/es; scripts `check-i18n-parity.js`, `build-i18n-missing-packs.js`, `apply-i18n-code-migration.js`.
+- UI: `event-detail` convite/título; `mural-app-feed`, `mural-period-rankings-card`; `profile`; `account-edit` (parcial).
+- TTS: `MuralRuleSpeechService.toSpeechLang()` BCP47.
+- Docs: `I18N-SMOKE-XAIANA.md`, `I18N-HARDCODED-REPORT.md`, `AUDITORIA-PLAY-I18N` atualizada.
+- Pendente: toasts/erros TS em `event-detail`; wizard completo `account-edit`; `team-form`/`team-profile`.
 
 ### 2026-11-13 — Growth: medicao e funil convite
 

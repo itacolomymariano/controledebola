@@ -10,10 +10,10 @@
         <app-mural-event-context [context]="shareContext"></app-mural-event-context>
       }
       <div class="mural-card-header-row">
-        <ion-card-title>Desempenho — qualitativos</ion-card-title>
+        <ion-card-title>{{ 'mural.performance.qualitative' | t }}</ion-card-title>
         <app-mural-share-button
           [context]="shareContext"
-          cardTitle="Desempenho — qualitativos"
+          [cardTitle]="'mural.performance.qualitative' | t"
           ruleKey="mural.rule.desempenho"
         ></app-mural-share-button>
       </div>
@@ -22,9 +22,9 @@
       }
     </ion-card-header>
     <ion-card-content>
-      <h3>Top 3 finalizacoes no alvo</h3>
+      <h3>{{ 'mural.performance.top3.shotsOnTarget' | t }}</h3>
       @if (!loadedAnalytics.qualitative.shotsOnTarget.length) {
-        <ion-note color="medium">Sem dados.</ion-note>
+        <ion-note color="medium">{{ 'mural.performance.noData' | t }}</ion-note>
       }
       @for (entry of loadedAnalytics.qualitative.shotsOnTarget; track entry.userId; let i = $index) {
         <div class="top-entry">
@@ -42,9 +42,9 @@
         </div>
       }
 
-      <h3 class="ion-margin-top">Top 3 maiores finalizadores</h3>
+      <h3 class="ion-margin-top">{{ 'mural.performance.top3.topShooters' | t }}</h3>
       @if (!loadedAnalytics.qualitative.totalShots.length) {
-        <ion-note color="medium">Sem dados.</ion-note>
+        <ion-note color="medium">{{ 'mural.performance.noData' | t }}</ion-note>
       }
       @for (entry of loadedAnalytics.qualitative.totalShots; track entry.userId; let i = $index) {
         <div class="top-entry">
@@ -62,9 +62,9 @@
         </div>
       }
 
-      <h3 class="ion-margin-top">Top 3 assistencias</h3>
+      <h3 class="ion-margin-top">{{ 'mural.performance.top3.assists' | t }}</h3>
       @if (!loadedAnalytics.qualitative.assists.length) {
-        <ion-note color="medium">Sem dados.</ion-note>
+        <ion-note color="medium">{{ 'mural.performance.noData' | t }}</ion-note>
       }
       @for (entry of loadedAnalytics.qualitative.assists; track entry.userId; let i = $index) {
         <div class="top-entry">
@@ -92,10 +92,10 @@
         <app-mural-event-context [context]="shareContext"></app-mural-event-context>
       }
       <div class="mural-card-header-row">
-        <ion-card-title>Desempenho — quantitativos</ion-card-title>
+        <ion-card-title>{{ 'mural.performance.quantitative' | t }}</ion-card-title>
         <app-mural-share-button
           [context]="shareContext"
-          cardTitle="Desempenho — quantitativos"
+          [cardTitle]="'mural.performance.quantitative' | t"
           ruleKey="mural.rule.desempenho"
         ></app-mural-share-button>
       </div>
@@ -104,9 +104,9 @@
       }
     </ion-card-header>
     <ion-card-content>
-      <h3>Top 3 maiores finalizadores</h3>
+      <h3>{{ 'mural.performance.top3.topShooters' | t }}</h3>
       @if (!loadedAnalytics.quantitative.totalShots.length) {
-        <ion-note color="medium">Sem dados.</ion-note>
+        <ion-note color="medium">{{ 'mural.performance.noData' | t }}</ion-note>
       }
       @for (entry of loadedAnalytics.quantitative.totalShots; track entry.userId; let i = $index) {
         <div class="top-entry">
@@ -124,9 +124,9 @@
         </div>
       }
 
-      <h3 class="ion-margin-top">Top 3 passes certos</h3>
+      <h3 class="ion-margin-top">{{ 'mural.performance.top3.passesCompleted' | t }}</h3>
       @if (!loadedAnalytics.quantitative.passesCompleted.length) {
-        <ion-note color="medium">Sem dados.</ion-note>
+        <ion-note color="medium">{{ 'mural.performance.noData' | t }}</ion-note>
       }
       @for (entry of loadedAnalytics.quantitative.passesCompleted; track entry.userId; let i = $index) {
         <div class="top-entry">
@@ -144,9 +144,9 @@
         </div>
       }
 
-      <h3 class="ion-margin-top">Top 3 que mais sofre faltas</h3>
+      <h3 class="ion-margin-top">{{ 'mural.performance.top3.foulsSuffered' | t }}</h3>
       @if (!loadedAnalytics.quantitative.foulsSuffered.length) {
-        <ion-note color="medium">Sem dados.</ion-note>
+        <ion-note color="medium">{{ 'mural.performance.noData' | t }}</ion-note>
       }
       @for (entry of loadedAnalytics.quantitative.foulsSuffered; track entry.userId; let i = $index) {
         <div class="top-entry">
@@ -164,9 +164,9 @@
         </div>
       }
 
-      <h3 class="ion-margin-top">Top 3 quem mais comete faltas</h3>
+      <h3 class="ion-margin-top">{{ 'mural.performance.top3.foulsCommitted' | t }}</h3>
       @if (!loadedAnalytics.quantitative.foulsCommitted.length) {
-        <ion-note color="medium">Sem dados.</ion-note>
+        <ion-note color="medium">{{ 'mural.performance.noData' | t }}</ion-note>
       }
       @for (entry of loadedAnalytics.quantitative.foulsCommitted; track entry.userId; let i = $index) {
         <div class="top-entry">
@@ -184,9 +184,9 @@
         </div>
       }
 
-      <h3 class="ion-margin-top">Top 3 passes errados</h3>
+      <h3 class="ion-margin-top">{{ 'mural.performance.top3.passesMissed' | t }}</h3>
       @if (!loadedAnalytics.quantitative.passesMissed.length) {
-        <ion-note color="medium">Sem dados.</ion-note>
+        <ion-note color="medium">{{ 'mural.performance.noData' | t }}</ion-note>
       }
       @for (entry of loadedAnalytics.quantitative.passesMissed; track entry.userId; let i = $index) {
         <div class="top-entry">
@@ -214,10 +214,10 @@
         <app-mural-event-context [context]="shareContext"></app-mural-event-context>
       }
       <div class="mural-card-header-row">
-        <ion-card-title>Graficos de desempenho</ion-card-title>
+        <ion-card-title>{{ 'mural.performance.chartsTitle' | t }}</ion-card-title>
         <app-mural-share-button
           [context]="shareContext"
-          cardTitle="Graficos de desempenho"
+          [cardTitle]="'mural.performance.chartsTitle' | t"
           ruleKey="mural.rule.desempenho"
         ></app-mural-share-button>
       </div>
@@ -226,9 +226,9 @@
       }
     </ion-card-header>
     <ion-card-content>
-      <h3>Finalizacoes no alvo x fora</h3>
+      <h3>{{ 'mural.performance.chart.shotsOnOff' | t }}</h3>
       <div class="perf-bar-row">
-        <span>No alvo</span>
+        <span>{{ 'mural.performance.chart.onTarget' | t }}</span>
         <div class="perf-bar-track">
           <div
             class="perf-bar-fill perf-bar-fill--primary"
@@ -238,7 +238,7 @@
         <span>{{ loadedAnalytics.charts.shotsOnTarget }}</span>
       </div>
       <div class="perf-bar-row">
-        <span>Fora</span>
+        <span>{{ 'mural.performance.chart.offTarget' | t }}</span>
         <div class="perf-bar-track">
           <div
             class="perf-bar-fill perf-bar-fill--medium"
@@ -248,9 +248,9 @@
         <span>{{ loadedAnalytics.charts.shotsOffTarget }}</span>
       </div>
 
-      <h3 class="ion-margin-top">Total de finalizacoes x gols</h3>
+      <h3 class="ion-margin-top">{{ 'mural.performance.chart.shotsVsGoals' | t }}</h3>
       <div class="perf-bar-row">
-        <span>Finalizacoes</span>
+        <span>{{ 'mural.performance.chart.shots' | t }}</span>
         <div class="perf-bar-track">
           <div
             class="perf-bar-fill perf-bar-fill--secondary"
@@ -260,7 +260,7 @@
         <span>{{ loadedAnalytics.charts.totalShots }}</span>
       </div>
       <div class="perf-bar-row">
-        <span>Gols</span>
+        <span>{{ 'mural.performance.chart.goals' | t }}</span>
         <div class="perf-bar-track">
           <div
             class="perf-bar-fill perf-bar-fill--success"
@@ -270,7 +270,7 @@
         <span>{{ loadedAnalytics.charts.goals }}</span>
       </div>
 
-      <h3 class="ion-margin-top">Aproveitamento finalizacao no alvo → gol</h3>
+      <h3 class="ion-margin-top">{{ 'mural.performance.chart.conversionTitle' | t }}</h3>
       <div class="perf-pct-row">
         <div class="perf-pct-track">
           <div
@@ -281,10 +281,10 @@
         <strong>{{ loadedAnalytics.charts.goalConversionPct }}%</strong>
       </div>
       <p class="perf-chart-note">
-        {{ loadedAnalytics.charts.goals }} gols em {{ loadedAnalytics.charts.shotsOnTarget }} finalizacoes no alvo
+        {{ 'mural.performance.chart.conversionNote' | t: { goals: loadedAnalytics.charts.goals, shotsOnTarget: loadedAnalytics.charts.shotsOnTarget } }}
       </p>
 
-      <h3 class="ion-margin-top">Acerto de passes</h3>
+      <h3 class="ion-margin-top">{{ 'mural.performance.chart.passAccuracy' | t }}</h3>
       <div class="perf-pct-row">
         <div class="perf-pct-track">
           <div
@@ -295,12 +295,12 @@
         <strong>{{ loadedAnalytics.charts.passAccuracyPct }}%</strong>
       </div>
       <p class="perf-chart-note">
-        {{ loadedAnalytics.charts.passesCompleted }} certos de {{ loadedAnalytics.charts.totalPasses }} passes
+        {{ 'mural.performance.chart.passNote' | t: { completed: loadedAnalytics.charts.passesCompleted, total: loadedAnalytics.charts.totalPasses } }}
       </p>
 
-      <h3 class="ion-margin-top">Faltas cometidas x atletas</h3>
+      <h3 class="ion-margin-top">{{ 'mural.performance.chart.foulsVsAthletes' | t }}</h3>
       <div class="perf-bar-row">
-        <span>Faltas</span>
+        <span>{{ 'mural.performance.chart.fouls' | t }}</span>
         <div class="perf-bar-track">
           <div
             class="perf-bar-fill perf-bar-fill--warning"
@@ -310,7 +310,7 @@
         <span>{{ loadedAnalytics.charts.foulsCommitted }}</span>
       </div>
       <div class="perf-bar-row">
-        <span>Atletas</span>
+        <span>{{ 'mural.performance.chart.athletes' | t }}</span>
         <div class="perf-bar-track">
           <div
             class="perf-bar-fill perf-bar-fill--tertiary"
@@ -330,10 +330,10 @@
         <app-mural-event-context [context]="shareContext"></app-mural-event-context>
       }
       <div class="mural-card-header-row">
-        <ion-card-title>Tipos de gols</ion-card-title>
+        <ion-card-title>{{ 'mural.performance.goalTypes' | t }}</ion-card-title>
         <app-mural-share-button
           [context]="shareContext"
-          cardTitle="Tipos de gols"
+          [cardTitle]="'mural.performance.goalTypes' | t"
           ruleKey="mural.rule.goalTypes"
         ></app-mural-share-button>
       </div>
@@ -342,7 +342,7 @@
       }
     </ion-card-header>
     <ion-card-content>
-      @for (opt of goalMethodOptions; track opt.field) {
+      @for (opt of localizedGoalMethodOptions; track opt.field) {
         <div class="stats-row ion-margin-bottom">
           <span>{{ opt.label }}</span>
           <ion-badge color="primary">{{ goalTypeCount(opt.field) }}</ion-badge>

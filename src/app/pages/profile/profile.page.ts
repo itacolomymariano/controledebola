@@ -6,7 +6,8 @@ import { AuthService } from '../../core/services/auth.service';
 import { AppInviteShareService } from '../../core/services/app-invite-share.service';
 import { AppStorageService } from '../../core/services/app-storage.service';
 import { BiometricUnlockService } from '../../core/services/biometric-unlock.service';
-import { PROFILE_ROLE_LABELS, ProfileRole } from '../../core/models/profile-role.model';
+import { ProfileRole } from '../../core/models/profile-role.model';
+import { localizedProfileRoleLabel } from '../../core/utils/profile-role-i18n.util';
 import { PROFESSIONAL_ROLES, ProfessionalRole } from '../../core/models/role-profile.model';
 import { AthleteProfileService } from '../../core/services/athlete-profile.service';
 import { RoleProfileService } from '../../core/services/role-profile.service';
@@ -15,6 +16,7 @@ import { FanProfileService } from '../../core/services/fan-profile.service';
 import { RefereeInvitationService } from '../../core/services/referee-invitation.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
 import { AppGuideService } from '../../core/services/app-guide.service';
+import { I18nService } from '../../core/services/i18n.service';
 
 @Component({
   selector: 'app-profile',
@@ -66,8 +68,15 @@ export class ProfilePage implements OnInit, OnDestroy {
     private readonly router: Router,
     private readonly alertCtrl: AlertController,
     private readonly loadingCtrl: LoadingController,
-    private readonly appGuide: AppGuideService
+    private readonly appGuide: AppGuideService,
+    private readonly i18n: I18nService
   ) {}
+
+  teamCountSummary(): string {
+    if (!this.hasTeam) return this.i18n.t('profile.registerNow');
+    const plural = this.teamCount === 1 ? '' : 's';
+    return this.i18n.t('profile.myTeamsManage', { count: this.teamCount, plural });
+  }
 
   ngOnInit(): void {
     this.profileSub = this.auth.onProfileChanged.subscribe(() => {
@@ -88,7 +97,7 @@ export class ProfilePage implements OnInit, OnDestroy {
   }
 
   roleLabel(role: ProfessionalRole): string {
-    return PROFILE_ROLE_LABELS[role];
+    return localizedProfileRoleLabel(this.i18n, role);
   }
 
   openAthleteProfile(): void {
@@ -220,7 +229,9 @@ export class ProfilePage implements OnInit, OnDestroy {
     this.avatarUrl = this.auth.getAvatarUrl();
     this.biometricEnabled = await this.storage.isBiometricEnabled();
     this.primaryRole = this.auth.getPrimaryRole();
-    this.primaryRoleLabel = this.primaryRole ? PROFILE_ROLE_LABELS[this.primaryRole] : '';
+    this.primaryRoleLabel = this.primaryRole
+      ? localizedProfileRoleLabel(this.i18n, this.primaryRole)
+      : '';
     this.hasAthleteProfile = !!(await this.athleteProfileService.getForCurrentUser());
     const myTeams = await this.teamService.listMine();
     this.teamCount = myTeams.length;

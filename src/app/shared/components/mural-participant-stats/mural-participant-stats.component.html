@@ -6,15 +6,15 @@
       }
       <div class="mural-card-header-row">
         <div>
-          <ion-card-title>Participantes por localizacao</ion-card-title>
+          <ion-card-title>{{ 'mural.stats.participantsByLocation' | t }}</ion-card-title>
           @if (filterCaption) {
             <p class="mural-filter-line">{{ filterCaption }}</p>
           }
-          <ion-card-subtitle>Total: {{ stats.total }}</ion-card-subtitle>
+          <ion-card-subtitle>{{ 'mural.stats.totalLine' | t: { count: stats.total } }}</ion-card-subtitle>
         </div>
         <app-mural-share-button
           [context]="shareContext"
-          cardTitle="Participantes por localizacao"
+          [cardTitle]="'mural.stats.participantsByLocation' | t"
           ruleKey="mural.rule.participantesLocal"
         ></app-mural-share-button>
       </div>
@@ -38,17 +38,17 @@
 
         @if (level === 'states') {
           @if (!stateCards.length) {
-            <ion-note color="medium">Sem endereco de estado registrado.</ion-note>
+            <ion-note color="medium">{{ 'mural.stats.noStateAddress' | t }}</ion-note>
           }
           <div class="drilldown-grid">
             @for (row of stateCards; track row.label) {
               <ion-card button class="drilldown-card" (click)="openState(row.label)">
                 <ion-card-header>
                   <ion-card-title>{{ row.label }}</ion-card-title>
-                  <ion-card-subtitle>{{ row.count }} participantes</ion-card-subtitle>
+                  <ion-card-subtitle>{{ 'mural.stats.participantsLine' | t: { count: row.count } }}</ion-card-subtitle>
                 </ion-card-header>
                 <ion-card-content>
-                  <ion-note>{{ row.subCount }} {{ row.subLabel | lowercase }}</ion-note>
+                  <ion-note>{{ row.subLine }}</ion-note>
                 </ion-card-content>
               </ion-card>
             }
@@ -57,17 +57,17 @@
 
         @if (level === 'cities') {
           @if (!cityCards.length) {
-            <ion-note color="medium">Sem cidade registrada neste estado.</ion-note>
+            <ion-note color="medium">{{ 'mural.stats.noCityInState' | t }}</ion-note>
           }
           <div class="drilldown-grid">
             @for (row of cityCards; track row.label) {
               <ion-card button class="drilldown-card" (click)="openCity(row.label)">
                 <ion-card-header>
                   <ion-card-title>{{ row.label }}</ion-card-title>
-                  <ion-card-subtitle>{{ row.count }} participantes</ion-card-subtitle>
+                  <ion-card-subtitle>{{ 'mural.stats.participantsLine' | t: { count: row.count } }}</ion-card-subtitle>
                 </ion-card-header>
                 <ion-card-content>
-                  <ion-note>{{ row.subCount }} {{ row.subLabel | lowercase }}</ion-note>
+                  <ion-note>{{ row.subLine }}</ion-note>
                 </ion-card-content>
               </ion-card>
             }
@@ -76,14 +76,14 @@
 
         @if (level === 'neighborhoods') {
           @if (!neighborhoodCards.length) {
-            <ion-note color="medium">Sem bairro registrado nesta cidade.</ion-note>
+            <ion-note color="medium">{{ 'mural.stats.noNeighborhoodInCity' | t }}</ion-note>
           }
           <div class="drilldown-grid">
             @for (row of neighborhoodCards; track row.label) {
               <ion-card class="drilldown-card drilldown-card-static">
                 <ion-card-header>
                   <ion-card-title>{{ row.label }}</ion-card-title>
-                  <ion-card-subtitle>{{ row.count }} participantes</ion-card-subtitle>
+                  <ion-card-subtitle>{{ 'mural.stats.participantsLine' | t: { count: row.count } }}</ion-card-subtitle>
                 </ion-card-header>
               </ion-card>
             }
@@ -92,9 +92,9 @@
       } @else {
         @if (showCity) {
           <div class="stats-section">
-            <h3>Por cidade</h3>
+            <h3>{{ 'mural.stats.byCity' | t }}</h3>
             @if (!stats.byCity.length) {
-              <ion-note color="medium">Sem endereco de cidade registrado.</ion-note>
+              <ion-note color="medium">{{ 'mural.stats.noCityAddress' | t }}</ion-note>
             }
             @for (row of stats.byCity; track row.label) {
               <div class="stats-row">
@@ -116,12 +116,12 @@
                 (click)="openNeighborhoods()"
               >
                 <ion-label>
-                  <h3>Por bairro</h3>
+                  <h3>{{ 'mural.stats.byNeighborhood' | t }}</h3>
                   <p>
                     @if (neighborhoodCount === 1) {
-                      1 bairro no {{ scopeLabel }}
+                      {{ 'mural.stats.neighborhoodsOneInScope' | t: { scope: scopeLabel } }}
                     } @else {
-                      {{ neighborhoodCount }} bairros no {{ scopeLabel }}
+                      {{ 'mural.stats.neighborhoodsManyInScope' | t: { count: neighborhoodCount, scope: scopeLabel } }}
                     }
                   </p>
                 </ion-label>
@@ -138,10 +138,10 @@
                   <ion-icon slot="start" name="chevron-back-outline" aria-hidden="true"></ion-icon>
                   {{ 'common.back' | t }}
                 </ion-button>
-                <ion-note>Por bairro · {{ neighborhoodCount }}</ion-note>
+                <ion-note>{{ 'mural.stats.byNeighborhoodCount' | t: { count: neighborhoodCount } }}</ion-note>
               </div>
               @if (!stats.byNeighborhood.length) {
-                <ion-note color="medium">Sem endereco de bairro registrado.</ion-note>
+                <ion-note color="medium">{{ 'mural.stats.noNeighborhoodAddress' | t }}</ion-note>
               }
               @for (row of stats.byNeighborhood; track row.label) {
                 <div class="stats-row">

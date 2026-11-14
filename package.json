@@ -1,6 +1,6 @@
 {
   "name": "minhapelada",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "author": "Ionic Framework",
   "homepage": "https://ionicframework.com/",
   "scripts": {
@@ -24,6 +24,10 @@
     "check:cloud-parity": "node scripts/cloud-client-parity.js",
     "probe:sandbox-cloud": "node scripts/probe-sandbox-cloud-functions.js",
     "verify:growth-cloud": "node scripts/verify-growth-cloud-deployed.js",
+    "check:i18n": "node scripts/check-i18n-parity.js",
+    "check:i18n:scan": "node scripts/scan-i18n-hardcoded.js",
+    "check:i18n:strict": "node scripts/scan-i18n-hardcoded.js --strict",
+    "audit:i18n:pt-accents": "node scripts/audit-pt-br-orthography.js",
     "sync:play-assetlinks": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-play-assetlinks.ps1"
   },
   "private": true,

@@ -77,7 +77,7 @@
               <app-team-shield [teamName]="team.teamName" size="sm"></app-team-shield>
               <p class="mural-playful-team">{{ team.teamName }}</p>
             </div>
-            <p class="mural-playful-meta">{{ team.count }} torcedor(es)</p>
+            <p class="mural-playful-meta">{{ fansCountLabel(team.count) }}</p>
           } @else {
             <ion-badge color="medium">{{ 'mural.playful.noData' | t }}</ion-badge>
           }
@@ -96,7 +96,7 @@
       } @else {
         <app-playful-card tone="users" class="mural-playful-tile">
           <ion-icon name="star-outline" class="mural-playful-tile__icon"></ion-icon>
-          <h4>Promessa</h4>
+          <h4>{{ promessaTitle() }}</h4>
           @if (highlights.promessa; as entry) {
             <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
           } @else {
@@ -446,10 +446,10 @@
     @if (showPlayfulExtraCards) {
       <app-playful-card tone="surface" class="ion-margin-bottom">
         <div class="mural-card-header-row">
-          <h3 class="mural-playful-section-title">Promessa</h3>
+          <h3 class="mural-playful-section-title">{{ promessaTitle() }}</h3>
           <app-mural-share-button
             [context]="shareContext"
-            cardTitle="Promessa"
+            [cardTitle]="promessaTitle()"
             ruleKey="mural.rule.promessa"
           ></app-mural-share-button>
         </div>
@@ -466,10 +466,10 @@
             <app-mural-event-context [context]="shareContext"></app-mural-event-context>
           }
           <div class="mural-card-header-row">
-            <ion-card-title>Promessa</ion-card-title>
+            <ion-card-title>{{ promessaTitle() }}</ion-card-title>
             <app-mural-share-button
               [context]="shareContext"
-              cardTitle="Promessa"
+              [cardTitle]="promessaTitle()"
               ruleKey="mural.rule.promessa"
             ></app-mural-share-button>
           </div>
@@ -491,10 +491,10 @@
   @if (showPlayfulExtraCards) {
     <app-playful-card tone="muted" class="ion-margin-bottom">
       <div class="mural-card-header-row">
-        <h3 class="mural-playful-section-title">Master</h3>
+        <h3 class="mural-playful-section-title">{{ masterTitle() }}</h3>
         <app-mural-share-button
           [context]="shareContext"
-          cardTitle="Master"
+          [cardTitle]="masterTitle()"
           ruleKey="mural.rule.master"
         ></app-mural-share-button>
       </div>
@@ -511,10 +511,10 @@
           <app-mural-event-context [context]="shareContext"></app-mural-event-context>
         }
         <div class="mural-card-header-row">
-          <ion-card-title>Master</ion-card-title>
+          <ion-card-title>{{ masterTitle() }}</ion-card-title>
           <app-mural-share-button
             [context]="shareContext"
-            cardTitle="Master"
+            [cardTitle]="masterTitle()"
             ruleKey="mural.rule.master"
           ></app-mural-share-button>
         </div>

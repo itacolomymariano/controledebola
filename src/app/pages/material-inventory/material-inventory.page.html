@@ -1,7 +1,7 @@
 <ion-header>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button [defaultHref]="ownerType === 'pelada' && peladaId ? '/pelada/' + peladaId : '/tabs/profile'"></ion-back-button>
+      <ion-back-button [text]="'common.back' | t" [defaultHref]="ownerType === 'pelada' && peladaId ? '/pelada/' + peladaId : '/tabs/profile'"></ion-back-button>
     </ion-buttons>
     <ion-title>{{ pageTitle }}</ion-title>
     <ion-buttons slot="end">

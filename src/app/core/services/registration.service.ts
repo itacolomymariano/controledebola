@@ -5,7 +5,6 @@ import {
   computeEffectiveConfirmation,
   eventsOverlap,
   getRegistrationStatus,
-  getRegistrationStatusLabel,
   isTeamSide,
   PeladaEvent,
   TeamSide,
@@ -18,7 +17,11 @@ import {
   ScheduleConflict,
 } from '../models/event-registration.model';
 import { PeladaParticipant } from '../models/pelada-participant.model';
-import { ProfileRole, PROFILE_ROLE_LABELS } from '../models/profile-role.model';
+import { ProfileRole } from '../models/profile-role.model';
+import { localizedProfileRoleLabel } from '../utils/profile-role-i18n.util';
+import { formatAppDateTime, intlLocaleForApp } from '../utils/locale-datetime.util';
+import { I18nService } from './i18n.service';
+import { localizedRegistrationStatusLabel } from '../utils/event-status-i18n.util';
 import { isInvalidCloudFunctionError, parseErrorMessage } from '../utils/parse-error.util';
 import { getUserAvatarUrl } from '../utils/user-avatar.util';
 import {
@@ -53,7 +56,8 @@ export class RegistrationService {
     private readonly peladaService: PeladaService,
     private readonly monthlyFeeService: PeladaMonthlyFeeService,
     private readonly gateTicketService: EventGateTicketService,
-    private readonly profilePresentationService: ProfilePresentationRequestService
+    private readonly profilePresentationService: ProfilePresentationRequestService,
+    private readonly i18n: I18nService
   ) {
     this.parseService.init();
   }
@@ -901,7 +905,7 @@ export class RegistrationService {
   }
 
   formatArrivedAt(date: Date): string {
-    return new Intl.DateTimeFormat('pt-BR', {
+    return new Intl.DateTimeFormat(intlLocaleForApp(this.i18n.locale), {
       hour: '2-digit',
       minute: '2-digit',
     }).format(date);
@@ -991,7 +995,9 @@ export class RegistrationService {
 
     if (registrationStatus !== 'open') {
       throw new Error(
-        `As inscricoes estao ${getRegistrationStatusLabel(registrationStatus).toLowerCase()}.`
+        this.i18n.t('eventDetail.registration.closedMessage', {
+          status: localizedRegistrationStatusLabel(this.i18n, registrationStatus),
+        })
       );
     }
 
@@ -1232,34 +1238,32 @@ export class RegistrationService {
     registration: EventRegistration,
     participationFee: number
   ): string {
+    const t = (key: string) => this.i18n.t(key);
     if (registration.profilePresentationStatus === 'pending') {
-      return 'Aguardando aprovacao do administrador da pelada';
+      return t('registration.effective.awaitingPeladaAdmin');
     }
     if (registration.profilePresentationStatus === 'rejected') {
-      return 'Solicitacao recusada pelo administrador da pelada';
+      return t('registration.effective.rejectedPeladaAdmin');
     }
     if (registration.invitedByContract || registration.invitedAsReferee) {
       if (!registration.isEffectivelyConfirmed) {
-        return 'Aguardando confirmacao da contratacao';
+        return t('registration.effective.awaitingContractConfirm');
       }
       const offered = Number(registration.contractOfferedAmount ?? 0);
       if (offered > 0) {
-        return (
-          'Confirmado (contratacao aceita). O pagamento pelo trabalho sera liberado ' +
-          'apos o administrador confirmar sua presenca.'
-        );
+        return t('registration.effective.confirmedContractPaidAfterPresence');
       }
-      return 'Confirmado (convocacao aceita).';
+      return t('registration.effective.confirmedConvocation');
     }
-    if (participationFee <= 0) return 'Confirmado';
-    if (registration.paymentExempt) return 'Confirmado (isento de pagamento)';
-    if (registration.isEffectivelyConfirmed) return 'Confirmado (pagamento validado)';
-    if (registration.paymentConfirmed) return 'Pagamento confirmado';
-    return 'Aguardando pagamento';
+    if (participationFee <= 0) return t('registration.effective.confirmed');
+    if (registration.paymentExempt) return t('registration.effective.confirmedExempt');
+    if (registration.isEffectivelyConfirmed) return t('registration.effective.confirmedPaid');
+    if (registration.paymentConfirmed) return t('registration.effective.paymentConfirmed');
+    return t('registration.effective.awaitingPayment');
   }
 
   formatRole(role: ProfileRole): string {
-    return PROFILE_ROLE_LABELS[role] ?? role;
+    return localizedProfileRoleLabel(this.i18n, role) || role;
   }
 
   private notifyRegistrationsChanged(): void {
@@ -1268,12 +1272,7 @@ export class RegistrationService {
   }
 
   private formatDateTime(date: Date): string {
-    return new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
+    return formatAppDateTime(date, this.i18n.locale);
   }
 
   private toRegistration(obj: Parse.Object): EventRegistration {

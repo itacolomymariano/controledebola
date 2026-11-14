@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  EventEmitter,
+  Input,
+  OnDestroy,
+  Output,
+} from '@angular/core';
+import { Subscription } from 'rxjs';
 import { Router } from '@angular/router';
 import {
   PeladaEvent,
@@ -17,6 +26,7 @@ import {
   registrationCardColor,
   registrationCardTitle,
 } from '../../../core/utils/event-detail-display.util';
+import { I18nService } from '../../../core/services/i18n.service';
 import {
   isContractHiredRegistration,
   registrationRequiresParticipationPayment,
@@ -31,7 +41,8 @@ export type EventDetailParticipantsPanelMode = 'admin' | 'user';
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: false,
 })
-export class EventDetailParticipantsPanelComponent {
+export class EventDetailParticipantsPanelComponent implements OnDestroy {
+  private localeSub?: Subscription;
   @Input({ required: true }) mode!: EventDetailParticipantsPanelMode;
   @Input({ required: true }) event!: PeladaEvent;
   @Input() registration: EventRegistration | null = null;
@@ -81,8 +92,16 @@ export class EventDetailParticipantsPanelComponent {
   constructor(
     readonly registrationService: RegistrationService,
     readonly eventService: EventService,
-    private readonly router: Router
-  ) {}
+    private readonly router: Router,
+    private readonly i18n: I18nService,
+    private readonly cdr: ChangeDetectorRef
+  ) {
+    this.localeSub = this.i18n.locale$.subscribe(() => this.cdr.markForCheck());
+  }
+
+  ngOnDestroy(): void {
+    this.localeSub?.unsubscribe();
+  }
 
   openInbox(): void {
     void this.router.navigateByUrl('/inbox');
@@ -123,7 +142,7 @@ export class EventDetailParticipantsPanelComponent {
   }
 
   cardTitle(registration: EventRegistration): string {
-    return registrationCardTitle(registration);
+    return registrationCardTitle(registration, (key, params) => this.i18n.t(key, params));
   }
 
   cardColor(registration: EventRegistration): string {
@@ -139,6 +158,15 @@ export class EventDetailParticipantsPanelComponent {
 
   formatParticipationFee(fee: number): string {
     return this.eventService.formatParticipationFee(fee);
+  }
+
+  participantPaymentStatusLine(participant: EventRegistrationListItem): string {
+    const status = this.i18n.t(
+      participant.paymentConfirmed
+        ? 'eventDetail.participants.paymentYes'
+        : 'eventDetail.participants.paymentNo'
+    );
+    return this.i18n.t('eventDetail.participants.paymentLine', { status });
   }
 
   hasArrived(participant: EventRegistrationListItem): boolean {

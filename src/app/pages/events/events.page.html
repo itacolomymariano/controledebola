@@ -54,7 +54,7 @@
           <ion-icon name="swap-horizontal-outline"></ion-icon>
           <div>
             <h3 class="events-card-title">Nenhum confronto</h3>
-            <p class="events-card-meta">Use o botão acima para marcar um novo confronto.</p>
+            <p class="events-card-meta">{{ 'events.noFixtureHint' | t }}</p>
           </div>
         </div>
       </app-playful-card>
@@ -84,7 +84,7 @@
             @if (row.locationLabel) {
               <p class="events-card-meta">{{ row.locationLabel }}</p>
             }
-            <ion-button expand="block" size="small" class="ion-margin-top" (click)="openMatch(row); $event.stopPropagation()">Entrar</ion-button>
+            <ion-button expand="block" size="small" class="ion-margin-top" (click)="openMatch(row); $event.stopPropagation()">{{ 'confrontos.enter' | t }}</ion-button>
           </app-playful-card>
         }
       </app-playful-grid>

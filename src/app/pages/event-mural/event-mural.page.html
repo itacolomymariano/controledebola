@@ -3,17 +3,17 @@
   <ion-toolbar>
     <ion-buttons slot="start">
       @if (!isRoot) {
-        <ion-button fill="clear" (click)="popView()" aria-label="Voltar">
+        <ion-button fill="clear" (click)="popView()" [attr.aria-label]="'common.back' | t">
           <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
         </ion-button>
       } @else {
-        <ion-back-button [defaultHref]="'/event/' + eventId"></ion-back-button>
+        <ion-back-button [text]="'common.back' | t" [defaultHref]="'/event/' + eventId"></ion-back-button>
       }
     </ion-buttons>
-    <ion-title>{{ isRoot ? 'Mural do evento' : drillTitle }}</ion-title>
+    <ion-title>{{ isRoot ? ('eventMural.title' | t) : drillTitle }}</ion-title>
     @if (!isRoot) {
       <ion-buttons slot="end">
-        <ion-button fill="clear" (click)="closeDrillToRoot()">Fechar</ion-button>
+        <ion-button fill="clear" (click)="closeDrillToRoot()">{{ 'eventMural.close' | t }}</ion-button>
       </ion-buttons>
     }
   </ion-toolbar>
@@ -35,7 +35,7 @@
       <ion-card-content>
         <p>{{ errorMessage }}</p>
         @if (loadFailed) {
-          <ion-button fill="clear" (click)="retry()">Tentar novamente</ion-button>
+          <ion-button fill="clear" (click)="retry()">{{ 'eventMural.retry' | t }}</ion-button>
         }
       </ion-card-content>
     </ion-card>
@@ -44,8 +44,7 @@
   @if (!loading && !loadFailed) {
     @if (isRoot && !voterQuorumMet) {
       <ion-note color="medium" class="ion-margin-bottom">
-        Integridade: este evento ainda tem menos de {{ minVotersForHighlights }} votantes
-        distintos. Os rankings continuam visiveis; a media fica mais confiavel com mais votos.
+        {{ 'eventMural.quorumNote' | t: { min: minVotersForHighlights } }}
       </ion-note>
     }
 
@@ -68,12 +67,12 @@
           <app-mural-event-context [context]="shareContext"></app-mural-event-context>
           <div class="mural-card-header-row">
             <div>
-              <h2 class="mural-event-hub__title">Top 10</h2>
-              <p class="mural-event-hub__subtitle">Atletas, goleiros e demais perfis</p>
+              <h2 class="mural-event-hub__title">{{ 'eventMural.hub.title' | t }}</h2>
+              <p class="mural-event-hub__subtitle">{{ 'eventMural.hub.subtitle' | t }}</p>
             </div>
             <app-mural-share-button
               [context]="shareContext"
-              cardTitle="Top 10"
+              [cardTitle]="'eventMural.hub.title' | t"
               ruleKey="mural.rule.top10Hub"
             ></app-mural-share-button>
           </div>
@@ -88,12 +87,12 @@
           <app-mural-event-context [context]="shareContext"></app-mural-event-context>
           <div class="mural-card-header-row">
             <div>
-              <h2 class="mural-event-hub__title">Apontamentos do Scout</h2>
-              <p class="mural-event-hub__subtitle">Desempenho, gráficos e tipos de gol</p>
+              <h2 class="mural-event-hub__title">{{ 'eventMural.hub.scoutTitle' | t }}</h2>
+              <p class="mural-event-hub__subtitle">{{ 'eventMural.hub.scoutSubtitle' | t }}</p>
             </div>
             <app-mural-share-button
               [context]="shareContext"
-              cardTitle="Apontamentos do Scout"
+              [cardTitle]="'eventMural.hub.scoutTitle' | t"
               ruleKey="mural.rule.scoutHub"
             ></app-mural-share-button>
           </div>
@@ -108,12 +107,12 @@
           <app-mural-event-context [context]="shareContext"></app-mural-event-context>
           <div class="mural-card-header-row">
             <div>
-              <h2 class="mural-event-hub__title">Notas individuais</h2>
-              <p class="mural-event-hub__subtitle">Scout, massagista e roupeiro</p>
+              <h2 class="mural-event-hub__title">{{ 'eventMural.hub.notasTitle' | t }}</h2>
+              <p class="mural-event-hub__subtitle">{{ 'eventMural.hub.notasSubtitle' | t }}</p>
             </div>
             <app-mural-share-button
               [context]="shareContext"
-              cardTitle="Notas individuais"
+              [cardTitle]="'eventMural.hub.notasTitle' | t"
               ruleKey="mural.rule.notasIndividuais"
             ></app-mural-share-button>
           </div>
@@ -128,12 +127,12 @@
           <app-mural-event-context [context]="shareContext"></app-mural-event-context>
           <div class="mural-card-header-row">
             <div>
-              <h2 class="mural-event-hub__title">Curiosidades do evento</h2>
-              <p class="mural-event-hub__subtitle">Localização, times, altura e torcida</p>
+              <h2 class="mural-event-hub__title">{{ 'eventMural.hub.curiositiesTitle' | t }}</h2>
+              <p class="mural-event-hub__subtitle">{{ 'eventMural.hub.curiositiesSubtitle' | t }}</p>
             </div>
             <app-mural-share-button
               [context]="shareContext"
-              cardTitle="Curiosidades do evento"
+              [cardTitle]="'eventMural.hub.curiositiesTitle' | t"
               ruleKey="mural.rule.curiosidades"
             ></app-mural-share-button>
           </div>
@@ -141,18 +140,20 @@
 
         <app-playful-card tone="surface" class="ion-margin-bottom">
           <div class="mural-card-header-row">
-            <h2 class="mural-event-hub__title">Imprensa / Mídia</h2>
+            <h2 class="mural-event-hub__title">{{ 'eventMural.hub.mediaTitle' | t }}</h2>
             <ion-button fill="clear" size="small" (click)="toggleExtrasMedia(); $event.stopPropagation()">
-              {{ showExtrasMedia ? 'Ocultar' : 'Expandir' }}
+              {{
+                showExtrasMedia ? ('eventMural.hub.collapse' | t) : ('eventMural.hub.expand' | t)
+              }}
             </ion-button>
           </div>
           @if (showExtrasMedia) {
             <div class="ion-padding-top">
               <div class="mural-card-header-row ion-margin-bottom">
-                <ion-card-subtitle>Radio, jornal e video do evento</ion-card-subtitle>
+                <ion-card-subtitle>{{ 'eventMural.hub.mediaSubtitle' | t }}</ion-card-subtitle>
                 <app-mural-share-button
                   [context]="shareContext"
-                  cardTitle="Imprensa / Midia"
+                  [cardTitle]="'eventMural.hub.mediaTitle' | t"
                   ruleKey="mural.rule.eventMedia"
                 ></app-mural-share-button>
               </div>
@@ -162,8 +163,8 @@
                     <ion-item button detail="true" lines="full" (click)="openMediaJournal()">
                       <ion-icon name="newspaper-outline" slot="start"></ion-icon>
                       <ion-label>
-                        <h3>Jornal</h3>
-                        <p>{{ mediaJournalHeadline || 'Conteudo publicado' }}</p>
+                        <h3>{{ 'eventMural.hub.mediaJournal' | t }}</h3>
+                        <p>{{ mediaJournalHeadline || ('eventMural.hub.mediaPublishedFallback' | t) }}</p>
                       </ion-label>
                     </ion-item>
                   }
@@ -171,8 +172,8 @@
                     <ion-item button detail="true" lines="full" (click)="openMediaRadio()">
                       <ion-icon name="radio-outline" slot="start"></ion-icon>
                       <ion-label>
-                        <h3>Radio</h3>
-                        <p>{{ mediaRadioTitle || 'Conteudo publicado' }}</p>
+                        <h3>{{ 'eventMural.hub.mediaRadio' | t }}</h3>
+                        <p>{{ mediaRadioTitle || ('eventMural.hub.mediaPublishedFallback' | t) }}</p>
                       </ion-label>
                     </ion-item>
                   }
@@ -180,17 +181,17 @@
                     <ion-item button detail="true" lines="full" (click)="openMediaVideo()">
                       <ion-icon name="videocam-outline" slot="start"></ion-icon>
                       <ion-label>
-                        <h3>Video</h3>
-                        <p>{{ mediaVideoTitle || 'Melhores momentos' }}</p>
+                        <h3>{{ 'eventMural.hub.mediaVideo' | t }}</h3>
+                        <p>{{ mediaVideoTitle || ('eventMural.hub.mediaHighlightsFallback' | t) }}</p>
                       </ion-label>
                     </ion-item>
                   }
                 </div>
               } @else {
-                <ion-note color="medium">Nenhuma cobertura publicada ainda.</ion-note>
+                <ion-note color="medium">{{ 'eventMural.hub.mediaNoCoverage' | t }}</ion-note>
               }
               <ion-button fill="clear" size="small" class="ion-margin-top" (click)="openMediaHub()">
-                Abrir cobertura
+                {{ 'eventMural.hub.mediaOpenCoverage' | t }}
               </ion-button>
             </div>
           }
@@ -198,9 +199,13 @@
 
         <app-playful-card tone="muted" class="ion-margin-bottom">
           <div class="mural-card-header-row">
-            <h2 class="mural-event-hub__title">Melhores palpites</h2>
+            <h2 class="mural-event-hub__title">{{ 'eventMural.hub.predictionsTitle' | t }}</h2>
             <ion-button fill="clear" size="small" (click)="toggleExtrasPredictions(); $event.stopPropagation()">
-              {{ showExtrasPredictions ? 'Ocultar' : 'Expandir' }}
+              {{
+                showExtrasPredictions
+                  ? ('eventMural.hub.collapse' | t)
+                  : ('eventMural.hub.expand' | t)
+              }}
             </ion-button>
           </div>
           @if (showExtrasPredictions) {
@@ -215,14 +220,14 @@
 
       @case ('top10') {
         <app-playful-card tone="confrontos" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('top10-athlete')">
-          <h2 class="mural-event-hub__title">Top 10 — Atleta</h2>
+          <h2 class="mural-event-hub__title">{{ 'eventMural.view.top10Athlete' | t }}</h2>
         </app-playful-card>
         <app-playful-card tone="peladas" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('top10-goalkeeper')">
-          <h2 class="mural-event-hub__title">Top 10 — Goleiro</h2>
+          <h2 class="mural-event-hub__title">{{ 'eventMural.view.top10Goalkeeper' | t }}</h2>
         </app-playful-card>
         <app-playful-card tone="times" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('top10-other')">
-          <h2 class="mural-event-hub__title">Outros Top 10...</h2>
-          <p class="mural-event-hub__subtitle">Juízes, imprensa e apoio de campo</p>
+          <h2 class="mural-event-hub__title">{{ 'eventMural.view.top10Other' | t }}</h2>
+          <p class="mural-event-hub__subtitle">{{ 'eventMural.view.top10OtherSubtitle' | t }}</p>
         </app-playful-card>
       }
 
@@ -241,7 +246,9 @@
       @case ('top10-other') {
         @for (section of otherRankingSections; track section.role) {
           <app-playful-card tone="users" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('top10-role', section.role)">
-            <h2 class="mural-event-hub__title">Top 10 — {{ section.title }}</h2>
+            <h2 class="mural-event-hub__title">{{
+              'eventMural.view.top10RoleTitle' | t: { title: section.title }
+            }}</h2>
           </app-playful-card>
         }
       }
@@ -254,16 +261,16 @@
 
       @case ('scout') {
         <app-playful-card tone="confrontos" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('scout-qualitative')">
-          <h2 class="mural-event-hub__title">Desempenho qualitativo</h2>
+          <h2 class="mural-event-hub__title">{{ 'eventMural.view.qualitativePerformance' | t }}</h2>
         </app-playful-card>
         <app-playful-card tone="peladas" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('scout-quantitative')">
-          <h2 class="mural-event-hub__title">Desempenho quantitativo</h2>
+          <h2 class="mural-event-hub__title">{{ 'eventMural.view.quantitativePerformance' | t }}</h2>
         </app-playful-card>
         <app-playful-card tone="times" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('scout-charts')">
-          <h2 class="mural-event-hub__title">Gráficos de desempenho</h2>
+          <h2 class="mural-event-hub__title">{{ 'eventMural.view.performanceCharts' | t }}</h2>
         </app-playful-card>
         <app-playful-card tone="users" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('scout-goal-types')">
-          <h2 class="mural-event-hub__title">Tipos de gols</h2>
+          <h2 class="mural-event-hub__title">{{ 'eventMural.view.goalTypes' | t }}</h2>
         </app-playful-card>
       }
 
@@ -318,7 +325,9 @@
       @case ('notas') {
         @for (role of ['scout', 'masseur', 'kitman']; track role) {
           <app-playful-card tone="surface" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('notas-role', $any(role))">
-            <h2 class="mural-event-hub__title">Notas — {{ rankingSectionForRole($any(role))?.title }}</h2>
+            <h2 class="mural-event-hub__title">{{
+              'eventMural.view.notasRoleTitle' | t: { title: rankingSectionForRole($any(role))?.title ?? '' }
+            }}</h2>
           </app-playful-card>
         }
       }
@@ -331,23 +340,23 @@
 
       @case ('curiosities') {
         <app-playful-card tone="peladas" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('curiosities-location')">
-          <h2 class="mural-event-hub__title">Participantes por localização</h2>
+          <h2 class="mural-event-hub__title">{{ 'eventMural.view.participantsByLocation' | t }}</h2>
         </app-playful-card>
         <app-playful-card tone="confrontos" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('curiosities-pro-team')">
-          <h2 class="mural-event-hub__title">Time profissional mais amado</h2>
+          <h2 class="mural-event-hub__title">{{ 'eventMural.view.favoriteProTeam' | t }}</h2>
         </app-playful-card>
         <app-playful-card tone="times" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('curiosities-amateur-team')">
-          <h2 class="mural-event-hub__title">Time amador mais amado</h2>
+          <h2 class="mural-event-hub__title">{{ 'eventMural.view.favoriteAmateurTeam' | t }}</h2>
         </app-playful-card>
         <app-playful-card tone="users" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('curiosities-height')">
-          <h2 class="mural-event-hub__title">Atleta mais alto e mais baixo</h2>
+          <h2 class="mural-event-hub__title">{{ 'eventMural.view.tallestShortestAthletes' | t }}</h2>
         </app-playful-card>
         <app-playful-card tone="surface" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('curiosities-explore')">
-          <h2 class="mural-event-hub__title">Detalhes e curiosidades dos atletas</h2>
-          <p class="mural-event-hub__subtitle">Gols por tipo (scout), faixas etárias, altura e mapa</p>
+          <h2 class="mural-event-hub__title">{{ 'eventMural.view.athleteCuriosities' | t }}</h2>
+          <p class="mural-event-hub__subtitle">{{ 'eventMural.view.athleteCuriositiesSubtitle' | t }}</p>
         </app-playful-card>
         <app-playful-card tone="surface" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('curiosities-fan-checkins')">
-          <h2 class="mural-event-hub__title">Torcedores com check-in</h2>
+          <h2 class="mural-event-hub__title">{{ 'eventMural.view.fansWithCheckIn' | t }}</h2>
         </app-playful-card>
       }
 

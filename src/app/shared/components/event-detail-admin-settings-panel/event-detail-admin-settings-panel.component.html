@@ -2,12 +2,12 @@
   <ion-card-header>
     <div class="event-panel-header">
       <div>
-        <ion-card-title>Configuracoes do evento</ion-card-title>
-        <ion-card-subtitle>Periodos, limites e opcoes do evento</ion-card-subtitle>
+        <ion-card-title>{{ 'eventDetail.adminSettings.title' | t }}</ion-card-title>
+        <ion-card-subtitle>{{ 'eventDetail.adminSettings.subtitle' | t }}</ion-card-subtitle>
       </div>
       <ion-button fill="clear" size="small" class="event-panel-back" (click)="back.emit()">
         <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
-        Voltar
+        {{ 'common.back' | t }}
       </ion-button>
     </div>
   </ion-card-header>
@@ -20,17 +20,17 @@
       (click)="notifyParticipants.emit()"
     >
       <ion-icon slot="start" name="notifications-outline"></ion-icon>
-      Notificar participantes
+      {{ 'eventDetail.adminSettings.notifyParticipants' | t }}
     </ion-button>
     <form [formGroup]="adminForm" novalidate (ngSubmit)="onSave($event)">
       <ion-list lines="none" class="playful-elevated-list">
         <ion-item-divider>
-          <ion-label>Periodo de inscricoes</ion-label>
+          <ion-label>{{ 'eventDetail.adminSettings.registrationPeriod' | t }}</ion-label>
         </ion-item-divider>
         <ion-item>
           <ion-input
             type="date"
-            label="Abertura - data"
+            [label]="'eventDetail.adminSettings.openDate' | t"
             labelPlacement="stacked"
             formControlName="registrationOpenDate"
           ></ion-input>
@@ -38,7 +38,7 @@
         <ion-item>
           <ion-input
             type="time"
-            label="Abertura - hora"
+            [label]="'eventDetail.adminSettings.openTime' | t"
             labelPlacement="stacked"
             formControlName="registrationOpenTime"
           ></ion-input>
@@ -46,7 +46,7 @@
         <ion-item>
           <ion-input
             type="date"
-            label="Encerramento - data"
+            [label]="'eventDetail.adminSettings.closeDate' | t"
             labelPlacement="stacked"
             formControlName="registrationCloseDate"
           ></ion-input>
@@ -54,19 +54,19 @@
         <ion-item>
           <ion-input
             type="time"
-            label="Encerramento - hora"
+            [label]="'eventDetail.adminSettings.closeTime' | t"
             labelPlacement="stacked"
             formControlName="registrationCloseTime"
           ></ion-input>
         </ion-item>
 
         <ion-item-divider>
-          <ion-label>Limite de atletas</ion-label>
+          <ion-label>{{ 'eventDetail.adminSettings.athleteLimit' | t }}</ion-label>
         </ion-item-divider>
         <ion-item>
           <ion-input
             type="number"
-            label="Quantidade maxima de atletas neste evento"
+            [label]="'eventDetail.adminSettings.maxAthletes' | t"
             labelPlacement="stacked"
             formControlName="maxAthletesPerEvent"
             min="0"
@@ -74,17 +74,16 @@
           ></ion-input>
         </ion-item>
         <ion-note class="ion-padding-horizontal">
-          Se definido, as inscricoes de atletas serao encerradas quando o numero de
-          confirmacoes de participacao atingir este limite.
+          {{ 'eventDetail.adminSettings.maxAthletesNote' | t }}
         </ion-note>
 
         <ion-item-divider>
-          <ion-label>Pagamento</ion-label>
+          <ion-label>{{ 'eventDetail.adminSettings.payment' | t }}</ion-label>
         </ion-item-divider>
         <ion-item>
           <ion-input
             type="number"
-            label="Valor da participacao (R$)"
+            [label]="'eventDetail.adminSettings.participationFee' | t"
             labelPlacement="stacked"
             formControlName="participationFee"
             min="0"
@@ -95,12 +94,12 @@
         </ion-item>
         @if (lockParticipationFee) {
           <ion-note color="medium" class="ion-padding-horizontal">
-            O valor da participacao nao pode ser alterado enquanto houver participantes confirmados e nao isentos.
+            {{ 'eventDetail.adminSettings.feeLockedNote' | t }}
           </ion-note>
         }
         <ion-item>
           <ion-input
-            label="Chave PIX 1"
+            [label]="'eventDetail.adminSettings.pixKey1' | t"
             labelPlacement="stacked"
             formControlName="pixKey1"
           ></ion-input>
@@ -108,7 +107,7 @@
         </ion-item>
         <ion-item>
           <ion-input
-            label="Chave PIX 2"
+            [label]="'eventDetail.adminSettings.pixKey2' | t"
             labelPlacement="stacked"
             formControlName="pixKey2"
           ></ion-input>
@@ -116,53 +115,52 @@
         </ion-item>
         <ion-item>
           <ion-input
-            label="Chave PIX 3"
+            [label]="'eventDetail.adminSettings.pixKey3' | t"
             labelPlacement="stacked"
             formControlName="pixKey3"
           ></ion-input>
           <app-pix-copy-button slot="end" [text]="adminForm.get('pixKey3')?.value ?? ''"></app-pix-copy-button>
         </ion-item>
         <ion-note class="ion-padding-horizontal">
-          Se o valor for maior que zero, informe ao menos uma chave PIX.
+          {{ 'eventDetail.adminSettings.pixRequiredNote' | t }}
         </ion-note>
 
         @if (supportsArrivalOrder) {
           <ion-item-divider>
-            <ion-label>Formacao de times</ion-label>
+            <ion-label>{{ 'eventDetail.adminSettings.teamFormation' | t }}</ion-label>
           </ion-item-divider>
           <ion-item>
             <ion-toggle formControlName="useArrivalOrderForTeams" labelPlacement="end">
-              Usar ordem de chegada dos atletas na separacao dos times
+              {{ 'eventDetail.adminSettings.arrivalOrderToggle' | t }}
             </ion-toggle>
           </ion-item>
           <ion-note class="ion-padding-horizontal">
-            Quando ativo, use o botao <strong>Chegou</strong> na lista de participantes.
-            Socios tem prioridade na ordem de chegada (Pelada e Racha).
+            {{ 'eventDetail.adminSettings.arrivalOrderNote' | t }}
           </ion-note>
         }
 
         <ion-item-divider>
-          <ion-label>Status do evento</ion-label>
+          <ion-label>{{ 'eventDetail.adminSettings.eventStatus' | t }}</ion-label>
         </ion-item-divider>
         <ion-item>
           <ion-toggle formControlName="isFinished" labelPlacement="end">
-            Marcar evento como encerrado
+            {{ 'eventDetail.adminSettings.markFinished' | t }}
           </ion-toggle>
         </ion-item>
         <ion-note class="ion-padding-horizontal">
-          Eventos encerrados aparecem com essa indicacao na lista da pelada.
+          {{ 'eventDetail.adminSettings.finishedNote' | t }}
         </ion-note>
 
         <ion-item-divider>
-          <ion-label>Periodo de votacao</ion-label>
+          <ion-label>{{ 'eventDetail.adminSettings.votingPeriod' | t }}</ion-label>
         </ion-item-divider>
         <ion-note class="ion-padding-horizontal">
-          Opcional. Se nao definir, a votacao abre no inicio do evento e encerra 24 horas depois.
+          {{ 'eventDetail.adminSettings.votingDefaultNote' | t }}
         </ion-note>
         <ion-item>
           <ion-input
             type="date"
-            label="Abertura da votacao - data"
+            [label]="'eventDetail.adminSettings.votingOpenDate' | t"
             labelPlacement="stacked"
             formControlName="votingOpenDate"
           ></ion-input>
@@ -170,7 +168,7 @@
         <ion-item>
           <ion-input
             type="time"
-            label="Abertura da votacao - hora"
+            [label]="'eventDetail.adminSettings.votingOpenTime' | t"
             labelPlacement="stacked"
             formControlName="votingOpenTime"
           ></ion-input>
@@ -178,7 +176,7 @@
         <ion-item>
           <ion-input
             type="date"
-            label="Encerramento da votacao - data"
+            [label]="'eventDetail.adminSettings.votingCloseDate' | t"
             labelPlacement="stacked"
             formControlName="votingCloseDate"
           ></ion-input>
@@ -186,56 +184,96 @@
         <ion-item>
           <ion-input
             type="time"
-            label="Encerramento da votacao - hora"
+            [label]="'eventDetail.adminSettings.votingCloseTime' | t"
             labelPlacement="stacked"
             formControlName="votingCloseTime"
           ></ion-input>
         </ion-item>
 
         <ion-item-divider>
-          <ion-label>Periodo de sumula (juiz)</ion-label>
+          <ion-label>{{ 'eventDetail.adminSettings.sumulaPeriod' | t }}</ion-label>
         </ion-item-divider>
         <ion-note class="ion-padding-horizontal">
-          Opcional. Define quando o juiz pode registrar a sumula.
+          {{ 'eventDetail.adminSettings.sumulaOptionalNote' | t }}
         </ion-note>
         <ion-item>
-          <ion-input type="date" label="Abertura - data" labelPlacement="stacked" formControlName="sumulaOpenDate"></ion-input>
+          <ion-input
+            type="date"
+            [label]="'eventDetail.adminSettings.openDate' | t"
+            labelPlacement="stacked"
+            formControlName="sumulaOpenDate"
+          ></ion-input>
         </ion-item>
         <ion-item>
-          <ion-input type="time" label="Abertura - hora" labelPlacement="stacked" formControlName="sumulaOpenTime"></ion-input>
+          <ion-input
+            type="time"
+            [label]="'eventDetail.adminSettings.openTime' | t"
+            labelPlacement="stacked"
+            formControlName="sumulaOpenTime"
+          ></ion-input>
         </ion-item>
         <ion-item>
-          <ion-input type="date" label="Encerramento - data" labelPlacement="stacked" formControlName="sumulaCloseDate"></ion-input>
+          <ion-input
+            type="date"
+            [label]="'eventDetail.adminSettings.closeDate' | t"
+            labelPlacement="stacked"
+            formControlName="sumulaCloseDate"
+          ></ion-input>
         </ion-item>
         <ion-item>
-          <ion-input type="time" label="Encerramento - hora" labelPlacement="stacked" formControlName="sumulaCloseTime"></ion-input>
+          <ion-input
+            type="time"
+            [label]="'eventDetail.adminSettings.closeTime' | t"
+            labelPlacement="stacked"
+            formControlName="sumulaCloseTime"
+          ></ion-input>
         </ion-item>
 
         <ion-item-divider>
-          <ion-label>Periodo de apontamento scout</ion-label>
+          <ion-label>{{ 'eventDetail.adminSettings.scoutPeriod' | t }}</ion-label>
         </ion-item-divider>
         <ion-note class="ion-padding-horizontal">
-          Opcional. Define quando o scout pode registrar apontamento.
+          {{ 'eventDetail.adminSettings.scoutOptionalNote' | t }}
         </ion-note>
         <ion-item>
-          <ion-input type="date" label="Abertura - data" labelPlacement="stacked" formControlName="scoutOpenDate"></ion-input>
+          <ion-input
+            type="date"
+            [label]="'eventDetail.adminSettings.openDate' | t"
+            labelPlacement="stacked"
+            formControlName="scoutOpenDate"
+          ></ion-input>
         </ion-item>
         <ion-item>
-          <ion-input type="time" label="Abertura - hora" labelPlacement="stacked" formControlName="scoutOpenTime"></ion-input>
+          <ion-input
+            type="time"
+            [label]="'eventDetail.adminSettings.openTime' | t"
+            labelPlacement="stacked"
+            formControlName="scoutOpenTime"
+          ></ion-input>
         </ion-item>
         <ion-item>
-          <ion-input type="date" label="Encerramento - data" labelPlacement="stacked" formControlName="scoutCloseDate"></ion-input>
+          <ion-input
+            type="date"
+            [label]="'eventDetail.adminSettings.closeDate' | t"
+            labelPlacement="stacked"
+            formControlName="scoutCloseDate"
+          ></ion-input>
         </ion-item>
         <ion-item>
-          <ion-input type="time" label="Encerramento - hora" labelPlacement="stacked" formControlName="scoutCloseTime"></ion-input>
+          <ion-input
+            type="time"
+            [label]="'eventDetail.adminSettings.closeTime' | t"
+            labelPlacement="stacked"
+            formControlName="scoutCloseTime"
+          ></ion-input>
         </ion-item>
 
         <ion-item-divider>
-          <ion-label>Portaria</ion-label>
+          <ion-label>{{ 'eventDetail.adminSettings.gate' | t }}</ion-label>
         </ion-item-divider>
         <ion-item>
           <ion-toggle formControlName="gateTicketControlEnabled" labelPlacement="end">
-            Havera controle de ingresso na portaria de entrada no evento?
+            {{ 'eventDetail.adminSettings.gateToggle' | t }}
           </ion-toggle>
         </ion-item>
       </ion-list>
@@ -247,7 +285,7 @@
         [disabled]="savingAdmin"
         (click)="onSave()"
       >
-        {{ savingAdmin ? 'Salvando...' : 'Salvar configuracoes' }}
+        {{ savingAdmin ? ('eventDetail.adminSettings.saving' | t) : ('eventDetail.adminSettings.save' | t) }}
       </ion-button>
     </form>
   </ion-card-content>

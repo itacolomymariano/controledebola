@@ -1,4 +1,5 @@
 import { Component, HostBinding, Input } from '@angular/core';
+import { I18nService } from '../../../core/services/i18n.service';
 import { MuralLocationCount, MuralParticipantLocationStats } from '../../../core/models/mural-participant-stats.model';
 import { MuralShareContext } from '../../../core/models/mural-share.model';
 import { MuralScope } from '../../../core/models/mural.model';
@@ -14,8 +15,7 @@ type ParticipantStatsLevel = 'states' | 'cities' | 'neighborhoods';
 interface ParticipantStatsCard {
   label: string;
   count: number;
-  subLabel: string;
-  subCount: number;
+  subLine: string;
 }
 
 @Component({
@@ -25,6 +25,8 @@ interface ParticipantStatsCard {
   standalone: false,
 })
 export class MuralParticipantStatsComponent {
+  constructor(private readonly i18n: I18nService) {}
+
   @Input() stats: MuralParticipantLocationStats | null = null;
   @Input() scope: MuralScope = 'app';
   @Input() shareContext: MuralShareContext | null = null;
@@ -63,16 +65,16 @@ export class MuralParticipantStatsComponent {
   }
 
   get scopeLabel(): string {
-    if (this.scope === 'event') return 'evento';
-    if (this.scope === 'pelada') return 'pelada';
-    return 'app';
+    return this.i18n.t(`mural.stats.scope.${this.scope}`);
   }
 
   get breadcrumb(): string {
     if (!this.useDrilldown) return '';
-    if (this.level === 'states') return 'Estados';
-    if (this.level === 'cities') return `${this.selectedState} · Cidades`;
-    return `${this.selectedCity} · Bairros`;
+    if (this.level === 'states') return this.i18n.t('mural.stats.breadcrumb.states');
+    if (this.level === 'cities') {
+      return this.i18n.t('mural.stats.breadcrumb.cities', { state: this.selectedState });
+    }
+    return this.i18n.t('mural.stats.breadcrumb.neighborhoods', { city: this.selectedCity });
   }
 
   get stateCards(): ParticipantStatsCard[] {
@@ -80,8 +82,9 @@ export class MuralParticipantStatsComponent {
     return this.stats.byState.map((row) => ({
       label: row.label,
       count: row.count,
-      subLabel: 'Cidades',
-      subCount: this.citiesForState(row.label).length,
+      subLine: this.i18n.t('mural.stats.subCitiesLine', {
+        count: this.citiesForState(row.label).length,
+      }),
     }));
   }
 
@@ -89,8 +92,9 @@ export class MuralParticipantStatsComponent {
     return this.citiesForState(this.selectedState).map((row) => ({
       label: displayCityName(row.label),
       count: row.count,
-      subLabel: 'Bairros',
-      subCount: this.neighborhoodsForCity(row.label).length,
+      subLine: this.i18n.t('mural.stats.subNeighborhoodsLine', {
+        count: this.neighborhoodsForCity(row.label).length,
+      }),
     }));
   }
 
@@ -98,8 +102,7 @@ export class MuralParticipantStatsComponent {
     return this.neighborhoodsForCity(this.selectedCity).map((row) => ({
       label: displayNeighborhoodName(row.label),
       count: row.count,
-      subLabel: '',
-      subCount: 0,
+      subLine: '',
     }));
   }
 

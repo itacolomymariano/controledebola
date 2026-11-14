@@ -10,6 +10,7 @@ import {
 } from '../../core/utils/contact-validation.util';
 import { MIN_PASSWORD_LENGTH } from '../../core/constants/auth.constants';
 import { AuthService } from '../../core/services/auth.service';
+import { I18nService } from '../../core/services/i18n.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
 import { birthDateToIsoString, parseBirthDateIso } from '../../core/utils/birth-date.util';
 import { consumeLegendFormReturnState } from '../../core/utils/legend-form-navigation.util';
@@ -102,8 +103,13 @@ export class AccountEditPage implements OnInit, OnDestroy {
     private readonly route: ActivatedRoute,
     private readonly loadingCtrl: LoadingController,
     private readonly alertCtrl: AlertController,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly i18n: I18nService
   ) {}
+
+  private t(key: string, params?: Record<string, string | number>): string {
+    return this.i18n.t(key, params);
+  }
 
   ngOnInit(): void {
     this.formSub = merge(this.form.statusChanges, this.form.valueChanges).subscribe(() => {
@@ -166,7 +172,10 @@ export class AccountEditPage implements OnInit, OnDestroy {
   }
 
   get wizardProgressLabel(): string {
-    return `Passo ${this.wizardStepIndex + 1} de ${this.accountWizardSteps.length}`;
+    return this.t('accountEdit.wizardProgress', {
+      current: this.wizardStepIndex + 1,
+      total: this.accountWizardSteps.length,
+    });
   }
 
   get wizardProgressValue(): number {
@@ -174,12 +183,7 @@ export class AccountEditPage implements OnInit, OnDestroy {
   }
 
   get wizardStepTitle(): string {
-    const titles: Record<AccountEditWizardStep, string> = {
-      dados: 'Dados pessoais',
-      contato: 'Contato e privacidade',
-      endereco: 'Endereco',
-    };
-    return titles[this.accountWizardStep];
+    return this.t(`accountEdit.wizardStep.${this.accountWizardStep}`);
   }
 
   get wizardIsLast(): boolean {
@@ -232,13 +236,12 @@ export class AccountEditPage implements OnInit, OnDestroy {
 
   async requestAccountDeletion(): Promise<void> {
     const intro = await this.alertCtrl.create({
-      header: 'Excluir conta',
-      message:
-        'Esta acao e permanente. Seus dados pessoais serao apagados e voce nao podera mais entrar com esta conta. Peladas e eventos que voce organizou permanecem para os outros participantes.',
+      header: this.t('accountEdit.deleteAccount'),
+      message: this.t('accountEdit.deleteIntroMessage'),
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.t('eventDetail.alert.cancel'), role: 'cancel' },
         {
-          text: 'Continuar',
+          text: this.t('accountEdit.continue'),
           role: 'destructive',
           handler: () => {
             void this.confirmAccountDeletion();
@@ -251,13 +254,19 @@ export class AccountEditPage implements OnInit, OnDestroy {
 
   private async confirmAccountDeletion(): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Confirme com a senha',
-      message: 'Digite sua senha para excluir a conta definitivamente.',
-      inputs: [{ name: 'password', type: 'password', placeholder: 'Senha da conta' }],
-      buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+      header: this.t('accountEdit.deleteConfirmHeader'),
+      message: this.t('accountEdit.deleteConfirmMessage'),
+      inputs: [
         {
-          text: 'Excluir definitivamente',
+          name: 'password',
+          type: 'password',
+          placeholder: this.t('accountEdit.deletePasswordPlaceholder'),
+        },
+      ],
+      buttons: [
+        { text: this.t('eventDetail.alert.cancel'), role: 'cancel' },
+        {
+          text: this.t('accountEdit.deleteConfirmButton'),
           role: 'destructive',
           handler: (data) => {
             void this.doDeleteAccount(String(data?.password || ''));
@@ -271,18 +280,18 @@ export class AccountEditPage implements OnInit, OnDestroy {
 
   private async doDeleteAccount(password: string): Promise<void> {
     if (!password.trim()) {
-      await this.showError('Informe sua senha para confirmar a exclusao.');
+      await this.showError(this.t('accountEdit.deletePasswordRequired'));
       return;
     }
 
-    const loading = await this.loadingCtrl.create({ message: 'Excluindo conta...' });
+    const loading = await this.loadingCtrl.create({ message: this.t('accountEdit.deletingAccount') });
     await loading.present();
     try {
       await this.auth.deleteAccount(password);
       const done = await this.alertCtrl.create({
-        header: 'Conta excluida',
-        message: 'Sua conta foi excluida. Voce ja pode fechar o app ou criar uma nova conta.',
-        buttons: ['OK'],
+        header: this.t('accountEdit.deletedHeader'),
+        message: this.t('accountEdit.deletedMessage'),
+        buttons: [this.t('eventDetail.alert.ok')],
       });
       await done.present();
       await this.router.navigateByUrl('/login', { replaceUrl: true });
@@ -300,12 +309,12 @@ export class AccountEditPage implements OnInit, OnDestroy {
     }
 
     const alert = await this.alertCtrl.create({
-      header: 'Confirmar alteracoes',
-      message: 'Deseja salvar as alteracoes realizadas nos seus dados?',
+      header: this.t('accountEdit.saveConfirmHeader'),
+      message: this.t('accountEdit.saveConfirmMessage'),
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.t('eventDetail.alert.cancel'), role: 'cancel' },
         {
-          text: 'Salvar',
+          text: this.t('accountEdit.save'),
           handler: () => {
             void this.doSubmit();
           },
@@ -322,12 +331,12 @@ export class AccountEditPage implements OnInit, OnDestroy {
     }
 
     const alert = await this.alertCtrl.create({
-      header: 'Confirmar nova senha',
-      message: 'Deseja alterar sua senha de acesso?',
+      header: this.t('accountEdit.passwordChangeConfirmHeader'),
+      message: this.t('accountEdit.passwordChangeConfirmMessage'),
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.t('eventDetail.alert.cancel'), role: 'cancel' },
         {
-          text: 'Alterar senha',
+          text: this.t('accountEdit.changePassword'),
           handler: () => {
             void this.doPasswordChange();
           },
@@ -338,7 +347,7 @@ export class AccountEditPage implements OnInit, OnDestroy {
   }
 
   private async doSubmit(): Promise<void> {
-    const loading = await this.loadingCtrl.create({ message: 'Salvando...' });
+    const loading = await this.loadingCtrl.create({ message: this.t('accountEdit.saving') });
     await loading.present();
 
     try {
@@ -362,9 +371,9 @@ export class AccountEditPage implements OnInit, OnDestroy {
       this.updateCanSubmit();
 
       const alert = await this.alertCtrl.create({
-        header: 'Dados atualizados',
-        message: 'Suas informacoes foram salvas com sucesso.',
-        buttons: ['OK'],
+        header: this.t('accountEdit.dataUpdatedHeader'),
+        message: this.t('accountEdit.dataUpdatedMessage'),
+        buttons: [this.t('eventDetail.alert.ok')],
       });
       await alert.present();
     } catch (error: unknown) {
@@ -376,7 +385,7 @@ export class AccountEditPage implements OnInit, OnDestroy {
 
   private async doPasswordChange(): Promise<void> {
     const v = this.passwordForm.getRawValue();
-    const loading = await this.loadingCtrl.create({ message: 'Alterando senha...' });
+    const loading = await this.loadingCtrl.create({ message: this.t('accountEdit.changingPassword') });
     await loading.present();
 
     try {
@@ -386,9 +395,9 @@ export class AccountEditPage implements OnInit, OnDestroy {
       this.canChangePassword = false;
 
       const alert = await this.alertCtrl.create({
-        header: 'Senha alterada',
-        message: 'Sua senha foi atualizada com sucesso.',
-        buttons: ['OK'],
+        header: this.t('accountEdit.passwordChangedHeader'),
+        message: this.t('accountEdit.passwordChangedMessage'),
+        buttons: [this.t('eventDetail.alert.ok')],
       });
       await alert.present();
     } catch (error: unknown) {
@@ -513,7 +522,11 @@ export class AccountEditPage implements OnInit, OnDestroy {
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.t('accountEdit.errorHeader'),
+      message,
+      buttons: [this.t('eventDetail.alert.ok')],
+    });
     await alert.present();
   }
 }

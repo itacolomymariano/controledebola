@@ -2,7 +2,7 @@
   <app-user-bar></app-user-bar>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/tabs/peladas"></ion-back-button>
+      <ion-back-button [text]="'common.back' | t" defaultHref="/tabs/peladas"></ion-back-button>
     </ion-buttons>
     <ion-title>{{ pelada?.name ?? 'Pelada' }}</ion-title>
     <ion-buttons slot="end">
@@ -12,7 +12,7 @@
         [enableSpeech]="true"
       ></app-screen-help>
       @if (isAdmin) {
-        <ion-button (click)="editPelada()">Editar</ion-button>
+        <ion-button (click)="editPelada()">{{ 'peladaDetail.edit' | t }}</ion-button>
       }
     </ion-buttons>
     </ion-toolbar>
@@ -70,10 +70,10 @@
           <p>{{ pelada.adminName }}</p>
         }
         @if (pelada.monthlyFee > 0) {
-          <p>Mensalidade: {{ formatCurrency(pelada.monthlyFee) }}</p>
+          <p>{{ 'peladaDetail.monthlyFeeLabel' | t }}: {{ formatCurrency(pelada.monthlyFee) }}</p>
         }
         <ion-button fill="outline" size="small" class="ion-margin-top" (click)="selectSegment('mural')">
-          Mural
+          {{ 'peladaDetail.tab.mural' | t }}
         </ion-button>
       </ion-card-content>
     </ion-card>
@@ -110,18 +110,18 @@
           </ion-card>
         }
         @if (isAdmin) {
-          <ion-button expand="block" (click)="createEvent()">Novo evento</ion-button>
+          <ion-button expand="block" (click)="createEvent()">{{ 'peladaDetail.newEvent' | t }}</ion-button>
         } @else {
           <ion-note class="ion-margin-bottom">
-            So o administrador da pelada pode criar evento e confronto entre times.
+            {{ 'peladaDetail.onlyAdminCreateEvent' | t }}
           </ion-note>
         }
         @if (isAdmin && (loadingProfileRequests || profilePresentationRequests.length)) {
           <ion-card>
             <ion-card-header>
-              <ion-card-title>Solicitacoes de participacao</ion-card-title>
+              <ion-card-title>{{ 'peladaDetail.profileRequestsTitle' | t }}</ion-card-title>
               <ion-card-subtitle>
-                Primeira participacao em eventos desta pelada — avalie o perfil antes de confirmar
+                {{ 'peladaDetail.profileRequestsSubtitle' | t }}
               </ion-card-subtitle>
             </ion-card-header>
             <ion-card-content>
@@ -141,7 +141,12 @@
                         </p>
                         <p>
                           {{ formatProfileRequestRole(request.role) }}
-                          · {{ request.membershipType === 'socio' ? 'Socio' : 'Convidado' }}
+                          ·
+                          {{
+                            request.membershipType === 'socio'
+                              ? ('eventDetail.participants.memberSocio' | t)
+                              : ('eventDetail.participants.memberGuest' | t)
+                          }}
                         </p>
                       </ion-label>
                       <div slot="end" class="request-actions">
@@ -150,7 +155,7 @@
                           size="small"
                           (click)="openProfilePresentationReview(request.userId)"
                         >
-                          Ver perfil
+                          {{ 'eventDetail.participants.viewProfile' | t }}
                         </ion-button>
                         <ion-button
                           color="success"
@@ -158,7 +163,7 @@
                           [disabled]="resolvingRequestId === request.registrationId"
                           (click)="approveProfilePresentationRequest(request)"
                         >
-                          Aprovar
+                          {{ 'eventDetail.participants.approve' | t }}
                         </ion-button>
                         <ion-button
                           color="danger"
@@ -167,7 +172,7 @@
                           [disabled]="resolvingRequestId === request.registrationId"
                           (click)="rejectProfilePresentationRequest(request)"
                         >
-                          Recusar
+                          {{ 'eventDetail.participants.reject' | t }}
                         </ion-button>
                       </div>
                     </ion-item>
@@ -179,16 +184,16 @@
         }
         <ion-searchbar
           class="playful-searchbar"
-          placeholder="Buscar por nome, data ou local"
+          [placeholder]="'peladaDetail.searchPlaceholder' | t"
           [value]="eventSearch"
           [debounce]="200"
           (ionInput)="onEventSearch($any($event.detail.value))"
           (ionClear)="onEventSearch('')"
         ></ion-searchbar>
         @if (events.length === 0) {
-          <ion-note>Nenhum evento nesta pelada.</ion-note>
+          <ion-note>{{ 'peladaDetail.noEvents' | t }}</ion-note>
         } @else if (filteredEvents.length === 0) {
-          <ion-note>Nenhum evento para "{{ eventSearch }}".</ion-note>
+          <ion-note>{{ 'peladaDetail.noEventsSearch' | t: { query: eventSearch } }}</ion-note>
         }
         <ion-list lines="none" class="playful-elevated-list">
           @for (event of filteredEvents; track event.objectId) {
@@ -200,25 +205,25 @@
                   <p>{{ event.locationComplement.trim() }}</p>
                 }
                 <p>
-                  <ion-chip [color]="event.registrationStatusLabel === 'Inscricoes abertas' ? 'success' : 'warning'" outline="true">
+                  <ion-chip [color]="event.registrationsOpen ? 'success' : 'warning'" outline="true">
                     {{ event.registrationStatusLabel }}
                   </ion-chip>
                   @if (event.remainingAthleteSpots != null) {
                     <ion-chip [color]="event.remainingAthleteSpots > 0 ? 'success' : 'danger'" outline="true">
                       @if (event.remainingAthleteSpots > 0) {
-                        {{ event.remainingAthleteSpots }} vaga(s) restante(s) para atletas
+                        {{ 'peladaDetail.spotsRemaining' | t: { count: event.remainingAthleteSpots } }}
                       } @else {
-                        Lotado (atletas)
+                        {{ 'peladaDetail.athletesFull' | t }}
                       }
                     </ion-chip>
                   }
                   @if (event.isRegistered) {
-                    <ion-chip color="primary" outline="true">Voce inscrito</ion-chip>
+                    <ion-chip color="primary" outline="true">{{ 'peladaDetail.youRegistered' | t }}</ion-chip>
                   }
                   @if (event.isFinished) {
-                    <ion-chip color="dark" outline="true">Encerrado</ion-chip>
+                    <ion-chip color="dark" outline="true">{{ 'peladaDetail.eventClosed' | t }}</ion-chip>
                   } @else if (event.isPast) {
-                    <ion-chip color="medium" outline="true">Finalizado</ion-chip>
+                    <ion-chip color="medium" outline="true">{{ 'peladaDetail.eventPast' | t }}</ion-chip>
                   }
                 </p>
               </ion-label>
@@ -230,7 +235,7 @@
       @if (segment === 'socios') {
         @if (!currentMembership && !isAdmin) {
           <ion-button expand="block" (click)="requestMembership()">
-            ENVIAR SOLICITAÇÃO PARA SER SÓCIO
+            {{ 'peladaDetail.membershipCta' | t }}
           </ion-button>
         }
         @if (isAdmin) {
@@ -241,7 +246,7 @@
           </ion-note>
           <ion-searchbar
             class="playful-searchbar"
-            placeholder="Buscar participante de eventos"
+            [placeholder]="'peladaDetail.searchParticipants' | t"
             [(ngModel)]="participantSearch"
             [ngModelOptions]="{ standalone: true }"
             [debounce]="0"
@@ -461,11 +466,11 @@
           </ion-item>
           <ion-button expand="block" (click)="loadMonthlyFees()">Carregar</ion-button>
           <ion-button expand="block" color="secondary" (click)="generateMonthlyFees()">
-            Gerar mensalidades do mes
+            {{ 'peladaDetail.generateMonthly' | t }}
           </ion-button>
         } @else {
           <ion-note class="ion-padding">
-            Exibindo sua mensalidade do mes selecionado na pelada.
+            {{ 'peladaDetail.monthlyFeeHint' | t }}
           </ion-note>
         }
         @if (monthlyFeesLoaded && monthlyFeesEmptyMessage) {
@@ -577,9 +582,9 @@
 
         <ion-card>
           <ion-card-header>
-            <ion-card-title>Solicitacoes de participacao</ion-card-title>
+            <ion-card-title>{{ 'peladaDetail.profileRequestsTitle' | t }}</ion-card-title>
             <ion-card-subtitle>
-              Primeira participacao em eventos desta pelada — aguardando sua avaliacao
+              {{ 'peladaDetail.profileRequestsAwaitingSubtitle' | t }}
             </ion-card-subtitle>
           </ion-card-header>
           <ion-card-content>
@@ -601,7 +606,12 @@
                       </p>
                       <p>
                         {{ formatProfileRequestRole(request.role) }}
-                        · {{ request.membershipType === 'socio' ? 'Socio' : 'Convidado' }}
+                        ·
+                        {{
+                          request.membershipType === 'socio'
+                            ? ('eventDetail.participants.memberSocio' | t)
+                            : ('eventDetail.participants.memberGuest' | t)
+                        }}
                       </p>
                     </ion-label>
                     <div slot="end" class="request-actions">
@@ -610,7 +620,7 @@
                         size="small"
                         (click)="openProfilePresentationReview(request.userId)"
                       >
-                        Ver perfil
+                        {{ 'eventDetail.participants.viewProfile' | t }}
                       </ion-button>
                       <ion-button
                         color="success"
@@ -618,7 +628,7 @@
                         [disabled]="resolvingRequestId === request.registrationId"
                         (click)="approveProfilePresentationRequest(request)"
                       >
-                        Aprovar
+                        {{ 'eventDetail.participants.approve' | t }}
                       </ion-button>
                       <ion-button
                         color="danger"
@@ -627,7 +637,7 @@
                         [disabled]="resolvingRequestId === request.registrationId"
                         (click)="rejectProfilePresentationRequest(request)"
                       >
-                        Recusar
+                        {{ 'eventDetail.participants.reject' | t }}
                       </ion-button>
                     </div>
                   </ion-item>
@@ -760,7 +770,7 @@
   }
   @if (isAdmin && segment === 'eventos') {
     <ion-fab slot="fixed" vertical="bottom" horizontal="end">
-      <ion-fab-button (click)="createEvent()" [attr.aria-label]="'Novo evento'">
+      <ion-fab-button (click)="createEvent()" [attr.aria-label]="'peladaDetail.newEvent' | t">
         <ion-icon name="add"></ion-icon>
       </ion-fab-button>
     </ion-fab>

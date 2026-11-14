@@ -1,4 +1,5 @@
-import { PeladaEvent, getEffectiveVotingWindow, getVotingStatusLabel } from '../models/event.model';
+import { AppLocale } from '../models/app-locale.model';
+import { PeladaEvent, getEffectiveVotingWindow } from '../models/event.model';
 import { EventService } from '../services/event.service';
 import {
   EventDetailOverviewChip,
@@ -7,22 +8,30 @@ import {
 } from '../../shared/components/event-detail-overview/event-detail-overview.component';
 
 import { EventRegistration } from '../models/event-registration.model';
+import { formatAppDateTime } from './locale-datetime.util';
 import { isContractHiredRegistration } from './registration-hiring.util';
+import { localizedVotingStatusLabel } from './event-status-i18n.util';
+import { I18nService } from '../services/i18n.service';
 
-export function registrationCardTitle(registration: EventRegistration): string {
+export type I18nTranslate = (key: string, params?: Record<string, string | number>) => string;
+
+export function registrationCardTitle(
+  registration: EventRegistration,
+  t: I18nTranslate
+): string {
   if (registration.profilePresentationStatus === 'pending') {
-    return 'Aguardando aprovacao do administrador';
+    return t('eventDetail.registrationCard.awaitingAdmin');
   }
   if (registration.profilePresentationStatus === 'rejected') {
-    return 'Solicitacao recusada';
+    return t('eventDetail.registrationCard.rejected');
   }
   if (!registration.isEffectivelyConfirmed) {
-    return 'Inscricao pendente';
+    return t('eventDetail.registrationCard.pending');
   }
   if (isContractHiredRegistration(registration)) {
-    return 'Contratacao confirmada';
+    return t('eventDetail.registrationCard.hiringConfirmed');
   }
-  return 'Participacao confirmada';
+  return t('eventDetail.registrationCard.confirmed');
 }
 
 export function registrationCardColor(registration: EventRegistration): string {
@@ -43,52 +52,57 @@ export function buildEventDetailOverviewViewModel(
     registrationStatusLabel: string;
     supportsArrivalOrder: boolean;
     pixKeys: string[];
+    t: I18nTranslate;
+    locale: AppLocale;
   }
 ): EventDetailOverviewViewModel {
+  const { t, locale } = options;
   const chips: EventDetailOverviewChip[] = [];
 
   if (event.isReadOnly) {
-    chips.push({ label: 'Somente leitura', color: 'medium' });
+    chips.push({ label: t('eventDetail.overview.readOnly'), color: 'medium' });
   }
   if (event.isFinished) {
-    chips.push({ label: 'Evento encerrado', color: 'dark' });
+    chips.push({ label: t('eventDetail.overview.finished'), color: 'dark' });
   }
   chips.push({
     label: options.registrationStatusLabel,
     color: options.registrationsOpen ? 'success' : 'warning',
   });
 
+  const fmt = (date: Date) => formatAppDateTime(date, locale);
+
   const rows: EventDetailOverviewRow[] = [
     {
       icon: 'calendar-outline',
-      title: 'Inicio',
-      value: formatEventDate(event.startTime),
+      title: t('eventDetail.overview.start'),
+      value: fmt(event.startTime),
     },
     {
       icon: 'time-outline',
-      title: 'Termino',
-      value: formatEventDate(event.endTime),
+      title: t('eventDetail.overview.end'),
+      value: fmt(event.endTime),
     },
     {
       icon: 'ticket-outline',
-      title: 'Inscricoes abertas',
-      value: formatEventDate(event.registrationOpensAt),
+      title: t('eventDetail.overview.registrationOpen'),
+      value: fmt(event.registrationOpensAt),
     },
     {
       icon: 'ticket-outline',
-      title: 'Inscricoes encerradas',
-      value: formatEventDate(event.registrationClosesAt),
+      title: t('eventDetail.overview.registrationClose'),
+      value: fmt(event.registrationClosesAt),
     },
   ];
 
   if (event.type === 'team_match' && (event.homeTeamName || event.awayTeamName)) {
     rows.push({
       icon: 'football-outline',
-      title: 'Confronto',
+      title: t('eventDetail.overview.fixture'),
       value: '',
       teamMatch: {
-        homeTeamName: event.homeTeamName || 'Mandante',
-        awayTeamName: event.awayTeamName || 'Visitante',
+        homeTeamName: event.homeTeamName || t('eventDetail.teamMatch.sideHomeFallback'),
+        awayTeamName: event.awayTeamName || t('eventDetail.teamMatch.sideAwayFallback'),
         homeTeamShieldUrl: event.homeTeamShieldUrl,
         awayTeamShieldUrl: event.awayTeamShieldUrl,
       },
@@ -98,24 +112,35 @@ export function buildEventDetailOverviewViewModel(
   if (options.supportsArrivalOrder && event.useArrivalOrderForTeams) {
     rows.push({
       icon: 'walk-outline',
-      title: 'Formacao de times',
-      value: 'Ordem de chegada dos atletas',
+      title: t('eventDetail.overview.teamFormation'),
+      value: t('eventDetail.overview.arrivalOrder'),
     });
   }
 
   rows.push({
     icon: 'location-outline',
-    title: 'Local',
+    title: t('eventDetail.overview.venue'),
     value: eventService.formatAddress(event.address),
-    detail: event.locationComplement ? `Complemento: ${event.locationComplement}` : undefined,
-    detailLines: [`CEP ${event.address.zipCode}`],
+    detail: event.locationComplement
+      ? t('eventDetail.overview.locationComplement', { text: event.locationComplement })
+      : undefined,
+    detailLines: [t('eventDetail.overview.zipLine', { zip: event.address.zipCode })],
   });
 
   rows.push({
     icon: 'cash-outline',
-    title: 'Valor da participacao',
+    title: t('eventDetail.overview.participationFee'),
     value: eventService.formatParticipationFee(event.participationFee),
   });
+
+  const adminApelido = event.adminApelido?.trim() || '';
+  const storedAdminName = event.adminName?.trim() || '';
+  const isAdminFallback =
+    !adminApelido &&
+    (!storedAdminName ||
+      storedAdminName === 'Administrador' ||
+      storedAdminName === 'Administrator');
+  const adminName = adminApelido || (isAdminFallback ? t('common.adminFallback') : storedAdminName);
 
   return {
     name: event.name,
@@ -124,22 +149,21 @@ export function buildEventDetailOverviewViewModel(
     chips,
     rows,
     pixKeys: options.pixKeys,
-    adminApelido: event.adminApelido,
-    adminName: event.adminName,
+    adminApelido,
+    adminName,
     adminAvatarUrl: event.adminAvatarUrl,
   };
 }
 
-export function formatEventDate(date: Date): string {
-  return new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
+/** @deprecated Use formatAppDateTime with locale */
+export function formatEventDate(date: Date, locale: AppLocale = 'pt-BR'): string {
+  return formatAppDateTime(date, locale);
 }
 
-export function buildEventVotingPeriodLabels(event: PeladaEvent): {
+export function buildEventVotingPeriodLabels(
+  event: PeladaEvent,
+  i18n: I18nService
+): {
   opensAt: string;
   closesAt: string;
   statusLabel: string;
@@ -147,9 +171,9 @@ export function buildEventVotingPeriodLabels(event: PeladaEvent): {
 } | null {
   const window = getEffectiveVotingWindow(event);
   return {
-    opensAt: formatEventDate(window.opensAt),
-    closesAt: formatEventDate(window.closesAt),
-    statusLabel: getVotingStatusLabel(event),
+    opensAt: formatAppDateTime(window.opensAt, i18n.locale),
+    closesAt: formatAppDateTime(window.closesAt, i18n.locale),
+    statusLabel: localizedVotingStatusLabel(i18n, event),
     usesDefault: window.usesDefault,
   };
 }

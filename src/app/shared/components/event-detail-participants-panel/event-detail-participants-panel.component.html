@@ -3,15 +3,17 @@
     <div class="event-panel-header">
       <div>
         @if (isAdminMode) {
-          <ion-card-title>Participantes ({{ participantsCount }})</ion-card-title>
-          <ion-card-subtitle>Confirme pagamento, isencao e chegada dos atletas</ion-card-subtitle>
+          <ion-card-title>{{
+            'eventDetail.participants.titleCount' | t: { count: participantsCount }
+          }}</ion-card-title>
+          <ion-card-subtitle>{{ 'eventDetail.participants.adminSubtitle' | t }}</ion-card-subtitle>
         } @else {
-          <ion-card-title>Participantes</ion-card-title>
+          <ion-card-title>{{ 'eventDetail.participants.title' | t }}</ion-card-title>
         }
       </div>
       <ion-button fill="clear" size="small" class="event-panel-back" (click)="back.emit()">
         <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
-        Voltar
+        {{ 'common.back' | t }}
       </ion-button>
     </div>
   </ion-card-header>
@@ -47,10 +49,10 @@
     @if (registration) {
       @if (isContractHired(registration)) {
         <ion-note class="ion-margin-bottom contract-inbox-note" color="medium">
-          Contratacao confirmada. Veja os detalhes em Mensagens (icone de e-mail no topo).
+          {{ 'eventDetail.participants.contractInboxNote' | t }}
         </ion-note>
         <ion-button expand="block" fill="outline" class="ion-margin-bottom" (click)="openInbox()">
-          Abrir caixa de entrada
+          {{ 'eventDetail.participants.openInbox' | t }}
         </ion-button>
       } @else {
         <ion-card [color]="cardColor(registration)" class="ion-margin-bottom">
@@ -60,7 +62,13 @@
             </ion-card-title>
             <ion-card-subtitle>
               {{ registration.apelido }} · {{ registrationService.formatRole(registration.role) }}
-              · {{ registration.membershipType === 'socio' ? 'Socio' : 'Convidado' }}
+              ·
+              {{
+                (registration.membershipType === 'socio'
+                  ? 'eventDetail.participants.memberSocio'
+                  : 'eventDetail.participants.memberGuest'
+                ) | t
+              }}
               @if (isTeamMatch && registration.teamSide) {
                 · {{ participantTeamSideLabel(registration) }}
               }
@@ -69,7 +77,12 @@
           <ion-card-content>
             <p>{{ effectiveConfirmationLabel(registration) }}</p>
             @if (showParticipationPaymentRequest(registration)) {
-              <p>Realize o pagamento de {{ formatParticipationFee(event.participationFee) }} via PIX.</p>
+              <p>
+                {{
+                  'eventDetail.participants.payPix'
+                    | t: { amount: formatParticipationFee(event.participationFee) }
+                }}
+              </p>
             }
           </ion-card-content>
         </ion-card>
@@ -84,24 +97,26 @@
           [disabled]="cancelling"
           (click)="cancelRegistration.emit()"
         >
-          Cancelar inscricao
+          {{ 'eventDetail.participants.cancelRegistration' | t }}
         </ion-button>
       }
     }
 
     @if (isAdminMode) {
       @if (participantsCount === 0) {
-        <ion-note>Nenhum participante inscrito ainda.</ion-note>
+        <ion-note>{{ 'eventDetail.participants.noneRegistered' | t }}</ion-note>
       } @else {
         <ion-searchbar
           class="playful-searchbar"
-          placeholder="Buscar participante"
+          [placeholder]="'eventDetail.participants.searchPlaceholder' | t"
           [value]="participantSearch"
           [debounce]="0"
           (ionInput)="onSearchInput($event)"
         ></ion-searchbar>
         @if (filteredParticipants.length === 0) {
-          <ion-note color="medium">Nenhum participante encontrado para "{{ participantSearch }}".</ion-note>
+          <ion-note color="medium">{{
+            'eventDetail.participants.noneFound' | t: { query: participantSearch }
+          }}</ion-note>
         }
         <ion-list lines="none" class="participant-admin-list playful-elevated-list">
           @for (participant of filteredParticipants; track participant.objectId; let i = $index) {
@@ -166,17 +181,17 @@
                     @if (isTeamMatch && participant.role === 'athlete' && !event.isReadOnly) {
                       <ion-item lines="none">
                         <ion-select
-                          label="Time"
+                          [label]="'eventDetail.participants.teamLabel' | t"
                           labelPlacement="stacked"
                           [value]="participant.teamSide || ''"
                           [disabled]="updatingTeamSideId === participant.objectId"
                           (ionChange)="onTeamSideSelect(participant, $any($event.detail.value))"
                         >
                           <ion-select-option value="home">{{
-                            event.homeTeamName || 'Mandante'
+                            event.homeTeamName || ('eventDetail.participants.homeFallback' | t)
                           }}</ion-select-option>
                           <ion-select-option value="away">{{
-                            event.awayTeamName || 'Visitante'
+                            event.awayTeamName || ('eventDetail.participants.awayFallback' | t)
                           }}</ion-select-option>
                         </ion-select>
                       </ion-item>
@@ -190,7 +205,7 @@
                             [disabled]="updatingPaymentId === participant.objectId"
                             (ionChange)="paymentExemptToggle.emit({ participant, event: $event })"
                           >
-                            Isento de pagamento
+                            {{ 'eventDetail.participants.paymentExemptToggle' | t }}
                           </ion-toggle>
                         </ion-item>
                         <ion-item>
@@ -201,7 +216,7 @@
                             "
                             (ionChange)="paymentToggle.emit({ participant, event: $event })"
                           >
-                            Pagamento confirmado
+                            {{ 'eventDetail.participants.paymentConfirmedToggle' | t }}
                           </ion-toggle>
                         </ion-item>
                       </ion-list>
@@ -217,7 +232,7 @@
                             [disabled]="cancellingTicketId === participant.objectId"
                             (click)="cancelGateTicket.emit(participant)"
                           >
-                            Cancelar ingresso
+                            {{ 'eventDetail.participants.cancelTicket' | t }}
                           </ion-button>
                         } @else {
                           <ion-button
@@ -226,7 +241,7 @@
                             [disabled]="issuingTicketId === participant.objectId"
                             (click)="issueGateTicket.emit(participant)"
                           >
-                            Enviar ingresso
+                            {{ 'eventDetail.participants.issueTicket' | t }}
                           </ion-button>
                         }
                       </div>
@@ -244,22 +259,25 @@
                       <p>
                         {{ participant.userName }} · {{ registrationService.formatRole(participant.role) }}
                         @if (participant.isAnonymous) {
-                          · Anonimo
+                          · {{ 'eventDetail.participants.anonymous' | t }}
                         }
                         @if (participant.primaryPosition) {
                           · {{ participant.primaryPosition }}
                         }
                       </p>
                       <p>
-                        Pendente
+                        {{ 'eventDetail.participants.pending' | t }}
                         @if (hasPendingProfilePresentation(participant)) {
-                          · <ion-text color="warning">Apresentacao de perfil pendente</ion-text>
+                          ·
+                          <ion-text color="warning">{{
+                            'eventDetail.participants.profilePresentationPending' | t
+                          }}</ion-text>
                         }
                         · {{ participantMembershipLabel(participant) }}
                         @if (participant.paymentExempt) {
-                          · Isento
+                          · {{ 'eventDetail.participants.exemptShort' | t }}
                         } @else if (hasPositiveParticipationFee(event.participationFee)) {
-                          · Pagamento: {{ participant.paymentConfirmed ? 'Sim' : 'Nao' }}
+                          · {{ participantPaymentStatusLine(participant) }}
                         }
                         @if (participant.age != null) {
                           · {{ participant.age }} anos
@@ -277,16 +295,16 @@
 
                   @if (hasPendingProfilePresentation(participant)) {
                     <div class="participant-admin-profile-review ion-margin-top">
-                      <ion-note color="warning">
-                        Primeira participacao nesta pelada — avalie o perfil antes de confirmar.
-                      </ion-note>
+                      <ion-note color="warning">{{
+                        'eventDetail.participants.firstParticipationNote' | t
+                      }}</ion-note>
                       <div class="participant-admin-profile-actions">
                         <ion-button
                           fill="outline"
                           size="small"
                           (click)="viewProfilePresentation.emit(participant)"
                         >
-                          Ver perfil
+                          {{ 'eventDetail.participants.viewProfile' | t }}
                         </ion-button>
                         <ion-button
                           color="success"
@@ -294,7 +312,7 @@
                           [disabled]="resolvingProfileId === participant.objectId"
                           (click)="approveProfilePresentation.emit(participant)"
                         >
-                          Aprovar
+                          {{ 'eventDetail.participants.approve' | t }}
                         </ion-button>
                         <ion-button
                           color="danger"
@@ -303,7 +321,7 @@
                           [disabled]="resolvingProfileId === participant.objectId"
                           (click)="rejectProfilePresentation.emit(participant)"
                         >
-                          Recusar
+                          {{ 'eventDetail.participants.reject' | t }}
                         </ion-button>
                       </div>
                     </div>

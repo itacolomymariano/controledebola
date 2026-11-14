@@ -18,52 +18,52 @@ export function muralTabToShareVariant(tab: MuralAppTab): MuralAppShareVariant {
 
 export interface MuralAppSupportRoleSection {
   role: MuralTargetRole;
-  title: string;
+  titleKey: string;
 }
 
 const SUPPORT_REFEREE: MuralAppSupportRoleSection = {
   role: 'referee',
-  title: 'Top 10 — Árbitros',
+  titleKey: 'mural.app.support.referee',
 };
 const SUPPORT_JOURNALIST: MuralAppSupportRoleSection = {
   role: 'journalist',
-  title: 'Top 10 — Jornalistas',
+  titleKey: 'mural.app.support.journalist',
 };
 const SUPPORT_SCOUT: MuralAppSupportRoleSection = {
   role: 'scout',
-  title: 'Top 10 — Scouts / Mesários',
+  titleKey: 'mural.app.support.scout',
 };
 const SUPPORT_CAMERAMAN: MuralAppSupportRoleSection = {
   role: 'cameraman',
-  title: 'Top 10 — Cinegrafistas',
+  titleKey: 'mural.app.support.cameraman',
 };
 const SUPPORT_NARRATOR: MuralAppSupportRoleSection = {
   role: 'narrator',
-  title: 'Top 10 — Narradores',
+  titleKey: 'mural.app.support.narrator',
 };
 const SUPPORT_PF: MuralAppSupportRoleSection = {
   role: 'physical_trainer',
-  title: 'Top 10 — Preparadores Físicos',
+  titleKey: 'mural.app.support.physical_trainer',
 };
 const SUPPORT_MASSEUR: MuralAppSupportRoleSection = {
   role: 'masseur',
-  title: 'Top 10 — Massagistas',
+  titleKey: 'mural.app.support.masseur',
 };
 const SUPPORT_KITMAN: MuralAppSupportRoleSection = {
   role: 'kitman',
-  title: 'Top 10 — Roupeiros',
+  titleKey: 'mural.app.support.kitman',
 };
 const SUPPORT_GANDULA: MuralAppSupportRoleSection = {
   role: 'gandula',
-  title: 'Top 10 — Gandulas',
+  titleKey: 'mural.app.support.gandula',
 };
 const SUPPORT_GATE: MuralAppSupportRoleSection = {
   role: 'gatekeeper',
-  title: 'Top 10 — Porteiros',
+  titleKey: 'mural.app.support.gatekeeper',
 };
 const SUPPORT_FAN: MuralAppSupportRoleSection = {
   role: 'fan',
-  title: 'Top 10 — Torcedores',
+  titleKey: 'mural.app.support.fan',
 };
 
 export function supportRoleSectionsForTab(tab: MuralAppTab): MuralAppSupportRoleSection[] {
@@ -87,7 +87,7 @@ export function tabShowsTeamCoachResults(tab: MuralAppTab): boolean {
   return tab === 'geral' || tab === 'confrontos';
 }
 
-export function highlightTitlesForTab(tab: MuralAppTab): {
+export function highlightTitleKeysForTab(tab: MuralAppTab): {
   craque: string;
   goalkeeper: string;
   scorer: string;
@@ -95,24 +95,29 @@ export function highlightTitlesForTab(tab: MuralAppTab): {
 } {
   if (tab === 'peladas') {
     return {
-      craque: 'Craque das Peladas',
-      goalkeeper: 'Melhor Goleiro das Peladas',
-      scorer: 'Maior Goleador das Peladas',
-      athletes: 'Top 10 — Atletas das Peladas',
+      craque: 'mural.app.titles.craque.peladas',
+      goalkeeper: 'mural.app.titles.goalkeeper.peladas',
+      scorer: 'mural.app.titles.scorer.peladas',
+      athletes: 'mural.app.titles.athletes.peladas',
     };
   }
   if (tab === 'confrontos') {
     return {
-      craque: 'Craque dos Confrontos',
-      goalkeeper: 'Melhor Goleiro dos Confrontos',
-      scorer: 'Maior Goleador dos Confrontos',
-      athletes: 'Top 10 — Atletas de Confrontos',
+      craque: 'mural.app.titles.craque.confrontos',
+      goalkeeper: 'mural.app.titles.goalkeeper.confrontos',
+      scorer: 'mural.app.titles.scorer.confrontos',
+      athletes: 'mural.app.titles.athletes.confrontos',
     };
   }
   return {
-    craque: 'Craque do App',
-    goalkeeper: 'Melhor Goleiro do App',
-    scorer: 'Maior Goleador do App',
-    athletes: 'Top 10 — Atletas',
+    craque: 'mural.app.titles.craque.geral',
+    goalkeeper: 'mural.app.titles.goalkeeper.geral',
+    scorer: 'mural.app.titles.scorer.geral',
+    athletes: 'mural.app.titles.athletes.geral',
   };
+}
+
+/** @deprecated use highlightTitleKeysForTab + i18n.t */
+export function highlightTitlesForTab(tab: MuralAppTab) {
+  return highlightTitleKeysForTab(tab);
 }

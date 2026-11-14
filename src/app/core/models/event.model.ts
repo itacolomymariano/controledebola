@@ -72,6 +72,7 @@ export interface PeladaEventListItem extends PeladaEvent {
   isRegistered?: boolean;
   isPast?: boolean;
   registrationStatusLabel?: string;
+  registrationsOpen?: boolean;
   nearby?: boolean;
   maxAthletes?: number;
   confirmedAthletes?: number;
@@ -262,14 +263,15 @@ export function getRegistrationStatus(
   return 'open';
 }
 
+/** @deprecated Prefer EventService.registrationStatusLabel / localizedRegistrationStatusLabel */
 export function getRegistrationStatusLabel(status: RegistrationStatus): string {
   switch (status) {
     case 'open':
-      return 'Inscricoes abertas';
+      return 'Registrations open';
     case 'closed':
-      return 'Inscricoes encerradas';
+      return 'Registrations closed';
     case 'not_yet_open':
-      return 'Inscricoes em breve';
+      return 'Registrations opening soon';
   }
 }
 
@@ -298,14 +300,15 @@ export function isVotingOpen(
   return now >= opensAt && now < closesAt;
 }
 
+/** @deprecated Prefer buildEventVotingPeriodLabels / localizedVotingStatusLabel */
 export function getVotingStatusLabel(
   event: Pick<PeladaEvent, 'startTime' | 'votingOpensAt' | 'votingClosesAt'>,
   now = new Date()
 ): string {
   const { opensAt, closesAt } = getEffectiveVotingWindow(event);
-  if (now < opensAt) return 'Votacao em breve';
-  if (now >= closesAt) return 'Votacao encerrada';
-  return 'Votacao aberta';
+  if (now < opensAt) return 'Voting soon';
+  if (now >= closesAt) return 'Voting closed';
+  return 'Voting open';
 }
 
 export function isEventEnded(

@@ -22,7 +22,7 @@ export class MuralRuleSpeechService {
       await this.stop();
     }
     const current = ++this.run;
-    const lang = this.i18n.locale || 'pt-BR';
+    const lang = this.toSpeechLang(this.i18n.locale);
     this.setSpeaking(true);
     try {
       if (Capacitor.isNativePlatform()) {
@@ -71,6 +71,16 @@ export class MuralRuleSpeechService {
     } finally {
       this.setSpeaking(false);
     }
+  }
+
+  /** BCP 47 for Capacitor TTS and SpeechSynthesis. */
+  private toSpeechLang(locale: string): string {
+    const map: Record<string, string> = {
+      'pt-BR': 'pt-BR',
+      'en-GB': 'en-GB',
+      'es-ES': 'es-ES',
+    };
+    return map[locale] || 'en-US';
   }
 
   private setSpeaking(value: boolean): void {

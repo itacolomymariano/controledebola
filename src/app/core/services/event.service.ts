@@ -17,7 +17,6 @@ import {
   EventSearchFilters,
   EventType,
   getRegistrationStatus,
-  getRegistrationStatusLabel,
   isEventReadOnly,
   hasPixKey,
   isSameLocationComplement,
@@ -26,6 +25,9 @@ import {
   UpdateEventAdminPayload,
 } from '../models/event.model';
 import { getUserAvatarUrl } from '../utils/user-avatar.util';
+import { formatAppCurrency } from '../utils/locale-datetime.util';
+import { localizedRegistrationStatusLabel } from '../utils/event-status-i18n.util';
+import { I18nService } from './i18n.service';
 import { locationProximityScore } from '../utils/location-proximity.util';
 import { ParseFileService } from './parse-file.service';
 import { ParseService } from './parse.service';
@@ -76,7 +78,8 @@ export class EventService {
 
   constructor(
     private readonly parseService: ParseService,
-    private readonly parseFileService: ParseFileService
+    private readonly parseFileService: ParseFileService,
+    private readonly i18n: I18nService
   ) {
     this.parseService.init();
   }
@@ -895,21 +898,19 @@ export class EventService {
   }
 
   registrationStatusLabel(event: PeladaEvent, now = new Date()): string {
-    return getRegistrationStatusLabel(
-      getRegistrationStatus(event.registrationOpensAt, event.registrationClosesAt, now)
-    );
+    const status = getRegistrationStatus(event.registrationOpensAt, event.registrationClosesAt, now);
+    return localizedRegistrationStatusLabel(this.i18n, status);
   }
 
   formatType(type: EventType): string {
-    return EVENT_TYPE_LABELS[type] ?? type;
+  const key = `event.type.${type}`;
+    const translated = this.i18n.t(key);
+    return translated !== key ? translated : EVENT_TYPE_LABELS[type] ?? type;
   }
 
   formatParticipationFee(fee: number): string {
-    if (fee <= 0) return 'Gratuito';
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(fee);
+    if (fee <= 0) return this.i18n.t('eventDetail.overview.freeParticipation');
+    return formatAppCurrency(fee, this.i18n.locale);
   }
 
   formatAddress(address: Address): string {

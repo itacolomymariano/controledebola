@@ -1,7 +1,7 @@
-﻿<ion-header>
+<ion-header>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/tabs/peladas"></ion-back-button>
+      <ion-back-button [text]="'common.back' | t" defaultHref="/tabs/peladas"></ion-back-button>
     </ion-buttons>
     <ion-title>{{ 'profile.title' | t }}</ion-title>
   </ion-toolbar>
@@ -12,8 +12,8 @@
   <ion-card>
     <ion-card-content class="profile-avatar-section">
       <app-image-picker
-        label="Foto de perfil"
-        hint="Toque para tirar uma foto ou escolher da galeria. A foto aparece no topo das telas."
+        [label]="'profile.photoSection' | t"
+        [hint]="'profile.photoHint' | t"
         [previewUrl]="avatarUrl"
         (imageSelected)="onAvatarSelected($event)"
       ></app-image-picker>
@@ -28,26 +28,26 @@
     <ion-item button (click)="openLegends()">
       <ion-icon name="star-outline" slot="start"></ion-icon>
       <ion-label>
-        <h2>Lendas do futebol amador</h2>
-        <p>Cadastrar atletas e times que marcaram a historia</p>
+        <h2>{{ 'profile.legendsTitle' | t }}</h2>
+        <p>{{ 'profile.legendsSubtitle' | t }}</p>
       </ion-label>
     </ion-item>
     <ion-item button (click)="openAccountEdit()">
       <ion-icon name="person-circle-outline" slot="start"></ion-icon>
       <ion-label>
-        <h2>Meus dados</h2>
-        <p>Nome, apelido, e-mail e dados opcionais</p>
+        <h2>{{ 'accountEdit.title' | t }}</h2>
+        <p>{{ 'profile.accountEditMenuHint' | t }}</p>
       </ion-label>
     </ion-item>
     <ion-item button (click)="openInbox()">
       <ion-icon name="mail-outline" slot="start"></ion-icon>
       <ion-label>
-        <h2>Caixa de entrada</h2>
+        <h2>{{ 'profile.inboxMenuTitle' | t }}</h2>
         <p>
           @if (pendingInvitations > 0) {
-            {{ pendingInvitations }} convite(s) pendente(s)
+            {{ 'profile.inboxPendingHint' | t: { count: pendingInvitations } }}
           } @else {
-            Convites de trabalho
+            {{ 'profile.inboxWorkHint' | t }}
           }
         </p>
       </ion-label>
@@ -59,21 +59,21 @@
       <ion-item>
         <ion-icon name="ribbon-outline" slot="start"></ion-icon>
         <ion-label>
-          <h2>Perfil principal nos eventos</h2>
+          <h2>{{ 'profile.primaryEventRole' | t }}</h2>
           <p>{{ primaryRoleLabel }}</p>
         </ion-label>
       </ion-item>
     }
 
     <ion-item-divider>
-      <ion-label>Perfis de participacao</ion-label>
+      <ion-label>{{ 'profile.participationProfiles' | t }}</ion-label>
     </ion-item-divider>
 
     <ion-item button (click)="openAthleteProfile()">
       <ion-icon name="football-outline" slot="start"></ion-icon>
       <ion-label>
-        <h2>Perfil de atleta</h2>
-        <p>{{ hasAthleteProfile ? 'Cadastrado' : 'Cadastrar agora' }}</p>
+        <h2>{{ 'profile.athleteProfile' | t }}</h2>
+        <p>{{ (hasAthleteProfile ? 'profile.registered' : 'profile.registerNow') | t }}</p>
       </ion-label>
     </ion-item>
 
@@ -81,8 +81,8 @@
       <ion-item button (click)="openAthleteHiring()">
         <ion-icon name="people-outline" slot="start"></ion-icon>
         <ion-label>
-          <h2>Contratacao pessoal</h2>
-          <p>Preparador fisico e scout pessoal</p>
+          <h2>{{ 'profile.personalHiring' | t }}</h2>
+          <p>{{ 'profile.personalHiringHint' | t }}</p>
         </ion-label>
       </ion-item>
     }
@@ -91,16 +91,16 @@
       <ion-item button (click)="openRoleProfile(role)">
         <ion-icon name="briefcase-outline" slot="start"></ion-icon>
         <ion-label>
-          <h2>Perfil de {{ roleLabel(role) }}</h2>
-          <p>{{ roleProfileRegistered[role] ? 'Cadastrado' : 'Cadastrar agora' }}</p>
+          <h2>{{ 'profile.roleProfileTitle' | t: { role: roleLabel(role) } }}</h2>
+          <p>{{ (roleProfileRegistered[role] ? 'profile.registered' : 'profile.registerNow') | t }}</p>
         </ion-label>
       </ion-item>
       @if (role === 'kitman' && roleProfileRegistered.kitman) {
         <ion-item button (click)="openKitmanMaterial()">
           <ion-icon name="shirt-outline" slot="start"></ion-icon>
           <ion-label>
-            <h2>Material do Roupeiro</h2>
-            <p>Cadastrar material proprio para ceder ou alugar</p>
+            <h2>{{ 'profile.kitmanMaterial' | t }}</h2>
+            <p>{{ 'profile.kitmanMaterialHint' | t }}</p>
           </ion-label>
         </ion-item>
       }
@@ -109,8 +109,8 @@
     <ion-item button (click)="openFanProfile()">
       <ion-icon name="trophy-outline" slot="start"></ion-icon>
       <ion-label class="ion-text-wrap">
-        <h2>Perfil de torcedor</h2>
-        <p>{{ hasFanProfile ? 'Cadastrado' : 'Cadastrar agora' }} · Palpites antes de cada evento</p>
+        <h2>{{ 'profile.fanProfile' | t }}</h2>
+        <p>{{ (hasFanProfile ? 'profile.fanProfileRegistered' : 'profile.fanProfileHint') | t }}</p>
       </ion-label>
     </ion-item>
 
@@ -130,44 +130,38 @@
     </ion-item>
 
     <ion-item-divider>
-      <ion-label>Outros cadastros</ion-label>
+      <ion-label>{{ 'profile.otherRegistrations' | t }}</ion-label>
     </ion-item-divider>
 
     <ion-item button (click)="openTeamForm()">
       <ion-icon name="people-outline" slot="start"></ion-icon>
       <ion-label>
-        <h2>Meus times</h2>
-        <p>
-          @if (hasTeam) {
-            {{ teamCount }} time{{ teamCount === 1 ? '' : 's' }} · Gerenciar
-          } @else {
-            Cadastrar agora
-          }
-        </p>
+        <h2>{{ 'profile.myTeams' | t }}</h2>
+        <p>{{ teamCountSummary() }}</p>
       </ion-label>
       <app-help-balloon slot="end" textKey="profile.myTeams.help"></app-help-balloon>
     </ion-item>
     <ion-item>
-      <ion-label>Login por biometria</ion-label>
+      <ion-label>{{ 'profile.biometricLogin' | t }}</ion-label>
       <ion-toggle [checked]="biometricEnabled" (ionChange)="toggleBiometric($event)"></ion-toggle>
     </ion-item>
     <ion-item button [disabled]="inviteShareBusy" (click)="inviteFriends()">
       <ion-icon name="share-social-outline" slot="start"></ion-icon>
       <ion-label>
-        <h2>Convidar Amigos</h2>
-        <p>Divulgar o Controle de Bola nas redes</p>
+        <h2>{{ 'profile.inviteFriends' | t }}</h2>
+        <p>{{ 'profile.inviteFriendsHint' | t }}</p>
       </ion-label>
     </ion-item>
     <ion-item button (click)="requestAccountDeletion()">
       <ion-icon name="trash-outline" slot="start" color="danger"></ion-icon>
       <ion-label>
-        <h2>Excluir conta</h2>
-        <p>Apagar definitivamente seus dados pessoais</p>
+        <h2>{{ 'profile.deleteAccount' | t }}</h2>
+        <p>{{ 'profile.deleteAccountHint' | t }}</p>
       </ion-label>
     </ion-item>
     <ion-item button color="danger" (click)="logout()">
       <ion-icon name="log-out-outline" slot="start"></ion-icon>
-      <ion-label>Sair do App</ion-label>
+      <ion-label>{{ 'profile.logout' | t }}</ion-label>
     </ion-item>
   </ion-list>
   </app-playful-page>

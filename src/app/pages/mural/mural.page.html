@@ -1,6 +1,6 @@
 ﻿<ion-header>
   <ion-toolbar>
-    <ion-title>Mural do Controle de Bola</ion-title>
+    <ion-title>{{ 'mural.pageTitle' | t }}</ion-title>
     <ion-buttons slot="end">
       @if (muralTab === 'confrontos') {
         <app-screen-help
@@ -20,16 +20,16 @@
       <ion-list lines="none" class="mural-location-list playful-elevated-list">
         <ion-item>
           <ion-select
-            label="Estado"
+            [label]="'mural.location.state' | t"
             labelPlacement="stacked"
             interface="alert"
-            okText="Escolher"
-            cancelText="Cancelar"
-            placeholder="Todo o Brasil"
+            [okText]="'mural.location.choose' | t"
+            [cancelText]="'mural.location.cancel' | t"
+            [placeholder]="'mural.location.allBrazil' | t"
             [value]="selectedState || allLocations"
             (ionChange)="onStateFilterChange($event)"
           >
-            <ion-select-option [value]="allLocations">Todo o Brasil</ion-select-option>
+            <ion-select-option [value]="allLocations">{{ 'mural.location.allBrazil' | t }}</ion-select-option>
             @for (option of stateOptions; track option.key) {
               <ion-select-option [value]="option.key">
                 {{ option.label }} ({{ option.count }})
@@ -41,16 +41,16 @@
         @if (selectedState) {
           <ion-item>
             <ion-select
-              label="Cidade"
+              [label]="'mural.location.city' | t"
               labelPlacement="stacked"
               interface="alert"
-              okText="Escolher"
-              cancelText="Cancelar"
-              placeholder="Todas as cidades"
+              [okText]="'mural.location.choose' | t"
+              [cancelText]="'mural.location.cancel' | t"
+              [placeholder]="'mural.location.allCities' | t"
               [value]="selectedCity || allLocations"
               (ionChange)="onCityFilterChange($event)"
             >
-              <ion-select-option [value]="allLocations">Todas as cidades</ion-select-option>
+              <ion-select-option [value]="allLocations">{{ 'mural.location.allCities' | t }}</ion-select-option>
               @for (option of cityOptions; track option.key) {
                 <ion-select-option [value]="option.key">
                   {{ cityOptionLabel(option) }} ({{ option.count }})
@@ -63,16 +63,16 @@
         @if (selectedCity) {
           <ion-item>
             <ion-select
-              label="Bairro"
+              [label]="'mural.location.neighborhood' | t"
               labelPlacement="stacked"
               interface="alert"
-              okText="Escolher"
-              cancelText="Cancelar"
-              placeholder="Todos os bairros"
+              [okText]="'mural.location.choose' | t"
+              [cancelText]="'mural.location.cancel' | t"
+              [placeholder]="'mural.location.allNeighborhoods' | t"
               [value]="selectedNeighborhood || allLocations"
               (ionChange)="onNeighborhoodFilterChange($event)"
             >
-              <ion-select-option [value]="allLocations">Todos os bairros</ion-select-option>
+              <ion-select-option [value]="allLocations">{{ 'mural.location.allNeighborhoods' | t }}</ion-select-option>
               @for (option of neighborhoodOptions; track option.key) {
                 <ion-select-option [value]="option.key">
                   {{ neighborhoodOptionLabel(option) }} ({{ option.count }})
@@ -90,7 +90,7 @@
           <ion-icon name="close-circle"></ion-icon>
         </ion-chip>
       } @else {
-        <ion-note class="mural-location-note">Mostrando todo o Brasil.</ion-note>
+        <ion-note class="mural-location-note">{{ 'mural.location.showingAllBrazil' | t }}</ion-note>
       }
     </div>
   }
@@ -118,14 +118,14 @@
   @if (loading) {
     <div class="ion-text-center ion-padding">
       <ion-spinner name="crescent"></ion-spinner>
-      <p class="mural-loading-text">Calculando Rankings, aguarde...</p>
+      <p class="mural-loading-text">{{ 'mural.loading' | t }}</p>
     </div>
   }
 
   @if (!loading && errorMessage) {
     <app-playful-card tone="muted" class="ion-margin-bottom">
       <p>{{ errorMessage }}</p>
-      <ion-button fill="clear" (click)="retry()">Tentar novamente</ion-button>
+      <ion-button fill="clear" (click)="retry()">{{ 'mural.retry' | t }}</ion-button>
     </app-playful-card>
   }
 

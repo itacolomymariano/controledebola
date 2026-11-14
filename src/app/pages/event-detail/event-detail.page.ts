@@ -13,7 +13,6 @@ import {
   hasPixKey,
   supportsArrivalOrder,
   getEffectiveVotingWindow,
-  getVotingStatusLabel,
   isVotingOpen,
   getRegistrationStatus,
   isEventEnded,
@@ -41,7 +40,8 @@ import { UserParticipationProfileService } from '../../core/services/user-partic
 
 import { RegistrationService } from '../../core/services/registration.service';
 import { HIREABLE_ROLES, HireableRole } from '../../core/models/event-hiring.model';
-import { EVENT_REGISTRATION_ROLES, PROFILE_ROLE_LABELS, ProfileRole } from '../../core/models/profile-role.model';
+import { EVENT_REGISTRATION_ROLES, ProfileRole } from '../../core/models/profile-role.model';
+import { localizedProfileRoleLabel } from '../../core/utils/profile-role-i18n.util';
 
 import { MuralService } from '../../core/services/mural.service';
 import { eventRegistrationVoteMuralRole } from '../../core/utils/mural-role.util';
@@ -82,6 +82,8 @@ import {
   buildEventDetailOverviewViewModel,
   buildEventVotingPeriodLabels,
 } from '../../core/utils/event-detail-display.util';
+import { votingStatusI18nKey } from '../../core/utils/event-status-i18n.util';
+import { intlLocaleForApp } from '../../core/utils/locale-datetime.util';
 import {
   EventDetailOverviewViewModel,
 } from '../../shared/components/event-detail-overview/event-detail-overview.component';
@@ -121,6 +123,7 @@ export class EventDetailPage implements OnDestroy {
   gateActionTileRows: EventDetailActionTile[][] = [];
 
   private registrationsChangedSub?: Subscription;
+  private localeSub?: Subscription;
 
   registration: EventRegistration | null = null;
 
@@ -385,6 +388,10 @@ export class EventDetailPage implements OnDestroy {
     this.registrationsChangedSub = this.registrationService.onRegistrationsChanged.subscribe(() => {
       void this.refreshRegistrationState();
     });
+    this.localeSub = this.i18n.locale$.subscribe(() => {
+      this.refreshUiState();
+      this.cdr.markForCheck();
+    });
   }
 
   private t(key: string, params?: Record<string, string | number>): string {
@@ -393,6 +400,7 @@ export class EventDetailPage implements OnDestroy {
 
   ngOnDestroy(): void {
     this.registrationsChangedSub?.unsubscribe();
+    this.localeSub?.unsubscribe();
   }
 
   get votingTargets(): EventRegistrationListItem[] {
@@ -460,8 +468,10 @@ export class EventDetailPage implements OnDestroy {
         registrationStatusLabel: this.registrationStatusLabel,
         supportsArrivalOrder: this.supportsArrivalOrder,
         pixKeys: this.pixKeys,
+        t: (key, params) => this.t(key, params),
+        locale: this.i18n.locale,
       });
-      this.votingPeriodLabels = buildEventVotingPeriodLabels(this.event);
+      this.votingPeriodLabels = buildEventVotingPeriodLabels(this.event, this.i18n);
     } else {
       this.eventOverview = null;
       this.votingPeriodLabels = null;
@@ -473,12 +483,15 @@ export class EventDetailPage implements OnDestroy {
     ).length;
     const participantsLabel =
       pendingProfileCount > 0
-        ? `Participantes (${this.participants.length}) · ${pendingProfileCount} apresentacao(oes)`
-        : `Participantes (${this.participants.length})`;
+        ? this.t('eventDetail.actions.participantsPending', {
+            count: this.participants.length,
+            pending: pendingProfileCount,
+          })
+        : this.t('eventDetail.actions.participants', { count: this.participants.length });
     this.adminActionTileRows = this.buildActionTileRows([
       {
         id: 'settings',
-        label: 'Configuracoes do evento',
+        label: this.t('eventDetail.actions.settings'),
         icon: 'settings-outline',
         visible: true,
         active: this.showAdminPanel,
@@ -492,34 +505,34 @@ export class EventDetailPage implements OnDestroy {
       },
       {
         id: 'notify-participants',
-        label: 'Notificar participantes',
+        label: this.t('eventDetail.actions.notify'),
         icon: 'notifications-outline',
         visible: this.isAdmin,
       },
       {
         id: 'hiring',
-        label: 'Negociacao/Contratacoes',
+        label: this.t('eventDetail.actions.hiring'),
         icon: 'briefcase-outline',
         visible: this.isAdmin || this.canManageTeamMatchHiring,
         active: this.showHiringPanel,
       },
       {
         id: 'convocation',
-        label: 'Convocacao',
+        label: this.t('eventDetail.actions.convocation'),
         icon: 'people-circle-outline',
         visible: this.canShowConvocationPanel,
         active: this.showConvocationPanel,
       },
       {
         id: 'material',
-        label: 'Material',
+        label: this.t('eventDetail.actions.material'),
         icon: 'shirt-outline',
         visible: !!this.event?.peladaId,
         active: this.showMaterialPanel,
       },
       {
         id: 'anonymous',
-        label: 'Adicionar participante anonimo',
+        label: this.t('eventDetail.actions.anonymous'),
         icon: 'person-add-outline',
         visible: true,
       },
@@ -531,13 +544,13 @@ export class EventDetailPage implements OnDestroy {
       },
       {
         id: 'predictions',
-        label: 'Fazer palpites',
+        label: this.t('eventDetail.actions.predictions'),
         icon: 'bulb-outline',
         visible: this.canMakePredictions,
       },
       {
         id: 'gate',
-        label: 'Portaria',
+        label: this.t('eventDetail.actions.gate'),
         icon: 'key-outline',
         visible:
           this.gateTicketControlEnabled &&
@@ -546,14 +559,14 @@ export class EventDetailPage implements OnDestroy {
       },
       {
         id: 'voting',
-        label: 'Votacao do evento',
+        label: this.t('eventDetail.actions.voting'),
         icon: 'star-outline',
         visible: this.canShowEventVoting,
         active: this.showVotingPanel,
       },
       {
         id: 'mural',
-        label: 'Ver mural do evento',
+        label: this.t('eventDetail.actions.mural'),
         icon: 'newspaper-outline',
         visible: true,
       },
@@ -569,14 +582,14 @@ export class EventDetailPage implements OnDestroy {
       },
       {
         id: 'convocation',
-        label: 'Convocacao',
+        label: this.t('eventDetail.actions.convocation'),
         icon: 'people-circle-outline',
         visible: this.canShowConvocationPanel,
         active: this.showConvocationPanel,
       },
       {
         id: 'hiring',
-        label: 'Negociacao/Contratacoes',
+        label: this.t('eventDetail.actions.hiring'),
         icon: 'briefcase-outline',
         visible: this.canManageTeamMatchHiring && !this.isAdmin,
         active: this.showHiringPanel,
@@ -589,25 +602,25 @@ export class EventDetailPage implements OnDestroy {
       },
       {
         id: 'narrator-radio',
-        label: 'Radio',
+        label: this.t('eventDetail.actions.radio'),
         icon: 'radio-outline',
         visible: this.canAccessNarratorRadio,
       },
       {
         id: 'journalist-journal',
-        label: 'Jornal',
+        label: this.t('eventDetail.actions.journal'),
         icon: 'newspaper-outline',
         visible: this.canAccessJournalistJournal,
       },
       {
         id: 'cameraman-coverage',
-        label: 'Cobertura',
+        label: this.t('eventDetail.actions.coverage'),
         icon: 'videocam-outline',
         visible: this.canAccessCameramanCoverage,
       },
       {
         id: 'gandula-duty',
-        label: 'Apoio em campo',
+        label: this.t('eventDetail.actions.fieldSupport'),
         icon: 'football-outline',
         visible: this.canAccessGandulaDuty,
       },
@@ -619,38 +632,38 @@ export class EventDetailPage implements OnDestroy {
       },
       {
         id: 'material',
-        label: 'Material',
+        label: this.t('eventDetail.actions.material'),
         icon: 'shirt-outline',
         visible: this.isEventKitman,
         active: this.showMaterialPanel,
       },
       {
         id: 'predictions',
-        label: 'Fazer palpites',
+        label: this.t('eventDetail.actions.predictions'),
         icon: 'bulb-outline',
         visible: this.canMakePredictions,
       },
       {
         id: 'fan-checkin',
-        label: 'Check-in da torcida',
+        label: this.t('eventDetail.actions.fanCheckin'),
         icon: 'heart-outline',
         visible: this.canAccessFanCheckIn,
       },
       {
         id: 'coach-board',
-        label: 'Painel do treinador',
+        label: this.t('eventDetail.actions.coachBoard'),
         icon: 'football-outline',
         visible: this.canAccessCoachBoard,
       },
       {
         id: 'physical-trainer',
-        label: 'Preparacao fisica',
+        label: this.t('eventDetail.actions.physicalTrainer'),
         icon: 'barbell-outline',
         visible: this.canAccessPhysicalTrainer,
       },
       {
         id: 'masseur-treatments',
-        label: 'Atendimentos',
+        label: this.t('eventDetail.actions.treatments'),
         icon: 'medkit-outline',
         visible: this.canAccessMasseurTreatments,
       },
@@ -662,7 +675,7 @@ export class EventDetailPage implements OnDestroy {
       },
       {
         id: 'gate',
-        label: 'Portaria',
+        label: this.t('eventDetail.actions.gate'),
         icon: 'key-outline',
         visible:
           (this.canManageGateTools || this.showParticipantGatePortaria) &&
@@ -671,14 +684,14 @@ export class EventDetailPage implements OnDestroy {
       },
       {
         id: 'voting',
-        label: 'Votacao do evento',
+        label: this.t('eventDetail.actions.voting'),
         icon: 'star-outline',
         visible: this.canShowEventVoting,
         active: this.showVotingPanel,
       },
       {
         id: 'mural',
-        label: 'Ver mural do evento',
+        label: this.t('eventDetail.actions.mural'),
         icon: 'newspaper-outline',
         visible: true,
       },
@@ -853,7 +866,7 @@ export class EventDetailPage implements OnDestroy {
 
   get userParticipantsButtonLabel(): string {
     const count = Math.max(this.confirmedParticipants.length, this.registration ? 1 : 0);
-    return `Participantes (${count})`;
+    return this.t('eventDetail.actions.participants', { count });
   }
 
   get pixKeys(): string[] {
@@ -921,9 +934,11 @@ export class EventDetailPage implements OnDestroy {
   }
 
   get teamSplitButtonLabel(): string {
-    if (!this.isEventFinished) return 'Separacao de times';
-    if (this.isAdmin && this.event?.allowTeamSplitAfterEventEnd) return 'Separacao de times';
-    return 'Consultar separacao de times';
+    if (!this.isEventFinished) return this.t('eventDetail.actions.teamSplit.live');
+    if (this.isAdmin && this.event?.allowTeamSplitAfterEventEnd) {
+      return this.t('eventDetail.actions.teamSplit.live');
+    }
+    return this.t('eventDetail.actions.teamSplit.view');
   }
 
   get canEditScoutApontamento(): boolean {
@@ -941,9 +956,9 @@ export class EventDetailPage implements OnDestroy {
   }
 
   get scoutApontamentoActionLabel(): string {
-    if (!this.event) return 'Apontamento scout';
-    if (this.canEditScoutApontamento) return 'Apontamento scout';
-    return 'Consultar apontamento scout';
+    if (!this.event) return this.t('eventDetail.actions.scout.edit');
+    if (this.canEditScoutApontamento) return this.t('eventDetail.actions.scout.edit');
+    return this.t('eventDetail.actions.scout.view');
   }
 
   /** @deprecated use canEditScoutApontamento */
@@ -966,19 +981,19 @@ export class EventDetailPage implements OnDestroy {
   }
 
   get sumulaActionLabel(): string {
-    if (!this.event) return 'Sumula do evento';
-    if (this.event.isFinished) return 'Consultar sumula do evento';
+    if (!this.event) return this.t('eventDetail.actions.sumula.edit');
+    if (this.event.isFinished) return this.t('eventDetail.actions.sumula.view');
     if (
       this.registration?.role === 'referee' &&
       this.registration.isEffectivelyConfirmed &&
       isSumulaEditOpen(this.event)
     ) {
-      return 'Sumula do evento';
+      return this.t('eventDetail.actions.sumula.edit');
     }
     if (this.registration?.role === 'referee') {
-      return 'Sumula do evento';
+      return this.t('eventDetail.actions.sumula.edit');
     }
-    return 'Consultar sumula do evento';
+    return this.t('eventDetail.actions.sumula.view');
   }
 
   get canVote(): boolean {
@@ -996,7 +1011,7 @@ export class EventDetailPage implements OnDestroy {
   }
 
   get votingStatusLabel(): string {
-    return this.event ? getVotingStatusLabel(this.event) : '';
+    return this.event ? this.i18n.t(votingStatusI18nKey(this.event)) : '';
   }
 
   get votingWindow() {
@@ -1015,23 +1030,14 @@ export class EventDetailPage implements OnDestroy {
   }
 
   formatDate(date: Date): string {
-
-    return new Intl.DateTimeFormat('pt-BR', {
-
+    return new Intl.DateTimeFormat(intlLocaleForApp(this.i18n.locale), {
       weekday: 'short',
-
       day: '2-digit',
-
       month: 'short',
-
       year: 'numeric',
-
       hour: '2-digit',
-
       minute: '2-digit',
-
     }).format(date);
-
   }
 
 
@@ -1143,7 +1149,7 @@ export class EventDetailPage implements OnDestroy {
         yellowCards: Number(v.yellowCards ?? 0),
         redCards: Number(v.redCards ?? 0),
       });
-      await this.showSuccess('Desempenho registrado.');
+      await this.showSuccess(this.t('eventDetail.toast.performanceSaved'));
       this.performanceForm.reset({
         userId: '',
         role: 'athlete',
@@ -1154,7 +1160,9 @@ export class EventDetailPage implements OnDestroy {
         redCards: 0,
       });
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Erro ao salvar desempenho.');
+      await this.showError(
+        error instanceof Error ? error.message : this.t('eventDetail.toast.performanceSaveFailed')
+      );
     } finally {
       this.savingPerformance = false;
     }
@@ -1310,7 +1318,7 @@ export class EventDetailPage implements OnDestroy {
         awayAcceptsUninvitedAthletes: result.awayAcceptsUninvitedAthletes,
       };
     } catch (error: unknown) {
-      await this.showError(parseErrorMessage(error) || 'Nao foi possivel salvar a opcao.');
+      await this.showError(parseErrorMessage(error) || this.t('eventDetail.toast.teamUninvitedSaveFailed'));
     } finally {
       this.teamMatchUninvitedBusy = false;
       this.cdr.markForCheck();
@@ -1337,12 +1345,12 @@ export class EventDetailPage implements OnDestroy {
         await this.loadMyGateTicket();
       }
       await this.showSuccess(
-        `Ingresso enviado para ${participant.apelido || participant.userName} com sucesso.`
+        this.t('eventDetail.toast.ticketSent', {
+          name: participant.apelido || participant.userName,
+        })
       );
     } catch (error: unknown) {
-      await this.showError(
-        parseErrorMessage(error) || 'Nao foi possivel enviar o ingresso. Tente novamente.'
-      );
+      await this.showError(parseErrorMessage(error) || this.t('eventDetail.toast.ticketSendFailed'));
     } finally {
       this.issuingTicketId = '';
       this.cdr.markForCheck();
@@ -1535,7 +1543,7 @@ export class EventDetailPage implements OnDestroy {
     this.refreshUiState();
     const hasGateActions = this.gateActionTileRows.some((row) => row.length > 0);
     if (!hasGateActions && !this.canViewMyGateTicket) {
-      void this.showInfo('Nenhuma acao de portaria disponivel no momento.');
+      void this.showInfo(this.t('eventDetail.toast.gateNoActions'));
       return;
     }
     if (this.isAdmin) {
@@ -1847,7 +1855,7 @@ export class EventDetailPage implements OnDestroy {
   async viewMyGateTicket(): Promise<void> {
     if (!this.event) return;
     if (!this.registration) {
-      await this.showInfo('Voce nao esta inscrito neste evento. Inscreva-se para visualizar seu ingresso.');
+      await this.showInfo(this.t('eventDetail.toast.notRegisteredForTicket'));
       return;
     }
     this.loadingMyGateTicket = true;
@@ -1860,14 +1868,12 @@ export class EventDetailPage implements OnDestroy {
       this.cdr.markForCheck();
       await this.scrollToGateTicketView();
       if (!this.myGateTicket?.active) {
-        await this.showInfo('Ingresso ainda nao foi emitido pelo administrador.');
+        await this.showInfo(this.t('eventDetail.toast.ticketNotIssued'));
       }
     } catch (error: unknown) {
       this.showMyGateTicketView = false;
       this.refreshUiState();
-      await this.showError(
-        parseErrorMessage(error) || 'Nao foi possivel carregar o ingresso. Tente novamente.'
-      );
+      await this.showError(parseErrorMessage(error) || this.t('eventDetail.toast.ticketLoadFailed'));
     } finally {
       this.loadingMyGateTicket = false;
       this.cdr.markForCheck();
@@ -1879,32 +1885,29 @@ export class EventDetailPage implements OnDestroy {
       return;
     }
     if (this.confirmedParticipants.length === 0) {
-      await this.showInfo(
-        'Ainda nao ha inscritos confirmados neste evento. A mensagem so chega para quem esta confirmado de verdade (pagamento, isencao, convite aceito ou taxa zero). Convide ou confirme participantes e tente de novo.'
-      );
+      await this.showInfo(this.t('eventDetail.toast.notifyNoConfirmed'));
       return;
     }
 
     const alert = await this.alertCtrl.create({
-      header: 'Notificar participantes',
-      message:
-        'A mensagem sera enviada para inscritos confirmados neste evento que autorizaram notificacoes no app.',
+      header: this.t('eventDetail.notify.header'),
+      message: this.t('eventDetail.notify.message'),
       inputs: [
         {
           name: 'title',
           type: 'text',
-          placeholder: 'Titulo da mensagem',
+          placeholder: this.t('eventDetail.notify.titlePlaceholder'),
         },
         {
           name: 'message',
           type: 'textarea',
-          placeholder: 'Mensagem de notificacao',
+          placeholder: this.t('eventDetail.notify.bodyPlaceholder'),
         },
       ],
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.t('eventDetail.alert.cancel'), role: 'cancel' },
         {
-          text: 'Enviar',
+          text: this.t('eventDetail.notify.send'),
           handler: (data) => {
             void this.sendParticipantNotification(String(data?.title || ''), String(data?.message || ''));
           },
@@ -1932,16 +1935,16 @@ export class EventDetailPage implements OnDestroy {
     const normalizedTitle = title.trim();
     const normalizedMessage = message.trim();
     if (normalizedTitle.length < 2) {
-      await this.showError('Informe o titulo da notificacao.');
+      await this.showError(this.t('eventDetail.toast.notifyTitleRequired'));
       return;
     }
     if (normalizedMessage.length < 2) {
-      await this.showError('Informe a mensagem da notificacao.');
+      await this.showError(this.t('eventDetail.toast.notifyBodyRequired'));
       return;
     }
 
     this.sendingParticipantNotification = true;
-    const loading = await this.loadingCtrl.create({ message: 'Enviando notificacoes...' });
+    const loading = await this.loadingCtrl.create({ message: this.t('eventDetail.toast.notifySending') });
     await loading.present();
     try {
       const result = await this.pushNotificationService.sendEventConfirmedParticipantNotification(
@@ -1951,17 +1954,18 @@ export class EventDetailPage implements OnDestroy {
       );
       if (result.devicesMatched <= 0) {
         await this.showError(
-          `Nenhum aparelho com notificacoes ativas foi encontrado entre ${result.targetedUsers} participante(s) confirmado(s). Peça ao participante para abrir o app logado e autorizar notificacoes novamente.`
+          this.t('eventDetail.toast.notifyNoDevices', { users: result.targetedUsers })
         );
         return;
       }
       await this.showSuccess(
-        `Notificacao enviada para ${result.devicesMatched} aparelho(s) de ${result.targetedUsers} participante(s) confirmado(s).`
+        this.t('eventDetail.toast.notifySent', {
+          devices: result.devicesMatched,
+          users: result.targetedUsers,
+        })
       );
     } catch (error: unknown) {
-      await this.showError(
-        parseErrorMessage(error) || 'Nao foi possivel enviar a notificacao. Tente novamente.'
-      );
+      await this.showError(parseErrorMessage(error) || this.t('eventDetail.toast.notifySendFailed'));
     } finally {
       this.sendingParticipantNotification = false;
       await loading.dismiss();
@@ -2374,9 +2378,7 @@ export class EventDetailPage implements OnDestroy {
     const hasVotingOpen = !!v.votingOpenDate && !!v.votingOpenTime;
     const hasVotingClose = !!v.votingCloseDate && !!v.votingCloseTime;
     if (hasVotingOpen !== hasVotingClose) {
-      await this.showError(
-        'Informe data e hora de abertura e encerramento da votacao, ou deixe ambos em branco.'
-      );
+      await this.showError(this.t('eventDetail.toast.votingDatesBoth'));
       return;
     }
 
@@ -2386,7 +2388,7 @@ export class EventDetailPage implements OnDestroy {
       votingOpensAt = this.combineDateTime(v.votingOpenDate!, v.votingOpenTime!);
       votingClosesAt = this.combineDateTime(v.votingCloseDate!, v.votingCloseTime!);
       if (votingClosesAt <= votingOpensAt) {
-        await this.showError('O encerramento da votacao deve ser apos a abertura.');
+        await this.showError(this.t('eventDetail.toast.votingCloseAfterOpen'));
         return;
       }
     }
@@ -2422,13 +2424,13 @@ export class EventDetailPage implements OnDestroy {
     const pixKey2 = String(v.pixKey2 ?? '').trim();
     const pixKey3 = String(v.pixKey3 ?? '').trim();
     if (!this.lockParticipationFee && participationFee > 0 && !hasPixKey(pixKey1, pixKey2, pixKey3)) {
-      await this.showError('Informe ao menos uma chave PIX quando o valor da participacao for maior que zero.');
+      await this.showError(this.t('eventDetail.toast.pixRequired'));
       return;
     }
 
     this.savingAdmin = true;
 
-    const loading = await this.loadingCtrl.create({ message: 'Salvando...' });
+    const loading = await this.loadingCtrl.create({ message: this.t('eventDetail.toast.saving') });
 
     await loading.present();
 
@@ -2555,7 +2557,7 @@ export class EventDetailPage implements OnDestroy {
     }
 
     if (!this.canVote) {
-      await this.showError('A votacao nao esta aberta no momento.');
+      await this.showError(this.t('eventDetail.toast.votingClosed'));
       return;
     }
 
@@ -2564,7 +2566,7 @@ export class EventDetailPage implements OnDestroy {
     );
 
     if (!entries.length) {
-      await this.showError('Atribua nota de 0 a 10 para ao menos um participante.');
+      await this.showError(this.t('eventDetail.toast.votingScoreRequired'));
       return;
     }
 
@@ -2607,9 +2609,9 @@ export class EventDetailPage implements OnDestroy {
       await this.loadVoteScores();
 
       const alert = await this.alertCtrl.create({
-        header: 'Votacao',
-        message: 'Suas notas foram registradas.',
-        buttons: ['OK'],
+        header: this.t('eventDetail.voting.submittedHeader'),
+        message: this.t('eventDetail.voting.submittedMessage'),
+        buttons: [this.t('eventDetail.alert.ok')],
       });
       await alert.present();
     } catch (error: unknown) {
@@ -2765,26 +2767,25 @@ export class EventDetailPage implements OnDestroy {
     if (!this.event || !this.isAdmin || this.addingAnonymous) return;
 
     const alert = await this.alertCtrl.create({
-      header: 'Participante anonimo',
-      message:
-        'Use para quem ainda nao tem o app instalado ou surgiu para completar a pelada. A inscricao entra confirmada e isenta.',
+      header: this.t('eventDetail.anonymous.header'),
+      message: this.t('eventDetail.anonymous.message'),
       inputs: [
         {
           name: 'apelido',
           type: 'text',
-          placeholder: 'Apelido',
+          placeholder: this.t('eventDetail.anonymous.nicknamePlaceholder'),
         },
         {
           name: 'role',
           type: 'text',
-          placeholder: 'Perfil (athlete, scout, fan...)',
+          placeholder: this.t('eventDetail.anonymous.rolePlaceholder'),
           value: 'athlete',
         },
       ],
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.t('eventDetail.alert.cancel'), role: 'cancel' },
         {
-          text: 'Adicionar',
+          text: this.t('eventDetail.anonymous.add'),
           handler: (data: { apelido?: string; role?: string }) => {
             void this.addAnonymousParticipant(data.apelido ?? '', data.role ?? 'athlete');
             return true;
@@ -2796,7 +2797,7 @@ export class EventDetailPage implements OnDestroy {
   }
 
   formatAnonymousRole(role: ProfileRole): string {
-    return PROFILE_ROLE_LABELS[role] || role;
+    return localizedProfileRoleLabel(this.i18n, role as ProfileRole) || role;
   }
 
   private async addAnonymousParticipant(rawApelido: string, rawRole: string): Promise<void> {
@@ -2805,11 +2806,11 @@ export class EventDetailPage implements OnDestroy {
     const apelido = rawApelido.trim();
     const role = (rawRole.trim() || 'athlete') as ProfileRole;
     if (apelido.length < 2) {
-      await this.showError('Informe um apelido com pelo menos 2 caracteres.');
+      await this.showError(this.t('eventDetail.toast.nicknameMin'));
       return;
     }
     if (!EVENT_REGISTRATION_ROLES.includes(role)) {
-      await this.showError('Perfil invalido. Use athlete, scout, fan, referee, etc.');
+      await this.showError(this.t('eventDetail.toast.invalidRole'));
       return;
     }
 
@@ -2974,7 +2975,7 @@ export class EventDetailPage implements OnDestroy {
       );
       if (!this.reviewProfile) {
         this.reviewProfileOpen = false;
-        await this.showError('Perfil nao encontrado.');
+        await this.showError(this.t('eventDetail.toast.profileNotFound'));
       }
     } catch (error: unknown) {
       this.reviewProfileOpen = false;
@@ -3051,7 +3052,7 @@ export class EventDetailPage implements OnDestroy {
       }))
       .filter((row) => row.quantity > 0);
     if (!lines.length) {
-      await this.showError('Informe ao menos uma quantidade parcial.');
+      await this.showError(this.t('eventDetail.toast.materialPartialQty'));
       return;
     }
     this.materialBusy = true;
@@ -3078,7 +3079,7 @@ export class EventDetailPage implements OnDestroy {
       this.materialSession = await this.materialInventoryService.sendEventMaterial(
         this.event.objectId
       );
-      await this.showInfo('Material enviado para conferencia.');
+      await this.showInfo(this.t('eventDetail.toast.materialSent'));
     } catch (error: unknown) {
       await this.showError(parseErrorMessage(error));
     } finally {
@@ -3095,7 +3096,7 @@ export class EventDetailPage implements OnDestroy {
       return raw === undefined || raw === null || String(raw).trim() === '';
     });
     if (missingLines.length) {
-      await this.showError('Informe a quantidade contada em todas as linhas antes de enviar a contagem cega.');
+      await this.showError(this.t('eventDetail.toast.materialBlindCount'));
       return;
     }
     const counts = this.materialSession.lines.map((line) => {
@@ -3162,7 +3163,7 @@ export class EventDetailPage implements OnDestroy {
         counts
       );
       await this.refreshMaterialInventoryForSession();
-      await this.showInfo('Devolucao registrada.');
+      await this.showInfo(this.t('eventDetail.toast.materialReturnSaved'));
     } catch (error: unknown) {
       await this.showError(parseErrorMessage(error));
     } finally {
@@ -3174,13 +3175,12 @@ export class EventDetailPage implements OnDestroy {
   async onMaterialApplyLosses(): Promise<void> {
     if (!this.event) return;
     const alert = await this.alertCtrl.create({
-      header: 'Aplicar baixas',
-      message:
-        'Atualizar o cadastro de material da pelada com as faltas/perdas encontradas nas divergencias?',
+      header: this.t('eventDetail.material.applyLossesHeader'),
+      message: this.t('eventDetail.material.applyLossesMessage'),
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.t('eventDetail.alert.cancel'), role: 'cancel' },
         {
-          text: 'Aplicar',
+          text: this.t('eventDetail.material.apply'),
           role: 'destructive',
           handler: () => {
             void this.applyMaterialLossesConfirmed();
@@ -3224,7 +3224,7 @@ export class EventDetailPage implements OnDestroy {
         this.event.objectId
       );
       await this.refreshMaterialInventoryForSession();
-      await this.showInfo('Baixas aplicadas no material da pelada.');
+      await this.showInfo(this.t('eventDetail.toast.materialLossesApplied'));
     } catch (error: unknown) {
       await this.showError(parseErrorMessage(error));
     } finally {
@@ -3391,7 +3391,7 @@ export class EventDetailPage implements OnDestroy {
 
     this.cancelling = true;
 
-    const loading = await this.loadingCtrl.create({ message: 'Cancelando inscricao...' });
+    const loading = await this.loadingCtrl.create({ message: this.t('eventDetail.toast.cancellingRegistration') });
 
     await loading.present();
 
@@ -3485,7 +3485,7 @@ export class EventDetailPage implements OnDestroy {
 
     if (!eventId) {
 
-      await this.showError('Evento nao encontrado.');
+      await this.showError(this.t('eventDetail.toast.eventNotFound'));
 
       this.goBack();
 
@@ -3508,7 +3508,7 @@ export class EventDetailPage implements OnDestroy {
 
       if (!this.event) {
 
-        await this.showError('Evento nao encontrado.');
+        await this.showError(this.t('eventDetail.toast.eventNotFound'));
 
         this.goBack();
 
@@ -3529,7 +3529,7 @@ export class EventDetailPage implements OnDestroy {
 
     } catch (error: unknown) {
 
-      const message = error instanceof Error ? error.message : 'Erro ao carregar evento.';
+      const message = error instanceof Error ? error.message : this.t('eventDetail.toast.loadFailed');
 
       await this.showError(message);
 
@@ -3637,29 +3637,29 @@ export class EventDetailPage implements OnDestroy {
     const missing = 2 - goalkeeperCount;
     this.goalkeeperShortageWarning =
       goalkeeperCount === 0
-        ? `Atencao: as inscricoes encerram em breve e nao ha goleiro confirmado (minimo 2). Contrate/convide um atleta goleiro em Negociacao/Contratacoes ou adicione um participante anonimo.`
-        : `Atencao: as inscricoes encerram em breve e ha apenas ${goalkeeperCount} goleiro confirmado (faltam ${missing} para o minimo de 2). Contrate/convide ou adicione participante anonimo.`;
+        ? this.t('eventDetail.goalkeeper.noneWarning')
+        : this.t('eventDetail.goalkeeper.oneWarning', { count: goalkeeperCount, missing });
 
     if (this.goalkeeperAlertShownForEventId !== this.event.objectId) {
       this.goalkeeperAlertShownForEventId = this.event.objectId;
       const alert = await this.alertCtrl.create({
-        header: 'Goleiros insuficientes',
+        header: this.t('eventDetail.goalkeeper.header'),
         message: this.goalkeeperShortageWarning,
         buttons: [
           {
-            text: 'Negociacao',
+            text: this.t('eventDetail.goalkeeper.negotiation'),
             handler: () => {
               this.pinHiringAccordion('athlete');
               void this.scrollToAnchor('hiring-panel-anchor');
             },
           },
           {
-            text: 'Participante anonimo',
+            text: this.t('eventDetail.goalkeeper.anonymous'),
             handler: () => {
               void this.promptAddAnonymousParticipant();
             },
           },
-          { text: 'OK', role: 'cancel' },
+          { text: this.t('eventDetail.alert.ok'), role: 'cancel' },
         ],
       });
       await alert.present();
@@ -3689,9 +3689,9 @@ export class EventDetailPage implements OnDestroy {
       if (this.teamMatchGkAlertShownForEventId !== this.event.objectId) {
         this.teamMatchGkAlertShownForEventId = this.event.objectId;
         const alert = await this.alertCtrl.create({
-          header: 'Goleiro sem confirmacao',
+          header: this.t('eventDetail.teamMatchGk.header'),
           message: this.teamMatchGoalkeeperWarning,
-          buttons: [{ text: 'OK', role: 'cancel' }],
+          buttons: [{ text: this.t('eventDetail.alert.ok'), role: 'cancel' }],
         });
         await alert.present();
       }
@@ -3874,7 +3874,7 @@ export class EventDetailPage implements OnDestroy {
       return {
         opensAt: null,
         closesAt: null,
-        error: `Informe data e hora de abertura e encerramento do periodo de ${label}, ou deixe ambos em branco.`,
+        error: this.t('eventDetail.toast.periodDatesBoth', { label: label ?? '' }),
       };
     }
     const opensAt = this.combineDateTime(openDate!, openTime!);
@@ -3883,7 +3883,7 @@ export class EventDetailPage implements OnDestroy {
       return {
         opensAt: null,
         closesAt: null,
-        error: `O encerramento do periodo de ${label} deve ser apos a abertura.`,
+        error: this.t('eventDetail.toast.periodCloseAfterOpen', { label: label ?? '' }),
       };
     }
     return { opensAt, closesAt };

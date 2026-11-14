@@ -6,7 +6,7 @@
         <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
       </ion-button>
     </ion-buttons>
-    <ion-title>Detalhe do evento</ion-title>
+    <ion-title>{{ 'eventDetail.pageTitle' | t }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -20,24 +20,24 @@
 
   @if (!loading && event && eventOverview) {
     <ion-note class="scroll-hint ion-margin-bottom" color="medium">
-      Role a tela para ver todas as opcoes do evento.
+      {{ 'eventDetail.scrollHint' | t }}
     </ion-note>
     <app-event-detail-overview [viewModel]="eventOverview">
       @if (event.peladaName && event.type !== 'team_match') {
         <ion-button peladaLink fill="clear" size="small" (click)="openPelada()">
-          Pelada: {{ event.peladaName }}
+          {{ 'eventDetail.peladaLink' | t: { name: event.peladaName } }}
         </ion-button>
       }
       @if (votingPeriodLabels) {
         <ion-item votingPeriod>
           <ion-icon name="star-outline" slot="start"></ion-icon>
           <ion-label class="ion-text-wrap">
-            <p>Periodo de votacao</p>
+            <p>{{ 'eventDetail.votingPeriod.title' | t }}</p>
             <h3>{{ votingPeriodLabels.opensAt }} — {{ votingPeriodLabels.closesAt }}</h3>
             <p>
               {{ votingPeriodLabels.statusLabel }}
               @if (votingPeriodLabels.usesDefault) {
-                · Padrao: inicio do evento ate 24h depois
+                · {{ 'eventDetail.votingPeriod.defaultHint' | t }}
               }
             </p>
           </ion-label>
@@ -48,11 +48,11 @@
     @if (isEventFinished) {
       <ion-card class="ion-margin-top">
         <ion-card-header>
-          <ion-card-title>Chame a galera</ion-card-title>
+          <ion-card-title>{{ 'eventDetail.inviteAfterEvent.title' | t }}</ion-card-title>
         </ion-card-header>
         <ion-card-content>
           <p class="ion-text-wrap">
-            Convide quem faltou ou amigos da pelada para o proximo jogo no Controle de Bola.
+            {{ 'eventDetail.inviteAfterEvent.body' | t }}
           </p>
           <ion-button
             expand="block"
@@ -61,7 +61,7 @@
             (click)="shareAfterEvent()"
           >
             <ion-icon name="share-social-outline" slot="start"></ion-icon>
-            Compartilhar convite
+            {{ 'eventDetail.inviteAfterEvent.share' | t }}
           </ion-button>
         </ion-card-content>
       </ion-card>
@@ -509,7 +509,10 @@
 
     @if (!registration && !event.isReadOnly && !registrationsOpen) {
       <ion-note color="warning" class="ion-margin-top">
-        As inscricoes para este evento estao {{ registrationStatusLabel.toLowerCase() }}.
+        {{
+          'eventDetail.registration.closedMessage'
+            | t: { status: registrationStatusLabel }
+        }}
       </ion-note>
     }
   }
@@ -598,7 +601,7 @@
         class="participate-footer-button"
         (click)="participate()"
       >
-        Participar
+        {{ 'eventDetail.participate' | t }}
       </ion-button>
     </ion-toolbar>
   </ion-footer>

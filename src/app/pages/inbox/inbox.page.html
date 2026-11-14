@@ -2,7 +2,7 @@
   <app-user-bar></app-user-bar>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/tabs/peladas"></ion-back-button>
+      <ion-back-button [text]="'common.back' | t" defaultHref="/tabs/peladas"></ion-back-button>
     </ion-buttons>
     <ion-title>{{ 'inbox.title' | t }}</ion-title>
     <ion-buttons slot="end">

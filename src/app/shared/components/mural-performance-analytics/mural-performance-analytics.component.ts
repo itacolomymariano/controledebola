@@ -11,6 +11,7 @@ import {
   MuralPerformanceTopEntry,
   PerformanceScope,
 } from '../../../core/services/athlete-performance.service';
+import { I18nService } from '../../../core/services/i18n.service';
 
 @Component({
   selector: 'app-mural-performance-analytics',
@@ -34,12 +35,20 @@ export class MuralPerformanceAnalyticsComponent implements OnChanges {
     return this.playfulChrome;
   }
 
-  readonly goalMethodOptions = SCOUT_GOAL_METHOD_OPTIONS;
-
   loading = false;
   loadedAnalytics: MuralPerformanceAnalytics | null = null;
 
-  constructor(private readonly performanceService: AthletePerformanceService) {}
+  constructor(
+    private readonly performanceService: AthletePerformanceService,
+    private readonly i18n: I18nService
+  ) {}
+
+  get localizedGoalMethodOptions(): Array<{ field: string; label: string }> {
+    return SCOUT_GOAL_METHOD_OPTIONS.map((opt) => ({
+      field: opt.field,
+      label: this.i18n.t(`mural.performance.goalMethod.${opt.field}`),
+    }));
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (this.preloadAnalytics) {

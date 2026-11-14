@@ -2,23 +2,22 @@
   <app-user-bar></app-user-bar>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button type="button" (click)="cancel()">Voltar</ion-button>
+      <ion-button type="button" (click)="cancel()">{{ 'accountEdit.back' | t }}</ion-button>
     </ion-buttons>
-    <ion-title>Meus dados</ion-title>
+    <ion-title>{{ 'accountEdit.title' | t }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding account-edit-content">
   @if (forcePasswordChange) {
     <ion-note color="warning" class="ion-margin-bottom">
-      Sua senha atual nao atende ao minimo de {{ minPasswordLength }} caracteres. Altere-a abaixo para continuar.
+      {{ 'accountEdit.passwordWarning' | t: { min: minPasswordLength } }}
     </ion-note>
   }
 
   @if (!showPasswordSection) {
     <ion-note class="ion-margin-bottom">
-      O e-mail e obrigatorio para entrar no app. O endereco e obrigatorio para eventos proximos e rankings
-      por bairro, cidade e estado. Celular e data de nascimento sao opcionais.
+      {{ 'accountEdit.introNote' | t }}
     </ion-note>
 
     <form id="accountEditForm" [formGroup]="form" (ngSubmit)="submit()">
@@ -26,7 +25,7 @@
         [progressLabel]="wizardProgressLabel"
         [progressValue]="wizardProgressValue"
         [stepTitle]="wizardStepTitle"
-        stepLead="Revise e atualize seus dados em passos curtos."
+        [stepLead]="'accountEdit.wizardLead' | t"
         [isFirst]="wizardStepIndex === 0"
         [isLast]="wizardIsLast"
         [continueDisabled]="wizardContinueDisabled"
@@ -39,32 +38,32 @@
         @if (accountWizardStep === 'dados') {
           <ion-list lines="full">
             <ion-item>
-              <ion-input label="Nome completo" labelPlacement="stacked" formControlName="name"></ion-input>
+              <ion-input [label]="'accountEdit.fullName' | t" labelPlacement="stacked" formControlName="name"></ion-input>
             </ion-item>
             @if (form.get('name')?.touched && form.get('name')?.invalid) {
-              <ion-note color="danger" class="ion-padding-horizontal">Informe o nome completo.</ion-note>
+              <ion-note color="danger" class="ion-padding-horizontal">{{ 'accountEdit.fullNameRequired' | t }}</ion-note>
             }
 
             <ion-item>
               <ion-input
-                label="Apelido"
+                [label]="'accountEdit.nickname' | t"
                 labelPlacement="stacked"
                 formControlName="apelido"
-                placeholder="Como voce sera chamado no app"
+                [placeholder]="'accountEdit.nicknamePlaceholder' | t"
               ></ion-input>
             </ion-item>
             <ion-note color="medium" class="ion-padding-horizontal">
-              O apelido usado em cada evento permanece o da inscricao naquele evento.
+              {{ 'accountEdit.nicknameEventNote' | t }}
             </ion-note>
 
             <app-birth-date-picker
               formControlName="birthDate"
-              label="Data de nascimento (opcional)"
+              [label]="'accountEdit.birthDateOptional' | t"
             ></app-birth-date-picker>
             <app-team-picker [control]="$any(form.get('favoriteProTeam'))"></app-team-picker>
             <app-legend-suggest-input
               [control]="$any(form.get('proFootballIdol'))"
-              label="Idolo do futebol profissional"
+              [label]="'accountEdit.proIdol' | t"
               suggestType="pro_idol"
               [inlineSearch]="true"
               returnUrl="/account/edit"
@@ -72,7 +71,7 @@
             ></app-legend-suggest-input>
             <app-legend-suggest-input
               [control]="$any(form.get('amateurFootballIdol'))"
-              label="Idolo do futebol amador"
+              [label]="'accountEdit.amateurIdol' | t"
               suggestType="idol"
               [inlineSearch]="true"
               returnUrl="/account/edit"
@@ -80,8 +79,8 @@
             ></app-legend-suggest-input>
             <app-legend-suggest-input
               [control]="$any(form.get('favoriteAmateurTeam'))"
-              label="Time de coracao (amador)"
-              placeholder="Ex: Uniao da vila"
+              [label]="'accountEdit.favoriteAmateurTeam' | t"
+              [placeholder]="'accountEdit.favoriteAmateurPlaceholder' | t"
               suggestType="pelada_team"
               [inlineSearch]="true"
               returnUrl="/account/edit"
@@ -93,17 +92,17 @@
         @if (accountWizardStep === 'contato') {
           <ion-list lines="full">
             <ion-item>
-              <ion-input label="E-mail" labelPlacement="stacked" formControlName="email" type="email"></ion-input>
+              <ion-input [label]="'accountEdit.email' | t" labelPlacement="stacked" formControlName="email" type="email"></ion-input>
             </ion-item>
             @if (form.get('email')?.touched && form.get('email')?.hasError('required')) {
-              <ion-note color="danger" class="ion-padding-horizontal">Informe um e-mail.</ion-note>
+              <ion-note color="danger" class="ion-padding-horizontal">{{ 'accountEdit.emailRequired' | t }}</ion-note>
             }
             @if (form.get('email')?.touched && form.get('email')?.hasError('invalidEmail')) {
-              <ion-note color="danger" class="ion-padding-horizontal">Informe um e-mail valido.</ion-note>
+              <ion-note color="danger" class="ion-padding-horizontal">{{ 'accountEdit.emailInvalid' | t }}</ion-note>
             }
             <ion-item>
               <ion-input
-                label="Celular (opcional)"
+                [label]="'accountEdit.phoneOptional' | t"
                 labelPlacement="stacked"
                 formControlName="phone"
                 type="tel"
@@ -111,25 +110,25 @@
             </ion-item>
             @if (form.get('phone')?.touched && form.get('phone')?.hasError('invalidPhone')) {
               <ion-note color="danger" class="ion-padding-horizontal">
-                Celular invalido. Informe DDD + numero (minimo 10 digitos).
+                {{ 'accountEdit.phoneInvalid' | t }}
               </ion-note>
             }
 
             <ion-item-divider>
-              <ion-label>Privacidade do perfil</ion-label>
+              <ion-label>{{ 'accountEdit.profilePrivacy' | t }}</ion-label>
             </ion-item-divider>
             <ion-item>
               <ion-toggle formControlName="showPhoneInProfile" labelPlacement="start">
-                Autorizar exibicao do celular no perfil publico
+                {{ 'accountEdit.showPhoneInProfile' | t }}
               </ion-toggle>
             </ion-item>
             <ion-item>
               <ion-toggle formControlName="showEmailInProfile" labelPlacement="start">
-                Autorizar exibicao do e-mail no perfil publico
+                {{ 'accountEdit.showEmailInProfile' | t }}
               </ion-toggle>
             </ion-item>
             <ion-note color="medium" class="ion-padding-horizontal">
-              Por padrao, celular e e-mail ficam restritos para outros usuarios do app.
+              {{ 'accountEdit.privacyDefaultNote' | t }}
             </ion-note>
           </ion-list>
         }
@@ -137,7 +136,7 @@
         @if (accountWizardStep === 'endereco') {
           <app-address-form
             formControlName="address"
-            title="Onde voce mora"
+            [title]="'accountEdit.addressTitle' | t"
             [required]="true"
             (addressChange)="onAddressChanged()"
           ></app-address-form>
@@ -148,11 +147,11 @@
     <form id="accountPasswordForm" [formGroup]="passwordForm" (ngSubmit)="submitPasswordChange()">
       <ion-list lines="full">
         <ion-item-divider>
-          <ion-label>Alterar senha</ion-label>
+          <ion-label>{{ 'accountEdit.changePassword' | t }}</ion-label>
         </ion-item-divider>
         <ion-item>
           <ion-input
-            label="Senha atual"
+            [label]="'accountEdit.currentPassword' | t"
             labelPlacement="stacked"
             formControlName="currentPassword"
             [type]="showPassword ? 'text' : 'password'"
@@ -164,18 +163,18 @@
             class="password-toggle"
             type="button"
             (click)="togglePasswordVisibility()"
-            [attr.aria-label]="showPassword ? 'Ocultar senha' : 'Mostrar senha'"
+            [attr.aria-label]="showPassword ? ('accountEdit.toggleHidePassword' | t) : ('accountEdit.toggleShowPassword' | t)"
           >
             <ion-icon [name]="showPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
           </ion-button>
         </ion-item>
         @if (passwordForm.get('currentPassword')?.touched && passwordForm.get('currentPassword')?.invalid) {
-          <ion-note color="danger" class="ion-padding-horizontal">Informe sua senha atual.</ion-note>
+          <ion-note color="danger" class="ion-padding-horizontal">{{ 'accountEdit.currentPasswordRequired' | t }}</ion-note>
         }
 
         <ion-item>
           <ion-input
-            label="Nova senha"
+            [label]="'accountEdit.newPassword' | t"
             labelPlacement="stacked"
             formControlName="newPassword"
             [type]="showNewPassword ? 'text' : 'password'"
@@ -187,20 +186,20 @@
             class="password-toggle"
             type="button"
             (click)="toggleNewPasswordVisibility()"
-            [attr.aria-label]="showNewPassword ? 'Ocultar senha' : 'Mostrar senha'"
+            [attr.aria-label]="showNewPassword ? ('accountEdit.toggleHidePassword' | t) : ('accountEdit.toggleShowPassword' | t)"
           >
             <ion-icon [name]="showNewPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
           </ion-button>
         </ion-item>
         @if (passwordForm.get('newPassword')?.touched && passwordForm.get('newPassword')?.hasError('minlength')) {
           <ion-note color="danger" class="ion-padding-horizontal">
-            A nova senha deve ter no minimo {{ minPasswordLength }} caracteres.
+            {{ 'accountEdit.newPasswordMinLength' | t: { min: minPasswordLength } }}
           </ion-note>
         }
 
         <ion-item>
           <ion-input
-            label="Confirmar nova senha"
+            [label]="'accountEdit.confirmNewPassword' | t"
             labelPlacement="stacked"
             formControlName="confirmPassword"
             [type]="showConfirmPassword ? 'text' : 'password'"
@@ -212,7 +211,7 @@
             class="password-toggle"
             type="button"
             (click)="toggleConfirmPasswordVisibility()"
-            [attr.aria-label]="showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'"
+            [attr.aria-label]="showConfirmPassword ? ('accountEdit.toggleHidePassword' | t) : ('accountEdit.toggleShowPassword' | t)"
           >
             <ion-icon [name]="showConfirmPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
           </ion-button>
@@ -222,7 +221,7 @@
           passwordForm.hasError('passwordsMismatch')
         ) {
           <ion-note color="danger" class="ion-padding-horizontal">
-            A confirmacao deve ser igual a nova senha.
+            {{ 'accountEdit.passwordsMismatch' | t }}
           </ion-note>
         }
       </ion-list>
@@ -234,18 +233,18 @@
   <ion-toolbar>
     @if (!showPasswordSection) {
       <ion-button expand="block" fill="outline" type="button" (click)="togglePasswordSection()">
-        Alterar senha
+        {{ 'accountEdit.changePassword' | t }}
       </ion-button>
       <ion-button expand="block" fill="clear" color="danger" type="button" (click)="requestAccountDeletion()">
-        Excluir conta
+        {{ 'accountEdit.deleteAccount' | t }}
       </ion-button>
-      <ion-button expand="block" fill="clear" type="button" (click)="cancel()">Voltar</ion-button>
+      <ion-button expand="block" fill="clear" type="button" (click)="cancel()">{{ 'common.back' | t }}</ion-button>
     } @else {
       <ion-button expand="block" type="submit" form="accountPasswordForm" [disabled]="!canChangePassword">
-        Salvar nova senha
+        {{ 'accountEdit.saveNewPassword' | t }}
       </ion-button>
       <ion-button expand="block" fill="clear" type="button" (click)="togglePasswordSection()">
-        Voltar aos meus dados
+        {{ 'accountEdit.backToData' | t }}
       </ion-button>
     }
   </ion-toolbar>

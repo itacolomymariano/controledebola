@@ -24,6 +24,7 @@ import { PeladaMembershipService } from '../../core/services/pelada-membership.s
 import { RegistrationService } from '../../core/services/registration.service';
 import { UserParticipationProfileService } from '../../core/services/user-participation-profile.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
+import { I18nService } from '../../core/services/i18n.service';
 import { buildMissingFieldsMessage } from '../../core/utils/form-validation.util';
 
 const EVENT_REGISTER_WIZARD_STEPS = ['papel', 'confirmacao'] as const;
@@ -88,7 +89,8 @@ export class EventRegisterPage {
     private readonly userParticipationProfileService: UserParticipationProfileService,
     private readonly loadingCtrl: LoadingController,
     private readonly alertCtrl: AlertController,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly i18n: I18nService
   ) {}
 
   get registerWizardStep(): EventRegisterWizardStep {
@@ -398,9 +400,9 @@ export class EventRegisterPage {
       }
 
       if (!this.eventService.areRegistrationsOpen(event)) {
-        this.registrationsClosedMessage = `As inscricoes estao ${this.eventService
-          .registrationStatusLabel(event)
-          .toLowerCase()}.`;
+        this.registrationsClosedMessage = this.i18n.t('eventDetail.registration.closedMessage', {
+          status: this.eventService.registrationStatusLabel(event),
+        });
         return;
       }
 

@@ -24,6 +24,7 @@ import { MuralHighlights } from '../../core/models/mural-highlights.model';
 import { MuralParticipantLocationStats } from '../../core/models/mural-participant-stats.model';
 import { MuralShareContext } from '../../core/models/mural-share.model';
 import { buildMissingFieldsMessage } from '../../core/utils/form-validation.util';
+import { formatAppDateTime } from '../../core/utils/locale-datetime.util';
 import { PELADA_MEMBERSHIP_ROLE_LABELS, PELADA_MEMBERSHIP_STATUS_LABELS, PeladaMembership } from '../../core/models/pelada-membership.model';
 import { PeladaCotinha, PeladaCotinhaPayment } from '../../core/models/pelada-cotinha.model';
 import { formatPeladaLocation, Pelada } from '../../core/models/pelada.model';
@@ -48,6 +49,7 @@ import {
   ProfilePresentationRequestService,
 } from '../../core/services/profile-presentation-request.service';
 import { WizardTourService } from '../../core/services/wizard-tour.service';
+import { I18nService } from '../../core/services/i18n.service';
 
 type Segment = 'eventos' | 'socios' | 'cotinhas' | 'caixa' | 'mensalidades' | 'mural' | 'configuracoes';
 
@@ -175,7 +177,8 @@ export class PeladaDetailPage implements OnDestroy {
     private readonly alertCtrl: AlertController,
     private readonly cdr: ChangeDetectorRef,
     private readonly zone: NgZone,
-    private readonly wizardTour: WizardTourService
+    private readonly wizardTour: WizardTourService,
+    private readonly i18n: I18nService
   ) {
     this.registrationsChangedSub = this.registrationService.onRegistrationsChanged.subscribe(() => {
       if (this.isAdmin && this.segment === 'configuracoes' && this.peladaId) {
@@ -240,16 +243,19 @@ export class PeladaDetailPage implements OnDestroy {
 
   get visibleTabs(): { id: Segment; label: string }[] {
     const tabs: { id: Segment; label: string }[] = [
-      { id: 'eventos', label: 'Eventos' },
-      { id: 'socios', label: 'Socios' },
-      { id: 'cotinhas', label: 'Cotinhas' },
+      { id: 'eventos', label: this.i18n.t('peladaDetail.tab.eventos') },
+      { id: 'socios', label: this.i18n.t('peladaDetail.tab.socios') },
+      { id: 'cotinhas', label: this.i18n.t('peladaDetail.tab.cotinhas') },
     ];
     if (this.showCaixaTab) {
-      tabs.push({ id: 'caixa', label: 'Caixa' });
+      tabs.push({ id: 'caixa', label: this.i18n.t('peladaDetail.tab.caixa') });
     }
-    tabs.push({ id: 'mensalidades', label: 'Mensalidades' }, { id: 'mural', label: 'Mural' });
+    tabs.push(
+      { id: 'mensalidades', label: this.i18n.t('peladaDetail.tab.mensalidades') },
+      { id: 'mural', label: this.i18n.t('peladaDetail.tab.mural') }
+    );
     if (this.isAdmin) {
-      tabs.push({ id: 'configuracoes', label: 'Configuracoes' });
+      tabs.push({ id: 'configuracoes', label: this.i18n.t('peladaDetail.tab.configuracoes') });
     }
     return tabs;
   }
@@ -426,12 +432,7 @@ export class PeladaDetailPage implements OnDestroy {
   }
 
   formatDate(date: Date): string {
-    return new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
+    return formatAppDateTime(date, this.i18n.locale);
   }
 
   onEventSearch(value: string | null | undefined): void {
@@ -680,7 +681,7 @@ export class PeladaDetailPage implements OnDestroy {
 
   async editCotinhaPayment(payment: PeladaCotinhaPayment): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Editar contribuicao',
+      header: this.i18n.t('peladaDetail.cotinhaEditTitle'),
       inputs: [
         {
           name: 'amount',
@@ -981,6 +982,7 @@ export class PeladaDetailPage implements OnDestroy {
         isRegistered: participated.has(event.objectId),
         isPast: isEventPast(event.endTime),
         registrationStatusLabel: this.eventService.registrationStatusLabel(event),
+        registrationsOpen: this.eventService.areRegistrationsOpen(event),
         isFinished: event.isFinished,
       }))
       .sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
@@ -1094,7 +1096,9 @@ export class PeladaDetailPage implements OnDestroy {
       await this.loadCotinhas();
       if (this.isMember) await this.loadCashFlow();
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Erro ao editar contribuicao.');
+      await this.showError(
+        error instanceof Error ? error.message : this.i18n.t('peladaDetail.cotinhaEditError')
+      );
     }
   }
 

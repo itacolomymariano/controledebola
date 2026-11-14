@@ -15,6 +15,7 @@ import {
   MuralPeriodSpotlightKey,
   MuralService,
 } from '../../../core/services/mural.service';
+import { I18nService } from '../../../core/services/i18n.service';
 
 export type MuralPeriodRankMetric = 'goals' | 'yellowCards' | 'redCards';
 
@@ -46,8 +47,13 @@ export class MuralPeriodRankingsCardComponent implements OnInit, OnChanges {
 
   constructor(
     private readonly muralService: MuralService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly i18n: I18nService
   ) {}
+
+  private t(key: string, params?: Record<string, string | number>): string {
+    return this.i18n.t(key, params);
+  }
 
   ngOnInit(): void {
     if (this.mode === 'legacy') {
@@ -84,32 +90,41 @@ export class MuralPeriodRankingsCardComponent implements OnInit, OnChanges {
 
   get periodSelectionCaption(): string {
     if (this.periodShareLabel) return this.periodShareLabel;
-    const periodLabels: Record<string, string> = {
-      week: 'Semana',
-      month: 'Mês',
-      year: 'Ano',
-    };
-    return `Período: ${periodLabels[this.periodFilter] || ''}`;
+    const periodKey =
+      this.periodFilter === 'week'
+        ? 'mural.period.week'
+        : this.periodFilter === 'month'
+          ? 'mural.period.month'
+          : 'mural.period.year';
+    return this.t('mural.period.caption', { period: this.t(periodKey) });
   }
 
   get activeCardTitle(): string {
-    const labels: Record<MuralPeriodSpotlightKey, string> = {
-      craque: 'Craque',
-      goleador: 'Goleador',
-      melhorGoleiro: 'Melhor goleiro',
-      melhorJuiz: 'Melhor juiz',
-      yellowCards: 'Cartões amarelos',
-      redCards: 'Cartões vermelhos',
-    };
+  const metric = this.metricTitleLabel(
+      this.periodMetric as MuralPeriodSpotlightKey | MuralPeriodRankMetric
+    );
     if (this.isLegacyPelada) {
-      const legacy: Record<MuralPeriodRankMetric, string> = {
-        goals: 'Gols',
-        yellowCards: 'Cartões amarelos',
-        redCards: 'Cartões vermelhos',
-      };
-      return legacy[this.periodMetric as MuralPeriodRankMetric] || 'Gols';
+      return metric;
     }
-    return `${labels[this.periodMetric as MuralPeriodSpotlightKey] || 'Resultado'} — Resultados por período`;
+    return this.t('mural.period.cardTitleJoin', {
+      metric,
+      title: this.t('mural.period.title'),
+    });
+  }
+
+  private metricTitleLabel(
+    key: MuralPeriodSpotlightKey | MuralPeriodRankMetric
+  ): string {
+    const labelKeys: Record<string, string> = {
+      craque: 'mural.period.metricLabel.craque',
+      goleador: 'mural.period.metricLabel.goleador',
+      melhorGoleiro: 'mural.period.metricLabel.melhorGoleiro',
+      melhorJuiz: 'mural.period.metricLabel.melhorJuiz',
+      yellowCards: 'mural.period.metricLabel.yellowCards',
+      redCards: 'mural.period.metricLabel.redCards',
+      goals: 'mural.period.metricLabel.goals',
+    };
+    return this.t(labelKeys[key] || 'mural.period.metricLabel.goals');
   }
 
   get activeRuleKey(): string {
@@ -130,15 +145,15 @@ export class MuralPeriodRankingsCardComponent implements OnInit, OnChanges {
   }
 
   metricLabel(key: MuralPeriodSpotlightKey): string {
-    const labels: Record<MuralPeriodSpotlightKey, string> = {
-      craque: 'CRAQUE',
-      goleador: 'GOLEADOR',
-      melhorGoleiro: 'MELHOR GOLEIRO',
-      melhorJuiz: 'MELHOR JUIZ',
-      yellowCards: 'AMARELOS',
-      redCards: 'VERMELHOS',
+    const labelKeys: Record<MuralPeriodSpotlightKey, string> = {
+      craque: 'mural.period.metric.craque',
+      goleador: 'mural.period.metric.goleador',
+      melhorGoleiro: 'mural.period.metric.melhorGoleiro',
+      melhorJuiz: 'mural.period.metric.melhorJuiz',
+      yellowCards: 'mural.period.yellowCards',
+      redCards: 'mural.period.redCards',
     };
-    return labels[key];
+    return this.t(labelKeys[key]);
   }
 
   async onPeriodFilterChange(value: 'week' | 'month' | 'year'): Promise<void> {

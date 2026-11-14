@@ -3,6 +3,7 @@ import { Capacitor } from '@capacitor/core';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { ToastController } from '@ionic/angular';
+import { I18nService } from './i18n.service';
 
 import {
   APP_INSTALL_ANDROID_URL,
@@ -21,7 +22,6 @@ export const APP_INSTALL_URL = APP_INSTALL_ANDROID_URL;
 export { APP_INVITE_LANDING_URL, APP_INSTALL_ANDROID_URL, APP_INSTALL_IOS_URL };
 
 const INVITE_TITLE = 'Controle de Bola App';
-const INVITE_DIALOG = 'Convidar amigos';
 const BRAND_LOGO_PATH = 'assets/icon/logo_controle_de_bola.png';
 const GOOGLE_PLAY_BADGE_PATH = 'assets/invite/google-play-badge.svg';
 const APP_STORE_BADGE_PATH = 'assets/invite/app-store-badge.svg';
@@ -34,19 +34,23 @@ const SHARE_CAPTION = formatAppInviteShareText({ src: 'invite', medium: 'share' 
 
 @Injectable({ providedIn: 'root' })
 export class AppInviteShareService {
-  constructor(private readonly toastCtrl: ToastController) {}
+  constructor(
+    private readonly toastCtrl: ToastController,
+    private readonly i18n: I18nService
+  ) {}
 
   /** Convite após evento (UTM `utm_source=event`). */
   async shareInviteAfterEvent(eventTitle?: string): Promise<void> {
     const label = eventTitle?.trim();
     const intro = label
-      ? `Bora de pelada de novo? ${label} — chama a galera no Controle de Bola:`
-      : 'Chama a galera pro Controle de Bola App:';
+      ? this.i18n.t('eventDetail.inviteShare.introWithEvent', { event: label })
+      : this.i18n.t('eventDetail.inviteShare.introGeneric');
     const caption = [intro, '', formatAppInviteShareText({ src: 'event', medium: 'share' })].join('\n');
     const url = buildAppInviteLandingUrl({ src: 'event', medium: 'share' });
+    const dialogTitle = this.i18n.t('eventDetail.inviteShare.dialogTitle');
     try {
       if (Capacitor.isNativePlatform()) {
-        await Share.share({ title: INVITE_TITLE, text: caption, url, dialogTitle: INVITE_DIALOG });
+        await Share.share({ title: INVITE_TITLE, text: caption, url, dialogTitle });
         return;
       }
       if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
@@ -56,7 +60,7 @@ export class AppInviteShareService {
       if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(`${caption}\n${url}`);
         const toast = await this.toastCtrl.create({
-          message: 'Link copiado para convidar a galera.',
+          message: this.i18n.t('eventDetail.inviteShare.linkCopied'),
           duration: 2200,
           color: 'success',
         });
@@ -89,7 +93,7 @@ export class AppInviteShareService {
           text: SHARE_CAPTION,
           url: buildAppInviteLandingUrl({ src: 'invite', medium: 'share' }),
           files: [saved.uri],
-          dialogTitle: INVITE_DIALOG,
+          dialogTitle: this.i18n.t('eventDetail.inviteShare.dialogTitle'),
         });
         return;
       }
@@ -127,7 +131,7 @@ export class AppInviteShareService {
             title: INVITE_TITLE,
             text: SHARE_CAPTION,
             url: buildAppInviteLandingUrl({ src: 'invite', medium: 'share' }),
-            dialogTitle: INVITE_DIALOG,
+            dialogTitle: this.i18n.t('eventDetail.inviteShare.dialogTitle'),
           });
           return;
         }

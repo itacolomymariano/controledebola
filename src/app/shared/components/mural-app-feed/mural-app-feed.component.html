@@ -22,11 +22,11 @@
             }
             <h3>{{ team.teamName }}</h3>
           </div>
-          <p><strong>Confrontos realizados:</strong> {{ team.matchesPlayed }}</p>
-          <p><strong>Vitória(s):</strong> {{ team.wins }}</p>
-          <p><strong>Empate(s):</strong> {{ team.draws }}</p>
-          <p><strong>Derrota(s):</strong> {{ team.losses }}</p>
-          <p><strong>Aproveitamento:</strong> {{ team.winRatePercent }}%</p>
+          <p><strong>{{ 'mural.app.teamMatch.matchesPlayed' | t }}</strong> {{ team.matchesPlayed }}</p>
+          <p><strong>{{ 'mural.app.teamMatch.wins' | t }}</strong> {{ team.wins }}</p>
+          <p><strong>{{ 'mural.app.teamMatch.draws' | t }}</strong> {{ team.draws }}</p>
+          <p><strong>{{ 'mural.app.teamMatch.losses' | t }}</strong> {{ team.losses }}</p>
+          <p><strong>{{ 'mural.app.teamMatch.winRate' | t }}</strong> {{ team.winRatePercent }}%</p>
         </ion-card-content>
       </ion-card>
     </ion-card-content>
@@ -57,11 +57,11 @@
             }
             <h3>{{ streak.teamName }}</h3>
           </div>
-          <p><strong>Invicto há:</strong> {{ unbeatenText(streak) }}</p>
-          <p><strong>Dias invicto:</strong> {{ streak.unbeatenDays }}</p>
-          <p><strong>Confrontos na sequência:</strong> {{ streak.matchesInStreak }}</p>
+          <p><strong>{{ 'mural.app.teamMatch.unbeatenFor' | t }}</strong> {{ unbeatenText(streak) }}</p>
+          <p><strong>{{ 'mural.app.teamMatch.unbeatenDays' | t }}</strong> {{ streak.unbeatenDays }}</p>
+          <p><strong>{{ 'mural.app.teamMatch.matchesInStreak' | t }}</strong> {{ streak.matchesInStreak }}</p>
           @if (streak.sinceStartTime) {
-            <p><strong>Desde:</strong> {{ formatFoundedAt(streak.sinceStartTime) }}</p>
+            <p><strong>{{ 'mural.app.teamMatch.since' | t }}</strong> {{ formatFoundedAt(streak.sinceStartTime) }}</p>
           }
         </ion-card-content>
       </ion-card>
@@ -93,16 +93,16 @@
             }
             <h3>{{ attack.teamName }}</h3>
           </div>
-          <p><strong>Gols marcados:</strong> {{ attack.goalsFor }}</p>
-          <p><strong>Confrontos realizados:</strong> {{ attack.matchesPlayed }}</p>
-          <p><strong>Média de gols por partida:</strong> {{ formatAverage(attack.goalsPerMatch) }}</p>
+          <p><strong>{{ 'mural.app.teamMatch.goalsFor' | t }}</strong> {{ attack.goalsFor }}</p>
+          <p><strong>{{ 'mural.app.teamMatch.matchesPlayed' | t }}</strong> {{ attack.matchesPlayed }}</p>
+          <p><strong>{{ 'mural.app.teamMatch.goalsPerMatch' | t }}</strong> {{ formatAverage(attack.goalsPerMatch) }}</p>
           @if (attack.topScorer; as scorer) {
             <div class="match-rank-row mural-sub-highlight">
               <app-user-avatar [avatarUrl]="scorer.avatarUrl" [alt]="scorer.name" size="md"></app-user-avatar>
-              <span><strong>Goleador do time:</strong> {{ scorer.name }}</span>
+              <span><strong>{{ 'mural.app.teamMatch.teamScorer' | t }}</strong> {{ scorer.name }}</span>
             </div>
-            <p><strong>Gols:</strong> {{ scorer.goals }}</p>
-            <p><strong>Média de gols por partida:</strong> {{ formatAverage(scorer.goalsPerMatch) }}</p>
+            <p><strong>{{ 'mural.app.teamMatch.goals' | t }}</strong> {{ scorer.goals }}</p>
+            <p><strong>{{ 'mural.app.teamMatch.goalsPerMatch' | t }}</strong> {{ formatAverage(scorer.goalsPerMatch) }}</p>
           }
         </ion-card-content>
       </ion-card>
@@ -134,16 +134,16 @@
             }
             <h3>{{ defense.teamName }}</h3>
           </div>
-          <p><strong>Gols sofridos:</strong> {{ defense.goalsAgainst }}</p>
-          <p><strong>Confrontos realizados:</strong> {{ defense.matchesPlayed }}</p>
-          <p><strong>Média de gols sofridos por partida:</strong> {{ formatAverage(defense.goalsAgainstPerMatch) }}</p>
+          <p><strong>{{ 'mural.app.teamMatch.goalsAgainst' | t }}</strong> {{ defense.goalsAgainst }}</p>
+          <p><strong>{{ 'mural.app.teamMatch.matchesPlayed' | t }}</strong> {{ defense.matchesPlayed }}</p>
+          <p><strong>{{ 'mural.app.teamMatch.goalsAgainstPerMatch' | t }}</strong> {{ formatAverage(defense.goalsAgainstPerMatch) }}</p>
           @if (defense.topDefender; as defender) {
             <div class="match-rank-row mural-sub-highlight">
               <app-user-avatar [avatarUrl]="defender.avatarUrl" [alt]="defender.name" size="md"></app-user-avatar>
-              <span><strong>Defensor com mais pontos:</strong> {{ defender.name }}</span>
+              <span><strong>{{ 'mural.app.teamMatch.topDefender' | t }}</strong> {{ defender.name }}</span>
             </div>
-            <p><strong>Pontos:</strong> {{ defender.points }}</p>
-            <p><strong>Média de pontos por partida:</strong> {{ formatAverage(defender.pointsPerMatch) }}</p>
+            <p><strong>{{ 'mural.app.teamMatch.points' | t }}</strong> {{ defender.points }}</p>
+            <p><strong>{{ 'mural.app.teamMatch.pointsPerMatch' | t }}</strong> {{ formatAverage(defender.pointsPerMatch) }}</p>
           }
         </ion-card-content>
       </ion-card>
@@ -193,17 +193,17 @@
             <p><strong>{{ 'mural.app.pelada.filledCardsAverage' | t }}:</strong> {{ formatAverage(pelada.filledCardsAverage) }}</p>
             <p><strong>{{ 'mural.app.pelada.distinctProfilesAverage' | t }}:</strong> {{ formatAverage(pelada.distinctProfilesAverage) }}</p>
             <p><strong>{{ 'mural.app.pelada.participantsAverage' | t }}:</strong> {{ formatAverage(pelada.participantsAverage) }}</p>
-            <p><strong>Média de eleitores:</strong> {{ formatAverage(pelada.distinctVotersAverage) }}</p>
-            <p><strong>Média de votos:</strong> {{ formatAverage(pelada.votesAverage) }}</p>
-            <p><strong>Média de vermelhos:</strong> {{ formatAverage(pelada.redCardsAverage) }}</p>
-            <p><strong>Média de amarelos:</strong> {{ formatAverage(pelada.yellowCardsAverage) }}</p>
-            <p><strong>Caixa:</strong> {{ yesNo(pelada.hasCash) }}</p>
-            <p><strong>Cotinha:</strong> {{ yesNo(pelada.hasCotinha) }}</p>
-            <p><strong>Mensagens:</strong> {{ yesNo(pelada.hasMailbox) }}</p>
+            <p><strong>{{ 'mural.app.pelada.votersAverage' | t }}</strong> {{ formatAverage(pelada.distinctVotersAverage) }}</p>
+            <p><strong>{{ 'mural.app.pelada.votesAverage' | t }}</strong> {{ formatAverage(pelada.votesAverage) }}</p>
+            <p><strong>{{ 'mural.app.pelada.redCardsAverage' | t }}</strong> {{ formatAverage(pelada.redCardsAverage) }}</p>
+            <p><strong>{{ 'mural.app.pelada.yellowCardsAverage' | t }}</strong> {{ formatAverage(pelada.yellowCardsAverage) }}</p>
+            <p><strong>{{ 'mural.app.pelada.hasCash' | t }}</strong> {{ yesNo(pelada.hasCash) }}</p>
+            <p><strong>{{ 'mural.app.pelada.hasCotinha' | t }}</strong> {{ yesNo(pelada.hasCotinha) }}</p>
+            <p><strong>{{ 'mural.app.pelada.hasMailbox' | t }}</strong> {{ yesNo(pelada.hasMailbox) }}</p>
           </ion-card-content>
         </ion-card>
       } @else {
-        <ion-note>Sem dados ainda.</ion-note>
+        <ion-note>{{ 'mural.playful.noData' | t }}</ion-note>
       }
     </ion-card-content>
   </ion-card>
@@ -215,17 +215,17 @@
   [appBucketTab]="tab"
   [playfulChrome]="tab === 'geral'"
   [shareContext]="shareContext"
-  [titleOverrides]="titles"
+  [titleOverrides]="highlightTitleOverrides"
   [filterCaption]="filterCaption"
 ></app-mural-highlights-panel>
 
 @if (tab === 'geral') {
   <app-playful-card tone="surface" class="mural-playful-ranking ion-margin-bottom">
     <div class="mural-card-header-row">
-      <h2 class="mural-playful-ranking__title">{{ 'mural.playful.ranking' | t }} — {{ titles.athletes }}</h2>
+      <h2 class="mural-playful-ranking__title">{{ 'mural.playful.ranking' | t }} — {{ titleText(titleKeys.athletes) }}</h2>
       <app-mural-share-button
         [context]="shareContext"
-        [cardTitle]="titles.athletes"
+        [cardTitle]="titleText(titleKeys.athletes)"
         ruleKey="mural.rule.atletas"
       ></app-mural-share-button>
     </div>
@@ -233,7 +233,7 @@
       <p class="mural-filter-line">{{ filterCaption }}</p>
     }
     @if (!athleteEntries().length) {
-      <ion-note>Ainda não há dados para exibir no ranking.</ion-note>
+      <ion-note>{{ 'mural.app.emptyRanking' | t }}</ion-note>
     }
     @for (entry of athleteEntries(); track entry.userId; let i = $index) {
       <div class="mural-playful-rank-row">
@@ -253,10 +253,10 @@
 <ion-card>
   <ion-card-header>
     <div class="mural-card-header-row">
-      <ion-card-title>{{ titles.athletes }}</ion-card-title>
+      <ion-card-title>{{ titleText(titleKeys.athletes) }}</ion-card-title>
       <app-mural-share-button
         [context]="shareContext"
-        [cardTitle]="titles.athletes"
+        [cardTitle]="titleText(titleKeys.athletes)"
         ruleKey="mural.rule.atletas"
       ></app-mural-share-button>
     </div>
@@ -305,7 +305,7 @@
     </ion-card-header>
     <ion-card-content>
       @if (!bucket?.topTeams?.length) {
-        <ion-note>Sem dados ainda.</ion-note>
+        <ion-note>{{ 'mural.playful.noData' | t }}</ion-note>
       }
       @for (team of bucket?.topTeams ?? []; track team.teamId + $index; let i = $index) {
         <ion-card class="match-rank-card ion-margin-bottom">
@@ -323,20 +323,20 @@
                   [alt]="team.presidentName"
                   size="sm"
                 ></app-user-avatar>
-                <span><strong>Presidente:</strong> {{ team.presidentName }}</span>
+                <span><strong>{{ 'mural.app.team.president' | t }}</strong> {{ team.presidentName }}</span>
               </div>
             }
             @if (team.foundedAt) {
-              <p><strong>Fundação:</strong> {{ formatFoundedAt(team.foundedAt) }}</p>
+              <p><strong>{{ 'mural.app.team.founded' | t }}</strong> {{ formatFoundedAt(team.foundedAt) }}</p>
             }
             @if (team.homeVenue) {
-              <p><strong>Sede:</strong> {{ team.homeVenue }}</p>
+              <p><strong>{{ 'mural.app.team.homeVenue' | t }}</strong> {{ team.homeVenue }}</p>
             }
-            <p><strong>Confrontos:</strong> {{ team.matchesPlayed }}</p>
-            <p><strong>Vitória(s):</strong> {{ team.wins }}</p>
-            <p><strong>Empate(s):</strong> {{ team.draws }}</p>
-            <p><strong>Derrota(s):</strong> {{ team.losses }}</p>
-            <p><strong>Rendimento:</strong> {{ team.winRatePercent }}%</p>
+            <p><strong>{{ 'mural.app.team.matches' | t }}</strong> {{ team.matchesPlayed }}</p>
+            <p><strong>{{ 'mural.app.teamMatch.wins' | t }}</strong> {{ team.wins }}</p>
+            <p><strong>{{ 'mural.app.teamMatch.draws' | t }}</strong> {{ team.draws }}</p>
+            <p><strong>{{ 'mural.app.teamMatch.losses' | t }}</strong> {{ team.losses }}</p>
+            <p><strong>{{ 'mural.app.team.performance' | t }}</strong> {{ team.winRatePercent }}%</p>
           </ion-card-content>
         </ion-card>
       }
@@ -363,7 +363,7 @@
     </ion-card-header>
     <ion-card-content>
       @if (!bucket?.topCoaches?.length) {
-        <ion-note>Sem dados ainda.</ion-note>
+        <ion-note>{{ 'mural.playful.noData' | t }}</ion-note>
       }
       @for (entry of bucket?.topCoaches ?? []; track entry.userId + $index; let i = $index) {
         <ion-card class="match-rank-card ion-margin-bottom">
@@ -373,16 +373,16 @@
               <h3>{{ entry.userName }}</h3>
             </div>
             @if (entry.age) {
-              <p><strong>Idade:</strong> {{ entry.age }} anos</p>
+              <p><strong>{{ 'mural.app.coach.age' | t }}</strong> {{ ageYears(entry.age) }}</p>
             }
             @if (entry.teamsCoachedCount) {
-              <p><strong>Times treinados:</strong> {{ entry.teamsCoachedCount }}</p>
+              <p><strong>{{ 'mural.app.coach.teamsCoached' | t }}</strong> {{ entry.teamsCoachedCount }}</p>
             }
-            <p><strong>Confrontos:</strong> {{ entry.matchesPlayed ?? 0 }}</p>
-            <p><strong>Vitória(s):</strong> {{ entry.wins ?? 0 }}</p>
-            <p><strong>Empate(s):</strong> {{ entry.draws ?? 0 }}</p>
-            <p><strong>Derrota(s):</strong> {{ entry.losses ?? 0 }}</p>
-            <p><strong>Rendimento:</strong> {{ entry.winRatePercent ?? 0 }}%</p>
+            <p><strong>{{ 'mural.app.team.matches' | t }}</strong> {{ entry.matchesPlayed ?? 0 }}</p>
+            <p><strong>{{ 'mural.app.teamMatch.wins' | t }}</strong> {{ entry.wins ?? 0 }}</p>
+            <p><strong>{{ 'mural.app.teamMatch.draws' | t }}</strong> {{ entry.draws ?? 0 }}</p>
+            <p><strong>{{ 'mural.app.teamMatch.losses' | t }}</strong> {{ entry.losses ?? 0 }}</p>
+            <p><strong>{{ 'mural.app.team.performance' | t }}</strong> {{ entry.winRatePercent ?? 0 }}%</p>
             <ion-badge>{{ teamPointsLabel(entry) }}</ion-badge>
           </ion-card-content>
         </ion-card>
@@ -402,10 +402,10 @@
           <ion-card>
             <ion-card-header>
               <div class="mural-card-header-row">
-                <ion-card-title>{{ section.title }}</ion-card-title>
+                <ion-card-title>{{ titleText(section.titleKey) }}</ion-card-title>
                 <app-mural-share-button
                   [context]="shareContext"
-                  [cardTitle]="section.title"
+                  [cardTitle]="titleText(section.titleKey)"
                   ruleKey="mural.rule.apoio"
                 ></app-mural-share-button>
               </div>
@@ -442,7 +442,7 @@
         </ion-card-header>
         <ion-card-content>
           @if (!predictionEntries().length) {
-            <ion-note>Sem dados ainda.</ion-note>
+            <ion-note>{{ 'mural.playful.noData' | t }}</ion-note>
           }
           @for (entry of predictionEntries(); track entry.userId; let i = $index) {
             <div class="rank-row ion-margin-bottom">
@@ -500,7 +500,7 @@
   @if (tab === 'geral') {
     <ion-accordion value="period-results">
       <ion-item slot="header" color="light">
-        <ion-label>Resultados por período</ion-label>
+        <ion-label>{{ 'mural.period.title' | t }}</ion-label>
       </ion-item>
       <div slot="content" class="ion-padding">
         <app-mural-period-rankings-card
@@ -531,7 +531,7 @@
     </ion-card-header>
     <ion-card-content>
       @if (!bucket?.topPeladas?.length) {
-        <ion-note>Sem dados ainda.</ion-note>
+        <ion-note>{{ 'mural.playful.noData' | t }}</ion-note>
       }
       @for (pelada of bucket?.topPeladas ?? []; track pelada.peladaId + $index; let i = $index) {
         <ion-card class="match-rank-card ion-margin-bottom">
