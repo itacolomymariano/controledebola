@@ -115,11 +115,11 @@ export class FanProfileFormPage {
   async exitWizard(): Promise<void> {
     this.persistDraft();
     const alert = await this.alertCtrl.create({
-      header: 'Sair do cadastro',
-      message: 'Seu rascunho foi salvo neste aparelho. Você pode continuar depois.',
+      header: this.i18n.t('peladaForm.exitWizardHeader'),
+      message: this.i18n.t('peladaForm.exitWizardMessage'),
       buttons: [
-        { text: 'Continuar preenchendo', role: 'cancel' },
-        { text: 'Sair', role: 'destructive', handler: () => this.cancel() },
+        { text: this.i18n.t('peladaForm.continueFilling'), role: 'cancel' },
+        { text: this.i18n.t('peladaForm.exit'), role: 'destructive', handler: () => this.cancel() },
       ],
     });
     await alert.present();
@@ -147,7 +147,7 @@ export class FanProfileFormPage {
 
   async submit(): Promise<void> {
     const v = this.form.getRawValue();
-    const loading = await this.loadingCtrl.create({ message: 'Salvando perfil...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('fanProfileForm.loading.saving') });
     await loading.present();
 
     try {
@@ -168,14 +168,14 @@ export class FanProfileFormPage {
       }
 
       const alert = await this.alertCtrl.create({
-        header: 'Perfil salvo',
-        message: 'Seu perfil de torcedor foi atualizado.',
-        buttons: ['OK'],
+        header: this.i18n.t('fanProfileForm.savedHeader'),
+        message: this.i18n.t('fanProfileForm.savedMessage'),
+        buttons: [this.i18n.t('common.ok')],
       });
       await alert.present();
       void this.router.navigateByUrl('/tabs/profile');
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Erro ao salvar perfil.');
+      await this.showError(error instanceof Error ? error.message : this.i18n.t('fanProfileForm.error.save'));
     } finally {
       await loading.dismiss();
     }
@@ -200,7 +200,11 @@ export class FanProfileFormPage {
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('common.error'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 }

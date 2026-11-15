@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
+import { I18nService } from '../core/services/i18n.service';
 import { FooterTabKey, isFooterTabActive } from './tabs-footer.util';
 
 @Component({
@@ -12,11 +13,13 @@ import { FooterTabKey, isFooterTabActive } from './tabs-footer.util';
 })
 export class TabsPage implements OnDestroy {
   private navSub?: Subscription;
+  private localeSub?: Subscription;
   private currentUrl = '';
 
   constructor(
     private readonly router: Router,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly i18n: I18nService
   ) {
     this.currentUrl = this.router.url;
     this.navSub = this.router.events
@@ -25,10 +28,12 @@ export class TabsPage implements OnDestroy {
         this.currentUrl = event.urlAfterRedirects || event.url;
         this.cdr.markForCheck();
       });
+    this.localeSub = this.i18n.locale$.subscribe(() => this.cdr.markForCheck());
   }
 
   ngOnDestroy(): void {
     this.navSub?.unsubscribe();
+    this.localeSub?.unsubscribe();
   }
 
   isFooterTabActive(key: FooterTabKey): boolean {

@@ -1,6 +1,6 @@
 ﻿<ion-header>
   <ion-toolbar>
-    <ion-title>Confrontos</ion-title>
+    <ion-title>{{ 'events.pageTitle' | t }}</ion-title>
     <ion-buttons slot="end">
       <app-screen-help helpId="confrontos-help" bodyKey="confrontos.help"></app-screen-help>
     </ion-buttons>
@@ -22,18 +22,18 @@
     @if (!loading && errorMessage) {
       <app-playful-card tone="muted" class="ion-margin-bottom">
         <p>{{ errorMessage }}</p>
-        <ion-button fill="clear" (click)="retry()">Tentar novamente</ion-button>
+        <ion-button fill="clear" (click)="retry()">{{ 'common.retry' | t }}</ion-button>
       </app-playful-card>
     }
 
     @if (!loading && !errorMessage) {
       <app-playful-card tone="peladas" class="ion-margin-bottom">
-        <ion-button expand="block" (click)="createDesafio()">Marcar novo confronto/jogo</ion-button>
+        <ion-button expand="block" (click)="createDesafio()">{{ 'events.scheduleNewMatch' | t }}</ion-button>
       </app-playful-card>
     }
 
     @if (!loading && acceptedChallenges.length > 0) {
-      <h2 class="events-section-title">Desafios aceitos — marcar data</h2>
+      <h2 class="events-section-title">{{ 'events.acceptedChallengesTitle' | t }}</h2>
       <app-playful-grid class="events-grid">
         @for (challenge of acceptedChallenges; track challenge.objectId) {
           <app-playful-card
@@ -42,7 +42,7 @@
             (activate)="scheduleAccepted(challenge)"
           >
             <h3 class="events-card-title">{{ challenge.challengerTeamName }} x {{ challenge.challengedTeamName }}</h3>
-            <p class="events-card-meta">Toque para definir data, local e convocacao</p>
+            <p class="events-card-meta">{{ 'events.scheduleTapHint' | t }}</p>
           </app-playful-card>
         }
       </app-playful-grid>
@@ -53,7 +53,7 @@
         <div class="events-empty">
           <ion-icon name="swap-horizontal-outline"></ion-icon>
           <div>
-            <h3 class="events-card-title">Nenhum confronto</h3>
+            <h3 class="events-card-title">{{ 'events.noneTitle' | t }}</h3>
             <p class="events-card-meta">{{ 'events.noFixtureHint' | t }}</p>
           </div>
         </div>
@@ -61,7 +61,7 @@
     }
 
     @if (!loading && rows.length > 0) {
-      <h2 class="events-section-title">Confrontos marcados</h2>
+      <h2 class="events-section-title">{{ 'events.scheduledTitle' | t }}</h2>
       <app-playful-grid class="events-grid">
         @for (row of rows; track row.match.objectId) {
           <app-playful-card [tone]="matchRowTone($index)" [interactive]="true" (activate)="openMatch(row)">
@@ -78,7 +78,7 @@
               <ion-badge color="tertiary">{{ row.badge }}</ion-badge>
             }
             @if (row.match.nearby) {
-              <ion-badge color="success" class="ion-margin-start">Proximo</ion-badge>
+              <ion-badge color="success" class="ion-margin-start">{{ 'events.nearbyBadge' | t }}</ion-badge>
             }
             <p class="events-card-meta">{{ row.dateLabel }}</p>
             @if (row.locationLabel) {

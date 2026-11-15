@@ -121,7 +121,7 @@
             @if (winnerForBand(highlights.craque, band); as entry) {
               <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
             } @else {
-              <ion-note>Sem dados para esta faixa etária.</ion-note>
+              <ion-note>{{ 'mural.highlights.noDataAgeBand' | t }}</ion-note>
             }
           </div>
         }
@@ -136,7 +136,7 @@
                 <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
               }
             } @else {
-              <ion-note>Sem dados para esta faixa etária.</ion-note>
+              <ion-note>{{ 'mural.highlights.noDataAgeBand' | t }}</ion-note>
             }
           </div>
         }
@@ -149,7 +149,7 @@
             @if (winnerForBand(highlights.melhorGoleiro, band); as entry) {
               <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
             } @else {
-              <ion-note>Sem dados para esta faixa etária.</ion-note>
+              <ion-note>{{ 'mural.highlights.noDataAgeBand' | t }}</ion-note>
             }
           </div>
         }
@@ -179,7 +179,7 @@
         @if (eventCraque; as entry) {
           <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
         } @else {
-          <ion-note>Sem dados.</ion-note>
+          <ion-note>{{ 'mural.playful.noData' | t }}</ion-note>
         }
       } @else if (scope === 'app') {
         <div class="origin-columns">
@@ -188,7 +188,7 @@
             @if (highlights.craquePelada; as entry) {
               <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
             } @else {
-              <ion-note>Sem dados.</ion-note>
+              <ion-note>{{ 'mural.playful.noData' | t }}</ion-note>
             }
           </div>
           <div class="origin-col">
@@ -196,7 +196,7 @@
             @if (highlights.craqueConfronto; as entry) {
               <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
             } @else {
-              <ion-note>Sem dados.</ion-note>
+              <ion-note>{{ 'mural.playful.noData' | t }}</ion-note>
             }
           </div>
         </div>
@@ -207,7 +207,7 @@
             @if (winnerForBand(highlights.craque, band); as entry) {
               <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
             } @else {
-              <ion-note>Sem dados para esta faixa etaria.</ion-note>
+              <ion-note>{{ 'mural.highlights.noDataAgeBand' | t }}</ion-note>
             }
           </div>
         }
@@ -215,7 +215,7 @@
         @if (eventCraque; as entry) {
           <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
         } @else {
-          <ion-note>Sem votos registrados para atletas.</ion-note>
+          <ion-note>{{ 'mural.highlights.noVotesAthletes' | t }}</ion-note>
         }
       } @else {
         @for (band of ageBands; track band) {
@@ -224,7 +224,7 @@
             @if (winnerForBand(highlights.craque, band); as entry) {
               <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
             } @else {
-              <ion-note>Sem dados para esta faixa etaria.</ion-note>
+              <ion-note>{{ 'mural.highlights.noDataAgeBand' | t }}</ion-note>
             }
           </div>
         }
@@ -254,7 +254,7 @@
             <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
           }
         } @else {
-          <ion-note>Sem gols registrados na súmula.</ion-note>
+          <ion-note>{{ 'mural.highlights.noGoalsMatchReport' | t }}</ion-note>
         }
       } @else if (scope === 'app') {
         <div class="origin-columns">
@@ -265,7 +265,7 @@
                 <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
               }
             } @else {
-              <ion-note>Sem gols.</ion-note>
+              <ion-note>{{ 'mural.highlights.noGoals' | t }}</ion-note>
             }
           </div>
           <div class="origin-col">
@@ -275,13 +275,13 @@
                 <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
               }
             } @else {
-              <ion-note>Sem gols.</ion-note>
+              <ion-note>{{ 'mural.highlights.noGoals' | t }}</ion-note>
             }
           </div>
         </div>
         @if (highlights.goleadorOverall?.length) {
           <div class="highlight-block highlight-block--overall">
-            <h3>Maior goleador (geral)</h3>
+            <h3>{{ 'mural.highlights.topScorerOverall' | t }}</h3>
             @for (overall of highlights.goleadorOverall; track overall.userId) {
               <app-mural-showcase-entry [entry]="overall"></app-mural-showcase-entry>
             }
@@ -296,7 +296,7 @@
                 <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
               }
             } @else {
-              <ion-note>Sem dados para esta faixa etaria.</ion-note>
+              <ion-note>{{ 'mural.highlights.noDataAgeBand' | t }}</ion-note>
             }
           </div>
         }
@@ -306,7 +306,7 @@
             <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
           }
         } @else {
-          <ion-note>Sem gols registrados no apontamento.</ion-note>
+          <ion-note>{{ 'mural.highlights.noGoalsScout' | t }}</ion-note>
         }
       } @else {
         <h3 class="highlight-section-title">Por faixa etaria</h3>
@@ -318,7 +318,7 @@
                 <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
               }
             } @else {
-              <ion-note>Sem dados para esta faixa etaria.</ion-note>
+              <ion-note>{{ 'mural.highlights.noDataAgeBand' | t }}</ion-note>
             }
           </div>
         }
@@ -348,7 +348,7 @@
         @if (eventMelhorGoleiro; as entry) {
           <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
         } @else {
-          <ion-note>Sem dados.</ion-note>
+          <ion-note>{{ 'mural.playful.noData' | t }}</ion-note>
         }
       } @else if (scope === 'app') {
         <div class="origin-columns">
@@ -357,7 +357,7 @@
             @if (highlights.melhorGoleiroPelada; as entry) {
               <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
             } @else {
-              <ion-note>Sem dados.</ion-note>
+              <ion-note>{{ 'mural.playful.noData' | t }}</ion-note>
             }
           </div>
           <div class="origin-col">
@@ -365,7 +365,7 @@
             @if (highlights.melhorGoleiroConfronto; as entry) {
               <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
             } @else {
-              <ion-note>Sem dados.</ion-note>
+              <ion-note>{{ 'mural.playful.noData' | t }}</ion-note>
             }
           </div>
         </div>
@@ -376,7 +376,7 @@
             @if (winnerForBand(highlights.melhorGoleiro, band); as entry) {
               <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
             } @else {
-              <ion-note>Sem dados para esta faixa etaria.</ion-note>
+              <ion-note>{{ 'mural.highlights.noDataAgeBand' | t }}</ion-note>
             }
           </div>
         }
@@ -384,7 +384,7 @@
         @if (eventMelhorGoleiro; as entry) {
           <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
         } @else {
-          <ion-note>Sem votos registrados para goleiros.</ion-note>
+          <ion-note>{{ 'mural.highlights.noVotesGoalkeepers' | t }}</ion-note>
         }
       } @else {
         @for (band of ageBands; track band) {
@@ -393,7 +393,7 @@
             @if (winnerForBand(highlights.melhorGoleiro, band); as entry) {
               <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
             } @else {
-              <ion-note>Sem dados para esta faixa etaria.</ion-note>
+              <ion-note>{{ 'mural.highlights.noDataAgeBand' | t }}</ion-note>
             }
           </div>
         }
@@ -409,10 +409,10 @@
         <app-mural-event-context [context]="shareContext"></app-mural-event-context>
       }
       <div class="mural-card-header-row">
-        <ion-card-title>Time mais amado</ion-card-title>
+        <ion-card-title>{{ bestTeamTitle() }}</ion-card-title>
         <app-mural-share-button
           [context]="shareContext"
-          cardTitle="Time mais amado"
+          [cardTitle]="bestTeamTitle()"
           ruleKey="mural.rule.timeAmado"
         ></app-mural-share-button>
       </div>
@@ -424,19 +424,19 @@
       @if (highlights.timeMaisAmado; as team) {
         <div class="favorite-team-entry">
           <p class="showcase-team-row">
-            <strong>Time profissional do coração:</strong>
+            <strong>{{ 'mural.highlights.proTeamHeart' | t }}</strong>
             <span class="showcase-team" [attr.data-pro-team]="team.teamName">
               <app-team-shield [teamName]="team.teamName" size="sm"></app-team-shield>
               {{ team.teamName }}
             </span>
           </p>
-          <p>{{ team.count }} {{ team.count === 1 ? 'torcedor' : 'torcedores' }}</p>
+          <p>{{ fanSupportersLabel(team.count) }}</p>
           @if (team.tenureLabel) {
             <p>{{ team.tenureLabel }}</p>
           }
         </div>
       } @else {
-        <ion-note>Sem times de coracao registrados.</ion-note>
+        <ion-note>{{ 'mural.highlights.noHeartTeams' | t }}</ion-note>
       }
     </ion-card-content>
   </ion-card>
@@ -456,7 +456,7 @@
         @if (highlights.promessa) {
           <app-mural-showcase-entry [entry]="highlights.promessa"></app-mural-showcase-entry>
         } @else {
-          <ion-note>Sem data de nascimento registrada.</ion-note>
+          <ion-note>{{ 'mural.highlights.noBirthDate' | t }}</ion-note>
         }
       </app-playful-card>
     } @else {
@@ -481,7 +481,7 @@
           @if (highlights.promessa) {
             <app-mural-showcase-entry [entry]="highlights.promessa"></app-mural-showcase-entry>
           } @else {
-            <ion-note>Sem data de nascimento registrada.</ion-note>
+            <ion-note>{{ 'mural.highlights.noBirthDate' | t }}</ion-note>
           }
         </ion-card-content>
       </ion-card>
@@ -501,7 +501,7 @@
       @if (highlights.master) {
         <app-mural-showcase-entry [entry]="highlights.master"></app-mural-showcase-entry>
       } @else {
-        <ion-note>Sem data de nascimento registrada.</ion-note>
+        <ion-note>{{ 'mural.highlights.noBirthDate' | t }}</ion-note>
       }
     </app-playful-card>
   } @else {
@@ -526,7 +526,7 @@
         @if (highlights.master) {
           <app-mural-showcase-entry [entry]="highlights.master"></app-mural-showcase-entry>
         } @else {
-          <ion-note>Sem data de nascimento registrada.</ion-note>
+          <ion-note>{{ 'mural.highlights.noBirthDate' | t }}</ion-note>
         }
       </ion-card-content>
     </ion-card>
@@ -536,18 +536,18 @@
     @if (showPlayfulExtraCards) {
       <app-playful-card tone="peladas" class="ion-margin-bottom">
         <div class="mural-card-header-row">
-          <h3 class="mural-playful-section-title">Aniversariantes do mês</h3>
+          <h3 class="mural-playful-section-title">{{ 'mural.highlights.birthdaysMonth' | t }}</h3>
           <app-mural-share-button
             [context]="shareContext"
-            cardTitle="Aniversariantes do mes"
+            [cardTitle]="birthdaysShareTitle"
           ></app-mural-share-button>
         </div>
         @if (!highlights.birthdays?.length) {
-          <ion-note>Nenhum aniversariante neste mês.</ion-note>
+          <ion-note>{{ 'mural.highlights.noBirthdaysMonth' | t }}</ion-note>
         }
         @for (entry of highlights.birthdays ?? []; track entry.userId) {
           <div class="highlight-block">
-            <h4>Dia {{ entry.birthdayDay }}</h4>
+            <h4>{{ birthdayDayLabel(entry.birthdayDay) }}</h4>
             <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
           </div>
         }
@@ -559,10 +559,10 @@
             <app-mural-event-context [context]="shareContext"></app-mural-event-context>
           }
           <div class="mural-card-header-row">
-            <ion-card-title>Aniversariantes do mês</ion-card-title>
+            <ion-card-title>{{ 'mural.highlights.birthdaysMonth' | t }}</ion-card-title>
             <app-mural-share-button
               [context]="shareContext"
-              cardTitle="Aniversariantes do mes"
+              [cardTitle]="birthdaysShareTitle"
             ></app-mural-share-button>
           </div>
           @if (filterCaption) {
@@ -571,7 +571,7 @@
         </ion-card-header>
         <ion-card-content>
           @if (!highlights.birthdays?.length) {
-            <ion-note>Nenhum aniversariante neste mes.</ion-note>
+            <ion-note>{{ 'mural.highlights.noBirthdaysMonth' | t }}</ion-note>
           }
           @for (entry of highlights.birthdays ?? []; track entry.userId) {
             <div class="highlight-block">
@@ -598,7 +598,7 @@
         @if (highlights.melhorJuiz) {
           <app-mural-showcase-entry [entry]="highlights.melhorJuiz"></app-mural-showcase-entry>
         } @else {
-          <ion-note>Sem votos ou desempenho registrado.</ion-note>
+          <ion-note>{{ 'mural.highlights.noVotesOrPerformance' | t }}</ion-note>
         }
       </app-playful-card>
     } @else {
@@ -623,7 +623,7 @@
           @if (highlights.melhorJuiz) {
             <app-mural-showcase-entry [entry]="highlights.melhorJuiz"></app-mural-showcase-entry>
           } @else {
-            <ion-note>Sem votos ou desempenho registrado.</ion-note>
+            <ion-note>{{ 'mural.highlights.noVotesOrPerformance' | t }}</ion-note>
           }
         </ion-card-content>
       </ion-card>

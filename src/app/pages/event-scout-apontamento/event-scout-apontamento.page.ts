@@ -17,6 +17,7 @@ import {
   withComputedScoutGoals,
 } from '../../core/models/scout-apontamento.model';
 import { ScoutApontamentoService } from '../../core/services/scout-apontamento.service';
+import { I18nService } from '../../core/services/i18n.service';
 import { normalizeSearchText } from '../../core/utils/search-text.util';
 
 type SyncStatus = 'idle' | 'saving' | 'saved' | 'error';
@@ -55,7 +56,8 @@ export class EventScoutApontamentoPage implements ViewWillLeave {
     private readonly scoutApontamentoService: ScoutApontamentoService,
     private readonly alertCtrl: AlertController,
     private readonly actionSheetCtrl: ActionSheetController,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly i18n: I18nService
   ) {}
 
   ionViewWillEnter(): void {
@@ -110,11 +112,11 @@ export class EventScoutApontamentoPage implements ViewWillLeave {
   get syncLabel(): string {
     switch (this.syncStatus) {
       case 'saving':
-        return 'Salvando...';
+        return this.i18n.t('eventScout.loading.saving');
       case 'saved':
-        return 'Salvo';
+        return this.i18n.t('common.ready');
       case 'error':
-        return 'Erro ao salvar';
+        return this.i18n.t('eventScout.error.saveFailed');
       default:
         return '';
     }
@@ -155,8 +157,12 @@ export class EventScoutApontamentoPage implements ViewWillLeave {
       await this.scoutApontamentoService.assignAthlete(this.eventId, athlete.userId);
       await this.load();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Erro ao atribuir atleta.';
-      const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+      const message = error instanceof Error ? error.message : this.i18n.t('eventScout.error.assignAthlete');
+      const alert = await this.alertCtrl.create({
+        header: this.i18n.t('common.error'),
+        message,
+        buttons: [this.i18n.t('common.ok')],
+      });
       await alert.present();
     } finally {
       this.assigning = false;
@@ -211,7 +217,7 @@ export class EventScoutApontamentoPage implements ViewWillLeave {
             void this.adjustStatForAthlete(athlete, option.field, 1);
           },
         })),
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.i18n.t('common.cancel'), role: 'cancel' },
       ],
     });
     await sheet.present();
@@ -232,7 +238,7 @@ export class EventScoutApontamentoPage implements ViewWillLeave {
             void this.adjustStatForAthlete(athlete, option.field, -1);
           },
         })),
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.i18n.t('common.cancel'), role: 'cancel' },
       ],
     });
     await sheet.present();
@@ -318,11 +324,11 @@ export class EventScoutApontamentoPage implements ViewWillLeave {
         }
         this.syncStatus = 'error';
         this.cdr.markForCheck();
-        const message = error instanceof Error ? error.message : 'Erro ao salvar apontamento.';
+        const message = error instanceof Error ? error.message : this.i18n.t('eventScout.error.saveApontamento');
         const alert = await this.alertCtrl.create({
-          header: 'Erro',
+          header: this.i18n.t('common.error'),
           message,
-          buttons: ['OK'],
+          buttons: [this.i18n.t('common.ok')],
         });
         await alert.present();
       });

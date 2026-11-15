@@ -13,6 +13,7 @@ import {
   LegendAthleteRelationship,
 } from '../../core/models/amateur-legend.model';
 import { AmateurLegendService } from '../../core/services/amateur-legend.service';
+import { I18nService } from '../../core/services/i18n.service';
 import {
   cancelLegendFormNavigation,
   finishLegendFormNavigation,
@@ -54,7 +55,8 @@ export class LegendProAthleteFormPage {
     private readonly router: Router,
     private readonly route: ActivatedRoute,
     private readonly loadingCtrl: LoadingController,
-    private readonly alertCtrl: AlertController
+    private readonly alertCtrl: AlertController,
+    private readonly i18n: I18nService
   ) {}
 
   ionViewWillEnter(): void {
@@ -132,7 +134,7 @@ export class LegendProAthleteFormPage {
     }
 
     this.saving = true;
-    const loading = await this.loadingCtrl.create({ message: 'Salvando lenda...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('legends.loading.savingPro') });
     await loading.present();
 
     try {
@@ -160,7 +162,11 @@ export class LegendProAthleteFormPage {
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('common.error'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 }

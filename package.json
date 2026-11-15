@@ -26,7 +26,9 @@
     "verify:growth-cloud": "node scripts/verify-growth-cloud-deployed.js",
     "check:i18n": "node scripts/check-i18n-parity.js",
     "check:i18n:scan": "node scripts/scan-i18n-hardcoded.js",
+    "check:i18n:scan:v2": "node scripts/scan-i18n-hardcoded-v2.js",
     "check:i18n:strict": "node scripts/scan-i18n-hardcoded.js --strict",
+    "check:i18n:strict:v2": "node scripts/scan-i18n-hardcoded-v2.js --strict",
     "audit:i18n:pt-accents": "node scripts/audit-pt-br-orthography.js",
     "sync:play-assetlinks": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-play-assetlinks.ps1"
   },

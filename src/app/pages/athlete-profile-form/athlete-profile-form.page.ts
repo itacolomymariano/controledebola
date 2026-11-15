@@ -165,11 +165,11 @@ export class AthleteProfileFormPage {
   async exitWizard(): Promise<void> {
     this.persistDraft();
     const alert = await this.alertCtrl.create({
-      header: 'Sair do cadastro',
-      message: 'Seu rascunho foi salvo neste aparelho. Você pode continuar depois.',
+      header: this.i18n.t('peladaForm.exitWizardHeader'),
+      message: this.i18n.t('peladaForm.exitWizardMessage'),
       buttons: [
-        { text: 'Continuar preenchendo', role: 'cancel' },
-        { text: 'Sair', role: 'destructive', handler: () => this.cancel() },
+        { text: this.i18n.t('peladaForm.continueFilling'), role: 'cancel' },
+        { text: this.i18n.t('peladaForm.exit'), role: 'destructive', handler: () => this.cancel() },
       ],
     });
     await alert.present();
@@ -264,7 +264,7 @@ export class AthleteProfileFormPage {
       this.wizardTour.completePendingStep();
       await this.router.navigateByUrl('/tabs/profile', { replaceUrl: true });
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Nao foi possivel salvar.');
+      await this.showError(error instanceof Error ? error.message : this.i18n.t('athleteProfileForm.error.save'));
     } finally {
       await loading.dismiss();
     }
@@ -299,7 +299,11 @@ export class AthleteProfileFormPage {
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('common.error'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 }

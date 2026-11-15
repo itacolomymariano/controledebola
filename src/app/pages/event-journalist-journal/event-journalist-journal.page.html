@@ -34,7 +34,7 @@
         </ion-card-header>
         <ion-card-content>
           <ion-item lines="full">
-            <ion-input label="Manchete" labelPlacement="stacked" [(ngModel)]="reportageHeadline" maxlength="160"></ion-input>
+            <ion-input [label]="'eventJournalist.headlineLabel' | t" labelPlacement="stacked" [(ngModel)]="reportageHeadline" maxlength="160"></ion-input>
           </ion-item>
           <input #reportagePhotoInput type="file" accept="image/*" hidden (change)="onReportagePhotoSelected($event)" />
           <ion-button expand="block" fill="outline" (click)="reportagePhotoInput.click()">
@@ -46,7 +46,7 @@
           }
           <ion-item lines="full" class="ion-margin-top">
             <ion-textarea
-              label="Texto / redacao"
+              [label]="'eventJournalist.bodyLabel' | t"
               labelPlacement="stacked"
               [(ngModel)]="reportageBody"
               autoGrow="true"
@@ -67,7 +67,7 @@
         </ion-card-header>
         <ion-card-content>
           <ion-item lines="full">
-            <ion-input label="Manchete" labelPlacement="stacked" [(ngModel)]="interviewHeadline" maxlength="160"></ion-input>
+            <ion-input [label]="'eventJournalist.headlineLabel' | t" labelPlacement="stacked" [(ngModel)]="interviewHeadline" maxlength="160"></ion-input>
           </ion-item>
           <input #interviewPhotoInput type="file" accept="image/*" hidden (change)="onInterviewPhotoSelected($event)" />
           <ion-button expand="block" fill="outline" (click)="interviewPhotoInput.click()">
@@ -79,7 +79,7 @@
           }
           <ion-item lines="full" class="ion-margin-top">
             <ion-textarea
-              label="Perguntas e respostas"
+              [label]="'eventJournalist.qaLabel' | t"
               labelPlacement="stacked"
               [(ngModel)]="interviewBody"
               autoGrow="true"

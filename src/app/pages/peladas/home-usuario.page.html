@@ -61,7 +61,7 @@
           <p class="usuario-mini-value">{{ user.apelido || '—' }}</p>
         </app-playful-card>
         <app-playful-card [tone]="infoPlayfulTone(2)">
-          <h3 class="usuario-mini-label">Local</h3>
+            <h3 class="usuario-mini-label">{{ 'homeUsuario.localLabel' | t }}</h3>
           <p class="usuario-mini-value">{{ place || ('peladas.localMissing' | t) }}</p>
         </app-playful-card>
       </app-playful-grid>

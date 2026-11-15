@@ -180,11 +180,11 @@ export class ConfrontoCreatePage {
   async exitWizard(): Promise<void> {
     this.persistDraft();
     const alert = await this.alertCtrl.create({
-      header: 'Sair do cadastro',
-      message: 'Seu rascunho foi salvo neste aparelho. Você pode continuar depois.',
+      header: this.i18n.t('peladaForm.exitWizardHeader'),
+      message: this.i18n.t('peladaForm.exitWizardMessage'),
       buttons: [
-        { text: 'Continuar preenchendo', role: 'cancel' },
-        { text: 'Sair', role: 'destructive', handler: () => this.cancel() },
+        { text: this.i18n.t('peladaForm.continueFilling'), role: 'cancel' },
+        { text: this.i18n.t('peladaForm.exit'), role: 'destructive', handler: () => this.cancel() },
       ],
     });
     await alert.present();
@@ -222,15 +222,15 @@ export class ConfrontoCreatePage {
       const startTime = this.combineDateTime(values.startDate || '', values.startTime || '');
       const endTime = this.combineDateTime(values.endDate || '', values.endTime || '');
       if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
-        void this.showError('Informe data e hora do jogo de ida.');
+        void this.showError(this.i18n.t('confrontoCreate.validation.outboundDateTime'));
         return false;
       }
       if (endTime <= startTime) {
-        void this.showError('O termino da ida deve ser apos o inicio.');
+        void this.showError(this.i18n.t('confrontoCreate.validation.outboundEndAfterStart'));
         return false;
       }
       if (!isAddressComplete(values.address)) {
-        void this.showError('Informe o endereco completo do jogo de ida.');
+        void this.showError(this.i18n.t('confrontoCreate.validation.outboundAddress'));
         return false;
       }
       if (values.returnLeg) {
@@ -243,11 +243,11 @@ export class ConfrontoCreatePage {
           values.returnEndTime || ''
         );
         if (Number.isNaN(returnStart.getTime()) || Number.isNaN(returnEnd.getTime())) {
-          void this.showError('Informe data e hora do jogo da volta.');
+          void this.showError(this.i18n.t('confrontoCreate.validation.returnDateTime'));
           return false;
         }
         if (returnEnd <= returnStart) {
-          void this.showError('O termino da volta deve ser apos o inicio.');
+          void this.showError(this.i18n.t('confrontoCreate.validation.returnEndAfterStart'));
           return false;
         }
       }
@@ -353,15 +353,15 @@ export class ConfrontoCreatePage {
     const startTime = this.combineDateTime(values.startDate || '', values.startTime || '');
     const endTime = this.combineDateTime(values.endDate || '', values.endTime || '');
     if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
-      await this.showError('Informe data e hora do jogo de ida.');
+      await this.showError(this.i18n.t('confrontoCreate.validation.outboundDateTime'));
       return;
     }
     if (endTime <= startTime) {
-      await this.showError('O termino da ida deve ser apos o inicio.');
+      await this.showError(this.i18n.t('confrontoCreate.validation.outboundEndAfterStart'));
       return;
     }
     if (!isAddressComplete(values.address)) {
-      await this.showError('Informe o endereco completo do jogo de ida.');
+      await this.showError(this.i18n.t('confrontoCreate.validation.outboundAddress'));
       return;
     }
 
@@ -374,17 +374,19 @@ export class ConfrontoCreatePage {
       );
       returnEndTime = this.combineDateTime(values.returnEndDate || '', values.returnEndTime || '');
       if (Number.isNaN(returnStartTime.getTime()) || Number.isNaN(returnEndTime.getTime())) {
-        await this.showError('Informe data e hora do jogo da volta.');
+        await this.showError(this.i18n.t('confrontoCreate.validation.returnDateTime'));
         return;
       }
       if (returnEndTime <= returnStartTime) {
-        await this.showError('O termino da volta deve ser apos o inicio.');
+        await this.showError(this.i18n.t('confrontoCreate.validation.returnEndAfterStart'));
         return;
       }
     }
 
     this.submitting = true;
-    const loading = await this.loadingCtrl.create({ message: 'Marcando confronto...' });
+    const loading = await this.loadingCtrl.create({
+      message: this.i18n.t('confrontoCreate.loadingScheduling'),
+    });
     await loading.present();
 
     try {
@@ -524,26 +526,32 @@ export class ConfrontoCreatePage {
   }): Promise<void> {
     const devices = Number(result.push?.devicesMatched || 0);
     const audience = Number(result.push?.audience || 0);
-    const legs = result.returnEventId ? 'Ida e volta criados.' : 'Confronto criado.';
+    const legs = result.returnEventId
+      ? this.i18n.t('confrontoCreate.createdBothLegs')
+      : this.i18n.t('confrontoCreate.createdSingle');
     const invited =
       result.invitedAthletes > 0
-        ? ` ${result.invitedAthletes} atleta(s) do mandante convocados.`
+        ? this.i18n.t('confrontoCreate.invitedAthletes', { count: result.invitedAthletes })
         : '';
     const push =
       audience > 0
-        ? ` Aviso enviado para ${devices} aparelho(s) (${audience} responsavel/atletas, exceto voce).`
-        : ' Nenhum outro responsavel recebeu push.';
+        ? this.i18n.t('confrontoCreate.pushSent', { devices, audience })
+        : this.i18n.t('confrontoCreate.pushNone');
     const alert = await this.alertCtrl.create({
-      header: 'Confronto marcado',
+      header: this.i18n.t('confrontoCreate.createdHeader'),
       message: `${legs}${invited}${push}`,
-      buttons: ['OK'],
+      buttons: [this.i18n.t('common.ok')],
     });
     await alert.present();
     await alert.onDidDismiss();
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Confronto', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('confrontoCreate.errorTitle'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 }

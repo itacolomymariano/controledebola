@@ -106,13 +106,15 @@
       @if (participantsCount === 0) {
         <ion-note>{{ 'eventDetail.participants.noneRegistered' | t }}</ion-note>
       } @else {
-        <ion-searchbar
-          class="playful-searchbar"
-          [placeholder]="'eventDetail.participants.searchPlaceholder' | t"
-          [value]="participantSearch"
-          [debounce]="0"
-          (ionInput)="onSearchInput($event)"
-        ></ion-searchbar>
+        @for (remountKey of [searchbarRemountKey]; track remountKey) {
+          <ion-searchbar
+            class="playful-searchbar"
+            [placeholder]="'eventDetail.participants.searchPlaceholder' | t"
+            [value]="participantSearch"
+            [debounce]="0"
+            (ionInput)="onSearchInput($event)"
+          ></ion-searchbar>
+        }
         @if (filteredParticipants.length === 0) {
           <ion-note color="medium">{{
             'eventDetail.participants.noneFound' | t: { query: participantSearch }
@@ -374,15 +376,19 @@
       <h3 class="participants-section-title">
         {{ 'eventDetail.participants.confirmedSection' | t: { count: confirmedParticipantsCount } }}
       </h3>
-      <ion-searchbar
-        class="playful-searchbar"
-        placeholder="Buscar participante"
-        [value]="participantSearch"
-        [debounce]="0"
-        (ionInput)="onSearchInput($event)"
-      ></ion-searchbar>
+      @for (remountKey of [searchbarRemountKey]; track remountKey) {
+        <ion-searchbar
+          class="playful-searchbar"
+          [placeholder]="'eventDetail.participants.searchPlaceholder' | t"
+          [value]="participantSearch"
+          [debounce]="0"
+          (ionInput)="onSearchInput($event)"
+        ></ion-searchbar>
+      }
       @if (filteredConfirmedParticipants.length === 0) {
-        <ion-note color="medium">Nenhum participante encontrado para "{{ participantSearch }}".</ion-note>
+        <ion-note color="medium">{{
+          'eventDetail.participants.noneFound' | t: { query: participantSearch }
+        }}</ion-note>
       }
       <ion-list lines="none" class="playful-elevated-list">
         @for (participant of filteredConfirmedParticipants; track participant.objectId; let i = $index) {

@@ -8,7 +8,7 @@
         <ion-back-button [text]="'common.back' | t" defaultHref="/tabs/peladas/times"></ion-back-button>
       }
     </ion-buttons>
-    <ion-title>Perfil do time</ion-title>
+    <ion-title>{{ 'teamProfile.pageTitle' | t }}</ion-title>
     <ion-buttons slot="end">
       <app-screen-help helpId="team-profile-help" bodyKey="screen.help.team-profile"></app-screen-help>
     </ion-buttons>
@@ -82,7 +82,7 @@
       @for (row of $any(profile['lastResults']); track row.eventId) {
         <p class="team-result-row">
           {{ formatMatchDate(row.startTime) }}
-          {{ resultName(row.result) }}:
+          {{ teamMatchResultKey(row.result) | t }}:
           {{ row.homeTeamName }} {{ row.homeScore }} x {{ row.awayScore }} {{ row.awayTeamName }}
         </p>
       }

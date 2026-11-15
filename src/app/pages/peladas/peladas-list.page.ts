@@ -49,12 +49,16 @@ export class PeladasListPage implements OnDestroy {
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly cdr: ChangeDetectorRef,
-    private readonly i18n: I18nService
+    readonly i18n: I18nService
   ) {
     this.peladasSub = this.peladaService.onPeladasChanged.subscribe(() => {
       void this.loadPeladas();
     });
     this.localeSub = this.i18n.locale$.subscribe(() => this.cdr.markForCheck());
+  }
+
+  get searchbarRemountKey(): string {
+    return this.i18n.ionInputRemountKey;
   }
 
   ngOnDestroy(): void {

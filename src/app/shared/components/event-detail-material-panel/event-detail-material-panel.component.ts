@@ -9,12 +9,14 @@ import {
   SimpleChanges,
 } from '@angular/core';
 import {
+  EventMaterialLine,
   EventMaterialSession,
   EventMaterialSource,
   EventMaterialStatus,
   MaterialInventoryItem,
   materialLineDisplayLabel,
 } from '../../../core/models/material-inventory.model';
+import { I18nService } from '../../../core/services/i18n.service';
 
 @Component({
   selector: 'app-event-detail-material-panel',
@@ -45,7 +47,14 @@ export class EventDetailMaterialPanelComponent implements OnChanges {
   @Output() blindCountChange = new EventEmitter<{ key: string; quantity: number }>();
   @Output() blindDamagedChange = new EventEmitter<{ key: string; quantity: number }>();
 
-  constructor(private readonly cdr: ChangeDetectorRef) {}
+  constructor(
+    private readonly cdr: ChangeDetectorRef,
+    private readonly i18n: I18nService
+  ) {}
+
+  private t(key: string, params?: Record<string, string | number>): string {
+    return this.i18n.t(key, params);
+  }
 
   ngOnChanges(_changes: SimpleChanges): void {
     this.cdr.markForCheck();
@@ -113,10 +122,10 @@ export class EventDetailMaterialPanelComponent implements OnChanges {
 
   get sendButtonLabel(): string {
     if (this.source === 'pelada') {
-      const name = (this.session?.counterpartyName || 'Roupeiro').trim();
-      return `Enviar material ao Roupeiro (${name})`;
+      const name = (this.session?.counterpartyName || this.t('eventDetail.material.kitmanFallbackName')).trim();
+      return this.t('eventDetail.material.sendToKitman', { name });
     }
-    return 'Enviar material ao Administrador';
+    return this.t('eventDetail.material.sendToAdmin');
   }
 
   get canBlindCount(): boolean {
@@ -168,16 +177,21 @@ export class EventDetailMaterialPanelComponent implements OnChanges {
   statusLabel(status: EventMaterialStatus): string {
     switch (status) {
       case 'loaded':
-        return 'Material carregado';
+        return this.t('eventDetail.material.status.loaded');
       case 'sent':
-        return 'Material enviado — aguardando conferencia';
+        return this.t('eventDetail.material.status.sent');
       case 'received':
-        return 'Conferencia registrada';
+        return this.t('eventDetail.material.status.received');
       case 'reconciled':
-        return 'Devolucao conciliada';
+        return this.t('eventDetail.material.status.reconciled');
       default:
-        return 'Aguardando carga';
+        return this.t('eventDetail.material.status.awaitingLoad');
     }
+  }
+
+  returnedOrCountedQty(line: EventMaterialLine): string {
+    const raw = line.quantityReturned || line.quantityBlindCounted;
+    return raw ? String(raw) : '-';
   }
 
   onSourceSelect(source: EventMaterialSource): void {

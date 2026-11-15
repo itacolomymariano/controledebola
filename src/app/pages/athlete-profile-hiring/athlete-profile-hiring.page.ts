@@ -12,6 +12,7 @@ import {
 } from '../../core/models/event-hiring.model';
 import { AthleteProfileService } from '../../core/services/athlete-profile.service';
 import { RoleProfileService } from '../../core/services/role-profile.service';
+import { I18nService } from '../../core/services/i18n.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
 
 type HiringSegment = 'trainer' | 'scout';
@@ -43,7 +44,8 @@ export class AthleteProfileHiringPage {
     private readonly roleProfileService: RoleProfileService,
     private readonly router: Router,
     private readonly loadingCtrl: LoadingController,
-    private readonly alertCtrl: AlertController
+    private readonly alertCtrl: AlertController,
+    private readonly i18n: I18nService
   ) {}
 
   ionViewWillEnter(): void {
@@ -111,7 +113,7 @@ export class AthleteProfileHiringPage {
 
   async save(): Promise<void> {
     this.saving = true;
-    const loading = await this.loadingCtrl.create({ message: 'Salvando...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('common.saving') });
     await loading.present();
 
     try {
@@ -145,7 +147,7 @@ export class AthleteProfileHiringPage {
     try {
       this.profile = await this.athleteProfileService.getForCurrentUser();
       if (!this.profile) {
-        await this.showError('Cadastre seu perfil de atleta antes de contratar profissionais.');
+        await this.showError(this.i18n.t('athleteProfileHiring.error.registerAthleteFirst'));
         void this.router.navigateByUrl('/athlete-profile/form');
         return;
       }
@@ -224,7 +226,11 @@ export class AthleteProfileHiringPage {
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('common.error'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 }

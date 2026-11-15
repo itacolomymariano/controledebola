@@ -76,7 +76,7 @@
         }
       </div>
     } @else if (search.trim().length > 0 && search.trim().length < 2) {
-      <ion-note class="legend-inline-hint">Digite ao menos 2 caracteres para buscar.</ion-note>
+      <ion-note class="legend-inline-hint">{{ 'common.searchMinChars' | t }}</ion-note>
     }
   </div>
 } @else {
@@ -107,7 +107,7 @@
             [value]="search"
             (ionInput)="onSearchInput($any($event.target).value)"
             debounce="0"
-            placeholder="Buscar..."
+            [placeholder]="'common.searchEllipsis' | t"
           ></ion-searchbar>
         </ion-toolbar>
         @if (isPeladaTeamSuggest) {

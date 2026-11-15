@@ -45,13 +45,7 @@ export class EventCreatePage implements OnInit, OnDestroy {
 
   peladaId = '';
 
-  eventTypes: { value: EventType; label: string }[] = [
-
-    { value: 'pelada', label: 'Pelada' },
-
-    { value: 'racha', label: 'Racha' },
-
-  ];
+  eventTypes: { value: EventType; label: string }[] = [];
 
 
 
@@ -164,6 +158,10 @@ export class EventCreatePage implements OnInit, OnDestroy {
 
 
   ngOnInit(): void {
+    this.eventTypes = [
+      { value: 'pelada', label: this.i18n.t('event.type.pelada') },
+      { value: 'racha', label: this.i18n.t('event.type.racha') },
+    ];
 
     this.peladaId = this.route.snapshot.queryParamMap.get('peladaId') ?? '';
     this.restoreDraft();
@@ -248,7 +246,7 @@ export class EventCreatePage implements OnInit, OnDestroy {
 
     if (!this.parseService.isConfigured) {
 
-      await this.showError('Configure as chaves do Back4App em src/environments/environment.local.ts');
+      await this.showError(this.i18n.t('eventCreate.error.back4appKeys'));
 
       return;
 
@@ -256,7 +254,7 @@ export class EventCreatePage implements OnInit, OnDestroy {
 
     if (!this.peladaId) {
 
-      await this.showError('Selecione uma pelada para criar o evento.');
+      await this.showError(this.i18n.t('eventCreate.selectPelada'));
 
       return;
 
@@ -272,7 +270,7 @@ export class EventCreatePage implements OnInit, OnDestroy {
 
     if (this.form.invalid || this.invalidHint) {
 
-      await this.showError(this.invalidHint || 'Verifique os campos obrigatorios.');
+      await this.showError(this.invalidHint || this.i18n.t('eventCreate.error.requiredFields'));
 
       return;
 
@@ -290,7 +288,7 @@ export class EventCreatePage implements OnInit, OnDestroy {
 
     if (endTime <= startTime) {
 
-      await this.showError('O horario de termino deve ser apos o inicio.');
+      await this.showError(this.i18n.t('eventCreate.error.endAfterStart'));
 
       return;
 
@@ -458,9 +456,9 @@ export class EventCreatePage implements OnInit, OnDestroy {
         'Evento criado, mas nenhum aparelho tem token de notificacao. No outro celular: abra o app logado e ligue Notificacoes no menu.';
     }
     const alert = await this.alertCtrl.create({
-      header: 'Evento criado',
+      header: this.i18n.t('eventCreate.createdHeader'),
       message,
-      buttons: ['OK'],
+      buttons: [this.i18n.t('common.ok')],
     });
     await alert.present();
     await alert.onDidDismiss();
@@ -468,7 +466,11 @@ export class EventCreatePage implements OnInit, OnDestroy {
 
   private async showError(message: string): Promise<void> {
 
-    const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('common.error'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
 
     await alert.present();
 
@@ -477,12 +479,12 @@ export class EventCreatePage implements OnInit, OnDestroy {
   async exitWizard(): Promise<void> {
     this.persistDraft();
     const alert = await this.alertCtrl.create({
-      header: 'Sair do cadastro',
-      message: 'Seu rascunho foi salvo neste aparelho. Você pode continuar depois.',
+      header: this.i18n.t('peladaForm.exitWizardHeader'),
+      message: this.i18n.t('peladaForm.exitWizardMessage'),
       buttons: [
-        { text: 'Continuar preenchendo', role: 'cancel' },
+        { text: this.i18n.t('peladaForm.continueFilling'), role: 'cancel' },
         {
-          text: 'Sair',
+          text: this.i18n.t('peladaForm.exit'),
           role: 'destructive',
           handler: () => this.cancel(),
         },
@@ -524,11 +526,11 @@ export class EventCreatePage implements OnInit, OnDestroy {
       const v = this.form.getRawValue();
       if (v.type === 'team_match') {
         if (!String(v.homeTeamName || '').trim() || !String(v.awayTeamName || '').trim()) {
-          void this.showError('Informe os nomes das equipes mandante e visitante.');
+          void this.showError(this.i18n.t('eventCreate.error.teamNamesRequired'));
           return false;
         }
         if (v.homeTeamId && v.awayTeamId && v.homeTeamId === v.awayTeamId) {
-          void this.showError('Times mandante e visitante devem ser diferentes.');
+          void this.showError(this.i18n.t('eventCreate.error.teamsMustDiffer'));
           return false;
         }
       }
@@ -550,7 +552,7 @@ export class EventCreatePage implements OnInit, OnDestroy {
       const start = this.combineDateTime(v.startDate!, v.startTime!);
       const end = this.combineDateTime(v.endDate!, v.endTime!);
       if (end <= start) {
-        void this.showError('O horario de termino deve ser apos o inicio.');
+        void this.showError(this.i18n.t('eventCreate.error.endAfterStart'));
         return false;
       }
       return true;
@@ -587,12 +589,11 @@ export class EventCreatePage implements OnInit, OnDestroy {
 
   private async confirmZeroParticipationFee(): Promise<boolean> {
     const alert = await this.alertCtrl.create({
-      header: 'Valor da participacao zerado',
-      message:
-        'O valor da participacao esta em R$ 0,00. Deseja criar o evento assim mesmo, sem cobranca de inscricao?',
+      header: this.i18n.t('eventCreate.zeroFeeHeader'),
+      message: this.i18n.t('eventCreate.zeroFeeMessage'),
       buttons: [
-        { text: 'Revisar', role: 'cancel' },
-        { text: 'Criar assim mesmo', role: 'confirm' },
+        { text: this.i18n.t('eventCreate.zeroFeeReview'), role: 'cancel' },
+        { text: this.i18n.t('eventCreate.zeroFeeConfirm'), role: 'confirm' },
       ],
     });
     await alert.present();

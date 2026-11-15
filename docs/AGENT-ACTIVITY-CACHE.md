@@ -2,7 +2,36 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-11-14 (i18n onda 3)
+**Ultima atualizacao:** 2026-11-15 (i18n onda 6 — scan v2 0)
+
+### 2026-11-15 — i18n onda 6 (varredura hardcode → chaves)
+
+- `scripts/scan-i18n-hardcoded-v2.js` + `check:i18n:scan:v2` / `strict:v2`; backlog [`I18N-WAVE6-BACKLOG.md`](I18N-WAVE6-BACKLOG.md).
+- `scripts/i18n-wave6-extra.js`; **2510** chaves; v1 e v2 scan **0** hits; P0 pelada-detail alerts/erros migrados.
+- Domínios: profile/login/views, confronto/time, papéis apoio evento, `user-bar`, hiring panel, gate/material.
+- Gotcha: v2 ignora `return 'mural.rule.*'` (chaves i18n) e formatação telefone com `.slice`.
+- Pendência: erros `throw new Error` em `core/services/` (fora da onda 6 cliente UI).
+
+### 2026-11-15 — i18n onda 5 (JOIN, searchbar, scan 0)
+
+- `event-register.*` completo; `registration.membershipType.*`; `I18nService.ionInputRemountKey` + `@for` em `ion-searchbar` (participants, convocation, search, inbox, peladas).
+- `scripts/i18n-wave5-extra.js` (~200+ chaves onda 5); **2329** chaves; `check:i18n:scan` **totalHits 0**.
+- `parse-error.util` + `setParseErrorI18n` no init; telas apoio evento (massagista, palpites, hiring, coach, midia).
+- Smoke: `I18N-SMOKE-XAIANA.md` itens 5a / 5a2 (Participantes + wizard JOIN).
+- Build OK.
+
+### 2026-11-15 — i18n: menu troca idioma + onda 4
+
+- Menu: Action Sheet (fim do alerta rádio); `applyAppLocale` + `ApplicationRef.tick`; tabs/mural/profile `locale$`.
+- P0/P1 strict **0**; ~1839 chaves; pelada cotinhas/caixa/settings; event-mural `drillTitle` i18n.
+- P2/P3 **248** hits residuais (`I18N-WAVE4-BACKLOG.md`); smoke atualizado em `I18N-SMOKE-XAIANA.md`.
+- Teste: `i18n.service.spec.ts` (3 casos). Build OK.
+
+### 2026-11-14 — i18n smoke en-GB: Busca + mural Explorar (pós-WhatsApp)
+
+- `search.*` legend prompt, histórico de times, erros TS; datas com `formatAppDateTime`.
+- `mural-highlights` torcedores + empty states; `mural-app-feed` `mural.playful.noData`.
+- **1739** chaves; build **0380** (prebuild bump local — reverter se não for release).
 
 ### 2026-11-14 — i18n onda 3 (core, pelada, about, gate scan)
 

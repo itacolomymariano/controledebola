@@ -54,19 +54,19 @@
           }
           <ion-list [formGroupName]="i">
             <ion-item>
-              <ion-input label="Nome do time" labelPlacement="stacked" formControlName="teamName"></ion-input>
+              <ion-input [label]="'eventCoachBoard.teamNameLabel' | t" labelPlacement="stacked" formControlName="teamName"></ion-input>
             </ion-item>
             <ion-item>
               <ion-input
-                label="Formacao / esquema"
+                [label]="'eventCoachBoard.formationLabel' | t"
                 labelPlacement="stacked"
                 formControlName="formation"
-                placeholder="Ex.: 2-2-1"
+                [placeholder]="'eventCoachBoard.formationPlaceholder' | t"
               ></ion-input>
             </ion-item>
             <ion-item>
               <ion-textarea
-                label="Foco tattico"
+                [label]="'eventCoachBoard.tacticalFocusLabel' | t"
                 labelPlacement="stacked"
                 formControlName="focus"
                 autoGrow="true"
@@ -74,7 +74,7 @@
             </ion-item>
             <ion-item>
               <ion-textarea
-                label="Titulares sugeridos (apelidos ou IDs, separados por virgula)"
+                [label]="'eventCoachBoard.startersLabel' | t"
                 labelPlacement="stacked"
                 formControlName="starters"
                 autoGrow="true"
@@ -87,7 +87,7 @@
       <ion-list>
         <ion-item>
           <ion-textarea
-            label="Rotacoes / substituicoes"
+            [label]="'eventCoachBoard.rotationsLabel' | t"
             labelPlacement="stacked"
             formControlName="rotationNotes"
             autoGrow="true"

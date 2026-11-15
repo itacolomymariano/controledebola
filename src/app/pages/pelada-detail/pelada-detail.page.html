@@ -182,14 +182,16 @@
             </ion-card-content>
           </ion-card>
         }
-        <ion-searchbar
-          class="playful-searchbar"
-          [placeholder]="'peladaDetail.searchPlaceholder' | t"
-          [value]="eventSearch"
-          [debounce]="200"
-          (ionInput)="onEventSearch($any($event.detail.value))"
-          (ionClear)="onEventSearch('')"
-        ></ion-searchbar>
+        @for (remountKey of [searchbarRemountKey]; track remountKey) {
+          <ion-searchbar
+            class="playful-searchbar"
+            [placeholder]="'peladaDetail.searchPlaceholder' | t"
+            [value]="eventSearch"
+            [debounce]="200"
+            (ionInput)="onEventSearch($any($event.detail.value))"
+            (ionClear)="onEventSearch('')"
+          ></ion-searchbar>
+        }
         @if (events.length === 0) {
           <ion-note>{{ 'peladaDetail.noEvents' | t }}</ion-note>
         } @else if (filteredEvents.length === 0) {
@@ -244,15 +246,17 @@
             Se participantes ou checkboxes estiverem incompletos, publique o Cloud Code
             em Back4App (ver docs/back4app-cloud-functions.md).
           </ion-note>
-          <ion-searchbar
-            class="playful-searchbar"
-            [placeholder]="'peladaDetail.searchParticipants' | t"
-            [(ngModel)]="participantSearch"
-            [ngModelOptions]="{ standalone: true }"
-            [debounce]="0"
-            (ionInput)="onParticipantSearchInput($event)"
-            (ionClear)="onParticipantSearchClear()"
-          ></ion-searchbar>
+          @for (remountKey of [searchbarRemountKey]; track remountKey) {
+            <ion-searchbar
+              class="playful-searchbar"
+              [placeholder]="'peladaDetail.searchParticipants' | t"
+              [(ngModel)]="participantSearch"
+              [ngModelOptions]="{ standalone: true }"
+              [debounce]="0"
+              (ionInput)="onParticipantSearchInput($event)"
+              (ionClear)="onParticipantSearchClear()"
+            ></ion-searchbar>
+          }
           @if (socioListRows.length === 0) {
             <ion-note class="ion-padding">
               Nenhum participante encontrado. Inscreva usuarios em eventos desta pelada primeiro.
@@ -326,20 +330,20 @@
         @if (isAdmin) {
           <form [formGroup]="cotinhaForm" (ngSubmit)="createCotinha()">
             <ion-item>
-              <ion-input label="Titulo" labelPlacement="stacked" formControlName="title"></ion-input>
+              <ion-input [label]="'peladaDetail.cotinha.titleLabel' | t" labelPlacement="stacked" formControlName="title"></ion-input>
             </ion-item>
             <ion-item>
-              <ion-input label="Descricao" labelPlacement="stacked" formControlName="description"></ion-input>
+              <ion-input [label]="'peladaDetail.cotinha.descriptionLabel' | t" labelPlacement="stacked" formControlName="description"></ion-input>
             </ion-item>
             <ion-item>
               <ion-input
-                label="Valor alvo"
+                [label]="'peladaDetail.cotinha.targetAmountLabel' | t"
                 labelPlacement="stacked"
                 type="number"
                 formControlName="targetAmount"
               ></ion-input>
             </ion-item>
-            <ion-button expand="block" type="submit">Criar cotinha</ion-button>
+            <ion-button expand="block" type="submit">{{ 'peladaDetail.cotinha.createButton' | t }}</ion-button>
           </form>
         }
         <ion-list lines="none" class="playful-elevated-list">
@@ -356,23 +360,23 @@
           }
         </ion-list>
         @if (selectedCotinhaId) {
-          <ion-note class="ion-padding">Cotinha: {{ selectedCotinhaTitle }}</ion-note>
+          <ion-note class="ion-padding">{{ 'peladaDetail.cotinha.selectedLabel' | t: { title: selectedCotinhaTitle } }}</ion-note>
           @if (isAdmin) {
             <form [formGroup]="paymentForm" (ngSubmit)="addCotinhaPayment()">
               <ion-item>
-                <ion-select label="Participante" labelPlacement="stacked" formControlName="userId">
+                <ion-select [label]="'peladaDetail.cotinha.participantLabel' | t" labelPlacement="stacked" formControlName="userId">
                   @for (p of participants; track p.userId) {
                     <ion-select-option [value]="p.userId">{{ p.userName }} ({{ p.apelido }})</ion-select-option>
                   }
                 </ion-select>
               </ion-item>
               <ion-item>
-                <ion-input label="Valor da contribuicao" labelPlacement="stacked" type="number" formControlName="amount"></ion-input>
+                <ion-input [label]="'peladaDetail.cotinha.contributionAmountLabel' | t" labelPlacement="stacked" type="number" formControlName="amount"></ion-input>
               </ion-item>
               <ion-item>
-                <ion-input label="Data e hora" labelPlacement="stacked" type="datetime-local" formControlName="paidAt"></ion-input>
+                <ion-input [label]="'peladaDetail.cotinha.paidAtLabel' | t" labelPlacement="stacked" type="datetime-local" formControlName="paidAt"></ion-input>
               </ion-item>
-              <ion-button expand="block" type="submit">Registrar contribuicao</ion-button>
+              <ion-button expand="block" type="submit">{{ 'peladaDetail.cotinha.registerContribution' | t }}</ion-button>
             </form>
           }
           <ion-list lines="none" class="playful-elevated-list">
@@ -383,13 +387,13 @@
                   <h2>{{ payment.userName }}</h2>
                   <p>
                     {{ formatCurrency(payment.amount) }} · {{ formatDate(payment.paidAt) }}
-                    · {{ payment.confirmedByAdmin ? 'Confirmado' : 'Pendente' }}
+                    · {{ payment.confirmedByAdmin ? ('peladaDetail.cotinha.confirmed' | t) : ('peladaDetail.cotinha.pending' | t) }}
                   </p>
                 </ion-label>
                 @if (isAdmin) {
-                  <ion-button size="small" fill="clear" (click)="editCotinhaPayment(payment)">Editar</ion-button>
+                  <ion-button size="small" fill="clear" (click)="editCotinhaPayment(payment)">{{ 'peladaDetail.edit' | t }}</ion-button>
                   <ion-button size="small" fill="clear" color="danger" (click)="deleteCotinhaPayment(payment)">
-                    Excluir
+                    {{ 'common.delete' | t }}
                   </ion-button>
                   <ion-toggle
                     [checked]="payment.confirmedByAdmin"
@@ -404,42 +408,42 @@
 
       @if (segment === 'caixa') {
         @if (!isMember) {
-          <ion-note>Fluxo de caixa visivel apenas para socios.</ion-note>
+          <ion-note>{{ 'peladaDetail.cash.membersOnly' | t }}</ion-note>
         } @else {
           <ion-item>
-            <ion-input label="De" labelPlacement="stacked" type="date" [(ngModel)]="cashStartDate"></ion-input>
+            <ion-input [label]="'peladaDetail.cash.fromLabel' | t" labelPlacement="stacked" type="date" [(ngModel)]="cashStartDate"></ion-input>
           </ion-item>
           <ion-item>
-            <ion-input label="Ate" labelPlacement="stacked" type="date" [(ngModel)]="cashEndDate"></ion-input>
+            <ion-input [label]="'peladaDetail.cash.toLabel' | t" labelPlacement="stacked" type="date" [(ngModel)]="cashEndDate"></ion-input>
           </ion-item>
-          <ion-button expand="block" (click)="loadCashFlow()">Filtrar</ion-button>
+          <ion-button expand="block" (click)="loadCashFlow()">{{ 'peladaDetail.cash.filterButton' | t }}</ion-button>
           @if (cashSummary) {
             <ion-card>
               <ion-card-content>
-                <p>Entradas: {{ formatCurrency(cashSummary.totalIn) }}</p>
-                <p>Saidas: {{ formatCurrency(cashSummary.totalOut) }}</p>
-                <p><strong>Saldo: {{ formatCurrency(cashSummary.finalBalance) }}</strong></p>
+                <p>{{ 'peladaDetail.cash.inflows' | t: { amount: formatCurrency(cashSummary.totalIn) } }}</p>
+                <p>{{ 'peladaDetail.cash.outflows' | t: { amount: formatCurrency(cashSummary.totalOut) } }}</p>
+                <p><strong>{{ 'peladaDetail.cash.balance' | t: { amount: formatCurrency(cashSummary.finalBalance) } }}</strong></p>
               </ion-card-content>
             </ion-card>
           }
           @if (isAdmin) {
             <form [formGroup]="cashForm" (ngSubmit)="addCashEntry()">
               <ion-item>
-                <ion-input label="Data" labelPlacement="stacked" type="date" formControlName="date"></ion-input>
+                <ion-input [label]="'peladaDetail.cash.dateLabel' | t" labelPlacement="stacked" type="date" formControlName="date"></ion-input>
               </ion-item>
               <ion-item>
-                <ion-select label="Tipo" labelPlacement="stacked" formControlName="type">
-                  <ion-select-option value="in">Entrada</ion-select-option>
-                  <ion-select-option value="out">Saida</ion-select-option>
+                <ion-select [label]="'peladaDetail.cash.typeLabel' | t" labelPlacement="stacked" formControlName="type">
+                  <ion-select-option value="in">{{ 'peladaDetail.cash.entryIn' | t }}</ion-select-option>
+                  <ion-select-option value="out">{{ 'peladaDetail.cash.entryOut' | t }}</ion-select-option>
                 </ion-select>
               </ion-item>
               <ion-item>
-                <ion-input label="Valor" labelPlacement="stacked" type="number" formControlName="amount"></ion-input>
+                <ion-input [label]="'peladaDetail.cash.amountLabel' | t" labelPlacement="stacked" type="number" formControlName="amount"></ion-input>
               </ion-item>
               <ion-item>
-                <ion-input label="Descricao" labelPlacement="stacked" formControlName="description"></ion-input>
+                <ion-input [label]="'peladaDetail.cash.descriptionLabel' | t" labelPlacement="stacked" formControlName="description"></ion-input>
               </ion-item>
-              <ion-button expand="block" type="submit">Registrar</ion-button>
+              <ion-button expand="block" type="submit">{{ 'peladaDetail.cash.registerButton' | t }}</ion-button>
             </form>
           }
           <ion-list lines="none" class="playful-elevated-list">
@@ -447,7 +451,7 @@
               <ion-item>
                 <ion-label>
                   <h2>{{ entry.description }}</h2>
-                  <p>{{ formatDate(entry.date) }} · {{ entry.type === 'in' ? 'Entrada' : 'Saida' }}</p>
+                  <p>{{ formatDate(entry.date) }} · {{ entry.type === 'in' ? ('peladaDetail.cash.entryIn' | t) : ('peladaDetail.cash.entryOut' | t) }}</p>
                 </ion-label>
                 <ion-note slot="end">{{ formatCurrency(entry.amount) }}</ion-note>
               </ion-item>
@@ -459,12 +463,12 @@
       @if (segment === 'mensalidades') {
         @if (isAdmin) {
           <ion-item>
-            <ion-input label="Ano" labelPlacement="stacked" type="number" [(ngModel)]="feeYear"></ion-input>
+            <ion-input [label]="'peladaDetail.month.yearLabel' | t" labelPlacement="stacked" type="number" [(ngModel)]="feeYear"></ion-input>
           </ion-item>
           <ion-item>
-            <ion-input label="Mes" labelPlacement="stacked" type="number" [(ngModel)]="feeMonth"></ion-input>
+            <ion-input [label]="'peladaDetail.month.monthLabel' | t" labelPlacement="stacked" type="number" [(ngModel)]="feeMonth"></ion-input>
           </ion-item>
-          <ion-button expand="block" (click)="loadMonthlyFees()">Carregar</ion-button>
+          <ion-button expand="block" (click)="loadMonthlyFees()">{{ 'peladaDetail.month.loadButton' | t }}</ion-button>
           <ion-button expand="block" color="secondary" (click)="generateMonthlyFees()">
             {{ 'peladaDetail.generateMonthly' | t }}
           </ion-button>
@@ -482,12 +486,12 @@
               <app-user-avatar slot="start" [avatarUrl]="fee.avatarUrl" [alt]="fee.userName" size="md"></app-user-avatar>
               <ion-label>
                 <h2>{{ fee.userName }}</h2>
-                <p>{{ fee.paymentConfirmed ? 'Pago' : 'Pendente' }}</p>
+                <p>{{ fee.paymentConfirmed ? ('peladaDetail.month.paid' | t) : ('peladaDetail.month.pending' | t) }}</p>
               </ion-label>
               @if (isAdmin) {
                 <ion-input
                   type="number"
-                  label="Valor (R$)"
+                  [label]="'peladaDetail.month.feeAmountLabel' | t"
                   labelPlacement="stacked"
                   [value]="getFeeAmount(fee)"
                   (ionInput)="onFeeAmountChange(fee.membershipId, $any($event).detail.value)"
@@ -504,21 +508,21 @@
       @if (segment === 'configuracoes' && isAdmin) {
         <ion-card>
           <ion-card-header>
-            <ion-card-title>Configuracoes da pelada</ion-card-title>
-            <ion-card-subtitle>Apenas o administrador pode alterar estes parametros</ion-card-subtitle>
+            <ion-card-title>{{ 'peladaDetail.settings.title' | t }}</ion-card-title>
+            <ion-card-subtitle>{{ 'peladaDetail.settings.subtitle' | t }}</ion-card-subtitle>
           </ion-card-header>
           <ion-card-content>
             <form [formGroup]="settingsForm" novalidate (ngSubmit)="saveSettings()">
               <ion-list lines="none" class="playful-elevated-list">
                 <ion-item class="item-toggle-wrap">
                   <ion-toggle formControlName="socioGoodStandingPaymentExempt">
-                    Socio em dia e isento do pagamento do evento?
+                    {{ 'peladaDetail.settings.socioExemptToggle' | t }}
                   </ion-toggle>
                 </ion-item>
                 <ion-item>
                   <ion-input
                     type="number"
-                    label="Eventos bloqueados apos expulsao"
+                    [label]="'peladaDetail.settings.expulsionBanLabel' | t"
                     labelPlacement="stacked"
                     formControlName="expulsionBanEventCount"
                     min="0"
@@ -526,13 +530,13 @@
                 </ion-item>
                 <ion-item class="item-toggle-wrap">
                   <ion-toggle formControlName="caixaMembersOnly">
-                    A aba Caixa visivel apenas para socios?
+                    {{ 'peladaDetail.settings.cashTabMembersToggle' | t }}
                   </ion-toggle>
                 </ion-item>
                 <ion-item>
                   <ion-input
                     type="number"
-                    label="Maximo de socios na pelada (0 = sem limite)"
+                    [label]="'peladaDetail.settings.maxMembersLabel' | t"
                     labelPlacement="stacked"
                     formControlName="maxSocios"
                     min="0"
@@ -541,31 +545,31 @@
                 <ion-item>
                   <ion-input
                     type="number"
-                    label="Maximo de atletas por evento (0 = sem limite)"
+                    [label]="'peladaDetail.settings.maxAthletesLabel' | t"
                     labelPlacement="stacked"
                     formControlName="maxAthletesPerEvent"
                     min="0"
                   ></ion-input>
                 </ion-item>
                 <ion-item-divider>
-                  <ion-label>Separacao de times</ion-label>
+                  <ion-label>{{ 'peladaDetail.settings.teamSplitDivider' | t }}</ion-label>
                 </ion-item-divider>
                 <ion-item class="item-toggle-wrap">
                   <ion-toggle formControlName="allowTeamSplitAfterEventEnd">
-                    A separacao dos times podera ser realizada apos o horario de termino do evento?
+                    {{ 'peladaDetail.settings.teamSplitAfterEndToggle' | t }}
                   </ion-toggle>
                 </ion-item>
                 <ion-note class="ion-padding-horizontal">
-                  Se ativo, o administrador pode registrar a separacao dos times mesmo apos o fim do evento.
+                  {{ 'peladaDetail.settings.teamSplitAfterEndNote' | t }}
                 </ion-note>
                 <ion-item class="item-toggle-wrap">
                   <ion-toggle formControlName="requireProfilePresentationOnFirstEvent">
-                    Exigir apresentacao do perfil na primeira participacao em eventos desta pelada?
+                    {{ 'peladaDetail.settings.profilePresentationToggle' | t }}
                   </ion-toggle>
                 </ion-item>
               </ion-list>
               <ion-button expand="block" type="button" class="ion-margin-top" [disabled]="savingSettings" (click)="saveSettings()">
-                {{ savingSettings ? 'Salvando...' : 'Salvar configuracoes' }}
+                {{ savingSettings ? ('peladaDetail.settings.saving' | t) : ('peladaDetail.settings.saveButton' | t) }}
               </ion-button>
               <ion-button
                 expand="block"
@@ -574,7 +578,7 @@
                 class="ion-margin-top"
                 (click)="openPeladaMaterial()"
               >
-                Material
+                {{ 'peladaDetail.settings.materialButton' | t }}
               </ion-button>
             </form>
           </ion-card-content>
@@ -591,7 +595,7 @@
             @if (loadingProfileRequests) {
               <ion-spinner name="crescent"></ion-spinner>
             } @else if (!profilePresentationRequests.length) {
-              <p>Nenhuma solicitacao pendente.</p>
+              <p>{{ 'peladaDetail.settings.noPendingRequests' | t }}</p>
             } @else {
               <ion-list lines="none" class="playful-elevated-list">
                 @for (request of profilePresentationRequests; track request.registrationId) {
@@ -654,7 +658,7 @@
         @if (muralLoading) {
           <div class="ion-text-center ion-padding">
             <ion-spinner name="crescent"></ion-spinner>
-            <p>Carregando mural...</p>
+            <p>{{ 'peladaDetail.muralLoading' | t }}</p>
           </div>
         }
         @if (muralError) {
@@ -746,7 +750,7 @@
               ></app-mural-share-button>
             </div>
             @if (!muralRankings[role]?.length) {
-              <ion-note>Sem dados ainda.</ion-note>
+              <ion-note>{{ 'mural.playful.noData' | t }}</ion-note>
             }
             @for (entry of muralRankings[role] ?? []; track entry.userId; let i = $index) {
               <div class="mural-playful-rank-row">
@@ -782,7 +786,7 @@
   <ng-template>
     <ion-header>
       <ion-toolbar>
-        <ion-title>Perfil do solicitante</ion-title>
+        <ion-title>{{ 'peladaDetail.profileReview.title' | t }}</ion-title>
         <ion-buttons slot="end">
           <ion-button (click)="closeProfilePresentationReview()">Fechar</ion-button>
         </ion-buttons>

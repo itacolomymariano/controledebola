@@ -2,9 +2,9 @@
   <app-user-bar></app-user-bar>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button (click)="cancel()">Voltar</ion-button>
+      <ion-button (click)="cancel()">{{ 'common.back' | t }}</ion-button>
     </ion-buttons>
-    <ion-title>{{ isEdit ? 'Editar pelada' : 'Nova pelada' }}</ion-title>
+    <ion-title>{{ (isEdit ? 'peladaForm.titleEdit' : 'peladaForm.titleNew') | t }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -28,18 +28,18 @@
       <form [formGroup]="form" (ngSubmit)="submit()">
         <ion-list lines="full">
           <ion-item>
-            <ion-input label="Nome da pelada" labelPlacement="stacked" formControlName="name"></ion-input>
+            <ion-input [label]="'peladaForm.nameLabel' | t" labelPlacement="stacked" formControlName="name"></ion-input>
           </ion-item>
           <ion-item>
-            <ion-select label="Esporte" labelPlacement="stacked" formControlName="sport">
+            <ion-select [label]="'peladaForm.sportLabel' | t" labelPlacement="stacked" formControlName="sport">
               @for (s of sports; track s.value) {
-                <ion-select-option [value]="s.value">{{ s.label }}</ion-select-option>
+                <ion-select-option [value]="s.value">{{ s.labelKey | t }}</ion-select-option>
               }
             </ion-select>
           </ion-item>
           <ion-item>
             <ion-input
-              label="Quantidade de sócios (meta)"
+              [label]="'peladaForm.memberCountLabel' | t"
               labelPlacement="stacked"
               type="number"
               formControlName="memberCount"
@@ -47,46 +47,46 @@
           </ion-item>
           <ion-item>
             <ion-input
-              label="Mensalidade padrão (R$)"
+              [label]="'peladaForm.monthlyFeeLabel' | t"
               labelPlacement="stacked"
               type="number"
               formControlName="monthlyFee"
             ></ion-input>
           </ion-item>
           <div class="ion-padding-horizontal ion-padding-top">
-            <app-birth-date-picker label="Data de fundação" formControlName="foundedDate"></app-birth-date-picker>
+            <app-birth-date-picker [label]="'peladaForm.foundedDateLabel' | t" formControlName="foundedDate"></app-birth-date-picker>
           </div>
           <ion-item-divider>
-            <ion-label>Endereço do local</ion-label>
+            <ion-label>{{ 'peladaForm.addressSection' | t }}</ion-label>
           </ion-item-divider>
           <app-address-form
             formControlName="address"
-            title="Local da pelada"
+            [title]="'peladaForm.locationTitle' | t"
             (addressChange)="onAddressChanged()"
           ></app-address-form>
           <ion-item-divider>
-            <ion-label>Foto do admin</ion-label>
+            <ion-label>{{ 'peladaForm.adminPhotoSection' | t }}</ion-label>
           </ion-item-divider>
           <div class="pelada-form-photos">
             <app-image-picker
-              label="Foto do administrador"
+              [label]="'peladaForm.adminPhotoLabel' | t"
               [previewUrl]="adminPhotoPreview"
               (imageSelected)="onAdminPhotoSelected($event)"
             ></app-image-picker>
           </div>
           <ion-item-divider>
-            <ion-label>Foto do local</ion-label>
+            <ion-label>{{ 'peladaForm.locationPhotoSection' | t }}</ion-label>
           </ion-item-divider>
           <div class="pelada-form-photos">
             <app-image-picker
-              label="Foto do local"
+              [label]="'peladaForm.locationPhotoLabel' | t"
               [previewUrl]="locationPhotoPreview"
               (imageSelected)="onLocationPhotoSelected($event)"
             ></app-image-picker>
           </div>
         </ion-list>
         <ion-button expand="block" type="submit" [disabled]="form.invalid" class="ion-margin-top">
-          Salvar
+          {{ 'common.save' | t }}
         </ion-button>
       </form>
     } @else {
@@ -110,18 +110,18 @@
               <ion-item>
                 <ion-input
                   class="form-label-wrap"
-                  label="Nome da pelada"
+                  [label]="'peladaForm.nameLabel' | t"
                   labelPlacement="stacked"
                   formControlName="name"
                 ></ion-input>
               </ion-item>
               @if (form.get('name')?.touched && form.get('name')?.invalid) {
-                <ion-note color="danger" class="ion-padding-horizontal">Informe o nome da pelada.</ion-note>
+                <ion-note color="danger" class="ion-padding-horizontal">{{ 'peladaForm.nameRequired' | t }}</ion-note>
               }
               <ion-item>
-                <ion-select class="form-label-wrap" label="Esporte" labelPlacement="stacked" formControlName="sport">
+                <ion-select class="form-label-wrap" [label]="'peladaForm.sportLabel' | t" labelPlacement="stacked" formControlName="sport">
                   @for (s of sports; track s.value) {
-                    <ion-select-option [value]="s.value">{{ s.label }}</ion-select-option>
+                    <ion-select-option [value]="s.value">{{ s.labelKey | t }}</ion-select-option>
                   }
                 </ion-select>
               </ion-item>
@@ -130,7 +130,7 @@
               <ion-item>
                 <ion-input
                   class="form-label-wrap"
-                  label="Quantidade de sócios (meta)"
+                  [label]="'peladaForm.memberCountLabel' | t"
                   labelPlacement="stacked"
                   type="number"
                   formControlName="memberCount"
@@ -139,18 +139,18 @@
               <ion-item>
                 <ion-input
                   class="form-label-wrap"
-                  label="Mensalidade padrão (R$)"
+                  [label]="'peladaForm.monthlyFeeLabel' | t"
                   labelPlacement="stacked"
                   type="number"
                   formControlName="monthlyFee"
                 ></ion-input>
               </ion-item>
-              <app-birth-date-picker label="Data de fundação (opcional)" formControlName="foundedDate"></app-birth-date-picker>
+              <app-birth-date-picker [label]="'peladaForm.foundedDateOptional' | t" formControlName="foundedDate"></app-birth-date-picker>
             }
             @case ('location') {
               <app-address-form
                 formControlName="address"
-                title="Local da pelada"
+                [title]="'peladaForm.locationTitle' | t"
                 [showTitle]="true"
                 (addressChange)="onAddressChanged()"
               ></app-address-form>
@@ -159,12 +159,12 @@
               <p class="ion-padding-horizontal">{{ 'peladaForm.wizard.photosHint' | t }}</p>
               <div class="pelada-form-photos">
                 <app-image-picker
-                  label="Foto do administrador (opcional)"
+                  [label]="'peladaForm.adminPhotoOptional' | t"
                   [previewUrl]="adminPhotoPreview"
                   (imageSelected)="onAdminPhotoSelected($event)"
                 ></app-image-picker>
                 <app-image-picker
-                  label="Foto do local (opcional)"
+                  [label]="'peladaForm.locationPhotoOptional' | t"
                   [previewUrl]="locationPhotoPreview"
                   (imageSelected)="onLocationPhotoSelected($event)"
                 ></app-image-picker>

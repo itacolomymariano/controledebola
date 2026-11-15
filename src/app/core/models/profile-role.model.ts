@@ -13,7 +13,7 @@ export type ProfileRole =
   | 'gatekeeper'
   | 'fan';
 
-export const PROFILE_ROLE_LABELS: Record<ProfileRole, string> = {
+export const PROFILE_ROLE_FALLBACK_LABELS: Record<ProfileRole, string> = {
   athlete: 'Atleta',
   referee: 'Juiz',
   scout: 'Scout / Mesario',

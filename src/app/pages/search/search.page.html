@@ -1,17 +1,17 @@
 ﻿<ion-header class="search-page-header">
   <ion-toolbar>
-    <ion-title>Buscar</ion-title>
+    <ion-title>{{ 'search.title' | t }}</ion-title>
   </ion-toolbar>
   <ion-toolbar class="search-kind-toolbar">
     <div class="search-kind-row">
       <button type="button" class="search-kind-btn" [class.is-on]="segment === 'eventos'" (click)="selectSegment('eventos')">
-        Eventos
+        {{ 'search.segment.events' | t }}
       </button>
       <button type="button" class="search-kind-btn" [class.is-on]="segment === 'perfis'" (click)="selectSegment('perfis')">
-        Perfis
+        {{ 'search.segment.profiles' | t }}
       </button>
       <button type="button" class="search-kind-btn" [class.is-on]="segment === 'times'" (click)="selectSegment('times')">
-        Times
+        {{ 'search.segment.teams' | t }}
       </button>
     </div>
   </ion-toolbar>
@@ -25,19 +25,35 @@
     <app-playful-card tone="surface" class="ion-margin-bottom">
       <ion-list lines="none" class="playful-transparent-list">
         <ion-item lines="none">
-          <ion-select label="Tipo de evento" labelPlacement="stacked" [(ngModel)]="selectedEventType" (ionChange)="onEventTypeChange()">
+          <ion-select [label]="'search.eventType.label' | t" labelPlacement="stacked" [(ngModel)]="selectedEventType" (ionChange)="onEventTypeChange()">
             @for (t of eventTypes; track t.value) {
               <ion-select-option [value]="t.value">{{ t.label }}</ion-select-option>
             }
           </ion-select>
         </ion-item>
         <ion-item lines="none">
-          <ion-input label="Bairro" labelPlacement="stacked" placeholder="Filtrar por bairro" [(ngModel)]="eventNeighborhood" [debounce]="300" (ionInput)="onNeighborhoodInput($event)"></ion-input>
+          <ion-input
+            [label]="'search.neighborhood.label' | t"
+            labelPlacement="stacked"
+            [placeholder]="'search.neighborhood.placeholder' | t"
+            [(ngModel)]="eventNeighborhood"
+            [debounce]="300"
+            (ionInput)="onNeighborhoodInput($event)"
+          ></ion-input>
         </ion-item>
       </ion-list>
     </app-playful-card>
 
-    <ion-searchbar class="playful-searchbar ion-margin-bottom" [placeholder]="'Buscar ' + selectedEventTypeLabel.toLowerCase() + ' por nome do evento ou da pelada...'" [(ngModel)]="eventQuery" [debounce]="0" (ionInput)="onEventSearchInput($event)" (ionClear)="onEventSearchClear()"></ion-searchbar>
+    @for (remountKey of [searchbarRemountKey]; track remountKey) {
+      <ion-searchbar
+        class="playful-searchbar ion-margin-bottom"
+        [placeholder]="eventSearchPlaceholder"
+        [(ngModel)]="eventQuery"
+        [debounce]="0"
+        (ionInput)="onEventSearchInput($event)"
+        (ionClear)="onEventSearchClear()"
+      ></ion-searchbar>
+    }
 
   }
 
@@ -48,7 +64,7 @@
     <app-playful-card tone="surface" class="ion-margin-bottom">
       <ion-list lines="none" class="playful-transparent-list">
         <ion-item lines="none">
-          <ion-select label="Tipo de perfil" labelPlacement="stacked" [(ngModel)]="selectedProfileKind" (ionChange)="onProfileKindChange()">
+          <ion-select [label]="'search.profileKind.label' | t" labelPlacement="stacked" [(ngModel)]="selectedProfileKind" (ionChange)="onProfileKindChange()">
             @for (option of profileKindOptions; track option.role) {
               <ion-select-option [value]="option.role">{{ option.label }}</ion-select-option>
             }
@@ -56,7 +72,7 @@
         </ion-item>
         @if (selectedProfileKind === 'athlete') {
           <ion-item lines="none">
-            <ion-select label="Posicao" labelPlacement="stacked" [(ngModel)]="selectedAthletePosition" (ionChange)="onAthletePositionChange()">
+            <ion-select [label]="'search.position.label' | t" labelPlacement="stacked" [(ngModel)]="selectedAthletePosition" (ionChange)="onAthletePositionChange()">
               @for (option of athletePositionOptions; track option.value) {
                 <ion-select-option [value]="option.value">{{ option.label }}</ion-select-option>
               }
@@ -66,7 +82,16 @@
       </ion-list>
     </app-playful-card>
 
-    <ion-searchbar class="playful-searchbar ion-margin-bottom" [placeholder]="'Buscar ' + selectedProfileKindLabel.toLowerCase() + ' por nome ou apelido...'" [(ngModel)]="profileQuery" [debounce]="0" (ionInput)="onProfileSearchInput($event)" (ionClear)="onProfileSearchClear()"></ion-searchbar>
+    @for (remountKey of [searchbarRemountKey]; track remountKey) {
+      <ion-searchbar
+        class="playful-searchbar ion-margin-bottom"
+        [placeholder]="profileSearchPlaceholder"
+        [(ngModel)]="profileQuery"
+        [debounce]="0"
+        (ionInput)="onProfileSearchInput($event)"
+        (ionClear)="onProfileSearchClear()"
+      ></ion-searchbar>
+    }
 
   }
 
@@ -79,7 +104,16 @@
         <ion-label>{{ 'peladas.teamKindLegend' | t }}</ion-label>
       </ion-segment-button>
     </ion-segment>
-    <ion-searchbar class="playful-searchbar ion-margin-bottom" placeholder="Buscar time amador por nome..." [(ngModel)]="teamQuery" [debounce]="0" (ionInput)="onTeamSearchInput($event)" (ionClear)="onTeamSearchClear()"></ion-searchbar>
+    @for (remountKey of [searchbarRemountKey]; track remountKey) {
+      <ion-searchbar
+        class="playful-searchbar ion-margin-bottom"
+        [placeholder]="'search.placeholder.team' | t"
+        [(ngModel)]="teamQuery"
+        [debounce]="0"
+        (ionInput)="onTeamSearchInput($event)"
+        (ionClear)="onTeamSearchClear()"
+      ></ion-searchbar>
+    }
   }
 
   @if (loading) {
@@ -97,21 +131,21 @@
   @if (!loading && errorMessage) {
     <app-playful-card tone="muted" class="ion-margin-bottom">
       <p>{{ errorMessage }}</p>
-      <ion-button fill="clear" (click)="retrySearch()">Tentar novamente</ion-button>
+      <ion-button fill="clear" (click)="retrySearch()">{{ 'search.retry' | t }}</ion-button>
     </app-playful-card>
   }
 
   @if (searched && !loading && !errorMessage && segment === 'eventos' && eventRows.length === 0) {
-    <p class="ion-text-center ion-padding">Nenhum evento encontrado.</p>
+    <p class="ion-text-center ion-padding">{{ 'search.empty.events' | t }}</p>
   }
 
   @if (searched && !loading && !errorMessage && segment === 'times' && teamRows.length === 0) {
-    <p class="ion-text-center ion-padding">Nenhum time encontrado.</p>
+    <p class="ion-text-center ion-padding">{{ 'search.empty.teams' | t }}</p>
   }
 
   @if (searched && !loading && !errorMessage && segment === 'perfis' && !isLegendSearch && profileResults.length === 0) {
 
-    <p class="ion-text-center ion-padding">Nenhum perfil encontrado.</p>
+    <p class="ion-text-center ion-padding">{{ 'search.empty.profiles' | t }}</p>
 
   }
 
@@ -119,11 +153,15 @@
 
   @if (showCreateLegendPrompt) {
     <app-playful-card tone="times" class="ion-margin-bottom">
-      <p>Nenhum cadastro em <strong>{{ selectedProfileKindLabel }}</strong> para "{{ profileQuery.trim() }}".</p>
+      <p>{{ 'search.legendNotFound' | t: { role: selectedProfileKindLabel, query: profileQuery.trim() } }}</p>
       @if (selectedProfileKind === 'legend_athlete') {
-        <ion-button expand="block" (click)="goCreateLegendAthlete()">Cadastrar lenda "{{ profileQuery.trim() }}"</ion-button>
+        <ion-button expand="block" (click)="goCreateLegendAthlete()">
+          {{ 'search.registerLegendAthlete' | t: { query: profileQuery.trim() } }}
+        </ion-button>
       } @else {
-        <ion-button expand="block" (click)="goCreateLegendTeam()">Cadastrar lenda "{{ profileQuery.trim() }}"</ion-button>
+        <ion-button expand="block" (click)="goCreateLegendTeam()">
+          {{ 'search.registerLegendTeam' | t: { query: profileQuery.trim() } }}
+        </ion-button>
       }
     </app-playful-card>
   }
@@ -160,13 +198,13 @@
                 <p class="search-card-meta">{{ row.team.subtitle }}</p>
               }
               @if (row.team.averageAge != null) {
-                <p class="search-card-meta">Media de idade: {{ row.team.averageAge }} anos</p>
+                <p class="search-card-meta">{{ 'search.teamAvgAge' | t: { age: row.team.averageAge } }}</p>
               }
             </div>
           </div>
           @if (row.team.kind !== 'legend') {
             <ion-button expand="block" fill="outline" size="small" (click)="toggleTeamHistory(row)">
-              {{ row.expanded ? 'Ocultar' : 'Historico' }}
+              {{ row.expanded ? ('eventMural.hub.collapse' | t) : ('search.teamShowHistory' | t) }}
             </ion-button>
           }
           @if (row.expanded) {
@@ -175,7 +213,7 @@
                 <ion-spinner name="crescent"></ion-spinner>
               </div>
             } @else if (!row.history.length) {
-              <p class="search-card-meta ion-margin-top">Nenhum confronto registrado ainda.</p>
+              <p class="search-card-meta ion-margin-top">{{ 'search.noTeamFixtures' | t }}</p>
             } @else {
               <ion-list lines="none" class="playful-transparent-list ion-margin-top">
                 @for (match of row.history; track match.eventId) {

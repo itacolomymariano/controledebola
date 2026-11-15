@@ -14,6 +14,7 @@ import {
 import { EventService } from '../../core/services/event.service';
 import { FanPredictionService } from '../../core/services/fan-prediction.service';
 import { SupportRoleToolsService } from '../../core/services/support-role-tools.service';
+import { I18nService } from '../../core/services/i18n.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
 
 @Component({
@@ -51,7 +52,8 @@ export class EventMasseurTreatmentsPage {
     private readonly supportTools: SupportRoleToolsService,
     private readonly loadingCtrl: LoadingController,
     private readonly alertCtrl: AlertController,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly i18n: I18nService
   ) {}
 
   goBack(): void {
@@ -73,7 +75,7 @@ export class EventMasseurTreatmentsPage {
     try {
       const event = await this.eventService.getById(eventId);
       if (!event) {
-        await this.showError('Evento nao encontrado.');
+        await this.showError(this.i18n.t('supportRole.eventNotFound'));
         await this.router.navigateByUrl('/tabs/peladas', { replaceUrl: true });
         return;
       }
@@ -81,7 +83,7 @@ export class EventMasseurTreatmentsPage {
       this.athletes = await this.fanPredictionService.listAthletesForEvent(eventId);
       this.treatments = await this.supportTools.listMasseurTreatments(eventId);
     } catch (error: unknown) {
-      await this.showError(parseErrorMessage(error) || 'Erro ao carregar atendimentos.');
+      await this.showError(parseErrorMessage(error) || this.i18n.t('supportRole.error.loadMasseur'));
     } finally {
       this.loading = false;
       this.cdr.markForCheck();
@@ -91,7 +93,7 @@ export class EventMasseurTreatmentsPage {
   async submit(): Promise<void> {
     if (!this.event || this.form.invalid || this.saving) return;
     this.saving = true;
-    const loading = await this.loadingCtrl.create({ message: 'Salvando atendimento...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('supportRole.loading.saveMasseur') });
     await loading.present();
     this.cdr.markForCheck();
     try {
@@ -108,9 +110,9 @@ export class EventMasseurTreatmentsPage {
       });
       this.treatments = await this.supportTools.listMasseurTreatments(this.event.objectId);
       this.form.patchValue({ notes: '', bodyRegion: '', treatmentType: '' });
-      await this.showSuccess('Atendimento registrado.');
+      await this.showSuccess(this.i18n.t('supportRole.masseurSaved'));
     } catch (error: unknown) {
-      await this.showError(parseErrorMessage(error) || 'Nao foi possivel salvar o atendimento.');
+      await this.showError(parseErrorMessage(error) || this.i18n.t('supportRole.error.saveMasseur'));
     } finally {
       await loading.dismiss();
       this.saving = false;
@@ -128,18 +130,18 @@ export class EventMasseurTreatmentsPage {
 
   private async showError(message: string): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Atenção',
+      header: this.i18n.t('common.attention'),
       message,
-      buttons: ['OK'],
+      buttons: [this.i18n.t('common.ok')],
     });
     await alert.present();
   }
 
   private async showSuccess(message: string): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Pronto',
+      header: this.i18n.t('common.ready'),
       message,
-      buttons: ['OK'],
+      buttons: [this.i18n.t('common.ok')],
     });
     await alert.present();
   }

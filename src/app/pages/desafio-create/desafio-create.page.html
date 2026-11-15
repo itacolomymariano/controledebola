@@ -2,9 +2,9 @@
   <app-user-bar></app-user-bar>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button (click)="cancel()">Cancelar</ion-button>
+      <ion-button (click)="cancel()">{{ 'common.cancel' | t }}</ion-button>
     </ion-buttons>
-    <ion-title>Desafiar time</ion-title>
+    <ion-title>{{ 'desafioForm.pageTitle' | t }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -13,8 +13,8 @@
     @if (!myTeams.length) {
       <ion-card>
         <ion-card-content>
-          <p>Cadastre pelo menos um time para enviar desafios.</p>
-          <ion-button expand="block" (click)="goRegisterTeam()">Cadastrar time</ion-button>
+          <p>{{ 'desafioForm.needTeamMessage' | t }}</p>
+          <ion-button expand="block" (click)="goRegisterTeam()">{{ 'desafioForm.registerTeam' | t }}</ion-button>
         </ion-card-content>
       </ion-card>
     } @else {
@@ -38,7 +38,7 @@
               <ion-item>
                 <ion-select
                   class="form-label-wrap"
-                  label="Seu time desafiante"
+                  [label]="'desafioForm.challengerTeamLabel' | t"
                   labelPlacement="stacked"
                   [(ngModel)]="challengerTeamId"
                   (ionChange)="persistDraft()"
@@ -54,7 +54,7 @@
           @case ('opponent') {
             @if (!selected) {
               <ion-searchbar
-                placeholder="Buscar time adversário"
+                [placeholder]="'desafioForm.searchOpponentPlaceholder' | t"
                 [debounce]="0"
                 [value]="query"
                 (ionInput)="onSearch($any($event.target).value)"
@@ -71,7 +71,7 @@
                     <ion-label>
                       <h2>{{ team.name }}</h2>
                       @if (team.averageAge != null) {
-                        <p>Média de idade: {{ team.averageAge }} anos</p>
+                        <p>{{ 'desafioForm.averageAgeLine' | t: { age: team.averageAge } }}</p>
                       }
                     </ion-label>
                   </ion-item>
@@ -81,12 +81,12 @@
               <ion-card>
                 <ion-card-header>
                   <ion-card-title>{{ selected.name }}</ion-card-title>
-                  <ion-card-subtitle>Time desafiado</ion-card-subtitle>
+                  <ion-card-subtitle>{{ 'desafioForm.challengedSubtitle' | t }}</ion-card-subtitle>
                 </ion-card-header>
                 <ion-card-content>
                   <div class="selected-team-actions">
-                    <ion-button fill="clear" size="small" (click)="clearSelected()">Trocar time</ion-button>
-                    <ion-button fill="outline" size="small" (click)="openSelectedTeamProfile()">Ver ficha do time</ion-button>
+                    <ion-button fill="clear" size="small" (click)="clearSelected()">{{ 'desafioForm.swapTeam' | t }}</ion-button>
+                    <ion-button fill="outline" size="small" (click)="openSelectedTeamProfile()">{{ 'desafioForm.viewTeamProfile' | t }}</ion-button>
                   </div>
                   @if (loadingProfile) {
                     <ion-spinner name="crescent"></ion-spinner>
@@ -95,8 +95,8 @@
                       <h3>{{ 'team.stats.title' | t }}</h3>
                       <app-help-balloon textKey="team.stats.help"></app-help-balloon>
                     </div>
-                    <p>Média de idade: {{ profile['averageAge'] ?? '—' }}</p>
-                    <p>Confrontos: {{ profile['matchesPlayed'] ?? 0 }}</p>
+                    <p>{{ 'desafioForm.averageAgeLine' | t: { age: profileAverageAgeLabel } }}</p>
+                    <p>{{ 'desafioForm.matchesLine' | t: { count: profileMatchesPlayedCount } }}</p>
                   }
                 </ion-card-content>
               </ion-card>
@@ -109,7 +109,7 @@
                   <ion-input
                     class="form-label-wrap"
                     type="date"
-                    label="Data de início"
+                    [label]="'formCommon.startDateLabel' | t"
                     labelPlacement="stacked"
                     formControlName="startDate"
                   ></ion-input>
@@ -118,7 +118,7 @@
                   <ion-input
                     class="form-label-wrap"
                     type="time"
-                    label="Hora de início"
+                    [label]="'formCommon.startTimeLabel' | t"
                     labelPlacement="stacked"
                     formControlName="startTime"
                   ></ion-input>
@@ -127,7 +127,7 @@
                   <ion-input
                     class="form-label-wrap"
                     type="date"
-                    label="Data de término"
+                    [label]="'formCommon.endDateLabel' | t"
                     labelPlacement="stacked"
                     formControlName="endDate"
                   ></ion-input>
@@ -136,7 +136,7 @@
                   <ion-input
                     class="form-label-wrap"
                     type="time"
-                    label="Hora de término"
+                    [label]="'formCommon.endTimeLabel' | t"
                     labelPlacement="stacked"
                     formControlName="endTime"
                   ></ion-input>
@@ -144,10 +144,10 @@
                 <ion-item>
                   <ion-input
                     class="form-label-wrap"
-                    label="Complemento do local"
+                    [label]="'formCommon.locationComplementLabel' | t"
                     labelPlacement="stacked"
                     formControlName="locationComplement"
-                    placeholder="Quadra, campo, etc."
+                    [placeholder]="'desafioForm.scheduleComplementPlaceholder' | t"
                   ></ion-input>
                 </ion-item>
               </ion-list>
@@ -159,35 +159,36 @@
               <ion-item>
                 <ion-textarea
                   class="form-label-wrap"
-                  label="Mensagem ao presidente desafiado"
+                  [label]="'desafioForm.messageLabel' | t"
                   labelPlacement="stacked"
                   [(ngModel)]="message"
                   (ionInput)="persistDraft()"
                   autoGrow="true"
                   maxlength="1000"
-                  placeholder="Ex.: Queremos marcar um amistoso no sábado..."
+                  [placeholder]="'desafioForm.messagePlaceholder' | t"
                 ></ion-textarea>
               </ion-item>
               <ion-item>
                 <ion-textarea
                   class="form-label-wrap"
-                  label="Condições e benefícios ao desafiado"
+                  [label]="'formCommon.challengeConditionsLabel' | t"
                   labelPlacement="stacked"
                   [(ngModel)]="challengeConditions"
                   (ionInput)="persistDraft()"
                   autoGrow="true"
                   maxlength="2000"
-                  placeholder="Ex.: água, coletes, arbitragem por nossa conta..."
+                  [placeholder]="'formCommon.challengeConditionsPlaceholder' | t"
                 ></ion-textarea>
               </ion-item>
               <ion-item>
                 <ion-toggle
                   class="form-label-wrap"
                   labelPlacement="stacked"
-                  label="Ida e volta (adversário será mandante na volta)"
                   [(ngModel)]="hasReturnLeg"
                   (ionChange)="persistDraft()"
-                ></ion-toggle>
+                >
+                  {{ 'desafioForm.returnLegToggleLabel' | t }}
+                </ion-toggle>
               </ion-item>
             </ion-list>
           }

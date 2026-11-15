@@ -70,7 +70,7 @@
     @if (event?.type === 'team_match' && matchdaySummary) {
       <ion-card class="ion-margin-top">
         <ion-card-header>
-          <ion-card-title>Placar do confronto</ion-card-title>
+          <ion-card-title>{{ 'eventDetail.teamMatch.scoreTitle' | t }}</ion-card-title>
         </ion-card-header>
         <ion-card-content>
           <app-team-match-headline
@@ -83,10 +83,10 @@
             [centered]="true"
           ></app-team-match-headline>
           @if (matchdaySummary.challengeConditions) {
-            <p><strong>Condicoes (somente presidentes):</strong> {{ matchdaySummary.challengeConditions }}</p>
+            <p><strong>{{ 'eventDetail.teamMatch.conditionsPresidents' | t }}</strong> {{ matchdaySummary.challengeConditions }}</p>
           }
           @if (matchdaySummary.scorers.length) {
-            <h3>Gols</h3>
+            <h3>{{ 'eventDetail.teamMatch.goalsTitle' | t }}</h3>
             @for (scorer of matchdaySummary.scorers; track scorer.userId) {
               <ion-item lines="none">
                 <app-user-avatar
@@ -96,15 +96,15 @@
                   size="md"
                 ></app-user-avatar>
                 <ion-label>
-                  <h2>{{ scorer.name }} · {{ scorer.goals }} gol(s)</h2>
+                  <h2>{{ 'eventDetail.teamMatch.scorerGoalsLine' | t: { name: scorer.name, goals: scorer.goals } }}</h2>
                   <p>
                     @if (scorer.teamName) {
                       {{ scorer.teamName }}
                       ·
                     }
-                    {{ scorer.position || 'Posicao —' }}
+                    {{ scorer.position || ('eventDetail.teamMatch.positionFallback' | t) }}
                     @if (scorer.age != null) {
-                      · {{ scorer.age }} anos
+                      · {{ 'eventDetail.teamMatch.yearsOld' | t: { age: scorer.age } }}
                     }
                   </p>
                 </ion-label>
@@ -112,7 +112,7 @@
             }
           }
           @if (matchdaySummary.referee) {
-            <h3>Arbitro</h3>
+            <h3>{{ 'eventDetail.teamMatch.refereeTitle' | t }}</h3>
             <ion-item lines="none">
               <app-user-avatar
                 slot="start"
@@ -124,12 +124,12 @@
                 <h2>{{ matchdaySummary.referee.name }}</h2>
                 <p>
                   @if (matchdaySummary.referee.score != null) {
-                    Nota {{ matchdaySummary.referee.score }}
+                    {{ 'eventDetail.teamMatch.muralScore' | t: { score: matchdaySummary.referee.score } }}
                   } @else {
-                    Sem nota no mural
+                    {{ 'eventDetail.teamMatch.noMuralScore' | t }}
                   }
                   @if (matchdaySummary.referee.age != null) {
-                    · {{ matchdaySummary.referee.age }} anos
+                    · {{ 'eventDetail.teamMatch.yearsOld' | t: { age: matchdaySummary.referee.age } }}
                   }
                 </p>
               </ion-label>
@@ -142,7 +142,7 @@
     @if (pendingReschedule && event && !event.isFinished) {
       <ion-card class="ion-margin-top" color="warning">
         <ion-card-header>
-          <ion-card-title>Remarcacao pendente</ion-card-title>
+          <ion-card-title>{{ 'eventDetail.teamMatch.pendingRescheduleTitle' | t }}</ion-card-title>
           <ion-card-subtitle>
             <app-team-match-headline
               [homeTeamName]="pendingReschedule.homeTeamName"
@@ -155,15 +155,15 @@
         <ion-card-content>
           @if (pendingReschedule.proposedStartTime) {
             <p>
-              Nova data proposta:
+              {{ 'eventDetail.teamMatch.proposedDate' | t }}
               {{ formatDate(pendingReschedule.proposedStartTime) }}
             </p>
           }
           @if (pendingReschedule.reason) {
-            <p>Motivo: {{ pendingReschedule.reason }}</p>
+            <p>{{ 'eventDetail.teamMatch.reasonLabel' | t }} {{ pendingReschedule.reason }}</p>
           }
           @if (isPendingRescheduleRequester) {
-            <ion-note color="medium">Aguardando aceite do presidente adversario.</ion-note>
+            <ion-note color="medium">{{ 'eventDetail.teamMatch.awaitingRivalAccept' | t }}</ion-note>
           }
           @if (canRespondPendingReschedule) {
             <ion-button
@@ -171,7 +171,7 @@
               [disabled]="teamMatchScheduleBusy"
               (click)="acceptPendingReschedule()"
             >
-              Aceitar remarcacao
+              {{ 'eventDetail.teamMatch.acceptReschedule' | t }}
             </ion-button>
             <ion-button
               expand="block"
@@ -181,7 +181,7 @@
               [disabled]="teamMatchScheduleBusy"
               (click)="declinePendingReschedule()"
             >
-              Recusar
+              {{ 'eventDetail.teamMatch.decline' | t }}
             </ion-button>
           }
         </ion-card-content>
@@ -191,9 +191,9 @@
     @if ((canManageTeamMatchSchedule || canToggleHomeUninvited || canToggleAwayUninvited) && event && !event.isFinished) {
       <ion-card class="ion-margin-top">
         <ion-card-header>
-          <ion-card-title>Agenda do confronto</ion-card-title>
+          <ion-card-title>{{ 'eventDetail.teamMatch.scheduleTitle' | t }}</ion-card-title>
           <ion-card-subtitle>
-            Remarcar exige aceite do outro presidente; cancelar avisa o elenco com motivo
+            {{ 'eventDetail.teamMatch.scheduleSubtitle' | t }}
           </ion-card-subtitle>
         </ion-card-header>
         <ion-card-content>
@@ -204,7 +204,7 @@
                 [disabled]="teamMatchUninvitedBusy"
                 (ionChange)="toggleTeamAcceptsUninvited('home', $any($event.detail).checked)"
               >
-                Aceita atletas nao convocados? ({{ event.homeTeamName || 'Mandante' }})
+                {{ 'eventDetail.teamMatch.acceptUninvited' | t: { team: event.homeTeamName || ('eventDetail.teamMatch.sideHomeFallbackShort' | t) } }}
               </ion-toggle>
             </ion-item>
           }
@@ -215,7 +215,7 @@
                 [disabled]="teamMatchUninvitedBusy"
                 (ionChange)="toggleTeamAcceptsUninvited('away', $any($event.detail).checked)"
               >
-                Aceita atletas nao convocados? ({{ event.awayTeamName || 'Visitante' }})
+                {{ 'eventDetail.teamMatch.acceptUninvited' | t: { team: event.awayTeamName || ('eventDetail.teamMatch.sideAwayFallbackShort' | t) } }}
               </ion-toggle>
             </ion-item>
           }
@@ -228,7 +228,7 @@
               [disabled]="teamMatchScheduleBusy || !!pendingReschedule"
               (click)="promptRescheduleTeamMatch()"
             >
-              Remarcar confronto
+              {{ 'eventDetail.teamMatch.rescheduleButton' | t }}
             </ion-button>
             <ion-button
               expand="block"
@@ -238,7 +238,7 @@
               [disabled]="teamMatchScheduleBusy"
               (click)="promptCancelTeamMatch()"
             >
-              Cancelar confronto
+              {{ 'eventDetail.teamMatch.cancelButton' | t }}
             </ion-button>
           }
         </ion-card-content>
@@ -254,7 +254,7 @@
         (click)="promptNotifyConfirmedParticipants()"
       >
         <ion-icon slot="start" name="notifications-outline"></ion-icon>
-        Notificar participantes
+        {{ 'eventDetail.notifyParticipants' | t }}
       </ion-button>
     }
 
@@ -523,7 +523,7 @@
   <ng-template>
     <ion-header>
       <ion-toolbar>
-        <ion-title>Perfil do solicitante</ion-title>
+        <ion-title>{{ 'eventDetail.requesterProfileTitle' | t }}</ion-title>
         <ion-buttons slot="end">
           <ion-button (click)="closeProfilePresentationReview()">Fechar</ion-button>
         </ion-buttons>

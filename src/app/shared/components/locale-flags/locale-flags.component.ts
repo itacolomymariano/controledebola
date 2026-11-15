@@ -70,7 +70,7 @@ export class LocaleFlagsComponent implements OnInit, OnDestroy {
   }
 
   private async applyLocale(locale: AppLocale): Promise<void> {
-    await this.i18n.setLocale(locale);
+    await this.i18n.applyAppLocale(locale);
     this.current = locale;
     this.cdr.markForCheck();
   }

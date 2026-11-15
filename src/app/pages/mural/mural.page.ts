@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { RefresherCustomEvent } from '@ionic/angular';
 import {
   MuralAppTab,
@@ -32,6 +33,7 @@ import {
 } from '../../core/services/athlete-performance.service';
 import { MuralHighlightsService } from '../../core/services/mural-highlights.service';
 import { MuralService } from '../../core/services/mural.service';
+import { I18nService } from '../../core/services/i18n.service';
 
 /** Valor sentinela das opcoes "Todo o Brasil" / "Todas as cidades" / "Todos os bairros". */
 const ALL_LOCATIONS = '__ALL__';
@@ -43,8 +45,9 @@ const ALL_LOCATIONS = '__ALL__';
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: false,
 })
-export class MuralPage {
+export class MuralPage implements OnInit, OnDestroy {
   readonly allLocations = ALL_LOCATIONS;
+  private localeSub?: Subscription;
 
   muralTab: MuralAppTab = 'geral';
   loading = true;
@@ -76,8 +79,17 @@ export class MuralPage {
   constructor(
     private readonly muralService: MuralService,
     private readonly muralHighlightsService: MuralHighlightsService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly i18n: I18nService
   ) {}
+
+  ngOnInit(): void {
+    this.localeSub = this.i18n.locale$.subscribe(() => this.cdr.markForCheck());
+  }
+
+  ngOnDestroy(): void {
+    this.localeSub?.unsubscribe();
+  }
 
   ionViewWillEnter(): void {
     void this.loadStateOptions();

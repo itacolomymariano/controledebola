@@ -3,7 +3,7 @@
     fill="clear"
     [id]="triggerId"
     (click)="$event.stopPropagation()"
-    aria-label="Ajuda desta tela"
+    [attr.aria-label]="'common.screenHelpAria' | t"
   >
     <ion-icon slot="icon-only" name="help-circle-outline"></ion-icon>
   </ion-button>
@@ -12,7 +12,7 @@
       <ion-content class="ion-padding help-balloon-popover">
         <div class="balloon-header">
           <h3>{{ titleKey | t }}</h3>
-          <ion-button fill="clear" size="small" color="medium" class="balloon-close" (click)="balloonPopover.dismiss()" aria-label="Fechar">
+          <ion-button fill="clear" size="small" color="medium" class="balloon-close" (click)="balloonPopover.dismiss()" [attr.aria-label]="'common.close' | t">
             <ion-icon slot="icon-only" name="close-outline"></ion-icon>
           </ion-button>
         </div>

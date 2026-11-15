@@ -184,9 +184,9 @@ export class LoginPage implements OnInit, OnDestroy {
       if (this.auth.needsPasswordUpgrade(password!)) {
         await loading.dismiss();
         const alert = await this.alertCtrl.create({
-          header: 'Atualize sua senha',
-          message: `Por seguranca, sua senha precisa ter no minimo ${MIN_PASSWORD_LENGTH} caracteres. Altere agora para continuar usando o app.`,
-          buttons: ['OK'],
+          header: this.i18n.t('login.passwordUpgradeHeader'),
+          message: this.i18n.t('login.passwordUpgradeMessage', { min: MIN_PASSWORD_LENGTH }),
+          buttons: [this.i18n.t('common.ok')],
         });
         await alert.present();
         await alert.onDidDismiss();
@@ -285,12 +285,12 @@ export class LoginPage implements OnInit, OnDestroy {
     if (already) return;
 
     const alert = await this.alertCtrl.create({
-      header: 'Login rapido',
-      message: 'Deseja ativar login por biometria neste dispositivo?',
+      header: this.i18n.t('login.quickLoginHeader'),
+      message: this.i18n.t('login.quickLoginMessage'),
       buttons: [
-        { text: 'Agora nao', role: 'cancel' },
+        { text: this.i18n.t('login.quickLoginNotNow'), role: 'cancel' },
         {
-          text: 'Ativar',
+          text: this.i18n.t('login.quickLoginEnable'),
           handler: () => {
             const { identifier, password } = this.form.getRawValue();
             if (identifier && password) {
@@ -304,7 +304,11 @@ export class LoginPage implements OnInit, OnDestroy {
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('common.error'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 }

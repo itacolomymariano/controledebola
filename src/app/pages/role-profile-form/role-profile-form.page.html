@@ -2,9 +2,9 @@
   <app-user-bar></app-user-bar>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button (click)="cancel()">Voltar</ion-button>
+      <ion-button (click)="cancel()">{{ 'common.back' | t }}</ion-button>
     </ion-buttons>
-    <ion-title>{{ useWizard ? ('roleProfileForm.wizard.title' | t : { role: roleLabel }) : ('Perfil de ' + roleLabel) }}</ion-title>
+    <ion-title>{{ useWizard ? ('roleProfileForm.wizard.title' | t : { role: roleLabel }) : ('roleProfileForm.titleWithRole' | t : { role: roleLabel }) }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -43,7 +43,7 @@
                   </ion-card-content>
                 </ion-card>
                 <ion-note color="medium" class="ion-margin-top">
-                  Times do coração, ídolos e data de nascimento são editados em Meus dados.
+                  {{ 'roleProfileForm.personalDataHint' | t }}
                 </ion-note>
               }
               @case ('rates') {
@@ -64,7 +64,7 @@
               @case ('history') {
                 <ng-container *ngTemplateOutlet="roleHistoryBlocks"></ng-container>
                 <ion-note color="medium" class="ion-margin-top">
-                  O histórico é só leitura; ele cresce conforme você participa de peladas e eventos.
+                  {{ 'roleProfileForm.historyReadOnly' | t }}
                 </ion-note>
               }
             }
@@ -85,7 +85,7 @@
 
         @if (hasProfile) {
           <ion-note class="ion-margin-bottom">
-            Atualize seus dados profissionais abaixo.
+            {{ 'roleProfileForm.updateBelow' | t }}
           </ion-note>
         }
 
@@ -93,7 +93,7 @@
           <div class="role-profile-form-stack">
             <app-role-profile-fields [form]="form" [role]="role"></app-role-profile-fields>
             <ion-note color="medium">
-              Times do coração, ídolos e data de nascimento são editados em Meus dados.
+              {{ 'roleProfileForm.personalDataHint' | t }}
             </ion-note>
           </div>
           <ng-container *ngTemplateOutlet="roleHistoryBlocks"></ng-container>
@@ -114,10 +114,10 @@
       >
         {{
           saving
-            ? 'Salvando...'
+            ? ('roleProfileForm.saving' | t)
             : hasProfile
-              ? 'Salvar alteracoes'
-              : 'Salvar perfil'
+              ? ('roleProfileForm.saveChanges' | t)
+              : ('roleProfileForm.saveProfile' | t)
         }}
       </ion-button>
     </ion-toolbar>
@@ -128,14 +128,14 @@
   @if (showsPeladaHistory) {
     <ion-card>
       <ion-card-header>
-        <ion-card-title>Peladas</ion-card-title>
+        <ion-card-title>{{ 'roleProfileForm.peladasTitle' | t }}</ion-card-title>
       </ion-card-header>
       <ion-card-content>
         @if (!history.peladas.length) {
-          <ion-note>Nenhuma pelada registrada ainda.</ion-note>
+          <ion-note>{{ 'roleProfileForm.noPeladasYet' | t }}</ion-note>
         }
         @for (item of peladaHistoryPreview; track item.id) {
-          <p>{{ item.name }} · Pontuacao: {{ item.score.toFixed(1) }}</p>
+          <p>{{ 'roleProfileForm.historyScore' | t : { name: item.name, score: item.score.toFixed(1) } }}</p>
         }
       </ion-card-content>
     </ion-card>
@@ -144,14 +144,14 @@
   @if (showsMatchHistory) {
     <ion-card>
       <ion-card-header>
-        <ion-card-title>Partidas entre equipes amadoras</ion-card-title>
+        <ion-card-title>{{ 'roleProfileForm.matchesTitle' | t }}</ion-card-title>
       </ion-card-header>
       <ion-card-content>
         @if (!history.matches.length) {
-          <ion-note>Nenhuma partida registrada ainda.</ion-note>
+          <ion-note>{{ 'roleProfileForm.noMatchesYet' | t }}</ion-note>
         }
         @for (item of matchHistoryPreview; track item.id) {
-          <p>{{ item.name }} · Pontuacao: {{ item.score.toFixed(1) }}</p>
+          <p>{{ 'roleProfileForm.historyScore' | t : { name: item.name, score: item.score.toFixed(1) } }}</p>
         }
       </ion-card-content>
     </ion-card>
@@ -160,14 +160,14 @@
   @if (showsTeamHistory) {
     <ion-card>
       <ion-card-header>
-        <ion-card-title>Times amadores</ion-card-title>
+        <ion-card-title>{{ 'roleProfileForm.teamsTitle' | t }}</ion-card-title>
       </ion-card-header>
       <ion-card-content>
         @if (!history.teams.length) {
-          <ion-note>Nenhum time registrado ainda.</ion-note>
+          <ion-note>{{ 'roleProfileForm.noTeamsYet' | t }}</ion-note>
         }
         @for (item of teamHistoryPreview; track item.id) {
-          <p>{{ item.name }} · Pontuacao: {{ item.score.toFixed(1) }}</p>
+          <p>{{ 'roleProfileForm.historyScore' | t : { name: item.name, score: item.score.toFixed(1) } }}</p>
         }
       </ion-card-content>
     </ion-card>

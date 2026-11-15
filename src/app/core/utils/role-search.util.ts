@@ -1,4 +1,4 @@
-import { PROFILE_ROLE_LABELS, ProfileRole } from '../models/profile-role.model';
+import { PROFILE_ROLE_FALLBACK_LABELS, ProfileRole } from '../models/profile-role.model';
 import { normalizeSearchText } from './search-text.util';
 
 /** Aliases curtos para busca em Negociacao/Contratacoes (ex.: "prep" → Preparador Fisico). */
@@ -22,7 +22,7 @@ export function searchMatchesRoleKeyword(search: string, role: ProfileRole): boo
   const normalized = normalizeSearchText(search);
   if (!normalized) return false;
 
-  const label = normalizeSearchText(PROFILE_ROLE_LABELS[role] || '');
+  const label = normalizeSearchText(PROFILE_ROLE_FALLBACK_LABELS[role] || '');
   if (label && (label.includes(normalized) || normalized.includes(label))) {
     return true;
   }

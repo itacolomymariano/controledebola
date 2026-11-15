@@ -1,6 +1,6 @@
-import { Component, Input } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, OnDestroy } from '@angular/core';
+import { Subscription } from 'rxjs';
 import {
-  MURAL_AGE_BAND_LABELS,
   MuralAgeBand,
   MuralAgeBandWinnerLists,
   MuralAgeBandWinners,
@@ -17,8 +17,19 @@ import { I18nService } from '../../../core/services/i18n.service';
   styleUrls: ['./mural-highlights-panel.component.scss'],
   standalone: false,
 })
-export class MuralHighlightsPanelComponent {
-  constructor(private readonly i18n: I18nService) {}
+export class MuralHighlightsPanelComponent implements OnDestroy {
+  private localeSub?: Subscription;
+
+  constructor(
+    private readonly i18n: I18nService,
+    private readonly cdr: ChangeDetectorRef
+  ) {
+    this.localeSub = this.i18n.locale$.subscribe(() => this.cdr.markForCheck());
+  }
+
+  ngOnDestroy(): void {
+    this.localeSub?.unsubscribe();
+  }
 
   @Input() highlights: MuralHighlights | null = null;
   @Input() scope: 'app' | 'pelada' | 'event' = 'pelada';
@@ -132,7 +143,11 @@ export class MuralHighlightsPanelComponent {
   }
 
   ageBandLabel(band: MuralAgeBand): string {
-    return MURAL_AGE_BAND_LABELS[band];
+    return this.i18n.t(`mural.highlights.ageBand.${band}`);
+  }
+
+  bestTeamTitle(): string {
+    return this.i18n.t('mural.playful.bestTeam');
   }
 
   ageBandHeading(band: MuralAgeBand, entry: MuralShowcaseEntry | null): string {
@@ -156,5 +171,18 @@ export class MuralHighlightsPanelComponent {
     band: MuralAgeBand
   ): MuralShowcaseEntry[] {
     return winners?.[band] ?? [];
+  }
+
+  fanSupportersLabel(count: number): string {
+    const key = count === 1 ? 'mural.highlights.fanSingular' : 'mural.highlights.fanPlural';
+    return this.i18n.t(key, { count });
+  }
+
+  get birthdaysShareTitle(): string {
+    return this.i18n.t('mural.highlights.birthdaysMonth');
+  }
+
+  birthdayDayLabel(day: number): string {
+    return this.i18n.t('mural.highlights.birthdayDay', { day });
   }
 }

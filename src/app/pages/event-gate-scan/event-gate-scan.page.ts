@@ -3,6 +3,7 @@ import { ActivatedRoute } from '@angular/router';
 import { Html5Qrcode } from 'html5-qrcode';
 import { EventGateTicketValidation } from '../../core/models/event-gate-ticket.model';
 import { EventGateTicketService } from '../../core/services/event-gate-ticket.service';
+import { I18nService } from '../../core/services/i18n.service';
 
 @Component({
   selector: 'app-event-gate-scan',
@@ -19,7 +20,8 @@ export class EventGateScanPage {
 
   constructor(
     private readonly route: ActivatedRoute,
-    private readonly gateTicketService: EventGateTicketService
+    private readonly gateTicketService: EventGateTicketService,
+    private readonly i18n: I18nService
   ) {}
 
   ionViewWillEnter(): void {
@@ -48,7 +50,7 @@ export class EventGateScanPage {
       this.scanning = false;
       this.result = {
         valid: false,
-        message: 'Nao foi possivel abrir a camera. Verifique as permissoes.',
+        message: this.i18n.t('eventGate.error.cameraPermission'),
       };
     }
   }
@@ -88,7 +90,7 @@ export class EventGateScanPage {
     try {
       this.result = await this.gateTicketService.validateTicket(this.eventId, qrPayload);
     } catch {
-      this.result = { valid: false, message: 'Erro ao validar ingresso.' };
+      this.result = { valid: false, message: this.i18n.t('eventGate.error.validateTicket') };
     }
   }
 }

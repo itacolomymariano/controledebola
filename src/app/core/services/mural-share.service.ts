@@ -16,6 +16,7 @@ import { muralFilterCaption } from '../utils/mural-filter-caption.util';
 import { getTeamShieldCandidates, teamSlug } from '../utils/team-shield.util';
 import { EventService } from './event.service';
 import { PeladaService } from './pelada.service';
+import { I18nService } from './i18n.service';
 
 const BRAND_LOGO_PATH = 'assets/icon/logo_controle_de_bola.png';
 const SITE_URL = 'https://controledebola.com';
@@ -33,7 +34,8 @@ export class MuralShareService {
     private readonly alertCtrl: AlertController,
     private readonly toastCtrl: ToastController,
     private readonly eventService: EventService,
-    private readonly peladaService: PeladaService
+    private readonly peladaService: PeladaService,
+    private readonly i18n: I18nService
   ) {}
 
   /** Linhas de legenda (sem a marca — a marca vai com o icone na imagem). */
@@ -222,9 +224,9 @@ export class MuralShareService {
       }
       console.warn('mural share failed', error);
       const alert = await this.alertCtrl.create({
-        header: 'Compartilhar',
-        message: 'Nao foi possivel gerar a imagem do card. Tente novamente.',
-        buttons: ['OK'],
+        header: this.i18n.t('mural.share.title'),
+        message: this.i18n.t('muralShare.error.generateCard'),
+        buttons: [this.i18n.t('common.ok')],
       });
       await alert.present();
     }

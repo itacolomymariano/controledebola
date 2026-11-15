@@ -8,14 +8,14 @@ export function formatTeamMatchDate(value: string | null | undefined): string {
 /** Codigo de resultado do Cloud (W/D/L) -> letra pt-BR (V/E/D). */
 export type TeamMatchResultCode = 'W' | 'D' | 'L';
 
-export function teamMatchResultName(code: string | null | undefined): string {
+export function teamMatchResultI18nKey(code: string | null | undefined): string {
   switch (code) {
     case 'W':
-      return 'Vitória';
+      return 'teamMatch.result.win';
     case 'L':
-      return 'Derrota';
+      return 'teamMatch.result.loss';
     case 'D':
-      return 'Empate';
+      return 'teamMatch.result.draw';
     default:
       return '';
   }

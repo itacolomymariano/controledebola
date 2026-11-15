@@ -1,5 +1,5 @@
 import { formatHeightLabel, heightCmToParts } from './athlete-profile.model';
-import { PROFILE_ROLE_LABELS, ProfileRole } from './profile-role.model';
+import { PROFILE_ROLE_FALLBACK_LABELS, ProfileRole } from './profile-role.model';
 import { RoleParticipationHistory } from './role-participation-history.model';
 import { RoleProfile } from './role-profile.model';
 
@@ -21,7 +21,7 @@ export const SEARCHABLE_PROFILE_ROLES: ProfileRole[] = [
 
 export const SEARCHABLE_PROFILE_OPTIONS = SEARCHABLE_PROFILE_ROLES.map((role) => ({
   role,
-  label: PROFILE_ROLE_LABELS[role],
+  label: PROFILE_ROLE_FALLBACK_LABELS[role],
 }));
 
 export type SearchProfileKind = ProfileRole | 'legend_athlete' | 'legend_team';

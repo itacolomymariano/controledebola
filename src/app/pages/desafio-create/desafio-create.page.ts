@@ -18,7 +18,7 @@ import {
   writeFormDraft,
 } from '../../core/utils/form-draft.util';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
-import { formatTeamMatchDate, teamMatchResultName } from '../../core/utils/team-match-result.util';
+import { formatTeamMatchDate } from '../../core/utils/team-match-result.util';
 import { AddressFormComponent } from '../../shared/components/address-form/address-form.component';
 
 const DESAFIO_WIZARD_STEPS = ['team', 'opponent', 'schedule', 'extras'] as const;
@@ -60,7 +60,6 @@ export class DesafioCreatePage {
   hasReturnLeg = false;
   profile: Record<string, unknown> | null = null;
   loadingProfile = false;
-  readonly resultName = teamMatchResultName;
   readonly formatMatchDate = formatTeamMatchDate;
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -91,6 +90,17 @@ export class DesafioCreatePage {
 
   get wizardStep(): DesafioWizardStep {
     return this.wizardSteps[this.currentStepIndex];
+  }
+
+  get profileAverageAgeLabel(): string | number {
+    const age = this.profile?.['averageAge'];
+    if (age == null || age === '') return '—';
+    return typeof age === 'number' || typeof age === 'string' ? age : '—';
+  }
+
+  get profileMatchesPlayedCount(): number {
+    const count = this.profile?.['matchesPlayed'];
+    return typeof count === 'number' ? count : Number(count) || 0;
   }
 
   get wizardProgress(): number {
@@ -130,12 +140,12 @@ export class DesafioCreatePage {
   async exitWizard(): Promise<void> {
     this.persistDraft();
     const alert = await this.alertCtrl.create({
-      header: 'Sair do desafio',
-      message: 'Seu rascunho foi salvo neste aparelho. Você pode continuar depois.',
+      header: this.i18n.t('desafioForm.exitWizardHeader'),
+      message: this.i18n.t('peladaForm.exitWizardMessage'),
       buttons: [
-        { text: 'Continuar preenchendo', role: 'cancel' },
+        { text: this.i18n.t('peladaForm.continueFilling'), role: 'cancel' },
         {
-          text: 'Sair',
+          text: this.i18n.t('peladaForm.exit'),
           role: 'destructive',
           handler: () => {
             void this.router.navigateByUrl('/tabs/peladas/confrontos');
@@ -166,7 +176,7 @@ export class DesafioCreatePage {
 
   async selectTeam(team: TeamPickerRow): Promise<void> {
     if (this.myTeams.some((mine) => mine.objectId === team.id)) {
-      await this.showError('Não é possível desafiar um dos seus próprios times.');
+      await this.showError(this.i18n.t('desafioCreate.cannotChallengeOwnTeam'));
       return;
     }
     this.selected = team;
@@ -247,34 +257,34 @@ export class DesafioCreatePage {
 
   async submit(): Promise<void> {
     if (!this.myTeams.length) {
-      await this.showError('Cadastre seu time antes de desafiar.');
+      await this.showError(this.i18n.t('desafioCreate.registerTeamFirst'));
       return;
     }
     if (!this.challengerTeamId) {
-      await this.showError('Selecione o seu time desafiante.');
+      await this.showError(this.i18n.t('desafioCreate.selectChallenger'));
       return;
     }
     if (!this.selected) {
-      await this.showError('Selecione o time desafiado.');
+      await this.showError(this.i18n.t('desafioCreate.selectChallenged'));
       return;
     }
     const values = this.scheduleForm.getRawValue();
     const startTime = this.combineDateTime(values.startDate || '', values.startTime || '');
     const endTime = this.combineDateTime(values.endDate || '', values.endTime || '');
     if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
-      await this.showError('Informe data e hora desejadas para o confronto.');
+      await this.showError(this.i18n.t('desafioCreate.scheduleDateTime'));
       return;
     }
     if (endTime <= startTime) {
-      await this.showError('O término deve ser após o início.');
+      await this.showError(this.i18n.t('eventDetail.teamMatch.endAfterStart'));
       return;
     }
     if (!isAddressComplete(values.address)) {
-      await this.showError('Informe o local desejado do confronto.');
+      await this.showError(this.i18n.t('desafioCreate.scheduleVenue'));
       return;
     }
 
-    const loading = await this.loadingCtrl.create({ message: 'Enviando desafio...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('desafioCreate.loadingSend') });
     await loading.present();
     try {
       await this.challengeService.create({
@@ -291,10 +301,9 @@ export class DesafioCreatePage {
       clearFormDraft(DESAFIO_FORM_DRAFT_KEY);
       await loading.dismiss();
       const alert = await this.alertCtrl.create({
-        header: 'Desafio enviado',
-        message:
-          'O presidente adversário recebeu data, hora e local propostos. A agenda dos times foi reservada até a resposta.',
-        buttons: ['OK'],
+        header: this.i18n.t('desafioCreate.sentHeader'),
+        message: this.i18n.t('desafioCreate.sentMessage'),
+        buttons: [this.i18n.t('common.ok')],
       });
       await alert.present();
       await alert.onDidDismiss();
@@ -379,7 +388,11 @@ export class DesafioCreatePage {
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Desafio', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('desafioCreate.errorTitle'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 }

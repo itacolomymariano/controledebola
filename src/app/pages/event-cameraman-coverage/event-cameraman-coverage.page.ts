@@ -3,6 +3,7 @@ import { ActivatedRoute } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
 import { EventMediaHighlightVideoItem } from '../../core/models/event-media.model';
 import { EventMediaService } from '../../core/services/event-media.service';
+import { I18nService } from '../../core/services/i18n.service';
 
 @Component({
   selector: 'app-event-cameraman-coverage',
@@ -28,7 +29,8 @@ export class EventCameramanCoveragePage {
     private readonly eventMediaService: EventMediaService,
     private readonly alertCtrl: AlertController,
     private readonly loadingCtrl: LoadingController,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly i18n: I18nService
   ) {}
 
   ionViewWillEnter(): void {
@@ -54,7 +56,7 @@ export class EventCameramanCoveragePage {
       this.videoFile = null;
       this.durationSec = 0;
       await this.showError(
-        this.eventMediaService.errorMessage(error, 'Nao foi possivel validar o video.')
+        this.eventMediaService.errorMessage(error, this.i18n.t('eventMedia.error.validateVideo'))
       );
       this.cdr.markForCheck();
     }
@@ -65,23 +67,23 @@ export class EventCameramanCoveragePage {
     const title = this.title.trim();
     const description = this.description.trim();
     if (!title || !description) {
-      await this.showError('Informe titulo e breve descricao antes de enviar ao mural.');
+      await this.showError(this.i18n.t('eventCameraman.error.titleDescriptionRequired'));
       return;
     }
     if (!this.videoFile && !this.existing?.videoUrl) {
-      await this.showError('Selecione um video de ate 5 minutos.');
+      await this.showError(this.i18n.t('eventMedia.error.selectVideoMax5Min'));
       return;
     }
 
     if (this.existing) {
       const confirm = await this.alertCtrl.create({
-        header: 'Substituir video?',
+        header: this.i18n.t('eventMedia.replaceVideoHeader'),
         message: this.eventMediaService.formatPublishOverwriteMessage(
-          'um video de melhores momentos'
+          this.i18n.t('eventMedia.overwriteKind.highlightVideo')
         ),
         buttons: [
-          { text: 'Cancelar', role: 'cancel' },
-          { text: 'Enviar', role: 'confirm' },
+          { text: this.i18n.t('common.cancel'), role: 'cancel' },
+          { text: this.i18n.t('common.send'), role: 'confirm' },
         ],
       });
       await confirm.present();
@@ -90,7 +92,7 @@ export class EventCameramanCoveragePage {
     }
 
     this.publishing = true;
-    const loading = await this.loadingCtrl.create({ message: 'Enviando video...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('eventMedia.sendingVideo') });
     await loading.present();
     try {
       let videoUrl = this.existing?.videoUrl || '';
@@ -111,14 +113,14 @@ export class EventCameramanCoveragePage {
       );
       await this.loadExisting();
       const alert = await this.alertCtrl.create({
-        header: 'Publicado',
-        message: 'Video enviado ao mural do evento.',
-        buttons: ['OK'],
+        header: this.i18n.t('common.published'),
+        message: this.i18n.t('eventCameraman.toast.videoPublished'),
+        buttons: [this.i18n.t('common.ok')],
       });
       await alert.present();
     } catch (error: unknown) {
       await this.showError(
-        this.eventMediaService.errorMessage(error, 'Nao foi possivel publicar o video.')
+        this.eventMediaService.errorMessage(error, this.i18n.t('eventMedia.error.publishVideo'))
       );
     } finally {
       this.publishing = false;
@@ -163,9 +165,9 @@ export class EventCameramanCoveragePage {
 
   private async showError(message: string): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Atencao',
+      header: this.i18n.t('common.attention'),
       message,
-      buttons: ['OK'],
+      buttons: [this.i18n.t('common.ok')],
     });
     await alert.present();
   }

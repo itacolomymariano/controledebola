@@ -3,7 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { RefresherCustomEvent } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { Address } from '../../core/models/address.model';
-import { PROFILE_ROLE_LABELS, PROFILE_ROLE_SEARCH_ALIASES } from '../../core/models/profile-role.model';
+import { PROFILE_ROLE_FALLBACK_LABELS, PROFILE_ROLE_SEARCH_ALIASES } from '../../core/models/profile-role.model';
 import { AuthService } from '../../core/services/auth.service';
 import { EventService } from '../../core/services/event.service';
 import {
@@ -397,7 +397,7 @@ export class HomeDirectoryPage implements OnDestroy {
     const userAddress = loggedUserAddress();
     const rows = users.map((user) => ({
       user,
-      rolesLabel: user.roles.map((role) => PROFILE_ROLE_LABELS[role]).join(' · '),
+      rolesLabel: user.roles.map((role) => PROFILE_ROLE_FALLBACK_LABELS[role]).join(' · '),
       place: formatPlaceLine(user.state, user.city, user.neighborhood),
       address: addressFromParts(user),
     }));

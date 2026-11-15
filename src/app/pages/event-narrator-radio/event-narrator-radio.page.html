@@ -26,11 +26,11 @@
       </ion-card-header>
       <ion-card-content>
         <ion-item lines="full">
-          <ion-input label="Titulo da narracao" labelPlacement="stacked" [(ngModel)]="narrationTitle" maxlength="120"></ion-input>
+          <ion-input [label]="'eventNarrator.narrationTitleLabel' | t" labelPlacement="stacked" [(ngModel)]="narrationTitle" maxlength="120"></ion-input>
         </ion-item>
         <ion-item lines="full">
           <ion-textarea
-            label="Breve descricao"
+            [label]="'eventNarrator.briefDescriptionLabel' | t"
             labelPlacement="stacked"
             [(ngModel)]="narrationDescription"
             maxlength="500"
@@ -74,11 +74,11 @@
       </ion-card-header>
       <ion-card-content>
         <ion-item lines="full">
-          <ion-input label="Titulo da entrevista" labelPlacement="stacked" [(ngModel)]="interviewTitle" maxlength="120"></ion-input>
+          <ion-input [label]="'eventNarrator.interviewTitleLabel' | t" labelPlacement="stacked" [(ngModel)]="interviewTitle" maxlength="120"></ion-input>
         </ion-item>
         <ion-item lines="full">
           <ion-textarea
-            label="Breve descricao"
+            [label]="'eventNarrator.briefDescriptionLabel' | t"
             labelPlacement="stacked"
             [(ngModel)]="interviewDescription"
             maxlength="500"

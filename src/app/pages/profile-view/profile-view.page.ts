@@ -2,7 +2,7 @@ import { Location } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
 import { ActivatedRoute, NavigationStart, Router } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
-import { ProfileRole, PROFILE_ROLE_LABELS } from '../../core/models/profile-role.model';
+import { ProfileRole, PROFILE_ROLE_FALLBACK_LABELS } from '../../core/models/profile-role.model';
 import { RolePublicProfile } from '../../core/models/profile-search.model';
 import {
   ROLE_HISTORY_MODE,
@@ -19,6 +19,7 @@ import {
 } from '../../core/models/support-role-tools.model';
 import { TeamMatchRecord } from '../../core/models/athlete-search.model';
 import { AthleteSearchService } from '../../core/services/athlete-search.service';
+import { I18nService } from '../../core/services/i18n.service';
 import { ProfileSearchService } from '../../core/services/profile-search.service';
 import { SupportRoleToolsService } from '../../core/services/support-role-tools.service';
 import {
@@ -49,16 +50,19 @@ export class ProfileViewPage implements OnDestroy {
   /** Rota de onde a ficha foi aberta (busca ou lista de usuarios). */
   private backUrl = '/tabs/search';
   private navSub?: Subscription;
+  private localeSub?: Subscription;
 
   constructor(
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly location: Location,
     private readonly athleteSearchService: AthleteSearchService,
+    private readonly i18n: I18nService,
     private readonly profileSearchService: ProfileSearchService,
     private readonly supportTools: SupportRoleToolsService,
     private readonly cdr: ChangeDetectorRef
   ) {
+    this.localeSub = this.i18n.locale$.subscribe(() => this.cdr.markForCheck());
     this.navSub = this.router.events
       .pipe(filter((event) => event instanceof NavigationStart))
       .subscribe((event) => {
@@ -73,6 +77,11 @@ export class ProfileViewPage implements OnDestroy {
 
   ngOnDestroy(): void {
     this.navSub?.unsubscribe();
+    this.localeSub?.unsubscribe();
+  }
+
+  fieldLabel(field: RoleProfileFieldDef): string {
+    return this.i18n.t(field.labelKey);
   }
 
   goBack(): void {
@@ -142,16 +151,19 @@ export class ProfileViewPage implements OnDestroy {
   }
 
   formatMoney(value?: number): string {
-    if (value == null || Number.isNaN(value)) return 'Nao informado';
+    if (value == null || Number.isNaN(value)) return this.i18n.t('athleteProfile.notInformed');
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   }
 
   fieldValue(field: RoleProfileFieldDef): string {
     const profile = this.profile?.roleProfile;
-    if (!profile) return 'Nao informado';
+    const notInformed = this.i18n.t('athleteProfile.notInformed');
+    if (!profile) return notInformed;
     const value = profile[field.key as keyof typeof profile];
-    if (value === undefined || value === null || value === '') return 'Nao informado';
-    if (field.type === 'boolean') return value ? 'Sim' : 'Nao';
+    if (value === undefined || value === null || value === '') return notInformed;
+    if (field.type === 'boolean') {
+      return value ? this.i18n.t('common.yes') : this.i18n.t('common.no');
+    }
     if (field.type === 'money' && typeof value === 'number') return this.formatMoney(value);
     return String(value);
   }
@@ -161,7 +173,7 @@ export class ProfileViewPage implements OnDestroy {
     this.errorMessage = '';
     this.cdr.markForCheck();
     this.role = role;
-    this.roleLabel = role ? PROFILE_ROLE_LABELS[role] : '';
+    this.roleLabel = role ? PROFILE_ROLE_FALLBACK_LABELS[role] : '';
     this.historyMode = role && isProfessionalRole(role) ? ROLE_HISTORY_MODE[role] : role === 'fan' ? 'pelada_match' : 'none';
     this.displayFields =
       role && isProfessionalRole(role) ? ROLE_PROFILE_FIELDS[role].filter((field) => field.type !== 'pix') : [];
@@ -171,12 +183,12 @@ export class ProfileViewPage implements OnDestroy {
     try {
       if (!role || !userId) {
         this.profile = null;
-        this.errorMessage = 'Perfil nao encontrado.';
+        this.errorMessage = this.i18n.t('profileView.notFound');
         return;
       }
       this.profile = await this.profileSearchService.getPublicProfile(role, userId);
       if (!this.profile) {
-        this.errorMessage = 'Perfil nao encontrado.';
+        this.errorMessage = this.i18n.t('profileView.notFound');
         return;
       }
       if (
@@ -196,7 +208,7 @@ export class ProfileViewPage implements OnDestroy {
     } catch (error: unknown) {
       this.profile = null;
       this.errorMessage =
-        error instanceof Error ? error.message : 'Erro ao carregar perfil.';
+        error instanceof Error ? error.message : this.i18n.t('profileView.loadError');
     } finally {
       this.loading = false;
       this.cdr.markForCheck();

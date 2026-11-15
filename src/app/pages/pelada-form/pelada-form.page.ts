@@ -49,11 +49,11 @@ export class PeladaFormPage {
 
   @ViewChild(AddressFormComponent) private addressForm?: AddressFormComponent;
 
-  sports: { value: PeladaSport; label: string }[] = [
-    { value: 'campo', label: 'Campo' },
-    { value: 'futsal', label: 'Futsal' },
-    { value: 'society', label: 'Society' },
-    { value: 'beach', label: 'Beach' },
+  readonly sports: { value: PeladaSport; labelKey: string }[] = [
+    { value: 'campo', labelKey: 'peladaSport.campo' },
+    { value: 'futsal', labelKey: 'peladaSport.futsal' },
+    { value: 'society', labelKey: 'peladaSport.society' },
+    { value: 'beach', labelKey: 'peladaSport.beach' },
   ];
 
   form = this.fb.group({
@@ -112,7 +112,7 @@ export class PeladaFormPage {
     if (this.isEdit && this.peladaId) {
       const pelada = await this.peladaService.getById(this.peladaId);
       if (!pelada) {
-        await this.showError('Pelada não encontrada.');
+        await this.showError(this.i18n.t('peladaForm.notFound'));
         void this.router.navigateByUrl('/tabs/peladas');
         return;
       }
@@ -143,12 +143,12 @@ export class PeladaFormPage {
   async exitWizard(): Promise<void> {
     this.persistDraft();
     const alert = await this.alertCtrl.create({
-      header: 'Sair do cadastro',
-      message: 'Seu rascunho foi salvo neste aparelho. Você pode continuar depois.',
+      header: this.i18n.t('peladaForm.exitWizardHeader'),
+      message: this.i18n.t('peladaForm.exitWizardMessage'),
       buttons: [
-        { text: 'Continuar preenchendo', role: 'cancel' },
+        { text: this.i18n.t('peladaForm.continueFilling'), role: 'cancel' },
         {
-          text: 'Sair',
+          text: this.i18n.t('peladaForm.exit'),
           role: 'destructive',
           handler: () => {
             void this.router.navigateByUrl('/tabs/peladas/lista');
@@ -226,10 +226,10 @@ export class PeladaFormPage {
       this.form.markAllAsTouched();
       const message =
         buildMissingFieldsMessage(this.form, {
-          name: 'Nome da pelada',
-          sport: 'Esporte',
-          address: 'Endereço validado (selecione na lista)',
-        }) || 'Verifique os campos obrigatórios do cadastro.';
+          name: this.i18n.t('peladaForm.fieldName'),
+          sport: this.i18n.t('peladaForm.fieldSport'),
+          address: this.i18n.t('peladaForm.fieldAddress'),
+        }) || this.i18n.t('peladaForm.validationRequired');
       await this.showError(message);
       return;
     }
@@ -237,7 +237,7 @@ export class PeladaFormPage {
     const v = this.form.getRawValue();
     const foundedAt = v.foundedDate ? parseBirthDateIso(v.foundedDate) ?? undefined : undefined;
     const loading = await this.loadingCtrl.create({
-      message: this.isEdit ? 'Salvando...' : 'Criando pelada...',
+      message: this.isEdit ? this.i18n.t('common.saving') : this.i18n.t('peladaForm.creating'),
     });
     await loading.present();
 
@@ -277,7 +277,7 @@ export class PeladaFormPage {
         }
       }
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Não foi possível salvar.';
+      const message = error instanceof Error ? error.message : this.i18n.t('peladaForm.saveFailed');
       await this.showError(message);
     } finally {
       await loading.dismiss();
@@ -316,7 +316,11 @@ export class PeladaFormPage {
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('common.error'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 }

@@ -4,7 +4,7 @@
     <ion-buttons slot="start">
       <ion-back-button [text]="'common.back' | t" defaultHref="/tabs/profile"></ion-back-button>
     </ion-buttons>
-    <ion-title>Contratacao pessoal</ion-title>
+    <ion-title>{{ 'athleteProfileHiring.pageTitle' | t }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -17,15 +17,15 @@
 
   @if (!loading) {
     <ion-note color="medium" class="ion-margin-bottom">
-      Escolha preparador fisico e scout pessoais para acompanhar seu desempenho.
+      {{ 'athleteProfileHiring.intro' | t }}
     </ion-note>
 
     <ion-segment [value]="segment" (ionChange)="onSegmentChange($event)">
       <ion-segment-button value="trainer">
-        <ion-label>Preparador</ion-label>
+        <ion-label>{{ 'athleteProfileHiring.segmentTrainer' | t }}</ion-label>
       </ion-segment-button>
       <ion-segment-button value="scout">
-        <ion-label>Scout</ion-label>
+        <ion-label>{{ 'athleteProfileHiring.segmentScout' | t }}</ion-label>
       </ion-segment-button>
     </ion-segment>
 
@@ -43,13 +43,13 @@
             <p>{{ formatCandidateSubtitle(selectedCandidate) }}</p>
           }
         </ion-label>
-        <ion-button fill="clear" slot="end" (click)="clearSelection()">Alterar</ion-button>
+        <ion-button fill="clear" slot="end" (click)="clearSelection()">{{ 'athleteProfileHiring.changeSelection' | t }}</ion-button>
       </ion-item>
     }
 
     <ion-searchbar
       class="ion-margin-top"
-      [placeholder]="segment === 'trainer' ? 'Buscar preparador' : 'Buscar scout'"
+      [placeholder]="(segment === 'trainer' ? 'athleteProfileHiring.searchTrainerPlaceholder' : 'athleteProfileHiring.searchScoutPlaceholder') | t"
       [(ngModel)]="search"
       [debounce]="0"
       (ionInput)="onSearchInput($event)"
@@ -63,11 +63,11 @@
     }
 
     @if (!search.trim() && !selectedCandidate) {
-      <ion-note color="medium">Digite nome ou apelido para buscar.</ion-note>
+      <ion-note color="medium">{{ 'athleteProfileHiring.searchHint' | t }}</ion-note>
     }
 
     @if (search.trim() && !displayedCandidates.length && !searchLoading) {
-      <ion-note color="medium">Nenhum resultado para "{{ search }}".</ion-note>
+      <ion-note color="medium">{{ 'athleteProfileHiring.noResults' | t: { term: search } }}</ion-note>
     }
 
     @if (search.trim() && displayedCandidates.length) {
@@ -92,7 +92,7 @@
               }
             </ion-label>
             <ion-button fill="clear" slot="end" (click)="viewProfile(candidate, $event)">
-              Ver perfil
+              {{ 'common.viewProfile' | t }}
             </ion-button>
           </ion-item>
         }
@@ -102,7 +102,7 @@
     @if (segment === 'scout') {
       <ion-item class="ion-margin-top">
         <ion-select
-          label="Fonte em conflito de stats"
+          [label]="'athleteProfileHiring.statsConflictSource' | t"
           labelPlacement="stacked"
           [(ngModel)]="personalStatsConflictSource"
         >
@@ -119,7 +119,7 @@
       [disabled]="saving"
       (click)="save()"
     >
-      Salvar preferencias
+      {{ 'athleteProfileHiring.savePreferences' | t }}
     </ion-button>
   }
 </ion-content>

@@ -13,6 +13,8 @@ import {
 } from '../../core/services/match-challenge.service';
 import { ParseService } from '../../core/services/parse.service';
 import { PlayfulCardTone } from '../../shared/components/playful-card/playful-card.component';
+import { I18nService } from '../../core/services/i18n.service';
+import { formatAppDateTime } from '../../core/utils/locale-datetime.util';
 
 interface ConfrontoRow {
   match: TeamMatchListItem;
@@ -54,6 +56,7 @@ export class EventsPage implements OnDestroy {
     private readonly challengeService: MatchChallengeService,
     private readonly parseService: ParseService,
     private readonly router: Router,
+    private readonly i18n: I18nService,
     private readonly cdr: ChangeDetectorRef
   ) {
     this.eventsSub = this.eventService.onEventsChanged.subscribe(() => {
@@ -101,7 +104,7 @@ export class EventsPage implements OnDestroy {
   private async loadMatches(): Promise<void> {
     if (!this.parseConfigured) {
       this.loading = false;
-      this.errorMessage = 'Configure as chaves do Back4App em environment.local.ts';
+      this.errorMessage = this.i18n.t('events.parseKeysHint');
       this.cdr.markForCheck();
       return;
     }
@@ -122,7 +125,11 @@ export class EventsPage implements OnDestroy {
         match,
         dateLabel: this.formatDate(match.startTime),
         locationLabel: this.formatLocation(match.address, match.locationComplement),
-        badge: match.returnOfEventId ? 'Volta' : match.hasReturnLeg ? 'Ida' : undefined,
+        badge: match.returnOfEventId
+          ? this.i18n.t('inbox.returnLeg')
+          : match.hasReturnLeg
+            ? this.i18n.t('events.badgeFirstLeg')
+            : undefined,
       }));
     } catch (error: unknown) {
       if (await this.auth.handleApiError(error)) {
@@ -130,7 +137,7 @@ export class EventsPage implements OnDestroy {
         return;
       }
       this.errorMessage =
-        error instanceof Error ? error.message : 'Nao foi possivel carregar os confrontos.';
+        error instanceof Error ? error.message : this.i18n.t('peladas.matchesLoadError');
     } finally {
       this.loading = false;
       this.cdr.markForCheck();
@@ -138,12 +145,7 @@ export class EventsPage implements OnDestroy {
   }
 
   private formatDate(date: Date): string {
-    return new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
+    return formatAppDateTime(date, this.i18n.locale);
   }
 
   private formatLocation(address: Address, complement: string): string {

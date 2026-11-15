@@ -7,7 +7,7 @@ export type RoleProfileFieldType = 'money' | 'boolean' | 'pix' | 'text' | 'texta
 
 export interface RoleProfileFieldDef {
   key: keyof CreateRoleProfilePayload;
-  label: string;
+  labelKey: string;
   type: RoleProfileFieldType;
   required?: boolean;
 }
@@ -77,197 +77,197 @@ export const ROLE_HISTORY_MODE: Record<ProfessionalRole, RoleHistoryMode> = {
 
 export const ROLE_PROFILE_FIELDS: Record<ProfessionalRole, RoleProfileFieldDef[]> = {
   referee: [
-    { key: 'peladaRate', label: 'Por quanto apita uma pelada?', type: 'money', required: true },
-    { key: 'matchRate', label: 'Por quanto apita uma partida?', type: 'money', required: true },
+    { key: 'peladaRate', labelKey: 'roleProfileField.referee.peladaRate', type: 'money', required: true },
+    { key: 'matchRate', labelKey: 'roleProfileField.referee.matchRate', type: 'money', required: true },
     {
       key: 'hasUniform',
-      label: 'Possui uniforme de arbitro?',
+      labelKey: 'roleProfileField.referee.hasUniform',
       type: 'boolean',
     },
     {
       key: 'hasFlags',
-      label: 'Possui bandeiras de linha?',
+      labelKey: 'roleProfileField.referee.hasFlags',
       type: 'boolean',
     },
     {
       key: 'hasOwnEquipment',
-      label: 'Possui demais equipamentos (cartoes, apito, etc)?',
+      labelKey: 'roleProfileField.referee.hasOwnEquipment',
       type: 'boolean',
     },
     {
       key: 'isFederatedReferee',
-      label: 'E Juiz/Arbitro federado?',
+      labelKey: 'roleProfileField.referee.isFederatedReferee',
       type: 'boolean',
     },
-    { key: 'federationName', label: 'Qual a Federacao', type: 'text' },
-    { key: 'federationRegistrationNumber', label: 'Numero de registro na federacao', type: 'text' },
-    { key: 'pixKey1', label: 'Chave Pix 1 para recebimento', type: 'pix' },
-    { key: 'pixKey2', label: 'Chave Pix 2 para recebimento', type: 'pix' },
-    { key: 'pixKey3', label: 'Chave Pix 3 para recebimento', type: 'pix' },
+    { key: 'federationName', labelKey: 'roleProfileField.referee.federationName', type: 'text' },
+    { key: 'federationRegistrationNumber', labelKey: 'roleProfileField.referee.federationRegistrationNumber', type: 'text' },
+    { key: 'pixKey1', labelKey: 'roleProfileField.referee.pixKey1', type: 'pix' },
+    { key: 'pixKey2', labelKey: 'roleProfileField.referee.pixKey2', type: 'pix' },
+    { key: 'pixKey3', labelKey: 'roleProfileField.referee.pixKey3', type: 'pix' },
   ],
   scout: [
-    { key: 'peladaRate', label: 'Por quanto faz o scout de uma pelada?', type: 'money', required: true },
-    { key: 'matchRate', label: 'Por quanto faz o scout de uma partida?', type: 'money', required: true },
-    { key: 'athleteRate', label: 'Por quanto faz o scout de um atleta?', type: 'money', required: true },
+    { key: 'peladaRate', labelKey: 'roleProfileField.scout.peladaRate', type: 'money', required: true },
+    { key: 'matchRate', labelKey: 'roleProfileField.scout.matchRate', type: 'money', required: true },
+    { key: 'athleteRate', labelKey: 'roleProfileField.scout.athleteRate', type: 'money', required: true },
     {
       key: 'hasMarkingAssistants',
-      label: 'Tem auxiliares para marcacao?',
+      labelKey: 'roleProfileField.scout.hasMarkingAssistants',
       type: 'boolean',
     },
     {
       key: 'equipmentDescription',
-      label: 'Quais equipamentos utiliza?',
+      labelKey: 'roleProfileField.scout.equipmentDescription',
       type: 'textarea',
     },
-    { key: 'pixKey1', label: 'Chave Pix 1 para recebimento', type: 'pix' },
-    { key: 'pixKey2', label: 'Chave Pix 2 para recebimento', type: 'pix' },
-    { key: 'pixKey3', label: 'Chave Pix 3 para recebimento', type: 'pix' },
+    { key: 'pixKey1', labelKey: 'roleProfileField.scout.pixKey1', type: 'pix' },
+    { key: 'pixKey2', labelKey: 'roleProfileField.scout.pixKey2', type: 'pix' },
+    { key: 'pixKey3', labelKey: 'roleProfileField.scout.pixKey3', type: 'pix' },
   ],
   journalist: [
-    { key: 'peladaRate', label: 'Por quanto cobre uma pelada?', type: 'money', required: true },
-    { key: 'matchRate', label: 'Por quanto cobre uma partida?', type: 'money', required: true },
+    { key: 'peladaRate', labelKey: 'roleProfileField.journalist.peladaRate', type: 'money', required: true },
+    { key: 'matchRate', labelKey: 'roleProfileField.journalist.matchRate', type: 'money', required: true },
     {
       key: 'equipmentDescription',
-      label: 'Quais equipamentos utiliza?',
+      labelKey: 'roleProfileField.journalist.equipmentDescription',
       type: 'textarea',
     },
-    { key: 'pixKey1', label: 'Chave Pix 1 para recebimento', type: 'pix' },
-    { key: 'pixKey2', label: 'Chave Pix 2 para recebimento', type: 'pix' },
-    { key: 'pixKey3', label: 'Chave Pix 3 para recebimento', type: 'pix' },
+    { key: 'pixKey1', labelKey: 'roleProfileField.journalist.pixKey1', type: 'pix' },
+    { key: 'pixKey2', labelKey: 'roleProfileField.journalist.pixKey2', type: 'pix' },
+    { key: 'pixKey3', labelKey: 'roleProfileField.journalist.pixKey3', type: 'pix' },
   ],
   cameraman: [
     {
       key: 'peladaLiveRate',
-      label: 'Por quanto filma uma pelada (transmissao ao vivo)?',
+      labelKey: 'roleProfileField.cameraman.peladaLiveRate',
       type: 'money',
       required: true,
     },
     {
       key: 'matchLiveRate',
-      label: 'Por quanto filma uma partida (transmissao ao vivo)?',
+      labelKey: 'roleProfileField.cameraman.matchLiveRate',
       type: 'money',
       required: true,
     },
     {
       key: 'peladaHighlightEditRate',
-      label: 'Por quanto edita melhores momentos (ate 5 min) de uma pelada?',
+      labelKey: 'roleProfileField.cameraman.peladaHighlightEditRate',
       type: 'money',
       required: true,
     },
     {
       key: 'matchHighlightEditRate',
-      label: 'Por quanto edita melhores momentos (ate 5 min) de uma partida?',
+      labelKey: 'roleProfileField.cameraman.matchHighlightEditRate',
       type: 'money',
       required: true,
     },
     {
       key: 'equipmentDescription',
-      label: 'Quais equipamentos utiliza?',
+      labelKey: 'roleProfileField.cameraman.equipmentDescription',
       type: 'textarea',
     },
-    { key: 'pixKey1', label: 'Chave Pix 1 para recebimento', type: 'pix' },
-    { key: 'pixKey2', label: 'Chave Pix 2 para recebimento', type: 'pix' },
-    { key: 'pixKey3', label: 'Chave Pix 3 para recebimento', type: 'pix' },
+    { key: 'pixKey1', labelKey: 'roleProfileField.cameraman.pixKey1', type: 'pix' },
+    { key: 'pixKey2', labelKey: 'roleProfileField.cameraman.pixKey2', type: 'pix' },
+    { key: 'pixKey3', labelKey: 'roleProfileField.cameraman.pixKey3', type: 'pix' },
   ],
   narrator: [
     {
       key: 'peladaLiveRate',
-      label: 'Por quanto narra uma pelada (transmissao ao vivo)?',
+      labelKey: 'roleProfileField.narrator.peladaLiveRate',
       type: 'money',
       required: true,
     },
     {
       key: 'matchLiveRate',
-      label: 'Por quanto narra uma partida (transmissao ao vivo)?',
+      labelKey: 'roleProfileField.narrator.matchLiveRate',
       type: 'money',
       required: true,
     },
     {
       key: 'peladaGoalNarrationEditRate',
-      label: 'Por quanto edita narracao dos gols de uma pelada?',
+      labelKey: 'roleProfileField.narrator.peladaGoalNarrationEditRate',
       type: 'money',
       required: true,
     },
     {
       key: 'matchGoalNarrationEditRate',
-      label: 'Por quanto edita narracao dos gols de uma partida?',
+      labelKey: 'roleProfileField.narrator.matchGoalNarrationEditRate',
       type: 'money',
       required: true,
     },
     {
       key: 'equipmentDescription',
-      label: 'Quais equipamentos utiliza?',
+      labelKey: 'roleProfileField.narrator.equipmentDescription',
       type: 'textarea',
     },
-    { key: 'pixKey1', label: 'Chave Pix 1 para recebimento', type: 'pix' },
-    { key: 'pixKey2', label: 'Chave Pix 2 para recebimento', type: 'pix' },
-    { key: 'pixKey3', label: 'Chave Pix 3 para recebimento', type: 'pix' },
+    { key: 'pixKey1', labelKey: 'roleProfileField.narrator.pixKey1', type: 'pix' },
+    { key: 'pixKey2', labelKey: 'roleProfileField.narrator.pixKey2', type: 'pix' },
+    { key: 'pixKey3', labelKey: 'roleProfileField.narrator.pixKey3', type: 'pix' },
   ],
   coach: [
     {
       key: 'teamTrainingRate',
-      label: 'Por quanto treina uma equipe amadora?',
+      labelKey: 'roleProfileField.coach.teamTrainingRate',
       type: 'money',
       required: true,
     },
-    { key: 'pixKey1', label: 'Chave Pix 1 para recebimento', type: 'pix' },
-    { key: 'pixKey2', label: 'Chave Pix 2 para recebimento', type: 'pix' },
-    { key: 'pixKey3', label: 'Chave Pix 3 para recebimento', type: 'pix' },
+    { key: 'pixKey1', labelKey: 'roleProfileField.coach.pixKey1', type: 'pix' },
+    { key: 'pixKey2', labelKey: 'roleProfileField.coach.pixKey2', type: 'pix' },
+    { key: 'pixKey3', labelKey: 'roleProfileField.coach.pixKey3', type: 'pix' },
   ],
   physical_trainer: [
     {
       key: 'teamTrainingRate',
-      label: 'Por quanto atua numa equipe amadora?',
+      labelKey: 'roleProfileField.physical_trainer.teamTrainingRate',
       type: 'money',
       required: true,
     },
     {
       key: 'athleteRate',
-      label: 'Por quanto atua como Personal Trainer?',
+      labelKey: 'roleProfileField.physical_trainer.athleteRate',
       type: 'money',
       required: true,
     },
-    { key: 'pixKey1', label: 'Chave Pix 1 para recebimento', type: 'pix' },
-    { key: 'pixKey2', label: 'Chave Pix 2 para recebimento', type: 'pix' },
-    { key: 'pixKey3', label: 'Chave Pix 3 para recebimento', type: 'pix' },
+    { key: 'pixKey1', labelKey: 'roleProfileField.physical_trainer.pixKey1', type: 'pix' },
+    { key: 'pixKey2', labelKey: 'roleProfileField.physical_trainer.pixKey2', type: 'pix' },
+    { key: 'pixKey3', labelKey: 'roleProfileField.physical_trainer.pixKey3', type: 'pix' },
   ],
   masseur: [
-    { key: 'peladaRate', label: 'Por quanto atua numa pelada?', type: 'money', required: true },
-    { key: 'teamRate', label: 'Por quanto atua numa equipe amadora?', type: 'money', required: true },
-    { key: 'pixKey1', label: 'Chave Pix 1 para recebimento', type: 'pix' },
-    { key: 'pixKey2', label: 'Chave Pix 2 para recebimento', type: 'pix' },
-    { key: 'pixKey3', label: 'Chave Pix 3 para recebimento', type: 'pix' },
+    { key: 'peladaRate', labelKey: 'roleProfileField.masseur.peladaRate', type: 'money', required: true },
+    { key: 'teamRate', labelKey: 'roleProfileField.masseur.teamRate', type: 'money', required: true },
+    { key: 'pixKey1', labelKey: 'roleProfileField.masseur.pixKey1', type: 'pix' },
+    { key: 'pixKey2', labelKey: 'roleProfileField.masseur.pixKey2', type: 'pix' },
+    { key: 'pixKey3', labelKey: 'roleProfileField.masseur.pixKey3', type: 'pix' },
   ],
   kitman: [
-    { key: 'peladaRate', label: 'Por quanto atua numa pelada?', type: 'money', required: true },
-    { key: 'teamRate', label: 'Por quanto atua numa equipe amadora?', type: 'money', required: true },
-    { key: 'pixKey1', label: 'Chave Pix 1 para recebimento', type: 'pix' },
-    { key: 'pixKey2', label: 'Chave Pix 2 para recebimento', type: 'pix' },
-    { key: 'pixKey3', label: 'Chave Pix 3 para recebimento', type: 'pix' },
+    { key: 'peladaRate', labelKey: 'roleProfileField.kitman.peladaRate', type: 'money', required: true },
+    { key: 'teamRate', labelKey: 'roleProfileField.kitman.teamRate', type: 'money', required: true },
+    { key: 'pixKey1', labelKey: 'roleProfileField.kitman.pixKey1', type: 'pix' },
+    { key: 'pixKey2', labelKey: 'roleProfileField.kitman.pixKey2', type: 'pix' },
+    { key: 'pixKey3', labelKey: 'roleProfileField.kitman.pixKey3', type: 'pix' },
   ],
   gandula: [
-    { key: 'peladaRate', label: 'Por quanto trabalha numa pelada?', type: 'money', required: true },
+    { key: 'peladaRate', labelKey: 'roleProfileField.gandula.peladaRate', type: 'money', required: true },
     {
       key: 'matchRate',
-      label: 'Por quanto trabalha numa partida entre equipes amadoras?',
+      labelKey: 'roleProfileField.gandula.matchRate',
       type: 'money',
       required: true,
     },
-    { key: 'pixKey1', label: 'Chave Pix 1 para pagamento', type: 'pix' },
-    { key: 'pixKey2', label: 'Chave Pix 2 para pagamento', type: 'pix' },
-    { key: 'pixKey3', label: 'Chave Pix 3 para pagamento', type: 'pix' },
+    { key: 'pixKey1', labelKey: 'roleProfileField.gandula.pixKey1', type: 'pix' },
+    { key: 'pixKey2', labelKey: 'roleProfileField.gandula.pixKey2', type: 'pix' },
+    { key: 'pixKey3', labelKey: 'roleProfileField.gandula.pixKey3', type: 'pix' },
   ],
   gatekeeper: [
-    { key: 'peladaRate', label: 'Por quanto atua numa pelada?', type: 'money', required: true },
+    { key: 'peladaRate', labelKey: 'roleProfileField.gatekeeper.peladaRate', type: 'money', required: true },
     {
       key: 'matchRate',
-      label: 'Por quanto atua numa partida entre equipes amadoras?',
+      labelKey: 'roleProfileField.gatekeeper.matchRate',
       type: 'money',
       required: true,
     },
-    { key: 'pixKey1', label: 'Chave Pix 1 para pagamento', type: 'pix' },
-    { key: 'pixKey2', label: 'Chave Pix 2 para pagamento', type: 'pix' },
-    { key: 'pixKey3', label: 'Chave Pix 3 para pagamento', type: 'pix' },
+    { key: 'pixKey1', labelKey: 'roleProfileField.gatekeeper.pixKey1', type: 'pix' },
+    { key: 'pixKey2', labelKey: 'roleProfileField.gatekeeper.pixKey2', type: 'pix' },
+    { key: 'pixKey3', labelKey: 'roleProfileField.gatekeeper.pixKey3', type: 'pix' },
   ],
 };
 
@@ -323,10 +323,10 @@ export function buildRoleProfileForm(fb: FormBuilder, role: ProfessionalRole): F
   return fb.group(controls);
 }
 
-export function roleProfileFieldLabels(role: ProfessionalRole): Record<string, string> {
+export function roleProfileFieldLabels(role: ProfessionalRole, t: (key: string) => string): Record<string, string> {
   const labels: Record<string, string> = {};
   for (const field of ROLE_PROFILE_FIELDS[role]) {
-    labels[field.key] = field.label;
+    labels[field.key] = t(field.labelKey);
   }
   return labels;
 }

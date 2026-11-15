@@ -2,9 +2,9 @@
   <app-user-bar></app-user-bar>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button (click)="cancel()">Cancelar</ion-button>
+      <ion-button (click)="cancel()">{{ 'common.cancel' | t }}</ion-button>
     </ion-buttons>
-    <ion-title>Novo evento</ion-title>
+    <ion-title>{{ 'eventCreateForm.pageTitle' | t }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -35,14 +35,14 @@
             <ion-item>
               <ion-input
                 class="form-label-wrap"
-                label="Nome do evento"
+                [label]="'eventCreateForm.nameLabel' | t"
                 labelPlacement="stacked"
                 formControlName="name"
                 (ionInput)="onFieldChange()"
               ></ion-input>
             </ion-item>
             <ion-item>
-              <ion-select class="form-label-wrap" label="Tipo" labelPlacement="stacked" formControlName="type">
+              <ion-select class="form-label-wrap" [label]="'formCommon.typeLabel' | t" labelPlacement="stacked" formControlName="type">
                 @for (t of eventTypes; track t.value) {
                   <ion-select-option [value]="t.value">{{ t.label }}</ion-select-option>
                 }
@@ -52,13 +52,13 @@
               <ion-item>
                 <ion-select
                   class="form-label-wrap"
-                  label="Time mandante cadastrado"
+                  [label]="'eventCreateForm.homeTeamRegistered' | t"
                   labelPlacement="stacked"
                   formControlName="homeTeamId"
                   interface="popover"
                   (ionChange)="onHomeTeamPicked($any($event.detail.value))"
                 >
-                  <ion-select-option value="">Digitar nome</ion-select-option>
+                  <ion-select-option value="">{{ 'eventCreateForm.typeEnterName' | t }}</ion-select-option>
                   @for (team of amateurTeams; track team.id) {
                     <ion-select-option [value]="team.id">{{ team.name }}</ion-select-option>
                   }
@@ -67,23 +67,23 @@
               <ion-item>
                 <ion-input
                   class="form-label-wrap"
-                  label="Nome da equipe mandante"
+                  [label]="'eventCreateForm.homeTeamName' | t"
                   labelPlacement="stacked"
                   formControlName="homeTeamName"
-                  placeholder="Ex.: Time Azul"
+                  [placeholder]="'eventCreateForm.homeTeamNamePlaceholder' | t"
                   (ionInput)="onFieldChange()"
                 ></ion-input>
               </ion-item>
               <ion-item>
                 <ion-select
                   class="form-label-wrap"
-                  label="Time visitante cadastrado"
+                  [label]="'eventCreateForm.awayTeamRegistered' | t"
                   labelPlacement="stacked"
                   formControlName="awayTeamId"
                   interface="popover"
                   (ionChange)="onAwayTeamPicked($any($event.detail.value))"
                 >
-                  <ion-select-option value="">Digitar nome</ion-select-option>
+                  <ion-select-option value="">{{ 'eventCreateForm.typeEnterName' | t }}</ion-select-option>
                   @for (team of amateurTeams; track team.id) {
                     <ion-select-option [value]="team.id">{{ team.name }}</ion-select-option>
                   }
@@ -92,15 +92,15 @@
               <ion-item>
                 <ion-input
                   class="form-label-wrap"
-                  label="Nome da equipe visitante"
+                  [label]="'eventCreateForm.awayTeamName' | t"
                   labelPlacement="stacked"
                   formControlName="awayTeamName"
-                  placeholder="Ex.: Time Vermelho"
+                  [placeholder]="'eventCreateForm.awayTeamNamePlaceholder' | t"
                   (ionInput)="onFieldChange()"
                 ></ion-input>
               </ion-item>
               <ion-note color="medium" class="ion-padding-horizontal">
-                Prefira um time ja cadastrado. Se ainda nao existir, digite o nome.
+                {{ 'eventCreateForm.teamMatchHint' | t }}
               </ion-note>
             }
           }
@@ -109,7 +109,7 @@
               <ion-input
                 class="form-label-wrap"
                 type="date"
-                label="Data de inicio"
+                [label]="'formCommon.startDateLabel' | t"
                 labelPlacement="stacked"
                 formControlName="startDate"
                 (ionInput)="onFieldChange()"
@@ -119,7 +119,7 @@
               <ion-input
                 class="form-label-wrap"
                 type="time"
-                label="Hora de inicio"
+                [label]="'formCommon.startTimeLabel' | t"
                 labelPlacement="stacked"
                 formControlName="startTime"
                 (ionInput)="onFieldChange()"
@@ -129,7 +129,7 @@
               <ion-input
                 class="form-label-wrap"
                 type="date"
-                label="Data de termino"
+                [label]="'formCommon.endDateLabel' | t"
                 labelPlacement="stacked"
                 formControlName="endDate"
                 (ionInput)="onFieldChange()"
@@ -139,7 +139,7 @@
               <ion-input
                 class="form-label-wrap"
                 type="time"
-                label="Hora de termino"
+                [label]="'formCommon.endTimeLabel' | t"
                 labelPlacement="stacked"
                 formControlName="endTime"
                 (ionInput)="onFieldChange()"
@@ -149,17 +149,17 @@
           @case ('location') {
             <app-address-form
               formControlName="address"
-              title="Local do evento"
+              [title]="'eventCreateForm.locationVenueTitle' | t"
               [showTitle]="true"
               (addressChange)="onAddressChanged()"
             ></app-address-form>
             <ion-item>
               <ion-input
                 class="form-label-wrap"
-                label="Complemento do local"
+                [label]="'formCommon.locationComplementLabel' | t"
                 labelPlacement="stacked"
                 formControlName="locationComplement"
-                placeholder="Ex.: Campo 2, Quadra 2"
+                [placeholder]="'formCommon.locationComplementPlaceholderCourt' | t"
                 (ionInput)="onFieldChange()"
               ></ion-input>
             </ion-item>
@@ -172,7 +172,7 @@
               <ion-input
                 class="form-label-wrap"
                 type="number"
-                label="Valor da participacao (R$)"
+                [label]="'eventCreateForm.participationFeeLabel' | t"
                 labelPlacement="stacked"
                 formControlName="participationFee"
                 min="0"
@@ -183,7 +183,7 @@
             <ion-item>
               <ion-input
                 class="form-label-wrap"
-                label="Chave PIX 1"
+                [label]="'eventCreateForm.pixKey1' | t"
                 labelPlacement="stacked"
                 formControlName="pixKey1"
                 (ionInput)="onFieldChange()"
@@ -193,7 +193,7 @@
             <ion-item>
               <ion-input
                 class="form-label-wrap"
-                label="Chave PIX 2"
+                [label]="'eventCreateForm.pixKey2' | t"
                 labelPlacement="stacked"
                 formControlName="pixKey2"
                 (ionInput)="onFieldChange()"
@@ -203,7 +203,7 @@
             <ion-item>
               <ion-input
                 class="form-label-wrap"
-                label="Chave PIX 3"
+                [label]="'eventCreateForm.pixKey3' | t"
                 labelPlacement="stacked"
                 formControlName="pixKey3"
                 (ionInput)="onFieldChange()"

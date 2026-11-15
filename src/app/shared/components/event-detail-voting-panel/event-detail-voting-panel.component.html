@@ -53,7 +53,7 @@
               [(ngModel)]="voteScores[participant.objectId]"
               [ngModelOptions]="{ standalone: true }"
               interface="popover"
-              placeholder="Nota"
+              [placeholder]="'eventDetail.voting.scorePlaceholder' | t"
             >
               @for (score of voteScoreOptions; track score) {
                 <ion-select-option [value]="score">{{ score }}</ion-select-option>

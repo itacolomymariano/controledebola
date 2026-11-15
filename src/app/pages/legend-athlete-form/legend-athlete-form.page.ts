@@ -10,6 +10,7 @@ import {
 } from '../../core/models/amateur-legend.model';
 import { AuthService } from '../../core/services/auth.service';
 import { AmateurLegendService } from '../../core/services/amateur-legend.service';
+import { I18nService } from '../../core/services/i18n.service';
 import {
   cancelLegendFormNavigation,
   consumeLegendFormReturnState,
@@ -55,7 +56,8 @@ export class LegendAthleteFormPage {
     private readonly router: Router,
     private readonly route: ActivatedRoute,
     private readonly loadingCtrl: LoadingController,
-    private readonly alertCtrl: AlertController
+    private readonly alertCtrl: AlertController,
+    private readonly i18n: I18nService
   ) {}
 
   get isEditMode(): boolean {
@@ -203,13 +205,13 @@ export class LegendAthleteFormPage {
     try {
       const athlete = await this.legendService.getAthlete(id);
       if (!athlete) {
-        await this.showError('Atleta lenda nao encontrado.');
+        await this.showError(this.i18n.t('legends.error.athleteNotFound'));
         void this.router.navigateByUrl('/legends');
         return;
       }
       const userId = this.auth.getCurrentUser()?.id;
       if (!userId || athlete.registeredByUserId !== userId) {
-        await this.showError('Somente quem cadastrou pode editar esta lenda.');
+        await this.showError(this.i18n.t('legends.editOnlyRegistrar'));
         void this.router.navigate(['/legends/athlete', id]);
         return;
       }
@@ -261,7 +263,11 @@ export class LegendAthleteFormPage {
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('common.error'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 }

@@ -88,8 +88,12 @@ export class InboxPage implements OnDestroy {
     private readonly route: ActivatedRoute,
     private readonly loadingCtrl: LoadingController,
     private readonly alertCtrl: AlertController,
-    private readonly i18n: I18nService
+    readonly i18n: I18nService
   ) {}
+
+  get searchbarRemountKey(): string {
+    return this.i18n.ionInputRemountKey;
+  }
 
   private t(key: string, params?: Record<string, string | number>): string {
     return this.i18n.t(key, params);

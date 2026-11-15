@@ -6,7 +6,7 @@
       class="mural-share-btn"
       [id]="helpTriggerId"
       (click)="$event.stopPropagation()"
-      aria-label="Como foi calculado"
+      [attr.aria-label]="'mural.share.howCalculated' | t"
     >
       <ion-icon slot="icon-only" name="help-circle-outline"></ion-icon>
     </ion-button>
@@ -15,7 +15,7 @@
         <ion-content class="ion-padding mural-rule-popover">
           <div class="balloon-header">
             <h3>{{ 'mural.rule.title' | t }}</h3>
-            <ion-button fill="clear" size="small" color="medium" class="balloon-close" (click)="rulePopover.dismiss()" aria-label="Fechar">
+            <ion-button fill="clear" size="small" color="medium" class="balloon-close" (click)="rulePopover.dismiss()" [attr.aria-label]="'common.close' | t">
               <ion-icon slot="icon-only" name="close-outline"></ion-icon>
             </ion-button>
           </div>
@@ -32,7 +32,7 @@
             </ion-button>
             <ion-button size="small" fill="solid" color="medium" (click)="rulePopover.dismiss()">
               <ion-icon slot="start" name="close-outline"></ion-icon>
-              Fechar
+              {{ 'common.close' | t }}
             </ion-button>
           </div>
         </ion-content>
@@ -45,7 +45,7 @@
     class="mural-share-btn"
     [disabled]="disabled || sharing || !context"
     (click)="share(); $event.stopPropagation()"
-    aria-label="Compartilhar card"
+    [attr.aria-label]="'mural.share.shareCard' | t"
   >
     @if (sharing) {
       <ion-spinner name="crescent"></ion-spinner>

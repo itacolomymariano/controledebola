@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/
 import { ActivatedRoute } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
 import { EventMediaService } from '../../core/services/event-media.service';
+import { I18nService } from '../../core/services/i18n.service';
 import { AudioRecordingSession, startAudioRecording } from '../../core/utils/audio-recorder.util';
 
 const NARRATION_MAX_MS = 40_000;
@@ -48,7 +49,8 @@ export class EventNarratorRadioPage {
     private readonly eventMediaService: EventMediaService,
     private readonly alertCtrl: AlertController,
     private readonly loadingCtrl: LoadingController,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly i18n: I18nService
   ) {}
 
   ionViewWillEnter(): void {
@@ -107,7 +109,9 @@ export class EventNarratorRadioPage {
       this.narrationRecording = true;
       this.cdr.markForCheck();
     } catch (error: unknown) {
-      await this.showError(this.eventMediaService.errorMessage(error, 'Nao foi possivel iniciar a gravacao.'));
+      await this.showError(
+        this.eventMediaService.errorMessage(error, this.i18n.t('eventMedia.error.startRecording'))
+      );
     }
   }
 
@@ -140,7 +144,9 @@ export class EventNarratorRadioPage {
       this.interviewRecording = true;
       this.cdr.markForCheck();
     } catch (error: unknown) {
-      await this.showError(this.eventMediaService.errorMessage(error, 'Nao foi possivel iniciar a gravacao.'));
+      await this.showError(
+        this.eventMediaService.errorMessage(error, this.i18n.t('eventMedia.error.startRecording'))
+      );
     }
   }
 
@@ -174,23 +180,23 @@ export class EventNarratorRadioPage {
     const title = this.narrationTitle.trim();
     const description = this.narrationDescription.trim();
     if (title.length < 2) {
-      await this.showError('Informe o titulo da narracao.');
+      await this.showError(this.i18n.t('eventMedia.validation.narrationTitle'));
       return;
     }
     if (description.length < 2) {
-      await this.showError('Informe uma breve descricao da narracao.');
+      await this.showError(this.i18n.t('eventMedia.validation.narrationDescription'));
       return;
     }
     if (!this.narrationAudioBlob && !this.narrationUploadedUrl) {
-      await this.showError('Grave ou envie o audio da narracao.');
+      await this.showError(this.i18n.t('eventMedia.validation.narrationAudio'));
       return;
     }
 
-    const confirmed = await this.confirmOverwrite('uma narracao de gol');
+    const confirmed = await this.confirmOverwrite(this.i18n.t('eventMedia.overwriteKind.narrationGoal'));
     if (!confirmed) return;
 
     this.publishingNarration = true;
-    const loading = await this.loadingCtrl.create({ message: 'Enviando narracao...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('eventMedia.sendingNarration') });
     await loading.present();
     try {
       const audioUrl =
@@ -201,10 +207,12 @@ export class EventNarratorRadioPage {
           `event-${this.eventId}-narration`
         ));
       await this.eventMediaService.publishRadioNarration(this.eventId, title, description, audioUrl);
-      await this.showSuccess('Narracao enviada ao mural do evento.');
+      await this.showSuccess(this.i18n.t('eventNarrator.toast.narrationPublished'));
       this.narrationUploadedUrl = audioUrl;
     } catch (error: unknown) {
-      await this.showError(this.eventMediaService.errorMessage(error, 'Nao foi possivel enviar a narracao.'));
+      await this.showError(
+        this.eventMediaService.errorMessage(error, this.i18n.t('eventMedia.error.sendNarration'))
+      );
     } finally {
       this.publishingNarration = false;
       await loading.dismiss();
@@ -216,23 +224,23 @@ export class EventNarratorRadioPage {
     const title = this.interviewTitle.trim();
     const description = this.interviewDescription.trim();
     if (title.length < 2) {
-      await this.showError('Informe o titulo da entrevista.');
+      await this.showError(this.i18n.t('eventMedia.validation.interviewTitle'));
       return;
     }
     if (description.length < 2) {
-      await this.showError('Informe uma breve descricao da entrevista.');
+      await this.showError(this.i18n.t('eventMedia.validation.interviewDescription'));
       return;
     }
     if (!this.interviewAudioBlob) {
-      await this.showError('Grave o audio da entrevista.');
+      await this.showError(this.i18n.t('eventMedia.validation.interviewAudio'));
       return;
     }
 
-    const confirmed = await this.confirmOverwrite('uma entrevista de radio');
+    const confirmed = await this.confirmOverwrite(this.i18n.t('eventMedia.overwriteKind.radioInterview'));
     if (!confirmed) return;
 
     this.publishingInterview = true;
-    const loading = await this.loadingCtrl.create({ message: 'Enviando entrevista...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('eventMedia.sendingInterview') });
     await loading.present();
     try {
       const audioUrl = await this.eventMediaService.uploadAudioBlob(
@@ -241,9 +249,11 @@ export class EventNarratorRadioPage {
         `event-${this.eventId}-interview`
       );
       await this.eventMediaService.publishRadioInterview(this.eventId, title, description, audioUrl);
-      await this.showSuccess('Entrevista enviada ao mural do evento.');
+      await this.showSuccess(this.i18n.t('eventNarrator.toast.interviewPublished'));
     } catch (error: unknown) {
-      await this.showError(this.eventMediaService.errorMessage(error, 'Nao foi possivel enviar a entrevista.'));
+      await this.showError(
+        this.eventMediaService.errorMessage(error, this.i18n.t('eventMedia.error.sendInterview'))
+      );
     } finally {
       this.publishingInterview = false;
       await loading.dismiss();
@@ -272,11 +282,11 @@ export class EventNarratorRadioPage {
 
   private async confirmOverwrite(kind: string): Promise<boolean> {
     const alert = await this.alertCtrl.create({
-      header: 'Confirmar envio',
+      header: this.i18n.t('eventMedia.confirmSendHeader'),
       message: this.eventMediaService.formatPublishOverwriteMessage(kind),
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
-        { text: 'Enviar', role: 'confirm' },
+        { text: this.i18n.t('common.cancel'), role: 'cancel' },
+        { text: this.i18n.t('common.send'), role: 'confirm' },
       ],
     });
     await alert.present();
@@ -285,12 +295,20 @@ export class EventNarratorRadioPage {
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Atencao', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('common.attention'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 
   private async showSuccess(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Sucesso', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('eventDetail.alert.success'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 }

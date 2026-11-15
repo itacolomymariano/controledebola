@@ -496,7 +496,7 @@
       ></app-mural-share-button>
     </div>
     @if (!section.entries.length) {
-      <ion-note>Sem dados ainda.</ion-note>
+      <ion-note>{{ 'mural.playful.noData' | t }}</ion-note>
     }
     @for (entry of section.entries; track entry.userId; let i = $index) {
       <div class="mural-playful-rank-row">

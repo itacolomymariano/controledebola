@@ -177,7 +177,7 @@ export class TeamFormPage {
     this.team = await this.teamService.getOwnedById(teamId);
     if (!this.team) {
       this.mode = 'list';
-      await this.showError('Time nao encontrado ou sem permissao.');
+      await this.showError(this.i18n.t('teamForm.error.notFoundOrForbidden'));
       return;
     }
     this.teamImagePreview = this.team.teamImageUrl ?? null;
@@ -301,17 +301,19 @@ export class TeamFormPage {
     const homeVenueAddress = hasVenueAddress ? venueAddress : null;
 
     if (!this.team && (!this.teamImageFile || !this.presidentImageFile)) {
-      await this.showError('Selecione a imagem do time e a imagem do presidente.');
+      await this.showError(this.i18n.t('teamForm.error.teamAndPresidentImages'));
       return;
     }
 
     if (!this.team && !values.uniformId) {
-      await this.showError('Selecione o uniforme do time.');
+      await this.showError(this.i18n.t('teamForm.error.selectUniform'));
       return;
     }
 
     const loading = await this.loadingCtrl.create({
-      message: this.team ? 'Salvando alteracoes...' : 'Salvando time...',
+      message: this.team
+        ? this.i18n.t('teamForm.loading.savingChanges')
+        : this.i18n.t('teamForm.loading.savingTeam'),
     });
     await loading.present();
 
@@ -368,12 +370,12 @@ export class TeamFormPage {
   async exitWizard(): Promise<void> {
     this.persistDraft();
     const alert = await this.alertCtrl.create({
-      header: 'Sair do cadastro',
-      message: 'Seu rascunho foi salvo neste aparelho. Você pode continuar depois.',
+      header: this.i18n.t('peladaForm.exitWizardHeader'),
+      message: this.i18n.t('peladaForm.exitWizardMessage'),
       buttons: [
-        { text: 'Continuar preenchendo', role: 'cancel' },
+        { text: this.i18n.t('peladaForm.continueFilling'), role: 'cancel' },
         {
-          text: 'Sair',
+          text: this.i18n.t('peladaForm.exit'),
           role: 'destructive',
           handler: () => {
             void this.router.navigateByUrl(this.readReturnUrl());
@@ -428,11 +430,11 @@ export class TeamFormPage {
     }
     if (step === 'photos') {
       if (!this.teamImageFile) {
-        void this.showError('Selecione a imagem do time.');
+        void this.showError(this.i18n.t('teamForm.error.selectTeamImage'));
         return false;
       }
       if (!this.presidentImageFile) {
-        void this.showError('Selecione a imagem do presidente.');
+        void this.showError(this.i18n.t('teamForm.error.selectPresidentImage'));
         return false;
       }
       return true;
@@ -529,7 +531,11 @@ export class TeamFormPage {
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('common.error'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 }

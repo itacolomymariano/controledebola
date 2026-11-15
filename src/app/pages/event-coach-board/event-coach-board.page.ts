@@ -8,6 +8,7 @@ import { CoachEventBoard } from '../../core/models/support-role-tools.model';
 import { EventService } from '../../core/services/event.service';
 import { FanPredictionService } from '../../core/services/fan-prediction.service';
 import { SupportRoleToolsService } from '../../core/services/support-role-tools.service';
+import { I18nService } from '../../core/services/i18n.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
 
 @Component({
@@ -42,7 +43,8 @@ export class EventCoachBoardPage {
     private readonly supportTools: SupportRoleToolsService,
     private readonly loadingCtrl: LoadingController,
     private readonly alertCtrl: AlertController,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly i18n: I18nService
   ) {}
 
   get teamNotes(): FormArray {
@@ -68,7 +70,7 @@ export class EventCoachBoardPage {
     try {
       const event = await this.eventService.getById(eventId);
       if (!event) {
-        await this.showError('Evento nao encontrado.');
+        await this.showError(this.i18n.t('supportRole.eventNotFound'));
         await this.router.navigateByUrl('/tabs/peladas', { replaceUrl: true });
         return;
       }
@@ -99,7 +101,7 @@ export class EventCoachBoardPage {
       }
       this.applyTeamMatchSides();
     } catch (error: unknown) {
-      await this.showError(parseErrorMessage(error) || 'Erro ao carregar painel do treinador.');
+      await this.showError(parseErrorMessage(error) || this.i18n.t('supportRole.error.loadCoachBoard'));
       this.readOnly = true;
     } finally {
       this.loading = false;
@@ -110,7 +112,7 @@ export class EventCoachBoardPage {
   async submit(): Promise<void> {
     if (!this.event || this.saving || this.readOnly) return;
     this.saving = true;
-    const loading = await this.loadingCtrl.create({ message: 'Salvando...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('common.saving') });
     await loading.present();
     this.cdr.markForCheck();
     try {
@@ -135,9 +137,9 @@ export class EventCoachBoardPage {
         rotationNotes: String(value.rotationNotes || ''),
       });
       this.applyTeamMatchSides();
-      await this.showSuccess('Painel do treinador salvo.');
+      await this.showSuccess(this.i18n.t('supportRole.coachBoardSaved'));
     } catch (error: unknown) {
-      await this.showError(parseErrorMessage(error) || 'Nao foi possivel salvar o painel.');
+      await this.showError(parseErrorMessage(error) || this.i18n.t('supportRole.error.saveCoachBoard'));
     } finally {
       await loading.dismiss();
       this.saving = false;
@@ -209,18 +211,18 @@ export class EventCoachBoardPage {
 
   private async showError(message: string): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Atenção',
+      header: this.i18n.t('common.attention'),
       message,
-      buttons: ['OK'],
+      buttons: [this.i18n.t('common.ok')],
     });
     await alert.present();
   }
 
   private async showSuccess(message: string): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Pronto',
+      header: this.i18n.t('common.ready'),
       message,
-      buttons: ['OK'],
+      buttons: [this.i18n.t('common.ok')],
     });
     await alert.present();
   }

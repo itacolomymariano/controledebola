@@ -6,6 +6,7 @@ import { EventAthleteOption } from '../../core/models/fan-prediction.model';
 import { PeladaEvent } from '../../core/models/event.model';
 import { EventService } from '../../core/services/event.service';
 import { FanPredictionService } from '../../core/services/fan-prediction.service';
+import { I18nService } from '../../core/services/i18n.service';
 
 @Component({
   selector: 'app-event-predictions',
@@ -43,7 +44,8 @@ export class EventPredictionsPage {
     private readonly eventService: EventService,
     private readonly fanPredictionService: FanPredictionService,
     private readonly loadingCtrl: LoadingController,
-    private readonly alertCtrl: AlertController
+    private readonly alertCtrl: AlertController,
+    private readonly i18n: I18nService
   ) {}
 
   get goalScorers(): FormArray {
@@ -65,7 +67,7 @@ export class EventPredictionsPage {
     try {
       const event = await this.eventService.getById(eventId);
       if (!event) {
-        await this.showError('Evento nao encontrado.');
+        await this.showError(this.i18n.t('supportRole.eventNotFound'));
         await this.router.navigateByUrl('/tabs/peladas', { replaceUrl: true });
         return;
       }
@@ -175,11 +177,11 @@ export class EventPredictionsPage {
 
     if (this.isPeladaType && this.form.get('topScorerUserId')?.invalid) {
       this.form.get('topScorerUserId')?.markAsTouched();
-      await this.showError('Selecione o atleta que voce acha que fara mais gols.');
+      await this.showError(this.i18n.t('eventPredictions.error.topScorer'));
       return;
     }
 
-    const loading = await this.loadingCtrl.create({ message: 'Salvando palpites...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('eventPredictions.loading.saving') });
     await loading.present();
 
     try {
@@ -206,21 +208,25 @@ export class EventPredictionsPage {
       });
 
       const alert = await this.alertCtrl.create({
-        header: 'Palpites salvos',
-        message: 'Seus palpites foram registrados. Boa sorte!',
-        buttons: ['OK'],
+        header: this.i18n.t('eventPredictions.savedHeader'),
+        message: this.i18n.t('eventPredictions.savedMessage'),
+        buttons: [this.i18n.t('common.ok')],
       });
       await alert.present();
       this.goBack();
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Nao foi possivel salvar.');
+      await this.showError(error instanceof Error ? error.message : this.i18n.t('eventPredictions.error.save'));
     } finally {
       await loading.dismiss();
     }
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('common.error'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 }

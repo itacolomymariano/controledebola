@@ -148,6 +148,7 @@ docs/             documentacao (guia completo + fases Back4App + iOS Actions)
 - Use `parseErrorMessage()` e `handleApiError()` para erros Parse
 - Configure chaves em `src/environments/environment.local.ts` (nao commitar)
 - **UI / tema:** paleta marca `controle_de_bola` — [`docs/UI-BRAND-THEME-2026-11.md`](docs/UI-BRAND-THEME-2026-11.md); hex so em `theme/variables.scss` + `theme-palette.model.ts`; **Inicio** so no rodape (1ª aba), nao icone casa no `user-bar`; labels longos em forms → `global.scss` (stacked input/select)
+- **i18n / OnPush:** HTML com `| t`; strings montadas em TS → `i18n.t()` e, se a tela e OnPush ou Ionic cacheia a view, `locale$.subscribe(() => cdr.markForCheck())` ou getters (troca global dispara `ApplicationRef.tick()` em `I18nService.setLocale`). Menu e bandeiras usam `applyAppLocale`.
 
 ### Nao faca
 

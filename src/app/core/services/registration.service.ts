@@ -901,7 +901,9 @@ export class RegistrationService {
   }
 
   formatMembershipType(type: MembershipType): string {
-    return type === 'socio' ? 'Socio' : 'Convidado';
+    return type === 'socio'
+      ? this.i18n.t('registration.membershipType.socio')
+      : this.i18n.t('registration.membershipType.convidado');
   }
 
   formatArrivedAt(date: Date): string {

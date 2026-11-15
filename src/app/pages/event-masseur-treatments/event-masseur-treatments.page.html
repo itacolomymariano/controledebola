@@ -20,13 +20,13 @@
 
   @if (!loading && event) {
     <h1>{{ event.name }}</h1>
-    <p>Registre atendimentos rapidos de apoio (nao e prontuario medico).</p>
+    <p>{{ 'eventMasseur.intro' | t }}</p>
 
     <form [formGroup]="form" (ngSubmit)="submit()">
       <ion-list>
         <ion-item>
           <ion-select
-            label="Atleta"
+            [label]="'eventMasseur.label.athlete' | t"
             labelPlacement="stacked"
             formControlName="athleteUserId"
             interface="popover"
@@ -39,7 +39,7 @@
           </ion-select>
         </ion-item>
         <ion-item>
-          <ion-select label="Momento" labelPlacement="stacked" formControlName="phase" interface="popover">
+          <ion-select [label]="'eventMasseur.label.phase' | t" labelPlacement="stacked" formControlName="phase" interface="popover">
             <ion-select-option value="pre">Pre-jogo</ion-select-option>
             <ion-select-option value="halftime">Intervalo</ion-select-option>
             <ion-select-option value="post">Pos-jogo</ion-select-option>
@@ -47,31 +47,31 @@
         </ion-item>
         <ion-item>
           <ion-input
-            label="Regiao do corpo"
+            [label]="'eventMasseur.label.bodyRegion' | t"
             labelPlacement="stacked"
             formControlName="bodyRegion"
-            placeholder="Ex.: panturrilha"
+            [placeholder]="'eventMasseur.placeholder.bodyRegion' | t"
           ></ion-input>
         </ion-item>
         <ion-item>
           <ion-input
-            label="Tipo de atendimento"
+            [label]="'eventMasseur.label.treatmentType' | t"
             labelPlacement="stacked"
             formControlName="treatmentType"
-            placeholder="Ex.: liberacao, gelo, alongamento"
+            [placeholder]="'eventMasseur.placeholder.treatmentType' | t"
           ></ion-input>
         </ion-item>
         <ion-item>
           <ion-input
             type="number"
-            label="Duracao (min)"
+            [label]="'eventMasseur.label.durationMin' | t"
             labelPlacement="stacked"
             formControlName="durationMin"
           ></ion-input>
         </ion-item>
         <ion-item>
           <ion-select
-            label="Retorno ao jogo"
+            [label]="'eventMasseur.label.returnStatus' | t"
             labelPlacement="stacked"
             formControlName="returnStatus"
             interface="popover"
@@ -83,7 +83,7 @@
         </ion-item>
         <ion-item>
           <ion-textarea
-            label="Observacao"
+            [label]="'eventMasseur.label.notes' | t"
             labelPlacement="stacked"
             formControlName="notes"
             autoGrow="true"

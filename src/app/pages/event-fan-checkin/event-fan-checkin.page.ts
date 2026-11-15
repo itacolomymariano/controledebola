@@ -6,6 +6,7 @@ import { PeladaEvent } from '../../core/models/event.model';
 import { FanAttendanceMode, FanEventCheckIn } from '../../core/models/support-role-tools.model';
 import { EventService } from '../../core/services/event.service';
 import { SupportRoleToolsService } from '../../core/services/support-role-tools.service';
+import { I18nService } from '../../core/services/i18n.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
 
 @Component({
@@ -36,7 +37,8 @@ export class EventFanCheckInPage {
     private readonly supportTools: SupportRoleToolsService,
     private readonly loadingCtrl: LoadingController,
     private readonly alertCtrl: AlertController,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly i18n: I18nService
   ) {}
 
   goBack(): void {
@@ -58,7 +60,7 @@ export class EventFanCheckInPage {
     try {
       const event = await this.eventService.getById(eventId);
       if (!event) {
-        await this.showError('Evento nao encontrado.');
+        await this.showError(this.i18n.t('supportRole.eventNotFound'));
         await this.router.navigateByUrl('/tabs/peladas', { replaceUrl: true });
         return;
       }
@@ -78,7 +80,7 @@ export class EventFanCheckInPage {
         this.canEdit = !!this.myCheckIn || true;
       }
     } catch (error: unknown) {
-      await this.showError(parseErrorMessage(error) || 'Erro ao carregar check-in.');
+      await this.showError(parseErrorMessage(error) || this.i18n.t('supportRole.error.loadFanCheckin'));
     } finally {
       this.loading = false;
       this.cdr.markForCheck();
@@ -88,7 +90,7 @@ export class EventFanCheckInPage {
   async submit(): Promise<void> {
     if (!this.event || this.form.invalid || this.saving) return;
     this.saving = true;
-    const loading = await this.loadingCtrl.create({ message: 'Registrando...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('supportRole.fanCheckinRegistering') });
     await loading.present();
     this.cdr.markForCheck();
     try {
@@ -99,9 +101,9 @@ export class EventFanCheckInPage {
         message: value.message || '',
       });
       this.checkIns = await this.supportTools.getEventFanCheckIns(this.event.objectId);
-      await this.showSuccess('Check-in da torcida registrado.');
+      await this.showSuccess(this.i18n.t('supportRole.fanCheckinSaved'));
     } catch (error: unknown) {
-      await this.showError(parseErrorMessage(error) || 'Nao foi possivel registrar o check-in.');
+      await this.showError(parseErrorMessage(error) || this.i18n.t('supportRole.error.saveFanCheckin'));
     } finally {
       await loading.dismiss();
       this.saving = false;
@@ -111,18 +113,18 @@ export class EventFanCheckInPage {
 
   private async showError(message: string): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Atenção',
+      header: this.i18n.t('common.attention'),
       message,
-      buttons: ['OK'],
+      buttons: [this.i18n.t('common.ok')],
     });
     await alert.present();
   }
 
   private async showSuccess(message: string): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Pronto',
+      header: this.i18n.t('common.ready'),
       message,
-      buttons: ['OK'],
+      buttons: [this.i18n.t('common.ok')],
     });
     await alert.present();
   }

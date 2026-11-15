@@ -8,7 +8,7 @@
     <ion-content class="ion-padding help-popover-body">
       <div class="balloon-header">
         <h3 class="help-popover-title">{{ titleKey | t }}</h3>
-        <ion-button fill="clear" size="small" color="medium" class="balloon-close" (click)="helpPopover.dismiss()" aria-label="Fechar">
+        <ion-button fill="clear" size="small" color="medium" class="balloon-close" (click)="helpPopover.dismiss()" [attr.aria-label]="'common.close' | t">
           <ion-icon slot="icon-only" name="close-outline"></ion-icon>
         </ion-button>
       </div>

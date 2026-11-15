@@ -27,13 +27,13 @@
     @if (replyingTo) {
       <div class="media-engagement__replying">
         <ion-note>Respondendo a {{ replyingTo.userName }}</ion-note>
-        <ion-button fill="clear" size="small" (click)="cancelReply()">Cancelar</ion-button>
+        <ion-button fill="clear" size="small" (click)="cancelReply()">{{ 'eventMediaEngagement.cancelReply' | t }}</ion-button>
       </div>
     }
 
     <ion-item lines="full" class="media-engagement__comment-input">
       <ion-textarea
-        label="Seu comentario"
+        [label]="'eventMediaEngagement.yourComment' | t"
         labelPlacement="stacked"
         [(ngModel)]="commentDraft"
         maxlength="280"

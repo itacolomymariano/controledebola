@@ -2,7 +2,7 @@ import { Component, OnInit, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar } from '@capacitor/status-bar';
-import { AlertController, MenuController, ToastController } from '@ionic/angular';
+import { ActionSheetController, AlertController, MenuController, ToastController } from '@ionic/angular';
 import Parse from 'parse';
 import { parseErrorMessage } from './core/utils/parse-error.util';
 import { AppInviteShareService } from './core/services/app-invite-share.service';
@@ -13,7 +13,7 @@ import { AppGuideService } from './core/services/app-guide.service';
 import { I18nService } from './core/services/i18n.service';
 import { WizardTourService } from './core/services/wizard-tour.service';
 import { BiometricUnlockService } from './core/services/biometric-unlock.service';
-import { APP_LOCALE_FLAGS, APP_LOCALE_LABELS, APP_LOCALES, AppLocale } from './core/models/app-locale.model';
+import { APP_LOCALE_FLAGS, APP_LOCALE_LABELS, APP_LOCALES } from './core/models/app-locale.model';
 import { ThemePickerComponent } from './shared/components/theme-picker/theme-picker.component';
 
 @Component({
@@ -37,6 +37,7 @@ export class AppComponent implements OnInit {
     private readonly router: Router,
     private readonly toastCtrl: ToastController,
     private readonly alertCtrl: AlertController,
+    private readonly actionSheetCtrl: ActionSheetController,
     private readonly auth: AuthService,
     private readonly i18n: I18nService,
     private readonly appGuide: AppGuideService,
@@ -156,27 +157,21 @@ export class AppComponent implements OnInit {
 
   async chooseLanguageFromMenu(): Promise<void> {
     await this.menuCtrl.close('app-menu');
-    const alert = await this.alertCtrl.create({
+    const sheet = await this.actionSheetCtrl.create({
       header: this.i18n.t('menu.language'),
-      inputs: APP_LOCALES.map((locale) => ({
-        type: 'radio' as const,
-        label: `${APP_LOCALE_FLAGS[locale]} ${APP_LOCALE_LABELS[locale]}`,
-        value: locale,
-        checked: locale === this.i18n.locale,
-      })),
       buttons: [
-        { text: this.i18n.t('confirm.cancel'), role: 'cancel' },
-        {
-          text: this.i18n.t('confirm.yes'),
-          handler: (value: AppLocale) => {
-            if (value && value !== this.i18n.locale) {
-              void this.i18n.setLocale(value);
-            }
+        ...APP_LOCALES.map((locale) => ({
+          text: `${APP_LOCALE_FLAGS[locale]} ${APP_LOCALE_LABELS[locale]}${
+            locale === this.i18n.locale ? ' ✓' : ''
+          }`,
+          handler: () => {
+            void this.i18n.applyAppLocale(locale);
           },
-        },
+        })),
+        { text: this.i18n.t('confirm.cancel'), role: 'cancel' },
       ],
     });
-    await alert.present();
+    await sheet.present();
   }
 
   async openThemeFromMenu(): Promise<void> {

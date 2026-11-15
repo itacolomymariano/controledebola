@@ -54,6 +54,7 @@ export class ProfilePage implements OnInit, OnDestroy {
   };
 
   private profileSub?: Subscription;
+  private localeSub?: Subscription;
 
   constructor(
     private readonly auth: AuthService,
@@ -82,10 +83,16 @@ export class ProfilePage implements OnInit, OnDestroy {
     this.profileSub = this.auth.onProfileChanged.subscribe(() => {
       void this.loadProfile();
     });
+    this.localeSub = this.i18n.locale$.subscribe(() => {
+      if (this.primaryRole) {
+        this.primaryRoleLabel = localizedProfileRoleLabel(this.i18n, this.primaryRole);
+      }
+    });
   }
 
   ngOnDestroy(): void {
     this.profileSub?.unsubscribe();
+    this.localeSub?.unsubscribe();
   }
 
   async ionViewWillEnter(): Promise<void> {
@@ -149,7 +156,7 @@ export class ProfilePage implements OnInit, OnDestroy {
   }
 
   async onAvatarSelected(file: File): Promise<void> {
-    const loading = await this.loadingCtrl.create({ message: 'Salvando foto...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('profile.savingAvatar') });
     await loading.present();
 
     try {
@@ -157,9 +164,9 @@ export class ProfilePage implements OnInit, OnDestroy {
       this.avatarUrl = this.auth.getAvatarUrl();
     } catch (error: unknown) {
       const alert = await this.alertCtrl.create({
-        header: 'Erro',
+        header: this.i18n.t('common.error'),
         message: parseErrorMessage(error),
-        buttons: ['OK'],
+        buttons: [this.i18n.t('common.ok')],
       });
       await alert.present();
     } finally {
@@ -183,13 +190,12 @@ export class ProfilePage implements OnInit, OnDestroy {
 
   async requestAccountDeletion(): Promise<void> {
     const intro = await this.alertCtrl.create({
-      header: 'Excluir conta',
-      message:
-        'Esta acao e permanente. Seus dados pessoais serao apagados e voce nao podera mais entrar com esta conta. Peladas e eventos que voce organizou permanecem para os outros participantes.',
+      header: this.i18n.t('profile.deleteAccount'),
+      message: this.i18n.t('accountEdit.deleteIntroMessage'),
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.i18n.t('common.cancel'), role: 'cancel' },
         {
-          text: 'Continuar',
+          text: this.i18n.t('accountEdit.continue'),
           role: 'destructive',
           handler: () => {
             void this.confirmAccountDeletion();
@@ -202,12 +208,12 @@ export class ProfilePage implements OnInit, OnDestroy {
 
   async logout(): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Sair do App',
-      message: 'Deseja realmente sair?',
+      header: this.i18n.t('profile.logout'),
+      message: this.i18n.t('confirm.logout'),
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.i18n.t('common.cancel'), role: 'cancel' },
         {
-          text: 'Sair',
+          text: this.i18n.t('profile.signOut'),
           role: 'destructive',
           handler: () => {
             void this.doLogout();
@@ -246,13 +252,19 @@ export class ProfilePage implements OnInit, OnDestroy {
 
   private async confirmAccountDeletion(): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Confirme com a senha',
-      message: 'Digite sua senha para excluir a conta definitivamente.',
-      inputs: [{ name: 'password', type: 'password', placeholder: 'Senha da conta' }],
-      buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+      header: this.i18n.t('accountEdit.deleteConfirmHeader'),
+      message: this.i18n.t('accountEdit.deleteConfirmMessage'),
+      inputs: [
         {
-          text: 'Excluir definitivamente',
+          name: 'password',
+          type: 'password',
+          placeholder: this.i18n.t('accountEdit.deletePasswordPlaceholder'),
+        },
+      ],
+      buttons: [
+        { text: this.i18n.t('common.cancel'), role: 'cancel' },
+        {
+          text: this.i18n.t('accountEdit.deleteConfirmButton'),
           role: 'destructive',
           handler: (data) => {
             void this.doDeleteAccount(String(data?.password || ''));
@@ -267,30 +279,30 @@ export class ProfilePage implements OnInit, OnDestroy {
   private async doDeleteAccount(password: string): Promise<void> {
     if (!password.trim()) {
       const alert = await this.alertCtrl.create({
-        header: 'Erro',
-        message: 'Informe sua senha para confirmar a exclusao.',
-        buttons: ['OK'],
+        header: this.i18n.t('common.error'),
+        message: this.i18n.t('accountEdit.deletePasswordRequired'),
+        buttons: [this.i18n.t('common.ok')],
       });
       await alert.present();
       return;
     }
 
-    const loading = await this.loadingCtrl.create({ message: 'Excluindo conta...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('accountEdit.deletingAccount') });
     await loading.present();
     try {
       await this.auth.deleteAccount(password);
       const done = await this.alertCtrl.create({
-        header: 'Conta excluida',
-        message: 'Sua conta foi excluida. Voce ja pode fechar o app ou criar uma nova conta.',
-        buttons: ['OK'],
+        header: this.i18n.t('accountEdit.deletedHeader'),
+        message: this.i18n.t('accountEdit.deletedMessage'),
+        buttons: [this.i18n.t('common.ok')],
       });
       await done.present();
       await this.router.navigateByUrl('/login', { replaceUrl: true });
     } catch (error: unknown) {
       const alert = await this.alertCtrl.create({
-        header: 'Erro',
+        header: this.i18n.t('common.error'),
         message: parseErrorMessage(error),
-        buttons: ['OK'],
+        buttons: [this.i18n.t('common.ok')],
       });
       await alert.present();
     } finally {

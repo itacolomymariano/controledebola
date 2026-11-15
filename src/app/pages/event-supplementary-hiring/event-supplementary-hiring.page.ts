@@ -12,6 +12,7 @@ import {
   SupplementaryHiringMode,
 } from '../../core/models/referee-invitation.model';
 import { EventService } from '../../core/services/event.service';
+import { I18nService } from '../../core/services/i18n.service';
 import { RefereeInvitationService } from '../../core/services/referee-invitation.service';
 import { RoleProfileService } from '../../core/services/role-profile.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
@@ -52,7 +53,8 @@ export class EventSupplementaryHiringPage {
     private readonly roleProfileService: RoleProfileService,
     private readonly invitationService: RefereeInvitationService,
     private readonly loadingCtrl: LoadingController,
-    private readonly alertCtrl: AlertController
+    private readonly alertCtrl: AlertController,
+    private readonly i18n: I18nService
   ) {}
 
   get pageTitle(): string {
@@ -153,16 +155,16 @@ export class EventSupplementaryHiringPage {
     if (!this.event || !this.inviteUserId) return;
     const amount = Number(this.offeredAmount ?? 0);
     if (amount < 0) {
-      await this.showError('Informe o valor da contratacao.');
+      await this.showError(this.i18n.t('supplementaryHiring.error.contractAmount'));
       return;
     }
     const deadline = combineDateAndTimeInputs(this.responseDeadlineDate, this.responseDeadlineTime);
     if (!deadline) {
-      await this.showError('Informe data e hora limite para resposta do convite.');
+      await this.showError(this.i18n.t('supplementaryHiring.error.responseDeadline'));
       return;
     }
     if (deadline <= new Date()) {
-      await this.showError('O prazo para resposta deve ser futuro.');
+      await this.showError(this.i18n.t('supplementaryHiring.error.deadlineFuture'));
       return;
     }
 
@@ -213,7 +215,7 @@ export class EventSupplementaryHiringPage {
 
       this.event = await this.eventService.getById(eventId);
       if (!this.event) {
-        await this.showError('Evento nao encontrado.');
+        await this.showError(this.i18n.t('supplementaryHiring.error.eventNotFound'));
         void this.router.navigateByUrl('/inbox');
         return;
       }
@@ -313,7 +315,11 @@ export class EventSupplementaryHiringPage {
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('common.error'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 }

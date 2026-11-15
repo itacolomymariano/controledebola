@@ -8,6 +8,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { MatchChallengeService } from '../../../core/services/match-challenge.service';
 import { ImageLightboxService } from '../../../core/services/image-lightbox.service';
 import { RefereeInvitationService } from '../../../core/services/referee-invitation.service';
+import { I18nService } from '../../../core/services/i18n.service';
 
 @Component({
   selector: 'app-user-bar',
@@ -46,19 +47,20 @@ export class UserBarComponent implements OnInit, OnDestroy {
     private readonly menuCtrl: MenuController,
     private readonly platform: Platform,
     private readonly cdr: ChangeDetectorRef,
-    private readonly imageLightbox: ImageLightboxService
+    private readonly imageLightbox: ImageLightboxService,
+    private readonly i18n: I18nService
   ) {}
 
   openLogo(): void {
     if (!this.enableImageZoom) return;
-    void this.imageLightbox.open(this.appLogoSrc, 'Controle de Bola');
+    void this.imageLightbox.open(this.appLogoSrc, this.i18n.t('splash.title'));
   }
 
   openAvatarZoom(): void {
     if (!this.enableImageZoom) return;
     const url = this.avatarUrl?.trim();
     if (!url) return;
-    void this.imageLightbox.open(url, this.apelido || 'Foto de perfil');
+    void this.imageLightbox.open(url, this.apelido || this.i18n.t('common.profilePhoto'));
   }
 
   ngOnInit(): void {

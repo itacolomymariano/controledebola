@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import Parse from 'parse';
-import { PROFILE_ROLE_LABELS, ProfileRole } from '../models/profile-role.model';
+import { PROFILE_ROLE_FALLBACK_LABELS, ProfileRole } from '../models/profile-role.model';
 import {
   MuralAgeBand,
   MuralAgeBandWinnerLists,
@@ -1506,7 +1506,7 @@ export class MuralHighlightsService {
       avatarUrl: participant.avatarUrl,
       profileLabel: this.pickMuralProfileLabel(
         participant.profileLabel,
-        primaryRole ? PROFILE_ROLE_LABELS[primaryRole] : undefined
+        primaryRole ? PROFILE_ROLE_FALLBACK_LABELS[primaryRole] : undefined
       ),
       isAthlete: this.participantRoleCountsForHeight(participant.roles),
       favoriteProTeam: participant.favoriteProTeam,
@@ -1536,7 +1536,7 @@ export class MuralHighlightsService {
         avatarUrl: participant.avatarUrl,
         profileLabel: this.pickMuralProfileLabel(
           participant.profileLabel,
-          primaryRole ? PROFILE_ROLE_LABELS[primaryRole] : undefined
+          primaryRole ? PROFILE_ROLE_FALLBACK_LABELS[primaryRole] : undefined
         ),
         isAthlete: this.participantRoleCountsForHeight(participant.roles),
         favoriteProTeam: participant.favoriteProTeam,
@@ -1682,7 +1682,7 @@ export class MuralHighlightsService {
     const primaryRole = user.get('primaryRole') as ProfileRole | undefined;
     return this.pickMuralProfileLabel(
       athletePosition,
-      primaryRole ? PROFILE_ROLE_LABELS[primaryRole] : undefined
+      primaryRole ? PROFILE_ROLE_FALLBACK_LABELS[primaryRole] : undefined
     );
   }
 

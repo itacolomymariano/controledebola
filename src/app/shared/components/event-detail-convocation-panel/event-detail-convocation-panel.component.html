@@ -2,12 +2,12 @@
   <ion-card-header>
     <div class="event-panel-header">
       <div>
-        <ion-card-title>Convocacao</ion-card-title>
-        <ion-card-subtitle>Adicione ou remova atletas do seu time neste confronto</ion-card-subtitle>
+        <ion-card-title>{{ 'eventDetail.convocation.title' | t }}</ion-card-title>
+        <ion-card-subtitle>{{ 'eventDetail.convocation.subtitle' | t }}</ion-card-subtitle>
       </div>
       <ion-button fill="clear" size="small" class="event-panel-back" (click)="back.emit()">
         <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
-        Voltar
+        {{ 'common.back' | t }}
       </ion-button>
     </div>
   </ion-card-header>
@@ -15,18 +15,18 @@
     @if (canSetMode) {
       <ion-item lines="none" class="ion-margin-bottom">
         <ion-select
-          label="Quem faz a convocacao"
+          [label]="'eventDetail.convocation.whoConvokes' | t"
           labelPlacement="stacked"
           [value]="athleteConvocationBy"
           [disabled]="savingMode"
           (ionChange)="onModeChange($any($event.detail.value))"
         >
-          <ion-select-option value="president">Presidente</ion-select-option>
-          <ion-select-option value="coach">Treinador</ion-select-option>
+          <ion-select-option value="president">{{ 'eventDetail.convocation.modePresident' | t }}</ion-select-option>
+          <ion-select-option value="coach">{{ 'eventDetail.convocation.modeCoach' | t }}</ion-select-option>
         </ion-select>
       </ion-item>
       <ion-note color="medium" class="ion-margin-bottom">
-        Presidente: apenas presidentes dos times. Treinador: presidente e treinador contratado/convidado do time.
+        {{ 'eventDetail.convocation.modeHint' | t }}
       </ion-note>
     }
 
@@ -42,15 +42,17 @@
       <h3 class="ion-margin-bottom">{{ teamName }}</h3>
     }
 
-    <ion-searchbar
-      class="playful-searchbar"
-      placeholder="Buscar atleta para convocar"
-      [value]="search"
-      [debounce]="250"
-      (ionInput)="onSearchInput($event)"
-    ></ion-searchbar>
+    @for (remountKey of [searchbarRemountKey]; track remountKey) {
+      <ion-searchbar
+        class="playful-searchbar"
+        [placeholder]="'eventDetail.convocation.searchPlaceholder' | t"
+        [value]="search"
+        [debounce]="250"
+        (ionInput)="onSearchInput($event)"
+      ></ion-searchbar>
+    }
     @if (searchLoading) {
-      <ion-note>Buscando...</ion-note>
+      <ion-note>{{ 'common.searching' | t }}</ion-note>
     }
     @if (candidates.length) {
       <ion-list lines="none" class="playful-elevated-list">
@@ -76,7 +78,7 @@
     @if (inviteUserId) {
       <ion-item>
         <ion-input
-          label="Valor (opcional)"
+          [label]="'eventDetail.convocation.amountOptional' | t"
           labelPlacement="stacked"
           type="number"
           [value]="offeredAmountDisplay"
@@ -85,7 +87,7 @@
       </ion-item>
       <ion-item>
         <ion-input
-          label="Prazo resposta (data)"
+          [label]="'eventDetail.convocation.deadlineDate' | t"
           labelPlacement="stacked"
           type="date"
           [min]="minDeadlineDate"
@@ -94,14 +96,14 @@
       </ion-item>
       <ion-item>
         <ion-input
-          label="Prazo resposta (hora)"
+          [label]="'eventDetail.convocation.deadlineTime' | t"
           labelPlacement="stacked"
           type="time"
           [(ngModel)]="responseDeadlineTime"
         ></ion-input>
       </ion-item>
       <ion-button expand="block" class="ion-margin-top" [disabled]="sending" (click)="sendInvite()">
-        Enviar convocacao
+        {{ 'eventDetail.convocation.sendButton' | t }}
       </ion-button>
     }
 
@@ -110,7 +112,7 @@
         <ion-spinner name="crescent"></ion-spinner>
       </div>
     } @else if (rows.length === 0) {
-      <ion-note color="medium">Nenhum atleta convocado neste time ainda.</ion-note>
+      <ion-note color="medium">{{ 'eventDetail.convocation.emptyRoster' | t }}</ion-note>
     } @else {
       <ion-list lines="none" class="ion-margin-top playful-elevated-list">
         @for (row of rows; track row.userId) {
@@ -125,7 +127,12 @@
                 <div class="convocation-row-text">
                   <h3>{{ row.apelido }}</h3>
                   <p>
-                    {{ row.status === 'pending' ? 'Convite pendente' : 'Confirmado' }}
+                    {{
+                      (row.status === 'pending'
+                        ? 'eventDetail.convocation.statusPending'
+                        : 'eventDetail.convocation.statusConfirmed'
+                      ) | t
+                    }}
                     @if (row.offeredAmount > 0) {
                       · R$ {{ row.offeredAmount | number: '1.2-2' }}
                     }
@@ -138,7 +145,7 @@
                   [disabled]="removingUserId === row.userId || event.isReadOnly"
                   (click)="removeRow(row)"
                 >
-                  Excluir
+                  {{ 'common.delete' | t }}
                 </ion-button>
               </div>
             </ion-card-content>

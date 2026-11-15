@@ -5,7 +5,7 @@
         <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
-    <ion-title>Perfil do atleta</ion-title>
+    <ion-title>{{ 'athleteProfileView.pageTitle' | t }}</ion-title>
     <ion-buttons slot="end">
       <app-help-balloon textKey="screen.help.athlete-profile-view"></app-help-balloon>
     </ion-buttons>
@@ -45,7 +45,7 @@
 
     <ion-segment scrollable="true" [value]="segment" (ionChange)="onSegmentChange($any($event.detail.value))">
       <ion-segment-button value="info">
-        <ion-label>Perfil</ion-label>
+        <ion-label>{{ 'athleteProfileView.segmentInfo' | t }}</ion-label>
       </ion-segment-button>
       <ion-segment-button value="scout">
         <ion-label>Desempenho scout</ion-label>
@@ -59,7 +59,7 @@
       <ion-list lines="full">
         <ion-item>
           <ion-label class="ion-text-wrap">
-            <h3>Local</h3>
+            <h3>{{ 'athleteProfileView.location' | t }}</h3>
             <p>
               {{ profile.state || '—' }} · {{ profile.city || '—' }} ·
               {{ profile.neighborhood || '—' }}
@@ -68,15 +68,15 @@
         </ion-item>
         <ion-item>
           <ion-label>
-            <h3>Idade</h3>
-            <p>{{ profile.age != null ? profile.age + ' anos' : 'Nao informada' }}</p>
+            <h3>{{ 'athleteProfileView.age' | t }}</h3>
+            <p>{{ ageLabel(profile.age) }}</p>
           </ion-label>
         </ion-item>
         <ion-item>
           <ion-label class="ion-text-wrap">
             <h3>Peladas</h3>
             @if (!profile.peladas.length) {
-              <p>Nenhuma pelada registrada.</p>
+              <p>{{ 'athleteProfileView.noPeladas' | t }}</p>
             }
             @for (pelada of profile.peladas; track pelada) {
               <p>{{ pelada }}</p>
@@ -94,21 +94,21 @@
         ></app-played-team-list>
         <ion-item>
           <ion-label class="ion-text-wrap">
-            <h3>Time profissional do coração</h3>
+            <h3>{{ 'athleteProfileView.favoriteProTeamTitle' | t }}</h3>
             @if (profile.favoriteProTeam) {
               <div class="favorite-team-row">
                 <app-team-shield [teamName]="profile.favoriteProTeam" size="sm"></app-team-shield>
                 <p>{{ profile.favoriteProTeam }}</p>
               </div>
             } @else {
-              <p>Nao informado</p>
+              <p>{{ notInformedLabel }}</p>
             }
           </ion-label>
         </ion-item>
         <ion-item>
           <ion-label>
-            <h3>Time amador do coração</h3>
-            <p>{{ profile.favoriteAmateurTeam || 'Nao informado' }}</p>
+            <h3>{{ 'athleteProfileView.favoriteAmateurTeamTitle' | t }}</h3>
+            <p>{{ profile.favoriteAmateurTeam || notInformedLabel }}</p>
           </ion-label>
         </ion-item>
         <ion-item>
@@ -253,32 +253,32 @@
 
         <ion-item>
           <ion-label>
-            <h3>Cartões amarelos</h3>
+            <h3>{{ 'athleteProfileView.yellowCardsTitle' | t }}</h3>
             <p>{{ profile.yellowCards }}</p>
           </ion-label>
         </ion-item>
         <ion-item>
           <ion-label>
-            <h3>Cartões vermelhos</h3>
+            <h3>{{ 'athleteProfileView.redCardsTitle' | t }}</h3>
             <p>{{ profile.redCards }}</p>
           </ion-label>
         </ion-item>
         <ion-item>
           <ion-label>
-            <h3>Ídolo do futebol profissional</h3>
-            <p>{{ profile.proFootballIdol || 'Nao informado' }}</p>
+            <h3>{{ 'athleteProfileView.proIdolTitle' | t }}</h3>
+            <p>{{ profile.proFootballIdol || notInformedLabel }}</p>
           </ion-label>
         </ion-item>
         <ion-item>
           <ion-label>
-            <h3>Ídolo do futebol amador</h3>
-            <p>{{ profile.amateurFootballIdol || 'Nao informado' }}</p>
+            <h3>{{ 'athleteProfileView.amateurIdolTitle' | t }}</h3>
+            <p>{{ profile.amateurFootballIdol || notInformedLabel }}</p>
           </ion-label>
         </ion-item>
         @if (profile.craquePeladas.length) {
           <ion-item>
             <ion-label class="ion-text-wrap">
-              <h3>Craque da pelada</h3>
+              <h3>{{ 'athleteProfileView.craquePeladaTitle' | t }}</h3>
               @for (pelada of profile.craquePeladas; track pelada) {
                 <p>Craque na pelada {{ pelada }}</p>
               }
@@ -299,7 +299,7 @@
         </ion-item>
         <ion-item>
           <ion-label>
-            <h3>Por quanto joga uma pelada</h3>
+            <h3>{{ 'athleteProfileView.peladaRateTitle' | t }}</h3>
             <p>{{ formatMoney(profile.peladaRate) }}</p>
           </ion-label>
         </ion-item>

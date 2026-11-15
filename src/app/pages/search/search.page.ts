@@ -1,15 +1,18 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { Router } from '@angular/router';
 import { FOOTBALL_POSITIONS } from '../../core/models/athlete-profile.model';
 import { EventType, PeladaEvent } from '../../core/models/event.model';
 import { ProfileRole } from '../../core/models/profile-role.model';
 import {
-  ALL_SEARCH_PROFILE_OPTIONS,
   formatAthleteBodyLabel,
   isLegendSearchKind,
   ProfileSearchResult,
   SearchProfileKind,
+  SEARCHABLE_PROFILE_ROLES,
 } from '../../core/models/profile-search.model';
+import { I18nService } from '../../core/services/i18n.service';
+import { localizedProfileRoleLabel } from '../../core/utils/profile-role-i18n.util';
 import { AmateurLegendAthlete, AmateurLegendTeam } from '../../core/models/amateur-legend.model';
 import { TeamDirectoryKind, TeamPickerRow } from '../../core/models/team.model';
 import { AuthService } from '../../core/services/auth.service';
@@ -20,6 +23,7 @@ import { TeamService } from '../../core/services/team.service';
 import { isParseObjectId } from '../../core/utils/parse-object-id.util';
 import { loggedUserAddress } from '../peladas/home-directory.util';
 import { PlayfulCardTone } from '../../shared/components/playful-card/playful-card.component';
+import { formatAppDateTime } from '../../core/utils/locale-datetime.util';
 
 type SearchSegment = 'eventos' | 'perfis' | 'times';
 
@@ -59,7 +63,8 @@ interface TeamSearchRow {
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: false,
 })
-export class SearchPage {
+export class SearchPage implements OnInit, OnDestroy {
+  private localeSub?: Subscription;
   private readonly eventTones: PlayfulCardTone[] = ['peladas', 'confrontos', 'times', 'users'];
   private readonly profileTones: PlayfulCardTone[] = ['users', 'peladas', 'confrontos', 'times'];
 
@@ -88,11 +93,8 @@ export class SearchPage {
   selectedEventType: EventType | '' = '';
   selectedAthletePosition = '';
   selectedProfileKind: SearchProfileKind = 'athlete';
-  readonly athletePositionOptions: Array<{ value: string; label: string }> = [
-    { value: '', label: 'Todas' },
-    ...FOOTBALL_POSITIONS.map((position) => ({ value: position, label: position })),
-  ];
-  profileKindOptions = ALL_SEARCH_PROFILE_OPTIONS;
+  athletePositionOptions: Array<{ value: string; label: string }> = [];
+  profileKindOptions: Array<{ role: SearchProfileKind; label: string }> = [];
   searched = false;
   loading = false;
   errorMessage = '';
@@ -100,12 +102,7 @@ export class SearchPage {
   profileSearchSeq = 0;
   teamSearchSeq = 0;
 
-  eventTypes: { value: EventType | ''; label: string }[] = [
-    { value: '', label: 'Todos os tipos' },
-    { value: 'pelada', label: 'Pelada' },
-    { value: 'racha', label: 'Racha' },
-    { value: 'team_match', label: 'Jogo entre equipes' },
-  ];
+  eventTypes: { value: EventType | ''; label: string }[] = [];
 
   constructor(
     private readonly auth: AuthService,
@@ -114,15 +111,68 @@ export class SearchPage {
     private readonly legendService: AmateurLegendService,
     private readonly teamService: TeamService,
     private readonly router: Router,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    readonly i18n: I18nService
   ) {}
+
+  get searchbarRemountKey(): string {
+    return this.i18n.ionInputRemountKey;
+  }
+
+  ngOnInit(): void {
+    this.rebuildLocalizedFilters();
+    this.localeSub = this.i18n.locale$.subscribe(() => {
+      this.rebuildLocalizedFilters();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.localeSub?.unsubscribe();
+  }
+
+  private rebuildLocalizedFilters(): void {
+    this.eventTypes = [
+      { value: '', label: this.i18n.t('search.eventType.all') },
+      { value: 'pelada', label: this.i18n.t('event.type.pelada') },
+      { value: 'racha', label: this.i18n.t('event.type.racha') },
+      { value: 'team_match', label: this.i18n.t('event.type.team_match') },
+    ];
+    this.profileKindOptions = [
+      ...SEARCHABLE_PROFILE_ROLES.map((role) => ({
+        role,
+        label: localizedProfileRoleLabel(this.i18n, role),
+      })),
+      { role: 'legend_athlete', label: this.i18n.t('search.legendAthlete') },
+      { role: 'legend_team', label: this.i18n.t('search.legendTeam') },
+    ];
+    this.athletePositionOptions = [
+      { value: '', label: this.i18n.t('search.position.all') },
+      ...FOOTBALL_POSITIONS.map((position) => ({ value: position, label: position })),
+    ];
+    this.cdr.markForCheck();
+  }
 
   get isLegendSearch(): boolean {
     return isLegendSearchKind(this.selectedProfileKind);
   }
 
   get selectedEventTypeLabel(): string {
-    return this.eventTypes.find((option) => option.value === this.selectedEventType)?.label ?? 'evento';
+    return (
+      this.eventTypes.find((option) => option.value === this.selectedEventType)?.label ??
+      this.i18n.t('search.eventType.any')
+    );
+  }
+
+  get eventSearchPlaceholder(): string {
+    return this.i18n.t('search.placeholder.event', {
+      type: this.selectedEventTypeLabel.toLowerCase(),
+    });
+  }
+
+  get profileSearchPlaceholder(): string {
+    return this.i18n.t('search.placeholder.profile', {
+      role: this.selectedProfileKindLabel.toLowerCase(),
+    });
   }
 
   get selectedProfileKindLabel(): string {
@@ -377,7 +427,7 @@ export class SearchPage {
       }
       this.eventRows = [];
       this.errorMessage =
-        error instanceof Error ? error.message : 'Nao foi possivel buscar eventos.';
+        error instanceof Error ? error.message : this.i18n.t('search.error.events');
     } finally {
       if (seq === this.eventSearchSeq) {
         this.loading = false;
@@ -473,7 +523,7 @@ export class SearchPage {
       }
       this.teamRows = [];
       this.errorMessage =
-        error instanceof Error ? error.message : 'Nao foi possivel buscar times.';
+        error instanceof Error ? error.message : this.i18n.t('search.error.teams');
     } finally {
       if (seq === this.teamSearchSeq) {
         this.loading = false;
@@ -548,7 +598,7 @@ export class SearchPage {
       this.legendAthleteResults = [];
       this.legendTeamResults = [];
       this.errorMessage =
-        error instanceof Error ? error.message : 'Nao foi possivel buscar perfis.';
+        error instanceof Error ? error.message : this.i18n.t('search.error.profiles');
     } finally {
       if (seq === this.profileSearchSeq) {
         this.loading = false;
@@ -560,8 +610,10 @@ export class SearchPage {
   private toEventSearchRow(event: PeladaEvent): EventSearchRow {
     let scoreLabel: string | undefined;
     if (event.type === 'team_match') {
-      const home = event.homeTeamName?.trim() || 'Mandante';
-      const away = event.awayTeamName?.trim() || 'Visitante';
+      const home =
+        event.homeTeamName?.trim() || this.i18n.t('eventDetail.teamMatch.sideHomeFallback');
+      const away =
+        event.awayTeamName?.trim() || this.i18n.t('eventDetail.teamMatch.sideAwayFallback');
       scoreLabel = `${home} x ${away}`;
     }
     const peladaName = event.peladaName?.trim() || '';
@@ -570,12 +622,7 @@ export class SearchPage {
       title: peladaName || event.name,
       eventNameLine: peladaName ? event.name : undefined,
       typeLabel: this.eventService.formatType(event.type),
-      dateLabel: new Intl.DateTimeFormat('pt-BR', {
-        day: '2-digit',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-      }).format(event.startTime),
+      dateLabel: formatAppDateTime(event.startTime, this.i18n.locale),
       locationLabel: [event.address.city, event.address.state].filter(Boolean).join(' - '),
       scoreLabel,
     };

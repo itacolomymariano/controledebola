@@ -2,7 +2,7 @@
   <app-user-bar></app-user-bar>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button (click)="back()">Voltar</ion-button>
+      <ion-button (click)="back()">{{ 'common.back' | t }}</ion-button>
     </ion-buttons>
     <ion-title>Lendas do futebol amador</ion-title>
   </ion-toolbar>
@@ -21,7 +21,7 @@
 
   <ion-searchbar
     class="playful-searchbar"
-    placeholder="Buscar lendas"
+    [placeholder]="'legendsHub.searchPlaceholder' | t"
     [value]="search"
     (ionInput)="onSearchChange($any($event.target).value)"
     debounce="300"

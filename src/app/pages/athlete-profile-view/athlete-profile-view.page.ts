@@ -12,6 +12,7 @@ import {
   SCOUT_STAT_LABELS,
 } from '../../core/models/scout-apontamento.model';
 import { AthleteSearchService } from '../../core/services/athlete-search.service';
+import { I18nService } from '../../core/services/i18n.service';
 import { ScoutApontamentoService } from '../../core/services/scout-apontamento.service';
 
 import { AthletePerformanceDashboard, AthletePerformanceService } from '../../core/services/athlete-performance.service';
@@ -51,8 +52,18 @@ export class AthleteProfileViewPage {
     private readonly router: Router,
     private readonly athleteSearchService: AthleteSearchService,
     private readonly scoutApontamentoService: ScoutApontamentoService,
-    private readonly performanceService: AthletePerformanceService
+    private readonly performanceService: AthletePerformanceService,
+    private readonly i18n: I18nService
   ) {}
+
+  get notInformedLabel(): string {
+    return this.i18n.t('athleteProfile.notInformed');
+  }
+
+  ageLabel(age: number | null | undefined): string {
+    if (age == null) return this.i18n.t('athleteProfileView.ageNotInformed');
+    return this.i18n.t('eventDetail.teamMatch.yearsOld', { age });
+  }
 
   get playedTeamLinks() {
     if (!this.profile) return [];
@@ -111,22 +122,22 @@ export class AthleteProfileViewPage {
   }
 
   get contactPhoneLabel(): string {
-    if (!this.profile?.phoneVisible) return 'Restrito pelo atleta';
+    if (!this.profile?.phoneVisible) return this.i18n.t('athleteProfileView.contactRestricted');
     return this.formatPhone(this.profile.phone);
   }
 
   get contactEmailLabel(): string {
-    if (!this.profile?.emailVisible) return 'Restrito pelo atleta';
-    return this.profile?.email || 'Nao informado';
+    if (!this.profile?.emailVisible) return this.i18n.t('athleteProfileView.contactRestricted');
+    return this.profile?.email || this.notInformedLabel;
   }
 
   formatMoney(value?: number): string {
-    if (value == null || Number.isNaN(value)) return 'Nao informado';
+    if (value == null || Number.isNaN(value)) return this.notInformedLabel;
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   }
 
   formatPhone(phone?: string): string {
-    if (!phone) return 'Nao informado';
+    if (!phone) return this.notInformedLabel;
     const digits = phone.replace(/\D/g, '');
     if (digits.length === 13 && digits.startsWith('55')) {
       const local = digits.slice(2);
@@ -141,7 +152,7 @@ export class AthleteProfileViewPage {
   }
 
   formatEventDate(value?: string): string {
-    if (!value) return 'Data nao informada';
+    if (!value) return this.i18n.t('athleteProfileView.dateNotInformed');
     return new Intl.DateTimeFormat('pt-BR', {
       day: '2-digit',
       month: 'short',
@@ -159,12 +170,12 @@ export class AthleteProfileViewPage {
     try {
       if (!userId) {
         this.profile = null;
-        this.errorMessage = 'Atleta nao encontrado.';
+        this.errorMessage = this.i18n.t('athleteProfileView.athleteNotFound');
         return;
       }
       this.profile = await this.athleteSearchService.getPublicProfile(userId);
       if (!this.profile) {
-        this.errorMessage = 'Perfil de atleta nao encontrado.';
+        this.errorMessage = this.i18n.t('athleteProfileView.profileNotFound');
       } else {
         this.activityIndicators = await this.athleteSearchService.getActivityIndicators(userId, 3);
         this.teamMatchRecord = await this.athleteSearchService.getUserTeamMatchRecord(userId, 'athlete');
@@ -174,7 +185,7 @@ export class AthleteProfileViewPage {
     } catch (error: unknown) {
       this.profile = null;
       this.errorMessage =
-        error instanceof Error ? error.message : 'Erro ao carregar perfil do atleta.';
+        error instanceof Error ? error.message : this.i18n.t('athleteProfileView.loadProfileError');
     } finally {
       this.loading = false;
     }
@@ -190,7 +201,7 @@ export class AthleteProfileViewPage {
     } catch (error: unknown) {
       this.scoutSummary = null;
       this.errorMessage =
-        error instanceof Error ? error.message : 'Erro ao carregar desempenho scout.';
+        error instanceof Error ? error.message : this.i18n.t('athleteProfileView.loadScoutError');
     } finally {
       this.scoutLoading = false;
     }

@@ -200,12 +200,16 @@ export class EventDetailParticipantsPanelComponent implements OnDestroy {
 
   teamGroupTitle(participant: EventRegistrationListItem): string {
     if (participant.teamSide === 'home') {
-      return this.event.homeTeamName?.trim() || 'Mandante';
+      return this.event.homeTeamName?.trim() || this.i18n.t('eventDetail.teamMatch.sideHomeFallback');
     }
     if (participant.teamSide === 'away') {
-      return this.event.awayTeamName?.trim() || 'Visitante';
+      return this.event.awayTeamName?.trim() || this.i18n.t('eventDetail.teamMatch.sideAwayFallback');
     }
-    return 'Sem time definido';
+    return this.i18n.t('eventDetail.participants.noTeamDefined');
+  }
+
+  get searchbarRemountKey(): string {
+    return this.i18n.ionInputRemountKey;
   }
 
   showTeamGroupHeader(

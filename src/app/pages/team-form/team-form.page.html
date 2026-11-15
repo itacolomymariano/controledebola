@@ -2,15 +2,15 @@
   <app-user-bar></app-user-bar>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button (click)="cancel()">Voltar</ion-button>
+      <ion-button (click)="cancel()">{{ 'common.back' | t }}</ion-button>
     </ion-buttons>
     <ion-title>
       @if (mode === 'list') {
-        Meus times
+        {{ 'teamForm.titleList' | t }}
       } @else if (team) {
-        Editar time
+        {{ 'teamForm.titleEdit' | t }}
       } @else {
-        Cadastro do time
+        {{ 'teamForm.titleCreate' | t }}
       }
     </ion-title>
   </ion-toolbar>
@@ -20,7 +20,7 @@
   <app-playful-page>
   @if (mode === 'list') {
     <ion-note color="medium" class="ion-margin-bottom">
-      Voce pode cadastrar ate 5 times. Toque em um time para editar elenco e dados.
+      {{ 'teamForm.listHint' | t }}
     </ion-note>
     <ion-list>
       @for (row of myTeams; track row.objectId) {
@@ -46,11 +46,11 @@
       [disabled]="!canCreateMore"
       (click)="startCreate()"
     >
-      Novo time
+      {{ 'teamForm.newTeam' | t }}
     </ion-button>
     @if (!canCreateMore) {
       <ion-note color="medium" class="ion-padding-horizontal">
-        Limite de 5 times atingido.
+        {{ 'teamForm.limitReached' | t }}
       </ion-note>
     }
   } @else if (team) {
@@ -58,32 +58,32 @@
       <ion-list lines="full">
         <ion-item>
           <ion-input
-            label="Nome do time"
+            [label]="'teamForm.nameLabel' | t"
             labelPlacement="stacked"
             formControlName="name"
           ></ion-input>
         </ion-item>
         <div class="ion-padding-horizontal ion-padding-top">
           <app-birth-date-picker
-            label="Data de fundacao"
+            [label]="'peladaForm.foundedDateLabel' | t"
             formControlName="foundedAt"
           ></app-birth-date-picker>
         </div>
         <div class="ion-padding-horizontal ion-padding-top">
           @if (form.get('homeVenue')?.value) {
             <ion-note color="medium" class="current-venue">
-              Local atual: {{ form.get('homeVenue')?.value }}
+              {{ 'teamForm.currentVenue' | t: { venue: form.get('homeVenue')?.value || '' } }}
             </ion-note>
           }
           <app-address-form
-            title="Local principal onde joga"
+            [title]="'teamForm.venueTitle' | t"
             [required]="false"
             formControlName="homeVenueAddress"
           ></app-address-form>
         </div>
         <ion-item>
           <ion-textarea
-            label="Descricao breve"
+            [label]="'teamForm.descriptionLabel' | t"
             labelPlacement="stacked"
             formControlName="description"
             autoGrow="true"
@@ -92,51 +92,51 @@
         </ion-item>
 
         <ion-item-divider>
-          <ion-label>Imagem do time</ion-label>
+          <ion-label>{{ 'teamForm.teamImageSection' | t }}</ion-label>
         </ion-item-divider>
         <div class="ion-padding">
           <app-image-picker
-            label="Selecionar imagem do time"
+            [label]="'teamForm.pickTeamImage' | t"
             [previewUrl]="teamImagePreview"
             (imageSelected)="onTeamImageSelected($event)"
           ></app-image-picker>
         </div>
 
         <ion-item-divider>
-          <ion-label>Escudo do time (opcional)</ion-label>
+          <ion-label>{{ 'teamForm.shieldSectionOptional' | t }}</ion-label>
         </ion-item-divider>
         <div class="ion-padding">
           <app-image-picker
-            label="Selecionar escudo"
+            [label]="'teamForm.pickShield' | t"
             [previewUrl]="shieldImagePreview"
             (imageSelected)="onShieldImageSelected($event)"
           ></app-image-picker>
         </div>
 
         <ion-item-divider>
-          <ion-label>Imagem do presidente</ion-label>
+          <ion-label>{{ 'teamForm.presidentSection' | t }}</ion-label>
         </ion-item-divider>
         <div class="ion-padding">
           <app-image-picker
-            label="Selecionar imagem do presidente"
+            [label]="'teamForm.pickPresidentImage' | t"
             [previewUrl]="presidentImagePreview"
             (imageSelected)="onPresidentImageSelected($event)"
           ></app-image-picker>
         </div>
 
         <ion-item-divider>
-          <ion-label>Foto da sede (opcional)</ion-label>
+          <ion-label>{{ 'teamForm.hqSectionOptional' | t }}</ion-label>
         </ion-item-divider>
         <div class="ion-padding">
           <app-image-picker
-            label="Selecionar foto da sede"
+            [label]="'teamForm.pickHqPhoto' | t"
             [previewUrl]="headquartersImagePreview"
             (imageSelected)="onHeadquartersImageSelected($event)"
           ></app-image-picker>
         </div>
 
         <ion-item-divider>
-          <ion-label>Uniforme do time</ion-label>
+          <ion-label>{{ 'teamForm.uniformSection' | t }}</ion-label>
         </ion-item-divider>
         <div class="ion-padding">
           @if (uniformPickerOpen) {
@@ -145,29 +145,29 @@
             @if (selectedUniform) {
               <div class="selected-uniform">
                 <app-jersey-preview [colors]="selectedUniform.colors"></app-jersey-preview>
-                <p>Uniforme selecionado: {{ selectedUniform.teamName }}</p>
+                <p>{{ 'teamForm.uniformSelected' | t: { name: selectedUniform.teamName } }}</p>
               </div>
             }
             <ion-button type="button" fill="outline" expand="block" (click)="uniformPickerOpen = true">
-              {{ selectedUniform ? 'Trocar uniforme' : 'Selecionar uniforme' }}
+              {{ (selectedUniform ? 'teamForm.swapUniform' : 'teamForm.selectUniform') | t }}
             </ion-button>
           }
         </div>
       </ion-list>
 
       <ion-button expand="block" type="submit" class="ion-margin-top">
-        Salvar alteracoes
+        {{ 'teamForm.saveChanges' | t }}
       </ion-button>
     </form>
 
     @if (team) {
       <ion-list lines="full" class="ion-margin-top">
         <ion-item-divider>
-          <ion-label>Elenco do time</ion-label>
+          <ion-label>{{ 'teamForm.rosterSection' | t }}</ion-label>
         </ion-item-divider>
         <ion-item>
           <ion-searchbar
-            placeholder="Buscar atleta por nome ou apelido"
+            [placeholder]="'teamForm.searchAthletePlaceholder' | t"
             [debounce]="0"
             [value]="athleteQuery"
             (ionInput)="onAthleteSearch($any($event.target).value)"
@@ -176,7 +176,7 @@
         </ion-item>
       </ion-list>
       <ion-note color="medium" class="ion-padding-horizontal">
-        Busque usuarios com perfil de atleta. Salve o time primeiro para montar o elenco.
+        {{ 'teamForm.rosterSearchHint' | t }}
       </ion-note>
       @if (athleteSearching) {
         <div class="ion-text-center ion-padding">
@@ -210,7 +210,7 @@
                 {{ 'common.viewProfile' | t }}
               </ion-button>
               <ion-button fill="solid" size="small" slot="end" (click)="addAthlete(athlete)">
-                Adicionar
+                {{ 'teamForm.addAthlete' | t }}
               </ion-button>
             </ion-item>
           }
@@ -229,20 +229,20 @@
               <ion-label>
                 <h2>{{ member.apelido }}</h2>
                 <p>
-                  {{ member.position || 'Posicao —' }}
+                  {{ member.position || ('teamForm.positionUnset' | t) }}
                   @if (member.age != null) {
-                    · {{ member.age }} anos
+                    · {{ 'teamForm.memberAgeYears' | t: { age: member.age } }}
                   }
                 </p>
               </ion-label>
               <ion-button fill="clear" color="danger" slot="end" (click)="removeMember(member)">
-                Remover
+                {{ 'common.remove' | t }}
               </ion-button>
             </ion-item>
           }
         </ion-list>
       } @else {
-        <ion-note color="medium" class="ion-padding">Nenhum atleta no elenco ainda.</ion-note>
+        <ion-note color="medium" class="ion-padding">{{ 'teamForm.emptyRoster' | t }}</ion-note>
       }
     }
   } @else {
@@ -266,24 +266,24 @@
             <ion-item>
               <ion-input
                 class="form-label-wrap"
-                label="Nome do time"
+                [label]="'teamForm.nameLabel' | t"
                 labelPlacement="stacked"
                 formControlName="name"
               ></ion-input>
             </ion-item>
             @if (form.get('name')?.touched && form.get('name')?.invalid) {
-              <ion-note color="danger" class="ion-padding-horizontal">Informe o nome do time.</ion-note>
+              <ion-note color="danger" class="ion-padding-horizontal">{{ 'teamForm.nameRequired' | t }}</ion-note>
             }
             <div class="ion-padding-horizontal ion-padding-top">
               <app-birth-date-picker
-                label="Data de fundacao (opcional)"
+                [label]="'peladaForm.foundedDateOptional' | t"
                 formControlName="foundedAt"
               ></app-birth-date-picker>
             </div>
           }
           @case ('venue') {
             <app-address-form
-              title="Local principal onde joga"
+              [title]="'teamForm.venueTitle' | t"
               [required]="false"
               [showTitle]="true"
               formControlName="homeVenueAddress"
@@ -294,7 +294,7 @@
             <ion-item>
               <ion-textarea
                 class="form-label-wrap"
-                label="Descricao breve (opcional)"
+                [label]="'teamForm.descriptionOptional' | t"
                 labelPlacement="stacked"
                 formControlName="description"
                 autoGrow="true"
@@ -306,22 +306,22 @@
             <p class="ion-padding-horizontal">{{ 'teamForm.wizard.photosHint' | t }}</p>
             <div class="ion-padding">
               <app-image-picker
-                label="Imagem do time"
+                [label]="'teamForm.teamImageSection' | t"
                 [previewUrl]="teamImagePreview"
                 (imageSelected)="onTeamImageSelected($event)"
               ></app-image-picker>
               <app-image-picker
-                label="Escudo (opcional)"
+                [label]="'teamForm.shieldOptionalLabel' | t"
                 [previewUrl]="shieldImagePreview"
                 (imageSelected)="onShieldImageSelected($event)"
               ></app-image-picker>
               <app-image-picker
-                label="Imagem do presidente"
+                [label]="'teamForm.presidentSection' | t"
                 [previewUrl]="presidentImagePreview"
                 (imageSelected)="onPresidentImageSelected($event)"
               ></app-image-picker>
               <app-image-picker
-                label="Foto da sede (opcional)"
+                [label]="'teamForm.hqOptionalLabel' | t"
                 [previewUrl]="headquartersImagePreview"
                 (imageSelected)="onHeadquartersImageSelected($event)"
               ></app-image-picker>
@@ -335,15 +335,15 @@
                 @if (selectedUniform) {
                   <div class="selected-uniform">
                     <app-jersey-preview [colors]="selectedUniform.colors"></app-jersey-preview>
-                    <p>Uniforme selecionado: {{ selectedUniform.teamName }}</p>
+                    <p>{{ 'teamForm.uniformSelected' | t: { name: selectedUniform.teamName } }}</p>
                   </div>
                 }
                 <ion-button type="button" fill="outline" expand="block" (click)="uniformPickerOpen = true">
-                  {{ selectedUniform ? 'Trocar uniforme' : 'Selecionar uniforme' }}
+                  {{ (selectedUniform ? 'teamForm.swapUniform' : 'teamForm.selectUniform') | t }}
                 </ion-button>
               }
               @if (form.get('uniformId')?.touched && form.get('uniformId')?.invalid) {
-                <ion-note color="danger">Selecione o uniforme do time.</ion-note>
+                <ion-note color="danger">{{ 'teamForm.selectUniformRequired' | t }}</ion-note>
               }
             </div>
           }

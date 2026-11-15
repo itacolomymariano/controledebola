@@ -2,9 +2,9 @@
   <app-user-bar></app-user-bar>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button (click)="cancel()">Voltar</ion-button>
+      <ion-button (click)="cancel()">{{ 'common.back' | t }}</ion-button>
     </ion-buttons>
-    <ion-title>Perfil de torcedor</ion-title>
+    <ion-title>{{ 'fanProfileForm.pageTitle' | t }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -17,30 +17,30 @@
         @if (apelido && apelido !== displayName) {
           <p>{{ apelido }}</p>
         }
-        <ion-note>Nome e foto sao editados em Meus dados.</ion-note>
+        <ion-note>{{ 'fanProfileForm.editMeusDadosNote' | t }}</ion-note>
       </div>
     </ion-card-content>
   </ion-card>
 
   @if (hasProfile) {
     <ion-note class="ion-margin-bottom">
-      Atualize seus dados de torcedor e valores de assistencia abaixo.
+      {{ 'fanProfileForm.updateHint' | t }}
     </ion-note>
   }
 
   @if (hasProfile) {
     <form [formGroup]="form" (ngSubmit)="submit()">
       <ion-note color="medium" class="ion-margin-bottom">
-        Times do coracao, idolos e data de nascimento sao editados em Meus dados.
+        {{ 'fanProfileForm.meusDadosFieldsNote' | t }}
       </ion-note>
       <ion-list lines="full">
       <ion-item-divider>
-        <ion-label>Por quanto assiste uma pelada</ion-label>
+        <ion-label>{{ 'fanProfileForm.peladaRateSection' | t }}</ion-label>
       </ion-item-divider>
       <ion-item>
         <ion-input
           type="number"
-          label="Presencialmente (R$)"
+          [label]="'fanProfileForm.presentialRate' | t"
           labelPlacement="stacked"
           formControlName="peladaPresentialRate"
           min="0"
@@ -50,7 +50,7 @@
       <ion-item>
         <ion-input
           type="number"
-          label="Remotamente — filmagem/narracao (R$)"
+          [label]="'fanProfileForm.remoteRate' | t"
           labelPlacement="stacked"
           formControlName="peladaRemoteRate"
           min="0"
@@ -59,12 +59,12 @@
       </ion-item>
 
       <ion-item-divider>
-        <ion-label>Por quanto assiste uma partida (equipes amadoras)</ion-label>
+        <ion-label>{{ 'fanProfileForm.matchRateSection' | t }}</ion-label>
       </ion-item-divider>
       <ion-item>
         <ion-input
           type="number"
-          label="Presencialmente (R$)"
+          [label]="'fanProfileForm.presentialRate' | t"
           labelPlacement="stacked"
           formControlName="matchPresentialRate"
           min="0"
@@ -74,7 +74,7 @@
       <ion-item>
         <ion-input
           type="number"
-          label="Remotamente — filmagem/narracao (R$)"
+          [label]="'fanProfileForm.remoteRate' | t"
           labelPlacement="stacked"
           formControlName="matchRemoteRate"
           min="0"
@@ -84,26 +84,24 @@
 
       <ion-item>
         <ion-toggle formControlName="acceptsPaidCommitments">
-          Aceito compromissos quando contratado e pago
+          {{ 'fanProfileForm.acceptsPaidCommitments' | t }}
         </ion-toggle>
       </ion-item>
       @if (form.get('acceptsPaidCommitments')?.value) {
         <ion-note color="medium" class="ion-padding commitment-note">
-          Ao aceitar contratacao paga, voce se compromete a comparecer ou assistir a transmissao,
-          realizar a votacao do evento e cumprir os palpites. O nao cumprimento pode resultar em
-          nao recebimento. O administrador pode registrar falta justificada e decidir pelo pagamento.
+          {{ 'fanProfileForm.commitmentNote' | t }}
         </ion-note>
       }
     </ion-list>
 
     <ion-button expand="block" type="submit" class="ion-margin-top">
-      Salvar alteracoes
+      {{ 'fanProfileForm.saveChanges' | t }}
     </ion-button>
   </form>
   } @else {
     <form [formGroup]="form">
       <ion-note color="medium" class="ion-margin-bottom">
-        Times do coracao, idolos e data de nascimento sao editados em Meus dados.
+        {{ 'fanProfileForm.meusDadosFieldsNote' | t }}
       </ion-note>
       <app-form-wizard
         [progressLabel]="wizardProgressLabel"
@@ -123,13 +121,13 @@
           @case ('pelada') {
             <ion-list lines="full">
               <ion-item-divider>
-                <ion-label>Por quanto assiste uma pelada</ion-label>
+                <ion-label>{{ 'fanProfileForm.peladaRateSection' | t }}</ion-label>
               </ion-item-divider>
               <ion-item>
                 <ion-input
                   class="form-label-wrap"
                   type="number"
-                  label="Presencialmente (R$)"
+                  [label]="'fanProfileForm.presentialRate' | t"
                   labelPlacement="stacked"
                   formControlName="peladaPresentialRate"
                   min="0"
@@ -140,7 +138,7 @@
                 <ion-input
                   class="form-label-wrap"
                   type="number"
-                  label="Remotamente — filmagem/narracao (R$)"
+                  [label]="'fanProfileForm.remoteRate' | t"
                   labelPlacement="stacked"
                   formControlName="peladaRemoteRate"
                   min="0"
@@ -152,13 +150,13 @@
           @case ('match') {
             <ion-list lines="full">
               <ion-item-divider>
-                <ion-label>Por quanto assiste uma partida (equipes amadoras)</ion-label>
+                <ion-label>{{ 'fanProfileForm.matchRateSection' | t }}</ion-label>
               </ion-item-divider>
               <ion-item>
                 <ion-input
                   class="form-label-wrap"
                   type="number"
-                  label="Presencialmente (R$)"
+                  [label]="'fanProfileForm.presentialRate' | t"
                   labelPlacement="stacked"
                   formControlName="matchPresentialRate"
                   min="0"
@@ -169,7 +167,7 @@
                 <ion-input
                   class="form-label-wrap"
                   type="number"
-                  label="Remotamente — filmagem/narracao (R$)"
+                  [label]="'fanProfileForm.remoteRate' | t"
                   labelPlacement="stacked"
                   formControlName="matchRemoteRate"
                   min="0"
@@ -181,14 +179,12 @@
           @case ('extra') {
             <ion-item>
               <ion-toggle formControlName="acceptsPaidCommitments">
-                Aceito compromissos quando contratado e pago
+                {{ 'fanProfileForm.acceptsPaidCommitments' | t }}
               </ion-toggle>
             </ion-item>
             @if (form.get('acceptsPaidCommitments')?.value) {
               <ion-note color="medium" class="ion-padding commitment-note">
-                Ao aceitar contratacao paga, voce se compromete a comparecer ou assistir a transmissao,
-                realizar a votacao do evento e cumprir os palpites. O nao cumprimento pode resultar em
-                nao recebimento. O administrador pode registrar falta justificada e decidir pelo pagamento.
+                {{ 'fanProfileForm.commitmentNote' | t }}
               </ion-note>
             }
           }

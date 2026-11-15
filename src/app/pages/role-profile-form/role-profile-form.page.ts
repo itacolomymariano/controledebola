@@ -15,7 +15,7 @@ import {
   roleProfileWizardSteps,
 } from '../../core/models/role-profile.model';
 import { RoleParticipationHistory } from '../../core/models/role-participation-history.model';
-import { PROFILE_ROLE_LABELS, ProfileRole } from '../../core/models/profile-role.model';
+import { PROFILE_ROLE_FALLBACK_LABELS, ProfileRole } from '../../core/models/profile-role.model';
 import { AuthService } from '../../core/services/auth.service';
 import { I18nService } from '../../core/services/i18n.service';
 import { RoleProfileHistoryService } from '../../core/services/role-profile-history.service';
@@ -139,7 +139,7 @@ export class RoleProfileFormPage {
     }
 
     this.role = role;
-    this.roleLabel = PROFILE_ROLE_LABELS[role as ProfileRole];
+    this.roleLabel = PROFILE_ROLE_FALLBACK_LABELS[role as ProfileRole];
     this.historyMode = ROLE_HISTORY_MODE[role];
     this.form = buildRoleProfileForm(this.fb, role);
     this.wizardStepIds = roleProfileWizardSteps(role, this.historyMode !== 'none');
@@ -173,12 +173,12 @@ export class RoleProfileFormPage {
   async exitWizard(): Promise<void> {
     this.persistDraft();
     const alert = await this.alertCtrl.create({
-      header: 'Sair do cadastro',
-      message: 'Seu rascunho foi salvo neste aparelho. Você pode continuar depois.',
+      header: this.i18n.t('peladaForm.exitWizardHeader'),
+      message: this.i18n.t('peladaForm.exitWizardMessage'),
       buttons: [
-        { text: 'Continuar preenchendo', role: 'cancel' },
+        { text: this.i18n.t('peladaForm.continueFilling'), role: 'cancel' },
         {
-          text: 'Sair',
+          text: this.i18n.t('peladaForm.exit'),
           role: 'destructive',
           handler: () => {
             void this.router.navigateByUrl('/tabs/profile');
@@ -251,7 +251,10 @@ export class RoleProfileFormPage {
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      const message = buildMissingFieldsMessage(this.form, roleProfileFieldLabels(this.role));
+      const message = buildMissingFieldsMessage(
+        this.form,
+        roleProfileFieldLabels(this.role, (k) => this.i18n.t(k))
+      );
       if (message) await this.showError(message);
       return;
     }
@@ -261,7 +264,7 @@ export class RoleProfileFormPage {
       this.form.get('isFederatedReferee')?.value &&
       !this.form.get('federationName')?.value?.trim()
     ) {
-      await this.showError('Informe a federacao do arbitro.');
+      await this.showError(this.i18n.t('roleProfileForm.error.refereeFederation'));
       return;
     }
 
@@ -316,7 +319,7 @@ export class RoleProfileFormPage {
     if (!this.role) return;
     const step = this.wizardStep;
     if (step === 'rates') {
-      const labels = roleProfileFieldLabels(this.role);
+      const labels = roleProfileFieldLabels(this.role, (k) => this.i18n.t(k));
       const moneyKeys = ROLE_PROFILE_FIELDS[this.role]
         .filter((f) => f.type === 'money')
         .map((f) => f.key);
@@ -335,12 +338,16 @@ export class RoleProfileFormPage {
       this.role === 'referee' &&
       this.form.get('isFederatedReferee')?.value
     ) {
-      await this.showError('Informe a federacao do arbitro.');
+      await this.showError(this.i18n.t('roleProfileForm.error.refereeFederation'));
     }
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('common.error'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 }

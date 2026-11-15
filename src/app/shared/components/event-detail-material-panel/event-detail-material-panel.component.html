@@ -2,23 +2,21 @@
   <ion-card-header>
     <div class="event-panel-header">
       <div>
-        <ion-card-title>Material do evento</ion-card-title>
-        <ion-card-subtitle>
-          Controle de envio, recebimento e conferencia com o roupeiro
-        </ion-card-subtitle>
+        <ion-card-title>{{ 'eventDetail.material.title' | t }}</ion-card-title>
+        <ion-card-subtitle>{{ 'eventDetail.material.subtitle' | t }}</ion-card-subtitle>
       </div>
       <ion-button fill="clear" size="small" class="event-panel-back" (click)="back.emit()">
         <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
-        Voltar
+        {{ 'common.back' | t }}
       </ion-button>
     </div>
   </ion-card-header>
 
   <ion-card-content>
     @if (!session) {
-      <ion-note>Carregando sessao de material...</ion-note>
+      <ion-note>{{ 'eventDetail.material.loadingSession' | t }}</ion-note>
     } @else {
-      <h3>Usar qual material?</h3>
+      <h3>{{ 'eventDetail.material.whichSource' | t }}</h3>
       <div class="source-actions">
         <ion-button
           size="small"
@@ -26,7 +24,7 @@
           [disabled]="busy || !isAdmin"
           (click)="onSourceSelect('pelada')"
         >
-          Proprio (Pelada)
+          {{ 'eventDetail.material.sourcePelada' | t }}
         </ion-button>
         <ion-button
           size="small"
@@ -34,7 +32,7 @@
           [disabled]="!canSelectKitmanSource"
           (click)="onSourceSelect('kitman')"
         >
-          Do Roupeiro
+          {{ 'eventDetail.material.sourceKitman' | t }}
         </ion-button>
         <ion-button
           size="small"
@@ -42,55 +40,56 @@
           [disabled]="!canSelectNoneSource"
           (click)="onSourceSelect('none')"
         >
-          Nao controla
+          {{ 'eventDetail.material.sourceNone' | t }}
         </ion-button>
       </div>
 
       @if (sourceLockedForKitman) {
         <ion-note color="warning">
-          O administrador definiu uso do material da pelada neste evento. Voce nao pode selecionar material proprio.
+          {{ 'eventDetail.material.sourceLockedKitman' | t }}
         </ion-note>
       }
 
       @if (session.counterpartyName) {
-        <ion-note color="medium">Roupeiro do evento: {{ session.counterpartyName }}</ion-note>
+        <ion-note color="medium">{{
+          'eventDetail.material.counterpartyLine' | t: { name: session.counterpartyName }
+        }}</ion-note>
       }
 
       @if (showMissingPeladaInventoryHint) {
         <ion-note color="warning">
-          Material da pelada ainda nao cadastrado. Cadastre o inventario em Configuracoes desta Pelada
-          (botao Material).
+          {{ 'eventDetail.material.missingPeladaInventory' | t }}
         </ion-note>
       } @else if (showMissingKitmanHint) {
         <ion-note color="warning">
-          Nenhum roupeiro contratado neste evento. Negocie/contrate um roupeiro para enviar o material.
+          {{ 'eventDetail.material.missingKitman' | t }}
         </ion-note>
       }
 
       @if (source === 'none') {
-        <p class="ion-margin-top">Controle de material desativado neste evento.</p>
+        <p class="ion-margin-top">{{ 'eventDetail.material.trackingOff' | t }}</p>
       } @else {
         <p class="ion-margin-top">
-          Status:
+          {{ 'eventDetail.material.statusLabel' | t }}
           <ion-text color="primary">{{ statusLabel(session.status) }}</ion-text>
         </p>
 
         @if (source === 'kitman' && isKitman && hasEmptyInventory) {
           <ion-note color="warning" class="ion-margin-top">
-            Seu material de roupeiro ainda nao foi cadastrado. Cadastre em Perfil → Material do Roupeiro.
+            {{ 'eventDetail.material.kitmanInventoryMissing' | t }}
           </ion-note>
         }
 
         @if (canLoad) {
-          <h3>Carregar material para o evento</h3>
+          <h3>{{ 'eventDetail.material.loadSectionTitle' | t }}</h3>
           <ion-button expand="block" [disabled]="busy" (click)="loadAll.emit()">
-            Todo o material disponivel
+            {{ 'eventDetail.material.loadAllButton' | t }}
           </ion-button>
 
           @if (inventory.length) {
             <div class="load-grid-header ion-margin-top">
-              <span>Material</span>
-              <span>Qtd.Evento</span>
+              <span>{{ 'eventDetail.material.materialColumn' | t }}</span>
+              <span>{{ 'common.qtyEvent' | t }}</span>
             </div>
             <ion-list lines="none" class="playful-elevated-list">
               @for (item of inventory; track item.objectId) {
@@ -98,9 +97,9 @@
                   <ion-label>
                     <h3>{{ lineLabel(item.itemType, item.color) }}</h3>
                     <p>
-                      Disponivel: {{ item.availableQuantity }}
+                      {{ 'eventDetail.material.availableLine' | t: { qty: item.availableQuantity } }}
                       @if (item.damagedQuantity > 0) {
-                        · Avariadas: {{ item.damagedQuantity }} (utilizavel)
+                        · {{ 'eventDetail.material.damagedLine' | t: { qty: item.damagedQuantity } }}
                       }
                     </p>
                   </ion-label>
@@ -109,7 +108,7 @@
                     type="number"
                     min="0"
                     [max]="item.availableQuantity"
-                    label="Qtd.Evento"
+                    [label]="'common.qtyEvent' | t"
                     labelPlacement="stacked"
                     [value]="eventQtyFor(item)"
                     (ionInput)="onPartialInput(item.objectId, $event)"
@@ -124,22 +123,26 @@
               [disabled]="busy"
               (click)="loadPartial.emit()"
             >
-              Carregar selecao (Qtd.Evento)
+              {{ 'eventDetail.material.loadPartialButton' | t }}
             </ion-button>
           }
         }
 
         @if (session.lines.length) {
-          <h3 class="ion-margin-top">Material carregado / enviado</h3>
+          <h3 class="ion-margin-top">{{ 'eventDetail.material.loadedSentTitle' | t }}</h3>
           <ion-list lines="none" class="playful-elevated-list">
             @for (line of session.lines; track lineKey(line.itemType, line.color)) {
               <ion-item>
                 <ion-label>
                   <h3>{{ lineLabel(line.itemType, line.color) }}</h3>
                   <p>
-                    Carregado {{ line.quantityLoaded }}
-                    · Enviado {{ line.quantitySent }}
-                    · Devolvido/contado {{ line.quantityReturned || line.quantityBlindCounted || '-' }}
+                    {{ 'eventDetail.material.lineLoaded' | t: { qty: line.quantityLoaded } }}
+                    · {{ 'eventDetail.material.lineSent' | t: { qty: line.quantitySent } }}
+                    ·
+                    {{
+                      'eventDetail.material.lineReturned'
+                        | t: { qty: returnedOrCountedQty(line) }
+                    }}
                   </p>
                 </ion-label>
               </ion-item>
@@ -149,7 +152,7 @@
 
         @if (session.status === 'loaded' && source === 'pelada' && isAdmin && !hasKitmanCounterparty) {
           <ion-note color="warning" class="ion-margin-top">
-            Botao de envio liberado somente apos contratar um roupeiro no evento.
+            {{ 'eventDetail.material.sendNeedsKitman' | t }}
           </ion-note>
         }
 
@@ -161,10 +164,10 @@
 
         @if (showConferenceInputs) {
           <h3 class="ion-margin-top">
-            {{ canBlindCount ? 'Contagem cega (conferencia)' : 'Conferencia da devolucao' }}
+            {{ (canBlindCount ? 'eventDetail.material.blindCountTitle' : 'eventDetail.material.returnCheckTitle') | t }}
           </h3>
           <ion-note color="medium" class="ion-margin-bottom">
-            Informe a quantidade recebida e, se houver, quantas unidades com avaria (ainda utilizaveis).
+            {{ 'eventDetail.material.conferenceHint' | t }}
           </ion-note>
           <ion-list lines="none" class="playful-elevated-list">
             @for (line of session.lines; track lineKey(line.itemType, line.color)) {
@@ -172,23 +175,23 @@
                 <ion-label>
                   <h3>{{ lineLabel(line.itemType, line.color) }}</h3>
                   @if (canBlindCount) {
-                    <p>Quantidade contada (sem consultar o enviado)</p>
+                    <p>{{ 'eventDetail.material.blindCountPrompt' | t }}</p>
                   } @else {
-                    <p>Quantidade devolvida</p>
+                    <p>{{ 'eventDetail.material.returnQtyPrompt' | t }}</p>
                   }
                 </ion-label>
                 <div slot="end" class="conference-inputs">
                   <ion-input
                     type="number"
                     min="0"
-                    placeholder="Qtd"
+                    [placeholder]="'common.qtyShort' | t"
                     [value]="blindCounts[lineKey(line.itemType, line.color)] ?? ''"
                     (ionInput)="onBlindInput(lineKey(line.itemType, line.color), $event)"
                   ></ion-input>
                   <ion-input
                     type="number"
                     min="0"
-                    placeholder="Avariadas"
+                    [placeholder]="'eventDetail.material.damagedPlaceholder' | t"
                     [value]="blindDamagedCounts[lineKey(line.itemType, line.color)] ?? ''"
                     (ionInput)="onBlindDamagedInput(lineKey(line.itemType, line.color), $event)"
                   ></ion-input>
@@ -198,7 +201,7 @@
           </ion-list>
           @if (canBlindCount) {
             <ion-button expand="block" [disabled]="busy" (click)="submitBlindCount.emit()">
-              Registrar contagem cega
+              {{ 'eventDetail.material.submitBlindCount' | t }}
             </ion-button>
           }
         }
@@ -211,16 +214,16 @@
             [disabled]="busy"
             (click)="receiveReturn.emit()"
           >
-            Receber devolucao do Roupeiro
+            {{ 'eventDetail.material.receiveReturnButton' | t }}
           </ion-button>
           <ion-note color="medium">
-            Use a conferencia acima (ou a contagem do roupeiro) para fechar a devolucao e registrar avarias.
+            {{ 'eventDetail.material.receiveReturnHint' | t }}
           </ion-note>
         }
 
-        <h3 class="ion-margin-top">Lista de divergencias</h3>
+        <h3 class="ion-margin-top">{{ 'eventDetail.material.divergenceTitle' | t }}</h3>
         @if (!session.divergences.length) {
-          <ion-note>Nenhuma divergencia registrada.</ion-note>
+          <ion-note>{{ 'eventDetail.material.noDivergence' | t }}</ion-note>
         } @else {
           <ion-list lines="none" class="playful-elevated-list">
             @for (row of session.divergences; track row.label + row.delta) {
@@ -228,7 +231,8 @@
                 <ion-label>
                   <h3>{{ row.label }}</h3>
                   <p>
-                    Esperado {{ row.expected }} · Contado {{ row.counted }} ·
+                    {{ 'eventDetail.material.divergenceExpected' | t: { qty: row.expected } }}
+                    · {{ 'eventDetail.material.divergenceCounted' | t: { qty: row.counted } }} ·
                     <ion-text [color]="row.delta < 0 ? 'danger' : 'success'">
                       {{ row.delta > 0 ? '+' : '' }}{{ row.delta }}
                     </ion-text>
@@ -247,12 +251,12 @@
             [disabled]="busy"
             (click)="applyLosses.emit()"
           >
-            Aplicar baixas no material da pelada
+            {{ 'eventDetail.material.applyLossesButton' | t }}
           </ion-button>
         }
 
         @if (session.lossesApplied) {
-          <ion-note color="success">Baixas ja aplicadas no inventario da pelada.</ion-note>
+          <ion-note color="success">{{ 'eventDetail.material.lossesAppliedNote' | t }}</ion-note>
         }
       }
     }

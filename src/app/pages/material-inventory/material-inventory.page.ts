@@ -9,6 +9,7 @@ import {
   MaterialOwnerType,
   materialLineDisplayLabel,
 } from '../../core/models/material-inventory.model';
+import { I18nService } from '../../core/services/i18n.service';
 import { MaterialInventoryService } from '../../core/services/material-inventory.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
 
@@ -46,7 +47,8 @@ export class MaterialInventoryPage {
     private readonly materialService: MaterialInventoryService,
     private readonly alertCtrl: AlertController,
     private readonly loadingCtrl: LoadingController,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly i18n: I18nService
   ) {}
 
   async ionViewWillEnter(): Promise<void> {
@@ -54,7 +56,7 @@ export class MaterialInventoryPage {
     this.ownerType = ownerType === 'kitman' ? 'kitman' : 'pelada';
     this.peladaId = String(this.route.snapshot.queryParamMap.get('peladaId') || '').trim();
     if (this.ownerType === 'pelada' && !this.peladaId) {
-      await this.showError('Pelada nao informada.');
+      await this.showError(this.i18n.t('materialInventory.peladaNotProvided'));
       void this.router.navigateByUrl('/tabs/peladas');
       return;
     }
@@ -110,7 +112,7 @@ export class MaterialInventoryPage {
   async saveAll(): Promise<void> {
     this.saving = true;
     this.cdr.markForCheck();
-    const loading = await this.loadingCtrl.create({ message: 'Salvando material...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('materialInventory.loading.saving') });
     await loading.present();
     try {
       for (const def of this.definitions) {
@@ -193,12 +195,20 @@ export class MaterialInventoryPage {
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('common.error'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 
   private async showMessage(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'OK', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('common.ok'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 }

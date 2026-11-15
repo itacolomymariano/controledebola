@@ -45,10 +45,10 @@
                 <ion-select
                   [(ngModel)]="row.color"
                   interface="popover"
-                  placeholder="Cor"
+                  [placeholder]="'materialInventory.colorPlaceholder' | t"
                   fill="outline"
-                  okText="OK"
-                  cancelText="Cancelar"
+                  [okText]="'common.ok' | t"
+                  [cancelText]="'common.cancel' | t"
                 >
                   @for (color of colorOptionsFor(row); track color) {
                     <ion-select-option [value]="color">{{ color }}</ion-select-option>
@@ -71,7 +71,7 @@
                 class="material-delete-btn"
                 fill="clear"
                 color="danger"
-                aria-label="Excluir linha"
+                [attr.aria-label]="'materialInventory.deleteRowAria' | t"
                 (click)="removeRow(def.type, $index)"
               >
                 <ion-icon slot="icon-only" name="trash-outline"></ion-icon>

@@ -5,24 +5,27 @@
 ## Preparação
 
 1. Build recente (APK debug ou release interno).
-2. Perfil → bandeiras → alternar **pt-BR**, **en-GB**, **es-ES**.
-3. Opcional: `npm run check:i18n` já passou no CI local antes do AAB.
+2. **Troca de idioma (obrigatório):** menu lateral ☰ → **Language** → action sheet (PT / EN / ES); repetir em **Perfil → bandeiras**. Ciclo **EN → ES → PT** sem fechar o app; abas do rodapé devem atualizar **sem** trocar de tela.
+3. Opcional: `npm run check:i18n` e `npm run check:i18n:scan` (meta: **0** hits) antes do AAB.
+4. **Regressão searchbar:** com locale **en-GB**, abra Participantes e confira placeholder **Search participant**; troque para **es-ES** na mesma tela e confira atualização sem sair do evento (remount `ion-searchbar`).
 
-## Matriz por idioma (en-GB e es-ES)
+## Matriz smoke (marque pt / en / es)
 
-| # | Tela | O que verificar |
-|---|------|-----------------|
-| 0 | **Splash** (entrada) | Título + tagline no idioma escolhido (antes do login) |
-| 1 | **Início** (6 portas) | Títulos das portas; **?** → texto de ajuda no idioma; **Ouvir** 1 frase |
-| 2 | **Peladas** | Lista e empty states |
-| 3 | **Mural → Geral** | Cards playful (`mural.playful.*`); hero Craque; filtros |
-| 4 | **Mural → Explorar** | Resultados por período — abas Semana/Mês/Ano e métricas |
-| 5 | **Evento → detalhe** | Overview (Início/Término, chip inscrições, taxa, admin); **Participar**; painel Participantes (busca, papéis, cancelar); datas em formato en-GB |
-| 5b | **Pelada → Arena Fire** | Lista de eventos (chips inscrição/vagas); aba **Members** — CTA sócio e mensalidades |
-| 5c | **Sobre** | Versão do build, Release, contacto — tudo no idioma ativo |
-| 6 | **Perfil** | Idioma/paleta; itens de perfil e **Convidar Amigos** |
-| 7 | **Meus dados** | Título e botão Voltar |
-| 8 | **Voltar** | Em 3 telas deep (ex.: pelada → detalhe, mural explorar, evento): rótulo **Back** / **Volver** no `ion-back-button` |
+| # | Tela | pt-BR | en-GB | es-ES |
+|---|------|:-----:|:-----:|:-----:|
+| 0 | Splash | | | |
+| 1 | Início (portas + Ouvir) | | | |
+| 2 | Peladas | | | |
+| 3 | Buscar | | | |
+| 4 | Mural Geral / Explorar | | | |
+| 5 | Evento detalhe | | | |
+| 5a | Evento → Participantes (placeholder busca + lista confirmados) | | | |
+| 5a2 | Evento → **JOIN** (wizard `event-register`, 2 passos) | | | |
+| 5b | Pelada detalhe (cotinhas/caixa) | | | |
+| 5c | Sobre | | | |
+| 6 | Perfil + menu idioma (action sheet) | | | |
+| 7 | Meus dados | | | |
+| 8 | `ion-back-button` (Voltar / Back / Volver) | | | |
 
 ## Critério de aprovação
 

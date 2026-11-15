@@ -1,4 +1,5 @@
-import { ChangeDetectorRef, Component } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
@@ -12,11 +13,7 @@ import {
   MembershipType,
   ScheduleConflict,
 } from '../../core/models/event-registration.model';
-import {
-  EVENT_REGISTRATION_ROLES,
-  PROFILE_ROLE_LABELS,
-  ProfileRole,
-} from '../../core/models/profile-role.model';
+import { EVENT_REGISTRATION_ROLES, ProfileRole } from '../../core/models/profile-role.model';
 import { AuthService } from '../../core/services/auth.service';
 import { AthleteProfileService } from '../../core/services/athlete-profile.service';
 import { EventService } from '../../core/services/event.service';
@@ -26,6 +23,7 @@ import { UserParticipationProfileService } from '../../core/services/user-partic
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
 import { I18nService } from '../../core/services/i18n.service';
 import { buildMissingFieldsMessage } from '../../core/utils/form-validation.util';
+import { localizedProfileRoleLabel } from '../../core/utils/profile-role-i18n.util';
 
 const EVENT_REGISTER_WIZARD_STEPS = ['papel', 'confirmacao'] as const;
 type EventRegisterWizardStep = (typeof EVENT_REGISTER_WIZARD_STEPS)[number];
@@ -36,17 +34,13 @@ type EventRegisterWizardStep = (typeof EVENT_REGISTER_WIZARD_STEPS)[number];
   styleUrls: ['./event-register.page.scss'],
   standalone: false,
 })
-export class EventRegisterPage {
+export class EventRegisterPage implements OnDestroy {
   readonly registerWizardSteps = EVENT_REGISTER_WIZARD_STEPS;
   wizardStepIndex = 0;
 
   eventId = '';
-  roles: { value: ProfileRole; label: string }[] = EVENT_REGISTRATION_ROLES
-    .filter((value) => value !== 'referee')
-    .map((value) => ({
-      value,
-      label: PROFILE_ROLE_LABELS[value],
-    }));
+  roles: { value: ProfileRole; label: string }[] = [];
+  private localeSub?: Subscription;
   selectedRole: ProfileRole | null = null;
   athleteProfile: AthleteProfile | null = null;
   showAthleteForm = false;
@@ -90,15 +84,28 @@ export class EventRegisterPage {
     private readonly loadingCtrl: LoadingController,
     private readonly alertCtrl: AlertController,
     private readonly cdr: ChangeDetectorRef,
-    private readonly i18n: I18nService
-  ) {}
+    readonly i18n: I18nService
+  ) {
+    this.localeSub = this.i18n.locale$.subscribe(() => {
+      this.refreshRoleLabels();
+      this.cdr.markForCheck();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.localeSub?.unsubscribe();
+  }
 
   get registerWizardStep(): EventRegisterWizardStep {
     return this.registerWizardSteps[this.wizardStepIndex];
   }
 
   get wizardProgressLabel(): string {
-    return `Passo ${this.wizardStepIndex + 1} de ${this.registerWizardSteps.length}`;
+    return this.i18n.wizardProgress(
+      'eventRegister.wizard.progress',
+      this.wizardStepIndex + 1,
+      this.registerWizardSteps.length
+    );
   }
 
   get wizardProgressValue(): number {
@@ -106,7 +113,9 @@ export class EventRegisterPage {
   }
 
   get wizardStepTitle(): string {
-    return this.registerWizardStep === 'papel' ? 'Papel neste evento' : 'Confirmar inscricao';
+    return this.registerWizardStep === 'papel'
+      ? this.i18n.t('eventRegister.wizard.step.papel.title')
+      : this.i18n.t('eventRegister.wizard.step.confirmacao.title');
   }
 
   get wizardIsLast(): boolean {
@@ -174,11 +183,11 @@ export class EventRegisterPage {
 
   get selectedRoleLabel(): string {
     const role = this.form.get('role')?.value as ProfileRole | '';
-    return role ? PROFILE_ROLE_LABELS[role] : '';
+    return role ? localizedProfileRoleLabel(this.i18n, role) : '';
   }
 
   get suggestedRoleLabel(): string {
-    return this.suggestedRole ? PROFILE_ROLE_LABELS[this.suggestedRole] : '';
+    return this.suggestedRole ? localizedProfileRoleLabel(this.i18n, this.suggestedRole) : '';
   }
 
   get membershipTypeLabel(): string {
@@ -199,11 +208,11 @@ export class EventRegisterPage {
   }
 
   get homeTeamLabel(): string {
-    return this.event?.homeTeamName?.trim() || 'Mandante';
+    return this.event?.homeTeamName?.trim() || this.i18n.t('eventDetail.teamMatch.sideHomeFallback');
   }
 
   get awayTeamLabel(): string {
-    return this.event?.awayTeamName?.trim() || 'Visitante';
+    return this.event?.awayTeamName?.trim() || this.i18n.t('eventDetail.teamMatch.sideAwayFallback');
   }
 
   get requiresTeamSide(): boolean {
@@ -250,8 +259,14 @@ export class EventRegisterPage {
   private buildRoleOptions(roles: ProfileRole[]): { value: ProfileRole; label: string }[] {
     return this.filterAvailableRoles(roles).map((value) => ({
       value,
-      label: PROFILE_ROLE_LABELS[value],
+      label: localizedProfileRoleLabel(this.i18n, value),
     }));
+  }
+
+  private refreshRoleLabels(): void {
+    if (!this.roles.length) return;
+    const values = this.roles.map((item) => item.value);
+    this.roles = this.buildRoleOptions(values);
   }
 
   private filterAvailableRoles(roles: ProfileRole[]): ProfileRole[] {
@@ -321,7 +336,7 @@ export class EventRegisterPage {
 
     if (this.requiresTeamSide && !this.form.get('teamSide')?.value) {
       this.form.markAllAsTouched();
-      await this.showError('Escolha o time mandante ou visitante.');
+      await this.showError(this.i18n.t('eventRegister.error.chooseTeamSide'));
       return;
     }
 
@@ -332,7 +347,9 @@ export class EventRegisterPage {
       return;
     }
 
-    const loading = await this.loadingCtrl.create({ message: 'Inscrevendo...' });
+    const loading = await this.loadingCtrl.create({
+      message: this.i18n.t('eventRegister.loading.registering'),
+    });
     await loading.present();
 
     try {
@@ -365,9 +382,7 @@ export class EventRegisterPage {
       });
 
       if (registration.profilePresentationStatus === 'pending') {
-        await this.showInfo(
-          'Solicitacao enviada ao administrador da pelada. Voce sera notificado quando houver decisao.'
-        );
+        await this.showInfo(this.i18n.t('eventRegister.profilePresentationSent'));
       }
 
       await this.router.navigate(['/event', this.eventId], { replaceUrl: true });
@@ -394,7 +409,7 @@ export class EventRegisterPage {
         await this.registrationService.isAthleteRegistrationFullForEvent(event);
       if (this.athleteRegistrationFull) {
         const max = await this.registrationService.resolveMaxAthletesForEvent(event);
-        this.athleteRegistrationFullMessage = `Inscricoes de atletas encerradas: limite de ${max} confirmacoes atingido neste evento.`;
+        this.athleteRegistrationFullMessage = this.i18n.t('eventRegister.athleteLimitMessage', { max });
       } else {
         this.athleteRegistrationFullMessage = '';
       }
@@ -463,25 +478,26 @@ export class EventRegisterPage {
 
   private buildRegistrationMissingMessage(): string {
     const labels: Record<string, string> = {
-      apelido: 'Apelido',
-      role: 'Perfil no evento',
+      apelido: this.i18n.t('eventRegister.validation.apelido'),
+      role: this.i18n.t('eventRegister.validation.role'),
     };
     let message = buildMissingFieldsMessage(this.form, labels);
     if (this.form.get('committed')?.invalid) {
+      const commitment = this.i18n.t('eventRegister.validation.commitment');
       message = message
-        ? `${message.replace(/\.$/, '')}, Compromisso de participacao.`
-        : 'Falta preencher: Compromisso de participacao.';
+        ? `${message.replace(/\.$/, '')}, ${commitment}.`
+        : this.i18n.t('eventRegister.validation.missingSuffix', { fields: commitment });
     }
     return message;
   }
 
   private async validateAthleteFields(): Promise<boolean> {
     const labels: Record<string, string> = {
-      primaryPosition: 'Posicao principal',
-      shoeSize: 'Numero do pe',
-      heightMeter: 'Altura (metros)',
-      heightCm: 'Altura (centimetros)',
-      weight: 'Peso',
+      primaryPosition: this.i18n.t('eventRegister.validation.primaryPosition'),
+      shoeSize: this.i18n.t('eventRegister.validation.shoeSize'),
+      heightMeter: this.i18n.t('eventRegister.validation.heightMeter'),
+      heightCm: this.i18n.t('eventRegister.validation.heightCm'),
+      weight: this.i18n.t('eventRegister.validation.weight'),
     };
     const message = buildMissingFieldsMessage(this.form, labels);
     if (message) {
@@ -493,12 +509,20 @@ export class EventRegisterPage {
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('common.error'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 
   private async showInfo(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Solicitacao enviada', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('eventRegister.profilePresentationHeader'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 }

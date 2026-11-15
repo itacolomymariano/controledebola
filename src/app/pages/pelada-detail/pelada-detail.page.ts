@@ -187,6 +187,10 @@ export class PeladaDetailPage implements OnDestroy {
     });
   }
 
+  get searchbarRemountKey(): string {
+    return this.i18n.ionInputRemountKey;
+  }
+
   ngOnDestroy(): void {
     this.registrationsChangedSub?.unsubscribe();
   }
@@ -341,7 +345,9 @@ export class PeladaDetailPage implements OnDestroy {
       await this.showMessage('Configuracoes salvas.');
       await this.loadProfilePresentationRequests();
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Erro ao salvar configuracoes.');
+      await this.showError(
+        error instanceof Error ? error.message : this.i18n.t('peladaDetail.error.saveSettings')
+      );
     } finally {
       this.savingSettings = false;
       this.cdr.markForCheck();
@@ -357,7 +363,7 @@ export class PeladaDetailPage implements OnDestroy {
       header: 'Recusar solicitacao',
       message: `Recusar a participacao de ${request.userDisplayName} no evento "${request.eventName}"?`,
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.i18n.t('common.cancel'), role: 'cancel' },
         {
           text: 'Recusar',
           role: 'destructive',
@@ -379,7 +385,9 @@ export class PeladaDetailPage implements OnDestroy {
         userId
       );
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Erro ao carregar perfil.');
+      await this.showError(
+        error instanceof Error ? error.message : this.i18n.t('peladaDetail.error.loadProfile')
+      );
       this.reviewProfileOpen = false;
     } finally {
       this.loadingReviewProfile = false;
@@ -466,7 +474,9 @@ export class PeladaDetailPage implements OnDestroy {
       await this.loadMembership();
       await this.showMessage('Solicitacao enviada ao administrador.');
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Erro ao solicitar socio.');
+      await this.showError(
+        error instanceof Error ? error.message : this.i18n.t('peladaDetail.error.requestMembership')
+      );
     }
   }
 
@@ -583,7 +593,9 @@ export class PeladaDetailPage implements OnDestroy {
       await this.loadSocioData();
     } catch (error: unknown) {
       this.buildSocioListRows();
-      await this.showError(error instanceof Error ? error.message : 'Erro ao atualizar socio.');
+      await this.showError(
+        error instanceof Error ? error.message : this.i18n.t('peladaDetail.error.updateSocio')
+      );
     } finally {
       this.togglingSocioUserId = '';
       this.cdr.markForCheck();
@@ -603,7 +615,9 @@ export class PeladaDetailPage implements OnDestroy {
       await this.membershipService.updateStatus(member.objectId, status);
       await this.loadMembers();
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Erro ao atualizar status.');
+      await this.showError(
+        error instanceof Error ? error.message : this.i18n.t('peladaDetail.error.updateMemberStatus')
+      );
     }
   }
 
@@ -627,7 +641,9 @@ export class PeladaDetailPage implements OnDestroy {
       this.cotinhaForm.reset({ title: '', description: '', targetAmount: 0 });
       await this.loadCotinhas();
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Erro ao criar cotinha.');
+      await this.showError(
+        error instanceof Error ? error.message : this.i18n.t('peladaDetail.error.createCotinha')
+      );
     }
   }
 
@@ -675,7 +691,9 @@ export class PeladaDetailPage implements OnDestroy {
       if (this.isMember) await this.loadCashFlow();
       await this.showMessage('Contribuicao registrada.');
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Erro ao registrar pagamento.');
+      await this.showError(
+        error instanceof Error ? error.message : this.i18n.t('peladaDetail.error.registerPayment')
+      );
     }
   }
 
@@ -696,7 +714,7 @@ export class PeladaDetailPage implements OnDestroy {
         },
       ],
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.i18n.t('common.cancel'), role: 'cancel' },
         {
           text: 'Salvar',
           handler: (data) => {
@@ -710,12 +728,12 @@ export class PeladaDetailPage implements OnDestroy {
 
   async deleteCotinhaPayment(payment: PeladaCotinhaPayment): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Excluir contribuicao',
-      message: `Excluir a contribuicao de ${payment.userName}?`,
+      header: this.i18n.t('peladaDetail.cotinha.deletePaymentHeader'),
+      message: this.i18n.t('peladaDetail.cotinha.deletePaymentMessage', { userName: payment.userName }),
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
+        { text: this.i18n.t('common.cancel'), role: 'cancel' },
         {
-          text: 'Excluir',
+          text: this.i18n.t('common.delete'),
           role: 'destructive',
           handler: () => {
             void this.confirmDeleteCotinhaPayment(payment.objectId);
@@ -733,7 +751,9 @@ export class PeladaDetailPage implements OnDestroy {
       await this.loadCotinhas();
       if (this.isMember) await this.loadCashFlow();
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Erro ao confirmar pagamento.');
+      await this.showError(
+        error instanceof Error ? error.message : this.i18n.t('peladaDetail.error.confirmPayment')
+      );
     }
   }
 
@@ -769,7 +789,9 @@ export class PeladaDetailPage implements OnDestroy {
       this.cashForm.reset({ date: '', type: 'in', amount: 0, description: '' });
       await this.loadCashFlow();
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Erro ao registrar movimentacao.');
+      await this.showError(
+        error instanceof Error ? error.message : this.i18n.t('peladaDetail.error.registerCashEntry')
+      );
     }
   }
 
@@ -804,14 +826,16 @@ export class PeladaDetailPage implements OnDestroy {
       await this.monthlyFeeService.generateFeesForMonth(this.peladaId, this.feeYear, this.feeMonth);
       await this.loadMonthlyFees();
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Erro ao gerar mensalidades.');
+      await this.showError(
+        error instanceof Error ? error.message : this.i18n.t('peladaDetail.error.generateMonthlyFees')
+      );
     }
   }
 
   async toggleMonthlyFee(fee: PeladaMembershipFee): Promise<void> {
     const amount = this.getFeeAmount(fee);
     if (amount <= 0) {
-      await this.showError('Informe o valor da mensalidade antes de confirmar.');
+      await this.showError(this.i18n.t('peladaDetail.error.monthlyFeeAmountRequired'));
       return;
     }
     try {
@@ -847,7 +871,9 @@ export class PeladaDetailPage implements OnDestroy {
         await this.loadCashFlow();
       }
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Erro ao confirmar mensalidade.');
+      await this.showError(
+        error instanceof Error ? error.message : this.i18n.t('peladaDetail.error.confirmMonthlyFee')
+      );
     }
   }
 
@@ -1109,7 +1135,9 @@ export class PeladaDetailPage implements OnDestroy {
       await this.loadCotinhas();
       if (this.isMember) await this.loadCashFlow();
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Erro ao excluir contribuicao.');
+      await this.showError(
+        error instanceof Error ? error.message : this.i18n.t('peladaDetail.error.deleteContribution')
+      );
     }
   }
 
@@ -1181,7 +1209,11 @@ export class PeladaDetailPage implements OnDestroy {
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('common.error'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 

@@ -1,4 +1,15 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  EventEmitter,
+  Input,
+  OnChanges,
+  OnDestroy,
+  Output,
+  SimpleChanges,
+} from '@angular/core';
+import { Subscription } from 'rxjs';
 import { AlertController, LoadingController, ToastController } from '@ionic/angular';
 import { PeladaEvent, TeamSide, teamSideLabel } from '../../../core/models/event.model';
 import { AthleteSearchResult } from '../../../core/models/athlete-search.model';
@@ -14,6 +25,8 @@ import {
   toTimeInputValue,
 } from '../../../core/utils/invite-response-deadline.util';
 import { parseErrorMessage } from '../../../core/utils/parse-error.util';
+import { intlLocaleForApp } from '../../../core/utils/locale-datetime.util';
+import { I18nService } from '../../../core/services/i18n.service';
 import Parse from 'parse';
 
 export interface TeamMatchConvocationRow {
@@ -34,7 +47,8 @@ export interface TeamMatchConvocationRow {
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: false,
 })
-export class EventDetailConvocationPanelComponent implements OnChanges {
+export class EventDetailConvocationPanelComponent implements OnChanges, OnDestroy {
+  private localeSub?: Subscription;
   @Input({ required: true }) event!: PeladaEvent;
   @Input() manageSides: TeamSide[] = [];
   @Input() canSetMode = false;
@@ -66,8 +80,23 @@ export class EventDetailConvocationPanelComponent implements OnChanges {
     private readonly alertCtrl: AlertController,
     private readonly loadingCtrl: LoadingController,
     private readonly toastCtrl: ToastController,
+    private readonly i18n: I18nService,
     private readonly cdr: ChangeDetectorRef
-  ) {}
+  ) {
+    this.localeSub = this.i18n.locale$.subscribe(() => this.cdr.markForCheck());
+  }
+
+  ngOnDestroy(): void {
+    this.localeSub?.unsubscribe();
+  }
+
+  get searchbarRemountKey(): string {
+    return this.i18n.ionInputRemountKey;
+  }
+
+  private t(key: string, params?: Record<string, string | number>): string {
+    return this.i18n.t(key, params);
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['manageSides'] || changes['event']) {
@@ -129,17 +158,17 @@ export class EventDetailConvocationPanelComponent implements OnChanges {
 
   async sendInvite(): Promise<void> {
     if (!this.inviteUserId) {
-      await this.showError('Selecione um atleta para convocar.');
+      await this.showError(this.t('eventDetail.convocation.errorSelectAthlete'));
       return;
     }
     const deadline = combineDateAndTimeInputs(this.responseDeadlineDate, this.responseDeadlineTime);
     if (!deadline || deadline <= new Date()) {
-      await this.showError('Informe um prazo futuro para resposta do convite.');
+      await this.showError(this.t('eventDetail.convocation.errorFutureDeadline'));
       return;
     }
     const amount = Number(this.offeredAmount ?? 0);
     if (amount < 0) {
-      await this.showError('Valor da convocacao invalido.');
+      await this.showError(this.t('eventDetail.convocation.errorInvalidAmount'));
       return;
     }
 
@@ -157,7 +186,7 @@ export class EventDetailConvocationPanelComponent implements OnChanges {
 
     this.sending = true;
     this.cdr.markForCheck();
-    const loading = await this.loadingCtrl.create({ message: 'Enviando convocacao...' });
+    const loading = await this.loadingCtrl.create({ message: this.t('eventDetail.convocation.sending') });
     await loading.present();
     try {
       await Parse.Cloud.run('createTeamMatchAthleteInvitation', {
@@ -178,7 +207,7 @@ export class EventDetailConvocationPanelComponent implements OnChanges {
       await this.reload();
       this.rosterChanged.emit();
       const toast = await this.toastCtrl.create({
-        message: 'Convocacao enviada.',
+        message: this.t('eventDetail.convocation.sentToast'),
         duration: 2200,
         color: 'success',
       });
@@ -195,7 +224,7 @@ export class EventDetailConvocationPanelComponent implements OnChanges {
   private async confirmInviteeScheduleConflict(candidate: AthleteSearchResult): Promise<boolean> {
     if (!this.event?.startTime || !this.event?.endTime) return true;
 
-    const checking = await this.loadingCtrl.create({ message: 'Verificando agenda...' });
+    const checking = await this.loadingCtrl.create({ message: this.t('eventDetail.convocation.checkingSchedule') });
     await checking.present();
     let conflict: ScheduleConflict | null = null;
     let sameEventOtherSide = false;
@@ -212,7 +241,7 @@ export class EventDetailConvocationPanelComponent implements OnChanges {
         sameEventOtherSide = true;
         conflict = {
           eventId: this.event.objectId,
-          eventName: this.event.name || 'Este confronto',
+          eventName: this.event.name || this.t('eventDetail.convocation.thisMatch'),
           startTime: this.event.startTime,
           endTime: this.event.endTime,
           source: 'pending_invitation',
@@ -232,24 +261,27 @@ export class EventDetailConvocationPanelComponent implements OnChanges {
     }
     if (!conflict) return true;
 
-    const name = candidate.apelido || candidate.displayName || 'O atleta';
-    const start = conflict.startTime.toLocaleString('pt-BR');
-    const end = conflict.endTime.toLocaleString('pt-BR');
+    const name = candidate.apelido || candidate.displayName || this.t('eventDetail.convocation.fallbackAthlete');
+    const locale = intlLocaleForApp(this.i18n.locale);
+    const start = conflict.startTime.toLocaleString(locale);
+    const end = conflict.endTime.toLocaleString(locale);
     const message = sameEventOtherSide
-      ? `${name} ja foi convocado pelo outro time neste confronto. ` +
-        `Deseja enviar a convocacao mesmo assim? O atleta podera escolher qual convite aceitar.`
-      : `${name} ja tem convite ou compromisso em "${conflict.eventName}" ` +
-        `no mesmo horario (${start} - ${end}). ` +
-        `Deseja enviar a convocacao mesmo assim? O atleta podera escolher qual convite aceitar.`;
+      ? this.t('eventDetail.convocation.conflictSameTeam', { name })
+      : this.t('eventDetail.convocation.conflictSchedule', {
+          name,
+          eventName: conflict.eventName,
+          start,
+          end,
+        });
 
     return new Promise<boolean>((resolve) => {
       void this.alertCtrl
         .create({
-          header: 'Conflito de agenda',
+          header: this.t('eventDetail.convocation.conflictHeader'),
           message,
           buttons: [
-            { text: 'Cancelar', role: 'cancel', handler: () => resolve(false) },
-            { text: 'Enviar mesmo assim', handler: () => resolve(true) },
+            { text: this.t('common.cancel'), role: 'cancel', handler: () => resolve(false) },
+            { text: this.t('common.sendAnyway'), handler: () => resolve(true) },
           ],
         })
         .then((alert) => alert.present());
@@ -258,11 +290,11 @@ export class EventDetailConvocationPanelComponent implements OnChanges {
 
   async removeRow(row: TeamMatchConvocationRow): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Remover convocacao',
-      message: `Remover ${row.apelido} da convocacao? O atleta sera notificado.`,
+      header: this.t('eventDetail.convocation.removeHeader'),
+      message: this.t('eventDetail.convocation.removeMessage', { apelido: row.apelido }),
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
-        { text: 'Remover', role: 'destructive' },
+        { text: this.t('common.cancel'), role: 'cancel' },
+        { text: this.t('common.remove'), role: 'destructive' },
       ],
     });
     await alert.present();
@@ -298,7 +330,7 @@ export class EventDetailConvocationPanelComponent implements OnChanges {
       );
       this.modeChanged.emit(saved);
       const toast = await this.toastCtrl.create({
-        message: 'Quem faz a convocacao atualizado.',
+        message: this.t('eventDetail.convocation.modeUpdated'),
         duration: 2000,
         color: 'success',
       });
@@ -373,9 +405,9 @@ export class EventDetailConvocationPanelComponent implements OnChanges {
 
   private async showError(message: string): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Convocacao',
+      header: this.t('eventDetail.convocation.title'),
       message,
-      buttons: ['OK'],
+      buttons: [this.t('common.ok')],
     });
     await alert.present();
   }

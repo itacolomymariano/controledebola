@@ -2,7 +2,7 @@
   <ion-toolbar>
     @if (step !== 'welcome') {
       <ion-buttons slot="start">
-        <ion-button (click)="back()">Voltar</ion-button>
+        <ion-button (click)="back()">{{ 'common.back' | t }}</ion-button>
       </ion-buttons>
     }
     <ion-buttons slot="end">
@@ -70,7 +70,7 @@
           <div class="choice-card-inner">
             <ion-icon name="football-outline"></ion-icon>
             <div>
-              <h2>Jogo em pelada/racha</h2>
+              <h2>{{ 'onboarding.participationPeladaTitle' | t }}</h2>
               <p>Jogo com amigos em peladas e rachas.</p>
             </div>
           </div>

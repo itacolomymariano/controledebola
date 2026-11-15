@@ -6,7 +6,7 @@ import {
   ProfileSearchResult,
   RolePublicProfile,
 } from '../models/profile-search.model';
-import { ProfileRole, PROFILE_ROLE_LABELS } from '../models/profile-role.model';
+import { ProfileRole, PROFILE_ROLE_FALLBACK_LABELS } from '../models/profile-role.model';
 import {
   ProfessionalRole,
   RoleProfile,
@@ -218,7 +218,7 @@ export class ProfileSearchService {
       (registration?.get('userDisplayName') as string | undefined)?.trim() ||
       apelido ||
       fullName ||
-      PROFILE_ROLE_LABELS[role];
+      PROFILE_ROLE_FALLBACK_LABELS[role];
 
     return {
       userId: normalizedUserId,
@@ -538,7 +538,7 @@ export class ProfileSearchService {
   private toSearchResultFromUser(user: Parse.User, role: ProfileRole): ProfileSearchResult {
     const apelido = (user.get('apelido') as string | undefined)?.trim() || '';
     const fullName = (user.get('name') as string | undefined)?.trim() || '';
-    const displayName = apelido || fullName || user.getUsername() || PROFILE_ROLE_LABELS[role];
+    const displayName = apelido || fullName || user.getUsername() || PROFILE_ROLE_FALLBACK_LABELS[role];
     const address = (user.get('address') as Address | undefined) ?? undefined;
 
     return {
@@ -547,7 +547,7 @@ export class ProfileSearchService {
       apelido: apelido || undefined,
       fullName: fullName || undefined,
       role,
-      subtitle: PROFILE_ROLE_LABELS[role],
+      subtitle: PROFILE_ROLE_FALLBACK_LABELS[role],
       city: address?.city?.trim() || undefined,
       state: address?.state?.trim() || undefined,
       avatarUrl: getUserAvatarUrl(user, this.parseFileService) || undefined,
@@ -590,7 +590,7 @@ export class ProfileSearchService {
         this.pickRicherText(primary.displayName, secondary.displayName) ??
         primary.displayName ??
         secondary.displayName ??
-        PROFILE_ROLE_LABELS[primary.role],
+        PROFILE_ROLE_FALLBACK_LABELS[primary.role],
       apelido: this.pickRicherText(primary.apelido, secondary.apelido),
       fullName: this.pickRicherText(primary.fullName, secondary.fullName),
       subtitle: this.pickRicherText(primary.subtitle, secondary.subtitle),
@@ -627,7 +627,7 @@ export class ProfileSearchService {
   private matchesQuery(entry: ProfileSearchResult, normalized: string): boolean {
     if (searchMatchesRoleKeyword(normalized, entry.role)) return true;
     const haystack = normalizeSearchText(
-      `${entry.displayName} ${entry.apelido ?? ''} ${entry.fullName ?? ''} ${entry.subtitle ?? ''} ${entry.city ?? ''} ${entry.state ?? ''} ${PROFILE_ROLE_LABELS[entry.role]}`
+      `${entry.displayName} ${entry.apelido ?? ''} ${entry.fullName ?? ''} ${entry.subtitle ?? ''} ${entry.city ?? ''} ${entry.state ?? ''} ${PROFILE_ROLE_FALLBACK_LABELS[entry.role]}`
     );
     if (haystack.includes(normalized)) return true;
     const tokens = normalized.split(/\s+/).filter((token) => token.length >= 2);
@@ -664,7 +664,7 @@ export class ProfileSearchService {
       apelido ||
       fullName ||
       user?.getUsername() ||
-      PROFILE_ROLE_LABELS[role];
+      PROFILE_ROLE_FALLBACK_LABELS[role];
     const address = (user?.get('address') as Address | undefined) ?? undefined;
 
     return {
@@ -673,7 +673,7 @@ export class ProfileSearchService {
       apelido: apelido || undefined,
       fullName: fullName || undefined,
       role,
-      subtitle: PROFILE_ROLE_LABELS[role],
+      subtitle: PROFILE_ROLE_FALLBACK_LABELS[role],
       city:
         (profile.get('userCity') as string | undefined)?.trim() ||
         address?.city?.trim() ||
@@ -712,7 +712,7 @@ export class ProfileSearchService {
       apelido ||
       fullName ||
       user?.getUsername() ||
-      PROFILE_ROLE_LABELS[role];
+      PROFILE_ROLE_FALLBACK_LABELS[role];
 
     return {
       userId,
@@ -720,7 +720,7 @@ export class ProfileSearchService {
       apelido: apelido || undefined,
       fullName: fullName || undefined,
       role,
-      subtitle: PROFILE_ROLE_LABELS[role],
+      subtitle: PROFILE_ROLE_FALLBACK_LABELS[role],
       avatarUrl:
         (registration.get('avatarUrl') as string | undefined)?.trim() ||
         getUserAvatarUrl(user, this.parseFileService) ||

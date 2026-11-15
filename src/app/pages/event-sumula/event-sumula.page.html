@@ -34,7 +34,7 @@
     </div>
 
     @if (isTeamMatch) {
-      <div class="sumula-scoreboard" aria-label="Placar do confronto">
+      <div class="sumula-scoreboard" [attr.aria-label]="'eventSumula.scoreboardAria' | t">
         <div class="sumula-scoreboard-side">
           <span class="sumula-scoreboard-team">{{ homeTeamName }}</span>
           <span class="sumula-scoreboard-goals">{{ homeScore }}</span>
@@ -63,7 +63,7 @@
     }
 
     <ion-searchbar
-      placeholder="Buscar atleta por apelido"
+      [placeholder]="'formCommon.searchAthleteByNickname' | t"
       [value]="searchTerm"
       (ionInput)="onSearchChange($any($event.target).value)"
       debounce="150"
@@ -105,7 +105,7 @@
 
               <ion-item class="sumula-observation-item">
                 <ion-textarea
-                  label="Observacao sobre o atleta"
+                  [label]="'eventSumula.athleteObservationLabel' | t"
                   labelPlacement="stacked"
                   [value]="athlete.stats.observation"
                   [readonly]="isLocked"

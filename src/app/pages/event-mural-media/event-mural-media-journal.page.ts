@@ -8,6 +8,7 @@ import { ActivatedRoute } from '@angular/router';
 import { AlertController } from '@ionic/angular';
 import { EventMediaDashboard } from '../../core/models/event-media.model';
 import { EventMediaService } from '../../core/services/event-media.service';
+import { I18nService } from '../../core/services/i18n.service';
 import { MuralShareContext } from '../../core/models/mural-share.model';
 import { MuralShareService } from '../../core/services/mural-share.service';
 import { resolveRouteParam } from '../../core/utils/route-param.util';
@@ -39,7 +40,8 @@ export class EventMuralMediaJournalPage {
     private readonly eventMediaService: EventMediaService,
     private readonly muralShareService: MuralShareService,
     private readonly alertCtrl: AlertController,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly i18n: I18nService
   ) {}
 
   ionViewWillEnter(): void {
@@ -60,7 +62,7 @@ export class EventMuralMediaJournalPage {
         'Deseja voltar para completar ou sair mesmo assim?',
       buttons: [
         { text: 'Sair mesmo assim', role: 'confirm' },
-        { text: 'Voltar', role: 'cancel' },
+        { text: this.i18n.t('common.back'), role: 'cancel' },
       ],
     });
     await alert.present();

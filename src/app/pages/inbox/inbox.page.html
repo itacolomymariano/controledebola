@@ -23,14 +23,16 @@
 
 <ion-content class="ion-padding cb-playful-ion-content">
   <app-playful-page>
-  <ion-searchbar
-    class="inbox-searchbar"
-    [value]="searchTerm"
-    debounce="0"
-    [placeholder]="'inbox.searchPlaceholder' | t"
-    (ionInput)="onSearchInput($any($event.detail.value))"
-    (ionClear)="onSearchInput('')"
-  ></ion-searchbar>
+  @for (remountKey of [searchbarRemountKey]; track remountKey) {
+    <ion-searchbar
+      class="inbox-searchbar"
+      [value]="searchTerm"
+      debounce="0"
+      [placeholder]="'inbox.searchPlaceholder' | t"
+      (ionInput)="onSearchInput($any($event.detail.value))"
+      (ionClear)="onSearchInput('')"
+    ></ion-searchbar>
+  }
 
   @if (loading) {
     <div class="ion-text-center ion-padding">

@@ -3,7 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { RefresherCustomEvent } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { AthletePublicProfile } from '../../core/models/athlete-search.model';
-import { PROFILE_ROLE_LABELS, ProfileRole } from '../../core/models/profile-role.model';
+import { PROFILE_ROLE_FALLBACK_LABELS, ProfileRole } from '../../core/models/profile-role.model';
 import { formatAthleteBodyLabel } from '../../core/models/profile-search.model';
 import { AthleteSearchService } from '../../core/services/athlete-search.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -36,7 +36,7 @@ export class HomeUsuarioPage implements OnDestroy {
   loading = true;
   errorMessage = '';
   parseConfigured = false;
-  readonly roleLabels = PROFILE_ROLE_LABELS;
+  readonly roleLabels = PROFILE_ROLE_FALLBACK_LABELS;
   private loadSeq = 0;
   private localeSub?: Subscription;
 

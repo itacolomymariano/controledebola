@@ -19,7 +19,7 @@
       </ion-toolbar>
       <ion-toolbar>
         <ion-searchbar
-          placeholder="Buscar time"
+          [placeholder]="'common.searchTeam' | t"
           [value]="search"
           [debounce]="250"
           (ionInput)="onSearchChange($any($event.detail.value))"
@@ -47,7 +47,7 @@
           </ion-card-content>
         </ion-card>
       } @else if (search.trim().length < 2) {
-        <ion-note class="ion-padding">Digite ao menos 2 caracteres para buscar.</ion-note>
+        <ion-note class="ion-padding">{{ 'common.searchMinChars' | t }}</ion-note>
       } @else if (!filteredRows.length) {
         <ion-note class="ion-padding">Nenhum time encontrado.</ion-note>
         @if (allowFreeText) {

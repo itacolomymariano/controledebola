@@ -10,6 +10,7 @@ import {
   RefereeSumulaStatField,
 } from '../../core/models/referee-sumula.model';
 import { RefereeSumulaService } from '../../core/services/referee-sumula.service';
+import { I18nService } from '../../core/services/i18n.service';
 import { normalizeSearchText } from '../../core/utils/search-text.util';
 
 type SyncStatus = 'idle' | 'saving' | 'saved' | 'error';
@@ -49,7 +50,8 @@ export class EventSumulaPage {
     private readonly route: ActivatedRoute,
     private readonly refereeSumulaService: RefereeSumulaService,
     private readonly alertCtrl: AlertController,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly i18n: I18nService
   ) {}
 
   ionViewWillEnter(): void {
@@ -113,11 +115,11 @@ export class EventSumulaPage {
   get syncLabel(): string {
     switch (this.syncStatus) {
       case 'saving':
-        return 'Salvando...';
+        return this.i18n.t('eventSumula.loading.saving');
       case 'saved':
-        return 'Salvo';
+        return this.i18n.t('eventSumula.savedHeader');
       case 'error':
-        return 'Erro ao salvar';
+        return this.i18n.t('eventSumula.error.saveFailed');
       default:
         return this.dirty ? 'Alteracoes pendentes' : '';
     }
@@ -158,9 +160,9 @@ export class EventSumulaPage {
         const opponentGoals = this.sumGoalsForSide(side === 'home' ? 'away' : 'home');
         if (teamConceded > opponentGoals) {
           const alert = await this.alertCtrl.create({
-            header: 'Limite de gols sofridos',
-            message: `A soma de gols sofridos dos goleiros deste time nao pode ultrapassar os gols do adversario (${opponentGoals}).`,
-            buttons: ['OK'],
+            header: this.i18n.t('eventSumula.error.goalsCap'),
+            message: this.i18n.t('eventSumula.error.goalsCapMessage', { goals: opponentGoals }),
+            buttons: [this.i18n.t('common.ok')],
           });
           await alert.present();
           return;
@@ -175,10 +177,9 @@ export class EventSumulaPage {
         const opponentConceded = this.sumConcededForSide(side === 'home' ? 'away' : 'home');
         if (opponentConceded > nextTeamGoals) {
           const alert = await this.alertCtrl.create({
-            header: 'Ajuste invalido',
-            message:
-              'Reduzir estes gols deixaria os gols sofridos dos goleiros adversarios acima do placar. Ajuste os gols sofridos primeiro.',
-            buttons: ['OK'],
+            header: this.i18n.t('eventSumula.error.invalidAdjustment'),
+            message: this.i18n.t('eventSumula.error.invalidAdjustmentMessage'),
+            buttons: [this.i18n.t('common.ok')],
           });
           await alert.present();
           return;
@@ -235,15 +236,19 @@ export class EventSumulaPage {
       this.dirty = false;
       this.syncStatus = 'saved';
       const alert = await this.alertCtrl.create({
-        header: 'Sumula salva',
-        message: 'Os apontamentos da sumula foram salvos com sucesso.',
-        buttons: ['OK'],
+        header: this.i18n.t('eventSumula.savedHeader'),
+        message: this.i18n.t('eventSumula.savedMessage'),
+        buttons: [this.i18n.t('common.ok')],
       });
       await alert.present();
     } catch (error: unknown) {
       this.syncStatus = 'error';
       const message = error instanceof Error ? error.message : 'Erro ao salvar sumula.';
-      const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+      const alert = await this.alertCtrl.create({
+        header: this.i18n.t('common.error'),
+        message,
+        buttons: [this.i18n.t('common.ok')],
+      });
       await alert.present();
     } finally {
       this.saving = false;
@@ -323,11 +328,11 @@ export class EventSumulaPage {
         return;
       }
       this.resetBoardState();
-      const message = error instanceof Error ? error.message : 'Erro ao carregar sumula.';
+      const message = error instanceof Error ? error.message : this.i18n.t('eventSumula.error.load');
       const alert = await this.alertCtrl.create({
-        header: 'Sumula do evento',
+        header: this.i18n.t('eventSumula.sheetHeader'),
         message,
-        buttons: ['OK'],
+        buttons: [this.i18n.t('common.ok')],
       });
       await alert.present();
     } finally {

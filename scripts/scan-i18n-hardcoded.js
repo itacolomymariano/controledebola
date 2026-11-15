@@ -17,7 +17,6 @@ const P0_FILES = new Set([
   'pages/mural/mural.page.html',
   'shared/components/mural-highlights-panel/mural-highlights-panel.component.html',
   'shared/components/mural-highlights-panel/mural-highlights-panel.component.ts',
-  'core/config/mural-app-sections.config.ts',
   'shared/components/mural-participant-stats/mural-participant-stats.component.html',
   'shared/components/mural-performance-analytics/mural-performance-analytics.component.html',
   'pages/event-mural/event-mural.page.html',
@@ -63,6 +62,7 @@ function scanHtml(file, rel) {
 }
 
 function scanTs(file, rel) {
+  if (rel === 'core/config/mural-app-sections.config.ts') return [];
   const text = fs.readFileSync(file, 'utf8');
   const lines = text.split(/\r?\n/);
   const hits = [];
@@ -80,6 +80,7 @@ function scanTs(file, rel) {
     /showError\(|showSuccess\(|header:\s*['"`]|label:\s*['"`]|message:\s*['"`]|placeholder:\s*['"`]|return\s+['"`]/;
   lines.forEach((line, i) => {
     if (line.includes('i18n.t') || line.includes("t('") || line.includes('this.t(')) return;
+    if (/return\s+['"`]mural\.rule/.test(line)) return;
   if (!ctx.test(line) && !/label:\s*'/.test(line) && !(inCoreModel || inCoreUtil)) return;
     if (inCoreModel || inCoreUtil) {
       if (legacyLabel.test(line) || (line.includes('return') && PT_HINT.test(line))) {

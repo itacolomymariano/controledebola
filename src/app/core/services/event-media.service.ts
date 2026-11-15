@@ -15,6 +15,7 @@ import {
   HIGHLIGHT_VIDEO_MAX_SECONDS,
 } from '../models/event-media.model';
 import { isInvalidCloudFunctionError, parseErrorMessage } from '../utils/parse-error.util';
+import { I18nService } from './i18n.service';
 import { ParseFileService } from './parse-file.service';
 import { ParseService } from './parse.service';
 
@@ -22,7 +23,8 @@ import { ParseService } from './parse.service';
 export class EventMediaService {
   constructor(
     private readonly parseService: ParseService,
-    private readonly parseFileService: ParseFileService
+    private readonly parseFileService: ParseFileService,
+    private readonly i18n: I18nService
   ) {
     this.parseService.init();
   }
@@ -241,7 +243,7 @@ export class EventMediaService {
   }
 
   formatPublishOverwriteMessage(kind: string): string {
-    return `Se ja existir ${kind} no mural, o conteudo anterior sera substituido. Deseja enviar?`;
+    return this.i18n.t('eventMedia.publishOverwriteConfirm', { kind });
   }
 
   errorMessage(error: unknown, fallback: string): string {

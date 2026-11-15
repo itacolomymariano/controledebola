@@ -24,14 +24,16 @@
 
     @if (!loading && !errorMessage) {
       <div class="directory-playful-search">
-        <ion-searchbar
-          class="playful-searchbar"
-          [placeholder]="'peladas.searchPlaceholder' | t"
-          [value]="search"
-          [debounce]="200"
-          (ionInput)="onSearchChange($any($event.detail.value))"
-          (ionClear)="onSearchChange('')"
-        ></ion-searchbar>
+        @for (remountKey of [searchbarRemountKey]; track remountKey) {
+          <ion-searchbar
+            class="playful-searchbar"
+            [placeholder]="'peladas.searchPlaceholder' | t"
+            [value]="search"
+            [debounce]="200"
+            (ionInput)="onSearchChange($any($event.detail.value))"
+            (ionClear)="onSearchChange('')"
+          ></ion-searchbar>
+        }
       </div>
     }
 

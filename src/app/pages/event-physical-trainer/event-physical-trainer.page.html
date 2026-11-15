@@ -31,7 +31,7 @@
       <ion-list>
         <ion-item>
           <ion-select
-            label="Foco do plano"
+            [label]="'eventPhysicalTrainer.planFocusLabel' | t"
             labelPlacement="stacked"
             formControlName="planFocus"
             interface="popover"
@@ -44,14 +44,14 @@
         <ion-item>
           <ion-input
             type="number"
-            label="Duracao estimada (min)"
+            [label]="'eventPhysicalTrainer.durationMinLabel' | t"
             labelPlacement="stacked"
             formControlName="planDurationMin"
           ></ion-input>
         </ion-item>
         <ion-item>
           <ion-textarea
-            label="Notas do plano"
+            [label]="'eventPhysicalTrainer.planNotesLabel' | t"
             labelPlacement="stacked"
             formControlName="planNotes"
             autoGrow="true"
@@ -59,7 +59,7 @@
         </ion-item>
         <ion-item>
           <ion-select
-            label="Atletas na sessao"
+            [label]="'eventPhysicalTrainer.athletesInSessionLabel' | t"
             labelPlacement="stacked"
             formControlName="athleteUserIds"
             multiple="true"

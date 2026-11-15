@@ -38,7 +38,7 @@
         formControlName="year"
         [interface]="selectInterface"
         [interfaceOptions]="{ header: ('birthDatePicker.selectYear' | t) }"
-        placeholder="Ano"
+        [placeholder]="'common.year' | t"
         (ionBlur)="markAsTouched()"
       >
         @for (year of years; track year) {

@@ -266,7 +266,7 @@
   </ion-card-header>
   <ion-card-content>
     @if (!athleteEntries().length) {
-      <ion-note>Sem dados ainda.</ion-note>
+      <ion-note>{{ 'mural.playful.noData' | t }}</ion-note>
     }
     @for (entry of athleteEntries(); track entry.userId; let i = $index) {
       <div class="rank-row ion-margin-bottom">

@@ -9,7 +9,7 @@
     <div [id]="searchAnchorId" class="hiring-role-search-anchor">
       <ion-searchbar
         class="playful-searchbar"
-        [placeholder]="'Buscar ' + roleLabel.toLowerCase()"
+        [placeholder]="'roleHiringPanel.searchPlaceholder' | t:{ role: roleLabel.toLowerCase() }"
         [(ngModel)]="search"
         [ngModelOptions]="{ standalone: true }"
         [debounce]="0"
@@ -81,7 +81,7 @@
     @if (showAttendanceMode) {
       <ion-item>
         <ion-select
-          label="Forma de assistencia"
+          [label]="'roleHiringPanel.attendanceModeLabel' | t"
           labelPlacement="stacked"
           [(ngModel)]="attendanceMode"
           [ngModelOptions]="{ standalone: true }"
@@ -147,7 +147,7 @@
         @if (isTeamMatchRefereeHiring) {
           <ion-item>
             <ion-select
-              label="Quem paga a arbitragem"
+              [label]="'roleHiringPanel.refereePayerLabel' | t"
               labelPlacement="stacked"
               [(ngModel)]="refereePaymentMode"
               [ngModelOptions]="{ standalone: true }"
@@ -163,7 +163,7 @@
           <ion-input
             type="text"
             inputmode="decimal"
-            label="Valor da contratacao (R$)"
+            [label]="'roleHiringPanel.contractAmountLabel' | t"
             labelPlacement="stacked"
             [value]="offeredAmountDisplay"
             (ionInput)="onOfferedAmountInput($event)"
@@ -173,7 +173,7 @@
         <ion-item>
           <ion-input
             type="date"
-            label="Resposta ate (data)"
+            [label]="'roleHiringPanel.responseDeadlineDateLabel' | t"
             labelPlacement="stacked"
             [(ngModel)]="responseDeadlineDate"
             [ngModelOptions]="{ standalone: true }"
@@ -184,7 +184,7 @@
         <ion-item>
           <ion-input
             type="time"
-            label="Resposta ate (hora)"
+            [label]="'roleHiringPanel.responseDeadlineTimeLabel' | t"
             labelPlacement="stacked"
             [(ngModel)]="responseDeadlineTime"
             [ngModelOptions]="{ standalone: true }"
@@ -205,7 +205,7 @@
           {{ sendingInvite ? 'Enviando convite...' : 'Enviar convite' }}
         </ion-button>
         @if (!inviteUserId) {
-          <ion-note color="medium">Selecione um candidato na lista acima para enviar o convite.</ion-note>
+          <ion-note color="medium">{{ 'roleHiringPanel.selectCandidateHint' | t }}</ion-note>
         }
       </ion-card-content>
     </ion-card>
@@ -256,7 +256,7 @@
                 <ion-item>
                   <ion-input
                     type="date"
-                    label="Data da chegada"
+                    [label]="'roleHiringPanel.arrivalDateLabel' | t"
                     labelPlacement="stacked"
                     [(ngModel)]="getArrivalDraft(invitation).date"
                     [ngModelOptions]="{ standalone: true }"
@@ -265,7 +265,7 @@
                 <ion-item>
                   <ion-input
                     type="time"
-                    label="Hora da chegada"
+                    [label]="'roleHiringPanel.arrivalTimeLabel' | t"
                     labelPlacement="stacked"
                     [(ngModel)]="getArrivalDraft(invitation).time"
                     [ngModelOptions]="{ standalone: true }"

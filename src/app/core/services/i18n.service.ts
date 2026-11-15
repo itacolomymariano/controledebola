@@ -1,8 +1,8 @@
-import { Injectable } from '@angular/core';
+import { ApplicationRef, Injectable, NgZone } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { AppStorageService } from './app-storage.service';
-import { duplicateValueMessage } from '../utils/parse-error.util';
+import { duplicateValueMessage, setParseErrorI18n } from '../utils/parse-error.util';
 import {
   APP_LOCALES,
   APP_LOCALE_LABELS,
@@ -24,8 +24,20 @@ export class I18nService {
 
   constructor(
     private readonly http: HttpClient,
-    private readonly storage: AppStorageService
+    private readonly storage: AppStorageService,
+    private readonly appRef: ApplicationRef,
+    private readonly ngZone: NgZone
   ) {}
+
+  isAppLocale(value: unknown): value is AppLocale {
+    return typeof value === 'string' && (APP_LOCALES as readonly string[]).includes(value);
+  }
+
+  /** Troca de idioma unificada (menu, bandeiras, etc.). */
+  async applyAppLocale(locale: AppLocale): Promise<void> {
+    if (locale === this.locale) return;
+    await this.setLocale(locale, true);
+  }
 
   get locale(): AppLocale {
     return this.locale$.value;
@@ -36,10 +48,16 @@ export class I18nService {
     return this.tick;
   }
 
+  /** Forces Ionic inputs (e.g. ion-searchbar placeholder) to remount on locale change. */
+  get ionInputRemountKey(): string {
+    return `${this.locale}-${this.tick}`;
+  }
+
   async init(): Promise<void> {
     this.fallback = await this.loadFile(DEFAULT_APP_LOCALE);
     const saved = await this.storage.getLocale();
     await this.setLocale(saved ?? DEFAULT_APP_LOCALE, false);
+    setParseErrorI18n(this);
   }
 
   async setLocale(locale: AppLocale, persist = true): Promise<void> {
@@ -50,6 +68,7 @@ export class I18nService {
     if (persist) {
       await this.storage.setLocale(next);
     }
+    this.ngZone.run(() => this.appRef.tick());
   }
 
   t(key: string, params?: Record<string, string | number>): string {
@@ -77,7 +96,7 @@ export class I18nService {
     const message =
       error && typeof error === 'object' ? String((error as { message?: string }).message ?? '') : '';
     if (code === 137) {
-      if (/\bcpf\b/i.test(message)) return duplicateValueMessage(message);
+      if (/\bcpf\b/i.test(message)) return duplicateValueMessage(message, this);
       if (!message || /apelido|nickname|duplicate value for a field/i.test(message)) {
         return this.t('error.nicknameTaken');
       }

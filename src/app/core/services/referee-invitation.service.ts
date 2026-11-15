@@ -11,7 +11,7 @@ import {
 } from '../models/referee-invitation.model';
 import { HireableRole, hireableRoleLabel, inviteeRoleLabel } from '../models/event-hiring.model';
 import { InvitationAcceptConflict, ScheduleConflict } from '../models/event-registration.model';
-import { PROFILE_ROLE_LABELS, ProfileRole } from '../models/profile-role.model';
+import { PROFILE_ROLE_FALLBACK_LABELS, ProfileRole } from '../models/profile-role.model';
 import { getUserAvatarUrl } from '../utils/user-avatar.util';
 import { parseErrorMessage } from '../utils/parse-error.util';
 import { EventService } from './event.service';
@@ -697,7 +697,7 @@ export class RefereeInvitationService {
       (user.get('apelido') as string) ||
       (user.get('name') as string) ||
       user.getUsername() ||
-      PROFILE_ROLE_LABELS[inviteRole];
+      PROFILE_ROLE_FALLBACK_LABELS[inviteRole];
 
     // Marca aceite antes da inscricao para evitar convite "pending" com inscricao ja criada.
     invitationObj.set('status', 'accepted');
@@ -1076,7 +1076,7 @@ export class RefereeInvitationService {
       invitedApelido ||
       invitedFullName ||
       invitedUser?.getUsername() ||
-      PROFILE_ROLE_LABELS[role];
+      PROFILE_ROLE_FALLBACK_LABELS[role];
     const invitedAvatarUrl =
       (obj.get('invitedUserAvatarUrl') as string | undefined)?.trim() ||
       getUserAvatarUrl(invitedUser, this.parseFileService) ||

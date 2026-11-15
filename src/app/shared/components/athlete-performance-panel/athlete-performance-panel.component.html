@@ -3,7 +3,7 @@
     <ion-spinner name="crescent"></ion-spinner>
   </div>
 } @else if (!dashboard) {
-  <ion-note>Sem dados de desempenho.</ion-note>
+  <ion-note>{{ 'common.noPerformanceData' | t }}</ion-note>
 } @else {
   <ion-card>
     <ion-card-header>

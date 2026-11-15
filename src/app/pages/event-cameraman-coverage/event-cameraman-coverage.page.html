@@ -28,7 +28,7 @@
       <ion-card-content>
         <ion-item lines="full">
           <ion-input
-            label="Titulo do video"
+            [label]="'eventCameraman.videoTitleLabel' | t"
             labelPlacement="stacked"
             [(ngModel)]="title"
             maxlength="120"
@@ -36,7 +36,7 @@
         </ion-item>
         <ion-item lines="full">
           <ion-textarea
-            label="Breve descricao"
+            [label]="'eventNarrator.briefDescriptionLabel' | t"
             labelPlacement="stacked"
             [(ngModel)]="description"
             maxlength="500"

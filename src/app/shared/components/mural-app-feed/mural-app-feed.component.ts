@@ -26,6 +26,7 @@ import {
 } from '../../../core/services/athlete-performance.service';
 import { muralRankingBadgeLabel, athleteRankingDisplayNote } from '../../../core/utils/mural-ranking.util';
 import { I18nService } from '../../../core/services/i18n.service';
+import { intlLocaleForApp } from '../../../core/utils/locale-datetime.util';
 
 @Component({
   selector: 'app-mural-app-feed',
@@ -85,8 +86,10 @@ export class MuralAppFeedComponent {
   formatAverage(value: number): string {
     const num = Number(value);
     if (!Number.isFinite(num)) return '0,00';
-    const locale = this.i18n.locale === 'en-GB' ? 'en-GB' : this.i18n.locale === 'es-ES' ? 'es-ES' : 'pt-BR';
-    return num.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return num.toLocaleString(intlLocaleForApp(this.i18n.locale), {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   }
 
   get titleKeys() {
@@ -149,8 +152,7 @@ export class MuralAppFeedComponent {
   formatFoundedAt(iso: string): string {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return iso;
-    const locale = this.i18n.locale === 'en-GB' ? 'en-GB' : this.i18n.locale === 'es-ES' ? 'es-ES' : 'pt-BR';
-    return d.toLocaleDateString(locale);
+    return d.toLocaleDateString(intlLocaleForApp(this.i18n.locale));
   }
 
   yesNo(value: boolean | undefined): string {

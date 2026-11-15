@@ -6,7 +6,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { TeamService } from '../../core/services/team.service';
 import { WizardTourService } from '../../core/services/wizard-tour.service';
 import { parseErrorMessage } from '../../core/utils/parse-error.util';
-import { formatTeamMatchDate, teamMatchResultName } from '../../core/utils/team-match-result.util';
+import { formatTeamMatchDate, teamMatchResultI18nKey } from '../../core/utils/team-match-result.util';
 import {
   consumeTeamProfileReturnState,
   TeamProfileReturnState,
@@ -27,7 +27,7 @@ export class TeamProfilePage {
   pendingJoin = false;
   wizardTeamJoin = false;
   teamReturn: TeamProfileReturnState | null = null;
-  readonly resultName = teamMatchResultName;
+  readonly teamMatchResultKey = teamMatchResultI18nKey;
   readonly formatMatchDate = formatTeamMatchDate;
 
   constructor(

@@ -336,12 +336,12 @@ export class EventRoleHiringPanelComponent implements OnChanges {
     if (!this.inviteUserId) return;
     const amount = Number(this.offeredAmount ?? 0);
     if (amount < 0) {
-      await this.showError('Informe o valor da contratacao.');
+      await this.showError(this.t('roleHiringPanel.error.contractAmount'));
       return;
     }
     const deadline = combineDateAndTimeInputs(this.responseDeadlineDate, this.responseDeadlineTime);
     if (!deadline) {
-      await this.showError('Informe data e hora limite para resposta do convite.');
+      await this.showError(this.t('roleHiringPanel.error.responseDeadline'));
       this.scrollToInviteForm();
       return;
     }
@@ -495,7 +495,7 @@ export class EventRoleHiringPanelComponent implements OnChanges {
     const draft = this.getArrivalDraft(invitation);
     const arrivalAt = this.combineDateTime(draft.date, draft.time);
     if (!arrivalAt) {
-      await this.showError('Informe data e hora da chegada.');
+      await this.showError(this.t('roleHiringPanel.error.arrivalDateTime'));
       return;
     }
     this.updatingInvitationId = invitation.objectId;
@@ -504,7 +504,7 @@ export class EventRoleHiringPanelComponent implements OnChanges {
       await this.reloadInvitations();
       this.invitationsChanged.emit();
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Erro ao confirmar presenca.');
+      await this.showError(error instanceof Error ? error.message : this.t('roleHiringPanel.error.confirmPresence'));
     } finally {
       this.updatingInvitationId = '';
       this.cdr.markForCheck();
@@ -523,7 +523,7 @@ export class EventRoleHiringPanelComponent implements OnChanges {
       await this.reloadInvitations();
       this.invitationsChanged.emit();
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Erro ao atualizar presenca.');
+      await this.showError(error instanceof Error ? error.message : this.t('roleHiringPanel.error.updatePresence'));
     } finally {
       this.updatingInvitationId = '';
       this.cdr.markForCheck();
@@ -537,7 +537,7 @@ export class EventRoleHiringPanelComponent implements OnChanges {
       await this.reloadInvitations();
       this.invitationsChanged.emit();
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Erro ao confirmar assistencia remota.');
+      await this.showError(error instanceof Error ? error.message : this.t('roleHiringPanel.error.confirmRemote'));
     } finally {
       this.updatingInvitationId = '';
       this.cdr.markForCheck();
@@ -555,7 +555,7 @@ export class EventRoleHiringPanelComponent implements OnChanges {
       await this.reloadInvitations();
       this.invitationsChanged.emit();
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Erro ao registrar pagamento.');
+      await this.showError(error instanceof Error ? error.message : this.t('roleHiringPanel.error.registerPayment'));
     } finally {
       this.updatingInvitationId = '';
       this.cdr.markForCheck();
@@ -573,7 +573,7 @@ export class EventRoleHiringPanelComponent implements OnChanges {
       await this.reloadInvitations();
       this.invitationsChanged.emit();
     } catch (error: unknown) {
-      await this.showError(error instanceof Error ? error.message : 'Erro ao registrar falta.');
+      await this.showError(error instanceof Error ? error.message : this.t('roleHiringPanel.error.registerFault'));
     } finally {
       this.updatingInvitationId = '';
       this.cdr.markForCheck();

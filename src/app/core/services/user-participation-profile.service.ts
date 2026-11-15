@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import {
   EVENT_REGISTRATION_ROLES,
-  PROFILE_ROLE_LABELS,
+  PROFILE_ROLE_FALLBACK_LABELS,
   ProfileRole,
 } from '../models/profile-role.model';
 import { PROFESSIONAL_ROLES } from '../models/role-profile.model';
@@ -41,7 +41,7 @@ export class UserParticipationProfileService {
       .filter((role) => EVENT_REGISTRATION_ROLES.includes(role) && role !== 'referee')
       .map((role) => ({
         role,
-        label: PROFILE_ROLE_LABELS[role],
+        label: PROFILE_ROLE_FALLBACK_LABELS[role],
       }));
   }
 }

@@ -2,7 +2,7 @@
   <app-user-bar></app-user-bar>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button (click)="cancel()">Voltar</ion-button>
+      <ion-button (click)="cancel()">{{ 'common.back' | t }}</ion-button>
     </ion-buttons>
     <ion-title>{{ isEditMode ? ('legends.editAthleteTitle' | t) : ('legends.createAthleteTitle' | t) }}</ion-title>
   </ion-toolbar>
@@ -16,45 +16,45 @@
   }
   <form id="legendAthleteForm" [formGroup]="form" (ngSubmit)="submit()" [class.ion-hide]="loadingEdit">
     <app-image-picker
-      label="Imagem"
-      hint="Foto do atleta lenda."
+      [label]="'legends.form.image' | t"
+      [hint]="'legends.form.imageHintAthlete' | t"
       [previewUrl]="imagePreview"
       (imageSelected)="onImageSelected($event)"
     ></app-image-picker>
 
     <ion-list lines="full">
       <ion-item>
-        <ion-input label="Nome" labelPlacement="stacked" formControlName="name"></ion-input>
+        <ion-input [label]="'legends.form.name' | t" labelPlacement="stacked" formControlName="name"></ion-input>
       </ion-item>
       @if (form.get('name')?.touched && form.get('name')?.invalid) {
-        <ion-note color="danger" class="ion-padding-horizontal">Informe o nome.</ion-note>
+        <ion-note color="danger" class="ion-padding-horizontal">{{ 'legends.validation.nameRequired' | t }}</ion-note>
       }
       <ion-item>
-        <ion-input label="Apelido" labelPlacement="stacked" formControlName="apelido"></ion-input>
+        <ion-input [label]="'legends.form.nickname' | t" labelPlacement="stacked" formControlName="apelido"></ion-input>
       </ion-item>
       @if (form.get('apelido')?.touched && form.get('apelido')?.invalid) {
-        <ion-note color="danger" class="ion-padding-horizontal">Informe o apelido.</ion-note>
+        <ion-note color="danger" class="ion-padding-horizontal">{{ 'legends.validation.nicknameRequired' | t }}</ion-note>
       }
 
-      <app-birth-date-picker label="Data de nascimento" formControlName="birthDate"></app-birth-date-picker>
+      <app-birth-date-picker [label]="'legends.form.birthDate' | t" formControlName="birthDate"></app-birth-date-picker>
       @if (form.get('birthDate')?.touched && form.get('birthDate')?.hasError('incompleteBirthDate')) {
         <ion-note color="danger" class="ion-padding-horizontal">
-          Selecione dia, mes e ano da data de nascimento.
+          {{ 'legends.validation.birthDateIncomplete' | t }}
         </ion-note>
       }
 
       <ion-item>
         <ion-input
           type="number"
-          label="Ano que encerrou a carreira"
+          [label]="'legends.form.careerEndYear' | t"
           labelPlacement="stacked"
           formControlName="careerEndYear"
         ></ion-input>
       </ion-item>
 
       <ion-item>
-        <ion-select label="Posicao que atuou" labelPlacement="stacked" formControlName="position">
-          <ion-select-option value="">Nao informado</ion-select-option>
+        <ion-select [label]="'legends.form.position' | t" labelPlacement="stacked" formControlName="position">
+          <ion-select-option value="">{{ 'athleteProfile.notInformed' | t }}</ion-select-option>
           @for (p of positions; track p) {
             <ion-select-option [value]="p">{{ p }}</ion-select-option>
           }
@@ -62,33 +62,33 @@
       </ion-item>
 
       <ion-item-divider>
-        <ion-label>Onde morava</ion-label>
+        <ion-label>{{ 'legends.form.whereTheyLived' | t }}</ion-label>
       </ion-item-divider>
       <app-address-form [formControl]="$any(form.get('address'))" (addressChange)="onAddressChanged()"></app-address-form>
       @if (form.get('address')?.touched && form.get('address')?.hasError('addressIncomplete')) {
         <ion-note color="danger" class="ion-padding-horizontal">
-          Informe e confirme o endereco completo (busque pelo CEP ou mapa).
+          {{ 'legends.validation.addressIncomplete' | t }}
         </ion-note>
       }
 
       <ion-item-divider>
-        <ion-label>Times amadores que jogou</ion-label>
+        <ion-label>{{ 'legends.form.amateurTeamsPlayed' | t }}</ion-label>
       </ion-item-divider>
       <ion-item>
-        <ion-label>Selecionar time</ion-label>
-        <ion-button slot="end" type="button" fill="outline" (click)="openTeamPicker()">Selecionar</ion-button>
+        <ion-label>{{ 'legends.form.selectTeam' | t }}</ion-label>
+        <ion-button slot="end" type="button" fill="outline" (click)="openTeamPicker()">{{ 'legends.form.select' | t }}</ion-button>
       </ion-item>
       @for (team of amateurTeams; track team; let i = $index) {
         <ion-item>
           <ion-label>{{ team }}</ion-label>
           <ion-button slot="end" type="button" fill="clear" color="danger" (click)="removeTeam(i)">
-            Remover
+            {{ 'common.remove' | t }}
           </ion-button>
         </ion-item>
       }
 
       <ion-item>
-        <ion-select label="Sua relacao com a lenda" labelPlacement="stacked" formControlName="relationship">
+        <ion-select [label]="'legends.form.relationshipAthlete' | t" labelPlacement="stacked" formControlName="relationship">
           @for (option of relationshipOptions; track option.value) {
             <ion-select-option [value]="option.value">{{ option.label }}</ion-select-option>
           }
@@ -96,16 +96,16 @@
       </ion-item>
 
       <ion-item>
-        <ion-toggle formControlName="inMemoriam">In memoriam</ion-toggle>
+        <ion-toggle formControlName="inMemoriam">{{ 'legends.form.inMemoriamToggle' | t }}</ion-toggle>
       </ion-item>
       @if (form.get('inMemoriam')?.value) {
         <app-birth-date-picker
-          label="Data da partida(falecimento)"
+          [label]="'legends.form.memorialDate' | t"
           formControlName="memorialDate"
         ></app-birth-date-picker>
         @if (form.get('memorialDate')?.touched && form.get('memorialDate')?.hasError('incompleteBirthDate')) {
           <ion-note color="danger" class="ion-padding-horizontal">
-            Selecione dia, mes e ano da data da partida (falecimento).
+            {{ 'legends.validation.memorialDateIncomplete' | t }}
           </ion-note>
         }
       }

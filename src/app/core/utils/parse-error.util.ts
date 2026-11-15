@@ -31,28 +31,38 @@ export function isCloudFunctionUnavailableError(error: unknown): boolean {
   );
 }
 
-const CPF_TAKEN_MESSAGE =
-  'Este CPF já está cadastrado no Controle de Bola App. Entre com a conta existente ou use "Esqueci minha senha".';
-const NICKNAME_TAKEN_MESSAGE = 'Apelido já utilizado neste evento. Escolha outro.';
+export type ParseErrorI18n = { t(key: string): string };
+
+let defaultParseErrorI18n: ParseErrorI18n | null = null;
+
+/** Register app I18nService so parseErrorMessage works without an explicit argument. */
+export function setParseErrorI18n(i18n: ParseErrorI18n | null): void {
+  defaultParseErrorI18n = i18n;
+}
+
+function tr(i18n: ParseErrorI18n | undefined, key: string): string {
+  const svc = i18n ?? defaultParseErrorI18n;
+  return svc ? svc.t(key) : key;
+}
 
 /** Parse 137 (DUPLICATE_VALUE) e usado por varias regras; so a mensagem do servidor diz qual. */
-export function duplicateValueMessage(message: string): string {
-  if (/\bcpf\b/i.test(message)) return CPF_TAKEN_MESSAGE;
+export function duplicateValueMessage(message: string, i18n?: ParseErrorI18n): string {
+  if (/\bcpf\b/i.test(message)) return tr(i18n, 'error.cpfTaken');
   if (!message || /apelido|nickname|duplicate value for a field/i.test(message)) {
-    return NICKNAME_TAKEN_MESSAGE;
+    return tr(i18n, 'error.nicknameTaken');
   }
   return message;
 }
 
-export function parseErrorMessage(error: unknown): string {
+export function parseErrorMessage(error: unknown, i18n?: ParseErrorI18n): string {
   const message = extractErrorMessage(error);
 
   if (!message && (error == null || typeof error === 'object')) {
-    return 'Ocorreu um erro inesperado. Tente novamente.';
+    return tr(i18n, 'error.generic');
   }
 
   if (typeof error === 'string' && !message) {
-    return error || 'Ocorreu um erro inesperado. Tente novamente.';
+    return error || tr(i18n, 'error.generic');
   }
 
   const err = (error && typeof error === 'object' ? error : {}) as { code?: number; message?: string };
@@ -60,71 +70,65 @@ export function parseErrorMessage(error: unknown): string {
   switch (err.code) {
     case 101:
       if (/invalid\s+username|username\/password|password/i.test(message)) {
-        return 'E-mail/celular ou senha incorretos.';
+        return tr(i18n, 'error.invalidCredentials');
       }
-      return message || 'Registro não encontrado ou sem permissão de acesso.';
+      return message || tr(i18n, 'error.notFoundOrForbidden');
     case 202:
-      return 'Nome de usuário já cadastrado. Use outro e-mail ou celular.';
+      return tr(i18n, 'error.usernameTaken');
     case 203:
-      return 'E-mail já cadastrado.';
+      return tr(i18n, 'error.emailTaken');
     case 205:
-      return 'Nenhum usuário encontrado com este e-mail.';
+      return tr(i18n, 'error.emailNotFound');
     case 125:
-      return 'E-mail inválido.';
+      return tr(i18n, 'error.invalidEmail');
     case 142:
       if (isNameFieldValidationMessage(message)) {
-        return 'Informe o nome completo (mínimo 2 caracteres).';
+        return tr(i18n, 'error.fullNameMin2');
       }
       if (/^email\b/i.test(message) || /\bemail\s+(is\s+)?required/i.test(message)) {
-        return 'Informe um e-mail válido.';
+        return tr(i18n, 'error.emailEnterValid');
       }
-      return message || 'Dados inválidos. Verifique os campos.';
+      return message || tr(i18n, 'error.invalidFields');
     case 137:
-      return duplicateValueMessage(message);
+      return duplicateValueMessage(message, i18n);
     case 209:
-      return 'Sessão expirada. Faça login novamente.';
+      return tr(i18n, 'error.sessionExpired');
     default:
       break;
   }
 
   if (isInvalidSessionError(error)) {
-    return 'Sessão expirada. Faça login novamente.';
+    return tr(i18n, 'error.sessionExpired');
   }
 
   if (/invalid\s+username|username\/password/i.test(message)) {
-    return 'E-mail/celular ou senha incorretos.';
+    return tr(i18n, 'error.invalidCredentials');
   }
 
   if (/^unauthorized$/i.test(message.trim()) || /\bnot authorized\b/i.test(message)) {
-    return 'Não autorizado. E-mail/celular ou senha incorretos, ou sua conta não existe neste ambiente.';
+    return tr(i18n, 'error.unauthorized');
   }
 
   if (/permission denied|needs to be authenticated/i.test(message)) {
-    return (
-      'Cadastro indisponível no servidor. Publique o Cloud Code (cloud/main.js) no Back4App ' +
-      'ou libere Create em _User para usuários não autenticados.'
-    );
+    return tr(i18n, 'error.signupServerUnavailable');
   }
 
   if (isNetworkConnectivityError(message)) {
-    return networkConnectivityMessage();
+    return tr(i18n, 'error.networkConnectivity');
   }
 
   if (
     /unexpected end of json input/i.test(message) ||
     /failed to execute 'json' on 'response'/i.test(message)
   ) {
-    return (
-      'Resposta inválida do servidor ao concluir o cadastro. ' +
-      'Verifique sua conexão e tente novamente em alguns instantes.'
-    );
+    return tr(i18n, 'error.signupInvalidResponse');
   }
 
   if (isNameFieldValidationMessage(message)) {
-    return 'Informe o nome completo (mínimo 2 caracteres).';
+    return tr(i18n, 'error.fullNameMin2');
   }
 
-  return message || 'Não foi possível concluir a operação.';
+  return message || tr(i18n, 'error.operation');
 }
 
 export function isNetworkError(error: unknown): boolean {
@@ -137,13 +141,6 @@ function extractErrorMessage(error: unknown): string {
 
   const err = error as { message?: string; error?: string; statusText?: string };
   return (err.message ?? err.error ?? err.statusText ?? '').trim();
-}
-
-function networkConnectivityMessage(): string {
-  return (
-    'Sem conexão com a internet ou falha ao acessar o servidor. ' +
-    'Verifique Wi-Fi/dados móveis, desative VPN ou DNS privado (Samsung: Conexões > DNS privado > Automático) e tente novamente.'
-  );
 }
 
 function isNameFieldValidationMessage(message: string): boolean {

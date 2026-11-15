@@ -6,7 +6,7 @@ import { Subscription, merge } from 'rxjs';
 import { partsToHeightCm } from '../../core/models/athlete-profile.model';
 import {
   EVENT_REGISTRATION_ROLES,
-  PROFILE_ROLE_LABELS,
+  PROFILE_ROLE_FALLBACK_LABELS,
   ProfileRole,
 } from '../../core/models/profile-role.model';
 import {
@@ -61,7 +61,7 @@ export class ProfileSetupPage implements OnDestroy {
 
   otherRoles = EVENT_REGISTRATION_ROLES.filter((role) => role !== 'athlete').map((value) => ({
     value,
-    label: PROFILE_ROLE_LABELS[value],
+    label: PROFILE_ROLE_FALLBACK_LABELS[value],
   }));
 
   private readonly rolePlayfulTones: PlayfulCardTone[] = ['peladas', 'confrontos', 'times', 'users'];
@@ -110,7 +110,7 @@ export class ProfileSetupPage implements OnDestroy {
   ) {}
 
   get selectedRoleLabel(): string {
-    return this.selectedRole ? PROFILE_ROLE_LABELS[this.selectedRole] : '';
+    return this.selectedRole ? PROFILE_ROLE_FALLBACK_LABELS[this.selectedRole] : '';
   }
 
   get isProfessionalSelected(): boolean {
@@ -467,7 +467,7 @@ export class ProfileSetupPage implements OnDestroy {
       this.otherForm.markAllAsTouched();
       const message = buildMissingFieldsMessage(
         this.otherForm,
-        roleProfileFieldLabels(this.selectedRole as ProfessionalRole)
+        roleProfileFieldLabels(this.selectedRole as ProfessionalRole, (k) => this.i18n.t(k))
       );
       if (message) await this.showError(message);
       return;
@@ -575,7 +575,11 @@ export class ProfileSetupPage implements OnDestroy {
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Erro', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('common.error'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 }

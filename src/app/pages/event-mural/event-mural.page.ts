@@ -1,9 +1,9 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
-import {
-  MURAL_TARGET_ROLE_LABELS,
-  MuralTargetRole,
-} from '../../core/models/event-performance.model';
+import { MuralTargetRole } from '../../core/models/event-performance.model';
+import { I18nService } from '../../core/services/i18n.service';
+import { localizedProfileRoleLabel } from '../../core/utils/profile-role-i18n.util';
 import { PeladaParticipant } from '../../core/models/pelada-participant.model';
 import { MuralHighlights } from '../../core/models/mural-highlights.model';
 import { MuralParticipantLocationStats } from '../../core/models/mural-participant-stats.model';
@@ -70,7 +70,8 @@ export interface EventMuralStackFrame {
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: false,
 })
-export class EventMuralPage {
+export class EventMuralPage implements OnInit, OnDestroy {
+  private localeSub?: Subscription;
   eventId = '';
   loading = true;
   errorMessage = '';
@@ -112,8 +113,21 @@ export class EventMuralPage {
     private readonly eventMediaService: EventMediaService,
     private readonly supportTools: SupportRoleToolsService,
     private readonly performanceService: AthletePerformanceService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly i18n: I18nService
   ) {}
+
+  ngOnInit(): void {
+    this.localeSub = this.i18n.locale$.subscribe(() => this.cdr.markForCheck());
+  }
+
+  ngOnDestroy(): void {
+    this.localeSub?.unsubscribe();
+  }
+
+  private muralRoleLabel(role: MuralTargetRole): string {
+    return localizedProfileRoleLabel(this.i18n, role as never);
+  }
 
   get currentView(): EventMuralStackFrame {
     return this.viewStack[this.viewStack.length - 1] ?? { id: 'root' };
@@ -127,43 +141,47 @@ export class EventMuralPage {
     const view = this.currentView;
     switch (view.id) {
       case 'top10':
-        return 'Top 10';
+        return this.i18n.t('eventMural.hub.title');
       case 'top10-athlete':
-        return 'Top 10 — Atleta';
+        return this.i18n.t('eventMural.view.top10Athlete');
       case 'top10-goalkeeper':
-        return 'Top 10 — Goleiro';
+        return this.i18n.t('eventMural.view.top10Goalkeeper');
       case 'top10-other':
-        return 'Outros Top 10';
+        return this.i18n.t('eventMural.view.top10Other');
       case 'top10-role':
-        return view.role ? `Top 10 — ${MURAL_TARGET_ROLE_LABELS[view.role]}` : 'Top 10';
+        return view.role
+          ? this.i18n.t('eventMural.view.top10RoleTitle', { title: this.muralRoleLabel(view.role) })
+          : this.i18n.t('eventMural.hub.title');
       case 'scout':
-        return 'Apontamentos do Scout';
+        return this.i18n.t('eventMural.hub.scoutTitle');
       case 'scout-qualitative':
-        return 'Desempenho qualitativo';
+        return this.i18n.t('eventMural.view.qualitativePerformance');
       case 'scout-quantitative':
-        return 'Desempenho quantitativo';
+        return this.i18n.t('eventMural.view.quantitativePerformance');
       case 'scout-charts':
-        return 'Gráficos de desempenho';
+        return this.i18n.t('eventMural.view.performanceCharts');
       case 'scout-goal-types':
-        return 'Tipos de gols';
+        return this.i18n.t('eventMural.view.goalTypes');
       case 'notas':
-        return 'Notas individuais';
+        return this.i18n.t('eventMural.hub.notasTitle');
       case 'notas-role':
-        return view.role ? `Notas — ${MURAL_TARGET_ROLE_LABELS[view.role]}` : 'Notas individuais';
+        return view.role
+          ? this.i18n.t('eventMural.view.notasRoleTitle', { title: this.muralRoleLabel(view.role) })
+          : this.i18n.t('eventMural.hub.notasTitle');
       case 'curiosities':
-        return 'Curiosidades do evento';
+        return this.i18n.t('eventMural.hub.curiositiesTitle');
       case 'curiosities-location':
-        return 'Participantes por localização';
+        return this.i18n.t('eventMural.view.participantsByLocation');
       case 'curiosities-pro-team':
-        return 'Time profissional mais amado';
+        return this.i18n.t('eventMural.view.favoriteProTeam');
       case 'curiosities-amateur-team':
-        return 'Time amador mais amado';
+        return this.i18n.t('eventMural.view.favoriteAmateurTeam');
       case 'curiosities-height':
-        return 'Atletas mais alto e mais baixo';
+        return this.i18n.t('eventMural.view.tallestShortestAthletes');
       case 'curiosities-fan-checkins':
-        return 'Torcedores com check-in';
+        return this.i18n.t('eventMural.view.fansWithCheckIn');
       default:
-        return 'Mural do evento';
+        return this.i18n.t('eventMural.title');
     }
   }
 
@@ -332,17 +350,17 @@ export class EventMuralPage {
     this.primaryRankingSections = buildMuralRankingDisplaySections(
       EVENT_PRIMARY_TOP10_ROLES,
       this.muralRankings,
-      (role) => MURAL_TARGET_ROLE_LABELS[role]
+      (role) => this.muralRoleLabel(role)
     );
     this.otherRankingSections = buildMuralRankingDisplaySections(
       EVENT_OTHER_TOP10_ROLES,
       this.muralRankings,
-      (role) => MURAL_TARGET_ROLE_LABELS[role]
+      (role) => this.muralRoleLabel(role)
     );
     this.notasRankingSections = buildMuralRankingDisplaySections(
       EVENT_NOTAS_ROLES,
       this.muralRankings,
-      (role) => MURAL_TARGET_ROLE_LABELS[role]
+      (role) => this.muralRoleLabel(role)
     );
 
     try {

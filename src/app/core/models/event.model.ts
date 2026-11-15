@@ -263,20 +263,10 @@ export function getRegistrationStatus(
   return 'open';
 }
 
-/** @deprecated Prefer EventService.registrationStatusLabel / localizedRegistrationStatusLabel */
-export function getRegistrationStatusLabel(status: RegistrationStatus): string {
-  switch (status) {
-    case 'open':
-      return 'Registrations open';
-    case 'closed':
-      return 'Registrations closed';
-    case 'not_yet_open':
-      return 'Registrations opening soon';
-  }
-}
+const EVENT_TYPES_WITH_ARRIVAL_ORDER = new Set<EventType>(['pelada', 'racha']);
 
 export function supportsArrivalOrder(type: EventType): boolean {
-  return type === 'pelada' || type === 'racha';
+  return EVENT_TYPES_WITH_ARRIVAL_ORDER.has(type);
 }
 
 const VOTING_DEFAULT_HOURS = 24;
@@ -298,17 +288,6 @@ export function isVotingOpen(
 ): boolean {
   const { opensAt, closesAt } = getEffectiveVotingWindow(event);
   return now >= opensAt && now < closesAt;
-}
-
-/** @deprecated Prefer buildEventVotingPeriodLabels / localizedVotingStatusLabel */
-export function getVotingStatusLabel(
-  event: Pick<PeladaEvent, 'startTime' | 'votingOpensAt' | 'votingClosesAt'>,
-  now = new Date()
-): string {
-  const { opensAt, closesAt } = getEffectiveVotingWindow(event);
-  if (now < opensAt) return 'Voting soon';
-  if (now >= closesAt) return 'Voting closed';
-  return 'Voting open';
 }
 
 export function isEventEnded(

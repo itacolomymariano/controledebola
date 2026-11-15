@@ -26,7 +26,7 @@
       <ion-list>
         <ion-item>
           <ion-select
-            label="Modo de presenca"
+            [label]="'eventFanCheckin.attendanceModeLabel' | t"
             labelPlacement="stacked"
             formControlName="attendanceMode"
             interface="popover"
@@ -37,12 +37,12 @@
         </ion-item>
         <ion-item>
           <ion-textarea
-            label="Recado da torcida"
+            [label]="'eventFanCheckin.messageLabel' | t"
             labelPlacement="stacked"
             formControlName="message"
             maxlength="160"
             autoGrow="true"
-            placeholder="Ex.: Vamos com tudo!"
+            [placeholder]="'eventFanCheckin.messagePlaceholder' | t"
           ></ion-textarea>
         </ion-item>
       </ion-list>

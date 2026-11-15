@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/
 import { ActivatedRoute } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
 import { EventMediaService } from '../../core/services/event-media.service';
+import { I18nService } from '../../core/services/i18n.service';
 
 type JournalSection = 'reportage' | 'interview';
 
@@ -37,7 +38,8 @@ export class EventJournalistJournalPage {
     private readonly eventMediaService: EventMediaService,
     private readonly alertCtrl: AlertController,
     private readonly loadingCtrl: LoadingController,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly i18n: I18nService
   ) {}
 
   ionViewWillEnter(): void {
@@ -106,22 +108,22 @@ export class EventJournalistJournalPage {
     const headline = this.reportageHeadline.trim();
     const body = this.reportageBody.trim();
     if (headline.length < 2) {
-      await this.showError('Informe a manchete da reportagem.');
+      await this.showError(this.i18n.t('eventMedia.validation.reportHeadline'));
       return;
     }
     if (!this.reportagePhotoFile && !this.reportageExistingPhotoUrl) {
-      await this.showError('Selecione a foto da reportagem.');
+      await this.showError(this.i18n.t('eventMedia.validation.reportPhoto'));
       return;
     }
     if (body.length < 10) {
-      await this.showError('Informe o texto da reportagem.');
+      await this.showError(this.i18n.t('eventMedia.validation.reportBody'));
       return;
     }
-    const confirmed = await this.confirmOverwrite('uma reportagem');
+    const confirmed = await this.confirmOverwrite(this.i18n.t('eventMedia.overwriteKind.reportage'));
     if (!confirmed) return;
 
     this.publishingReportage = true;
-    const loading = await this.loadingCtrl.create({ message: 'Enviando reportagem...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('eventMedia.sendingReportage') });
     await loading.present();
     try {
       const photoUrl = this.reportagePhotoFile
@@ -132,9 +134,11 @@ export class EventJournalistJournalPage {
         : this.reportageExistingPhotoUrl;
       await this.eventMediaService.publishJournalReportage(this.eventId, headline, photoUrl, body);
       this.reportageExistingPhotoUrl = photoUrl;
-      await this.showSuccess('Reportagem enviada ao mural do evento.');
+      await this.showSuccess(this.i18n.t('eventJournalist.toast.reportagePublished'));
     } catch (error: unknown) {
-      await this.showError(this.eventMediaService.errorMessage(error, 'Nao foi possivel enviar a reportagem.'));
+      await this.showError(
+        this.eventMediaService.errorMessage(error, this.i18n.t('eventMedia.error.sendReportage'))
+      );
     } finally {
       this.publishingReportage = false;
       try {
@@ -150,22 +154,22 @@ export class EventJournalistJournalPage {
     const headline = this.interviewHeadline.trim();
     const body = this.interviewBody.trim();
     if (headline.length < 2) {
-      await this.showError('Informe a manchete da entrevista.');
+      await this.showError(this.i18n.t('eventMedia.validation.journalInterviewHeadline'));
       return;
     }
     if (!this.interviewPhotoFile && !this.interviewExistingPhotoUrl) {
-      await this.showError('Selecione a foto da entrevista.');
+      await this.showError(this.i18n.t('eventMedia.validation.journalInterviewPhoto'));
       return;
     }
     if (body.length < 10) {
-      await this.showError('Informe o texto da entrevista.');
+      await this.showError(this.i18n.t('eventMedia.validation.journalInterviewBody'));
       return;
     }
-    const confirmed = await this.confirmOverwrite('uma entrevista de jornal');
+    const confirmed = await this.confirmOverwrite(this.i18n.t('eventMedia.overwriteKind.journalInterview'));
     if (!confirmed) return;
 
     this.publishingInterview = true;
-    const loading = await this.loadingCtrl.create({ message: 'Enviando entrevista...' });
+    const loading = await this.loadingCtrl.create({ message: this.i18n.t('eventMedia.sendingJournalInterview') });
     await loading.present();
     try {
       const photoUrl = this.interviewPhotoFile
@@ -176,9 +180,11 @@ export class EventJournalistJournalPage {
         : this.interviewExistingPhotoUrl;
       await this.eventMediaService.publishJournalInterview(this.eventId, headline, photoUrl, body);
       this.interviewExistingPhotoUrl = photoUrl;
-      await this.showSuccess('Entrevista enviada ao mural do evento.');
+      await this.showSuccess(this.i18n.t('eventJournalist.toast.interviewPublished'));
     } catch (error: unknown) {
-      await this.showError(this.eventMediaService.errorMessage(error, 'Nao foi possivel enviar a entrevista.'));
+      await this.showError(
+        this.eventMediaService.errorMessage(error, this.i18n.t('eventMedia.error.sendJournalInterview'))
+      );
     } finally {
       this.publishingInterview = false;
       try {
@@ -192,11 +198,11 @@ export class EventJournalistJournalPage {
 
   private async confirmOverwrite(kind: string): Promise<boolean> {
     const alert = await this.alertCtrl.create({
-      header: 'Confirmar envio',
+      header: this.i18n.t('eventMedia.confirmSendHeader'),
       message: this.eventMediaService.formatPublishOverwriteMessage(kind),
       buttons: [
-        { text: 'Cancelar', role: 'cancel' },
-        { text: 'Enviar', role: 'confirm' },
+        { text: this.i18n.t('common.cancel'), role: 'cancel' },
+        { text: this.i18n.t('common.send'), role: 'confirm' },
       ],
     });
     await alert.present();
@@ -205,12 +211,20 @@ export class EventJournalistJournalPage {
   }
 
   private async showError(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Atencao', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('common.attention'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 
   private async showSuccess(message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({ header: 'Sucesso', message, buttons: ['OK'] });
+    const alert = await this.alertCtrl.create({
+      header: this.i18n.t('eventDetail.alert.success'),
+      message,
+      buttons: [this.i18n.t('common.ok')],
+    });
     await alert.present();
   }
 }

@@ -1,5 +1,5 @@
 import { EventType } from './event.model';
-import { PROFILE_ROLE_LABELS, ProfileRole } from './profile-role.model';
+import { PROFILE_ROLE_FALLBACK_LABELS, ProfileRole } from './profile-role.model';
 import { ProfessionalRole, PROFESSIONAL_ROLES } from './role-profile.model';
 
 export type HireableRole = ProfessionalRole | 'fan' | 'athlete';
@@ -38,7 +38,7 @@ export interface EventInviteCandidate {
 }
 
 export function hireableRoleLabel(role: HireableRole): string {
-  return PROFILE_ROLE_LABELS[role as ProfileRole];
+  return PROFILE_ROLE_FALLBACK_LABELS[role as ProfileRole];
 }
 
 export function suggestOfferAmount(

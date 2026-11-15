@@ -2,7 +2,7 @@
   <app-user-bar></app-user-bar>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button (click)="cancel()">Voltar</ion-button>
+      <ion-button (click)="cancel()">{{ 'common.back' | t }}</ion-button>
     </ion-buttons>
     <ion-title>{{ isEditMode ? ('legends.editTeamTitle' | t) : ('legends.createTeamTitle' | t) }}</ion-title>
   </ion-toolbar>
@@ -16,52 +16,52 @@
   }
   <form id="legendTeamForm" [formGroup]="form" (ngSubmit)="submit()" [class.ion-hide]="loadingEdit">
     <app-image-picker
-      label="Imagem do time"
-      hint="Escudo ou foto do time lenda."
+      [label]="'legends.form.teamImage' | t"
+      [hint]="'legends.form.imageHintTeam' | t"
       [previewUrl]="imagePreview"
       (imageSelected)="onImageSelected($event)"
     ></app-image-picker>
 
     <ion-list lines="full">
       <ion-item>
-        <ion-input label="Nome do time" labelPlacement="stacked" formControlName="name"></ion-input>
+        <ion-input [label]="'legends.form.teamName' | t" labelPlacement="stacked" formControlName="name"></ion-input>
       </ion-item>
       @if (form.get('name')?.touched && form.get('name')?.invalid) {
-        <ion-note color="danger" class="ion-padding-horizontal">Informe o nome do time.</ion-note>
+        <ion-note color="danger" class="ion-padding-horizontal">{{ 'legends.validation.teamNameRequired' | t }}</ion-note>
       }
       <ion-item>
-        <ion-input label="Apelido do time" labelPlacement="stacked" formControlName="apelido"></ion-input>
+        <ion-input [label]="'legends.form.teamNickname' | t" labelPlacement="stacked" formControlName="apelido"></ion-input>
       </ion-item>
       @if (form.get('apelido')?.touched && form.get('apelido')?.invalid) {
-        <ion-note color="danger" class="ion-padding-horizontal">Informe o apelido do time.</ion-note>
+        <ion-note color="danger" class="ion-padding-horizontal">{{ 'legends.validation.teamNicknameRequired' | t }}</ion-note>
       }
 
-      <app-birth-date-picker label="Data de nascimento do time" formControlName="foundedDate"></app-birth-date-picker>
+      <app-birth-date-picker [label]="'legends.form.teamFoundedDate' | t" formControlName="foundedDate"></app-birth-date-picker>
       @if (form.get('foundedDate')?.touched && form.get('foundedDate')?.hasError('incompleteBirthDate')) {
         <ion-note color="danger" class="ion-padding-horizontal">
-          Selecione dia, mes e ano da data de nascimento do time.
+          {{ 'legends.validation.teamFoundedIncomplete' | t }}
         </ion-note>
       }
-      <app-birth-date-picker label="Data que encerrou as atividades" formControlName="endedDate"></app-birth-date-picker>
+      <app-birth-date-picker [label]="'legends.form.teamEndedDate' | t" formControlName="endedDate"></app-birth-date-picker>
       @if (form.get('endedDate')?.touched && form.get('endedDate')?.hasError('incompleteBirthDate')) {
         <ion-note color="danger" class="ion-padding-horizontal">
-          Selecione dia, mes e ano da data que encerrou as atividades.
+          {{ 'legends.validation.teamEndedIncomplete' | t }}
         </ion-note>
       }
 
       <ion-item-divider>
-        <ion-label>De onde era o time</ion-label>
+        <ion-label>{{ 'legends.form.whereTeamWasFrom' | t }}</ion-label>
       </ion-item-divider>
       <app-address-form [formControl]="$any(form.get('location'))" (addressChange)="onLocationChanged()"></app-address-form>
       @if (form.get('location')?.touched && form.get('location')?.hasError('addressIncomplete')) {
         <ion-note color="danger" class="ion-padding-horizontal">
-          Informe e confirme o endereco completo (busque pelo CEP ou mapa).
+          {{ 'legends.validation.addressIncomplete' | t }}
         </ion-note>
       }
 
       <ion-item>
         <ion-textarea
-          label="Sobre o time"
+          [label]="'legends.form.teamAbout' | t"
           labelPlacement="stacked"
           formControlName="description"
           autoGrow="true"
@@ -69,7 +69,7 @@
       </ion-item>
 
       <ion-item>
-        <ion-select label="Sua relacao com o time lenda" labelPlacement="stacked" formControlName="relationship">
+        <ion-select [label]="'legends.form.relationshipTeam' | t" labelPlacement="stacked" formControlName="relationship">
           @for (option of relationshipOptions; track option.value) {
             <ion-select-option [value]="option.value">{{ option.label }}</ion-select-option>
           }
@@ -90,16 +90,16 @@
       </ion-button>
 
       <ion-item-divider>
-        <ion-label>Atletas que atuaram no time</ion-label>
+        <ion-label>{{ 'legends.form.teamAthletesSection' | t }}</ion-label>
       </ion-item-divider>
       @for (ref of athleteRefs; track ref.type + ref.id; let i = $index) {
         <ion-item>
           <ion-label>{{ ref.label }}</ion-label>
-          <ion-note slot="end">{{ ref.type === 'legend_athlete' ? 'Lenda' : 'App' }}</ion-note>
-          <ion-button slot="end" fill="clear" color="danger" (click)="removeAthleteRef(i)">Remover</ion-button>
+          <ion-note slot="end">{{ ref.type === 'legend_athlete' ? ('legends.form.refKindLegend' | t) : ('legends.form.refKindApp' | t) }}</ion-note>
+          <ion-button slot="end" fill="clear" color="danger" (click)="removeAthleteRef(i)">{{ 'common.remove' | t }}</ion-button>
         </ion-item>
       }
-      <ion-button expand="block" fill="outline" (click)="openAthletePicker()">Adicionar atleta</ion-button>
+      <ion-button expand="block" fill="outline" (click)="openAthletePicker()">{{ 'legends.form.addAthlete' | t }}</ion-button>
     </ion-list>
   </form>
 </ion-content>
@@ -125,9 +125,9 @@
   <ng-template>
     <ion-header>
       <ion-toolbar>
-        <ion-title>Selecionar atleta</ion-title>
+        <ion-title>{{ 'legends.form.selectAthleteTitle' | t }}</ion-title>
         <ion-buttons slot="end">
-          <ion-button (click)="closeAthletePicker()">Fechar</ion-button>
+          <ion-button (click)="closeAthletePicker()">{{ 'common.close' | t }}</ion-button>
         </ion-buttons>
       </ion-toolbar>
       <ion-toolbar>
@@ -192,7 +192,7 @@
                 </ion-button>
               }
               <ion-button fill="solid" size="small" slot="end" (click)="addAthleteRef(item)">
-                Adicionar
+                {{ 'legends.form.add' | t }}
               </ion-button>
             </ion-item>
           }
@@ -208,7 +208,7 @@
       <ion-toolbar>
         <ion-title>{{ 'legends.selectPresident' | t }}</ion-title>
         <ion-buttons slot="end">
-          <ion-button (click)="closePresidentPicker()">Fechar</ion-button>
+          <ion-button (click)="closePresidentPicker()">{{ 'common.close' | t }}</ion-button>
         </ion-buttons>
       </ion-toolbar>
       <ion-toolbar>

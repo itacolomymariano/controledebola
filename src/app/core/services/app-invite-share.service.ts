@@ -152,7 +152,7 @@ export class AppInviteShareService {
           await this.copyInstallUrl();
         } catch {
           const toast = await this.toastCtrl.create({
-            message: 'Nao foi possivel compartilhar. Tente novamente.',
+            message: this.i18n.t('appInvite.error.share'),
             duration: 2800,
             color: 'danger',
           });

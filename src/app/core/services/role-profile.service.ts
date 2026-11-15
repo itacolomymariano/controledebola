@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import Parse from 'parse';
 import { RefereeInviteCandidate } from '../models/referee-invitation.model';
 import { EventInviteCandidate } from '../models/event-hiring.model';
-import { PROFILE_ROLE_LABELS } from '../models/profile-role.model';
+import { PROFILE_ROLE_FALLBACK_LABELS } from '../models/profile-role.model';
 import { searchMatchesRoleKeyword } from '../utils/role-search.util';
 import {
   CreateRoleProfilePayload,
@@ -739,7 +739,7 @@ export class RoleProfileService {
   ): boolean {
     if (role && searchMatchesRoleKeyword(normalizedSearch, role)) return true;
     const haystack = normalizeSearchText(
-      `${candidate.userName} ${candidate.apelido} ${candidate.fullName ?? ''} ${candidate.city ?? ''} ${candidate.state ?? ''} ${role ? PROFILE_ROLE_LABELS[role] : ''}`
+      `${candidate.userName} ${candidate.apelido} ${candidate.fullName ?? ''} ${candidate.city ?? ''} ${candidate.state ?? ''} ${role ? PROFILE_ROLE_FALLBACK_LABELS[role] : ''}`
     );
     if (haystack.includes(normalizedSearch)) return true;
     const tokens = normalizedSearch.split(/\s+/).filter((token) => token.length >= 2);

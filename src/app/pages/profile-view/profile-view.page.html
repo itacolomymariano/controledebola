@@ -5,7 +5,7 @@
         <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
-    <ion-title>Perfil de {{ roleLabel }}</ion-title>
+    <ion-title>{{ 'profileView.pageTitle' | t: { role: roleLabel } }}</ion-title>
     <ion-buttons slot="end">
       <app-help-balloon textKey="screen.help.profile-view"></app-help-balloon>
     </ion-buttons>
@@ -44,7 +44,7 @@
     <ion-list lines="none" class="playful-elevated-list">
       <ion-item>
         <ion-label class="ion-text-wrap">
-          <h3>Local</h3>
+          <h3>{{ 'profileView.location' | t }}</h3>
           <p>
             {{ profile.state || '—' }} · {{ profile.city || '—' }} ·
             {{ profile.neighborhood || '—' }}
@@ -54,8 +54,8 @@
       @if (profile.age != null) {
         <ion-item>
           <ion-label>
-            <h3>Idade</h3>
-            <p>{{ profile.age }} anos</p>
+            <h3>{{ 'profileView.age' | t }}</h3>
+            <p>{{ 'eventDetail.teamMatch.yearsOld' | t: { age: profile.age } }}</p>
           </ion-label>
         </ion-item>
       }
@@ -87,7 +87,7 @@
         @if (field.type !== 'boolean' || profile.roleProfile?.[field.key]) {
           <ion-item>
             <ion-label class="ion-text-wrap">
-              <h3>{{ field.label }}</h3>
+              <h3>{{ fieldLabel(field) }}</h3>
               <p>{{ fieldValue(field) }}</p>
             </ion-label>
           </ion-item>
@@ -98,7 +98,7 @@
     @if (refereeCardStats; as cards) {
       <ion-card>
         <ion-card-header>
-          <ion-card-title>Cartões na arbitragem</ion-card-title>
+          <ion-card-title>{{ 'profileView.refereeCardsTitle' | t }}</ion-card-title>
         </ion-card-header>
         <ion-card-content>
           <p>Cartões amarelos registrados no App: {{ formatStatNumber(cards.totalYellowCards) }}</p>
@@ -189,7 +189,7 @@
         </ion-card-header>
         <ion-card-content>
           @if (!profile.history.peladas.length) {
-            <ion-note>Nenhuma pelada registrada ainda.</ion-note>
+            <ion-note>{{ 'profileView.noPeladasYet' | t }}</ion-note>
           }
           @for (item of profile.history.peladas; track item.id) {
             <p>{{ item.name }} · Pontuacao: {{ formatScore(item.score) }}</p>

@@ -37,7 +37,7 @@
     <form [formGroup]="form" (ngSubmit)="submit()">
       @if (isPeladaType) {
         <ion-list-header>
-          <ion-label>Palpites da pelada</ion-label>
+          <ion-label>{{ 'eventPredictions.peladaSection' | t }}</ion-label>
         </ion-list-header>
         <ion-list-header>
           <ion-label>Qual atleta faz mais gols?</ion-label>
@@ -92,7 +92,7 @@
 
         <ion-item>
           <ion-input
-            label="Equipe mandante"
+            [label]="'eventPredictions.homeTeamLabel' | t"
             labelPlacement="stacked"
             formControlName="homeTeamName"
             [readonly]="closed"
@@ -100,7 +100,7 @@
         </ion-item>
         <ion-item>
           <ion-input
-            label="Equipe visitante"
+            [label]="'eventPredictions.awayTeamLabel' | t"
             labelPlacement="stacked"
             formControlName="awayTeamName"
             [readonly]="closed"
@@ -134,8 +134,8 @@
         @for (row of goalScorers.controls; track $index; let i = $index) {
           <div [formGroup]="goalScorerGroupAt(i)">
             <ion-item>
-              <ion-select label="Jogador" labelPlacement="stacked" formControlName="userId" [disabled]="closed">
-                <ion-select-option value="">Selecione</ion-select-option>
+              <ion-select [label]="'eventPredictions.playerLabel' | t" labelPlacement="stacked" formControlName="userId" [disabled]="closed">
+                <ion-select-option value="">{{ 'common.select' | t }}</ion-select-option>
                 @for (athlete of athletes; track athlete.userId) {
                   <ion-select-option [value]="athlete.userId">{{ athlete.userName }}</ion-select-option>
                 }
@@ -144,7 +144,7 @@
             <ion-item>
               <ion-input
                 type="number"
-                label="Quantidade de gols"
+                [label]="'eventPredictions.goalsCountLabel' | t"
                 labelPlacement="stacked"
                 formControlName="goals"
                 min="1"
@@ -164,7 +164,7 @@
 
         <ion-item>
           <ion-select
-            label="Jogadores expulsos"
+            [label]="'eventPredictions.expelledPlayersLabel' | t"
             labelPlacement="stacked"
             formControlName="expelledUserIds"
             [multiple]="true"
@@ -178,7 +178,7 @@
 
         <ion-item>
           <ion-select
-            label="Jogadores com cartao amarelo"
+            [label]="'eventPredictions.yellowCardsPlayersLabel' | t"
             labelPlacement="stacked"
             formControlName="yellowCardUserIds"
             [multiple]="true"
