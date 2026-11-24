@@ -2,7 +2,13 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-11-24 (Recapitulação Primeiro Coordenador pós-reinstall Windows)
+**Ultima atualizacao:** 2026-11-24 (manual site fase 2 + i18n onda 7 services)
+
+### 2026-11-24 — Manual site fase 2 + i18n services (onda 7)
+
+- **Site** `controledebolasite` `2ed904b`: 0 placeholders MDX; cadastro 6 passos; ciclo de vida 6 abas; figuras com JPEGs existentes; push → deploy Cloudflare.
+- **Capturas ainda humanas:** `p-lista-peladas`, `p39-separacao-media-cb`, `p46-portaria-entradas`, `p57`/`p58` (rótulos no MDX).
+- **i18n:** `serviceError()` em `parse-error.util.ts`; `referee-invitation` + `role-profile` migrados; [`I18N-SERVICES-BACKLOG.md`](I18N-SERVICES-BACKLOG.md); `npm run check:i18n` OK (+36 chaves).
 
 ### 2026-11-24 — Recapitulação coordenador (reinstall Windows)
 

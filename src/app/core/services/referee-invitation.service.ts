@@ -14,7 +14,7 @@ import { HireableRole, hireableRoleLabel, inviteeRoleLabel } from '../models/eve
 import { InvitationAcceptConflict, ScheduleConflict } from '../models/event-registration.model';
 import { PROFILE_ROLE_FALLBACK_LABELS, ProfileRole } from '../models/profile-role.model';
 import { getUserAvatarUrl } from '../utils/user-avatar.util';
-import { parseErrorMessage } from '../utils/parse-error.util';
+import { parseErrorMessage, serviceError } from '../utils/parse-error.util';
 import { EventService } from './event.service';
 import { ParseFileService } from './parse-file.service';
 import { PeladaCashService } from './pelada-cash.service';
@@ -396,13 +396,13 @@ export class RefereeInvitationService {
 
   async createSupplementary(payload: CreateSupplementaryInvitationPayload): Promise<RefereeInvitation> {
     const user = Parse.User.current();
-    if (!user) throw new Error('Faca login para enviar convites.');
+    if (!user) throw new Error(serviceError('error.refereeInvitation.loginToSend'));
 
     if (payload.offeredAmount < 0) {
-      throw new Error('Informe um valor de contratacao valido.');
+      throw new Error(serviceError('error.refereeInvitation.hiringAmountInvalid'));
     }
     if (!payload.responseDeadline || payload.responseDeadline <= new Date()) {
-      throw new Error('Informe data e hora limite para a resposta do convite.');
+      throw new Error(serviceError('error.refereeInvitation.responseDeadlineRequired'));
     }
 
     try {
@@ -418,7 +418,7 @@ export class RefereeInvitationService {
       });
       const objectId = result?.objectId ? String(result.objectId) : '';
       if (!objectId) {
-        throw new Error('Convite criado sem identificador.');
+        throw new Error(serviceError('error.refereeInvitation.createdWithoutId'));
       }
       const saved = await new Parse.Query(CLASS)
         .include('event')
@@ -435,7 +435,7 @@ export class RefereeInvitationService {
 
   async completeSupplementaryHiring(eventId: string, role: 'referee' | 'scout'): Promise<void> {
     const user = Parse.User.current();
-    if (!user) throw new Error('Faca login.');
+    if (!user) throw new Error(serviceError('error.service.loginRequired'));
 
     try {
       await Parse.Cloud.run('completeSupplementaryHiring', { eventId, role });
@@ -519,17 +519,17 @@ export class RefereeInvitationService {
 
   async create(payload: CreateRefereeInvitationPayload): Promise<RefereeInvitation> {
     const user = Parse.User.current();
-    if (!user) throw new Error('Faca login para enviar convites.');
+    if (!user) throw new Error(serviceError('error.refereeInvitation.loginToSend'));
 
     const role = payload.role ?? 'referee';
     const roleLabel = inviteeRoleLabel(role as HireableRole);
 
     if (payload.offeredAmount < 0) {
-      throw new Error('Informe um valor de contratacao valido.');
+      throw new Error(serviceError('error.refereeInvitation.hiringAmountInvalid'));
     }
 
     if (!payload.responseDeadline || payload.responseDeadline <= new Date()) {
-      throw new Error('Informe data e hora limite para a resposta do convite.');
+      throw new Error(serviceError('error.refereeInvitation.responseDeadlineRequired'));
     }
 
     const eventQuery = new Parse.Query(EVENT_CLASS);
@@ -537,20 +537,18 @@ export class RefereeInvitationService {
     eventQuery.include('admin');
     const eventObj = await eventQuery.get(payload.eventId);
     const event = await this.eventService.getById(payload.eventId);
-    if (!event) throw new Error('Evento nao encontrado.');
+    if (!event) throw new Error(serviceError('error.refereeInvitation.eventNotFound'));
 
     if (event.type === 'team_match' && role === 'referee') {
-      throw new Error(
-        'Em confrontos, a contratacao de arbitro exige aprovacao do presidente adversario. Use o fluxo de arbitragem do confronto.'
-      );
+      throw new Error(serviceError('error.refereeInvitation.teamMatchRefereeApproval'));
     }
 
     if (!this.eventService.isCurrentUserAdmin(event)) {
-      throw new Error('Apenas o administrador do evento pode enviar convites de contratacao.');
+      throw new Error(serviceError('error.refereeInvitation.adminOnlyHiringInvites'));
     }
 
     if (!event.peladaId && event.type !== 'team_match') {
-      throw new Error('Evento sem pelada vinculada.');
+      throw new Error(serviceError('error.refereeInvitation.eventWithoutPelada'));
     }
 
     const invitedUser = Parse.User.createWithoutData(payload.invitedUserId);
@@ -562,7 +560,7 @@ export class RefereeInvitationService {
     duplicateQuery.containedIn('status', ['pending', 'accepted']);
     const duplicate = await duplicateQuery.first();
     if (duplicate) {
-      throw new Error(`Este ${roleLabel} ja possui convite ativo para este evento.`);
+      throw new Error(serviceError('error.refereeInvitation.roleActiveInvite', { role: roleLabel }));
     }
 
     const existingReg = await this.registrationService.getForEventAndUser(
@@ -570,7 +568,7 @@ export class RefereeInvitationService {
       payload.invitedUserId
     );
     if (existingReg) {
-      throw new Error('Este usuario ja esta inscrito neste evento.');
+      throw new Error(serviceError('error.refereeInvitation.userAlreadyRegistered'));
     }
 
     const invitation = new Parse.Object(CLASS);
@@ -619,7 +617,7 @@ export class RefereeInvitationService {
     options?: { declineConflictInvitationIds?: string[] }
   ): Promise<RefereeInvitation> {
     const user = Parse.User.current();
-    if (!user) throw new Error('Faca login para aceitar convites.');
+    if (!user) throw new Error(serviceError('error.refereeInvitation.loginToAccept'));
 
     const query = new Parse.Query(CLASS);
     query.include('event');
@@ -630,12 +628,12 @@ export class RefereeInvitationService {
 
     const invited = invitationObj.get('invitedUser') as Parse.User | undefined;
     if (invited?.id !== user.id) {
-      throw new Error('Este convite nao pertence a voce.');
+      throw new Error(serviceError('error.refereeInvitation.inviteNotYours'));
     }
 
     const status = invitationObj.get('status') as RefereeInvitationStatus;
     if (status !== 'pending') {
-      throw new Error('Este convite ja foi respondido.');
+      throw new Error(serviceError('error.refereeInvitation.inviteAlreadyAnswered'));
     }
 
     const eventType = (invitationObj.get('event') as Parse.Object | undefined)?.get('type');
@@ -647,9 +645,7 @@ export class RefereeInvitationService {
       approval &&
       approval !== 'approved'
     ) {
-      throw new Error(
-        'Este convite de arbitro ainda aguarda aprovacao do presidente adversario.'
-      );
+      throw new Error(serviceError('error.refereeInvitation.refereeAwaitingOpponentApproval'));
     }
 
     const deadline = invitationObj.get('responseDeadline') as Date | undefined;
@@ -657,7 +653,7 @@ export class RefereeInvitationService {
       invitationObj.set('status', 'cancelled');
       await invitationObj.save();
       this.notifyChanged();
-      throw new Error('O prazo para responder a este convite expirou.');
+      throw new Error(serviceError('error.refereeInvitation.inviteDeadlineExpired'));
     }
 
     const event = invitationObj.get('event') as Parse.Object;
@@ -673,9 +669,7 @@ export class RefereeInvitationService {
       .find();
     for (const other of sameEventOthers) {
       if (other.get('status') === 'accepted') {
-        throw new Error(
-          'Voce ja aceitou convocacao do outro time neste confronto. Cancele a inscricao antes de aceitar este convite.'
-        );
+        throw new Error(serviceError('error.refereeInvitation.acceptedOtherTeamInMatch'));
       }
       other.set('status', 'declined');
       other.set('responseAt', new Date());
@@ -714,12 +708,16 @@ export class RefereeInvitationService {
         })) as { conflict?: boolean; eventName?: string };
         if (conflict?.conflict) {
           throw new Error(
-            `Conflito de agenda com "${conflict.eventName || 'outro evento'}". ` +
-              'Cancele o outro compromisso antes de aceitar este convite.'
+            serviceError('error.refereeInvitation.scheduleConflict', {
+              eventName: conflict.eventName || serviceError('error.refereeInvitation.otherEvent'),
+            })
           );
         }
       } catch (error: unknown) {
-        if (error instanceof Error && error.message.includes('Conflito de agenda')) {
+        if (
+          error instanceof Error &&
+          error.message.includes(serviceError('error.refereeInvitation.scheduleConflictPrefix'))
+        ) {
           throw error;
         }
         // Se a Cloud falhar, segue e deixa registerFromInvitation validar.
@@ -784,16 +782,16 @@ export class RefereeInvitationService {
 
   async decline(invitationId: string): Promise<void> {
     const user = Parse.User.current();
-    if (!user) throw new Error('Faca login.');
+    if (!user) throw new Error(serviceError('error.service.loginRequired'));
 
     const invitationObj = await new Parse.Query(CLASS).get(invitationId);
     const invited = invitationObj.get('invitedUser') as Parse.User | undefined;
     if (invited?.id !== user.id) {
-      throw new Error('Este convite nao pertence a voce.');
+      throw new Error(serviceError('error.refereeInvitation.inviteNotYours'));
     }
 
     if (invitationObj.get('status') !== 'pending') {
-      throw new Error('Este convite ja foi respondido.');
+      throw new Error(serviceError('error.refereeInvitation.inviteAlreadyAnswered'));
     }
 
     invitationObj.set('status', 'declined');
@@ -813,12 +811,20 @@ export class RefereeInvitationService {
     const invitationObj = await this.getInvitationForEvent(invitationId, eventId);
 
     if (invitationObj.get('status') !== 'accepted') {
-      throw new Error(`Presenca so pode ser confirmada apos o ${inviteeRoleLabel(((invitationObj.get('role') as ProfileRole) ?? 'referee') as HireableRole)} aceitar o convite.`);
+      throw new Error(
+        serviceError('error.refereeInvitation.presenceAfterAccept', {
+          role: inviteeRoleLabel(((invitationObj.get('role') as ProfileRole) ?? 'referee') as HireableRole),
+        })
+      );
     }
 
     if (confirmed) {
       if (!arrivalAt) {
-        throw new Error(`Informe data e hora da chegada do ${inviteeRoleLabel(((invitationObj.get('role') as ProfileRole) ?? 'referee') as HireableRole)}.`);
+        throw new Error(
+          serviceError('error.refereeInvitation.arrivalDateTimeForRole', {
+            role: inviteeRoleLabel(((invitationObj.get('role') as ProfileRole) ?? 'referee') as HireableRole),
+          })
+        );
       }
       invitationObj.set('presenceConfirmed', true);
       invitationObj.set('arrivalAt', arrivalAt);
@@ -844,11 +850,11 @@ export class RefereeInvitationService {
     const invitationObj = await this.getInvitationForEvent(invitationId, eventId);
 
     if (invitationObj.get('status') !== 'accepted') {
-      throw new Error('Pagamento so pode ser confirmado apos aceitar o convite.');
+      throw new Error(serviceError('error.refereeInvitation.paymentAfterAccept'));
     }
 
     if (confirmed && !invitationObj.get('presenceConfirmed') && !invitationObj.get('excusedFault')) {
-      throw new Error('Confirme a presenca ou registre falta justificada antes do pagamento.');
+      throw new Error(serviceError('error.refereeInvitation.presenceBeforePayment'));
     }
 
     if (
@@ -856,11 +862,11 @@ export class RefereeInvitationService {
       !invitationObj.get('arrivalAt') &&
       !invitationObj.get('excusedFault')
     ) {
-      throw new Error('Informe a data e hora de chegada antes de confirmar o pagamento.');
+      throw new Error(serviceError('error.refereeInvitation.arrivalBeforePayment'));
     }
 
     if (!confirmed && invitationObj.get('paymentReleased')) {
-      throw new Error('Pagamento ja registrado no caixa. Nao e possivel desmarcar.');
+      throw new Error(serviceError('error.refereeInvitation.paymentAlreadyInCashbox'));
     }
 
     invitationObj.set('paymentConfirmedByAdmin', confirmed);
@@ -886,7 +892,7 @@ export class RefereeInvitationService {
     const invitationObj = await this.getInvitationForEvent(invitationId, eventId);
 
     if (invitationObj.get('status') !== 'accepted') {
-      throw new Error('Falta justificada so pode ser registrada apos aceitar o convite.');
+      throw new Error(serviceError('error.refereeInvitation.excusedFaultAfterAccept'));
     }
 
     invitationObj.set('excusedFault', excused);
@@ -903,14 +909,14 @@ export class RefereeInvitationService {
 
   async confirmRemotePresence(invitationId: string, eventId: string): Promise<RefereeInvitation> {
     const user = Parse.User.current();
-    if (!user) throw new Error('Faca login.');
+    if (!user) throw new Error(serviceError('error.service.loginRequired'));
 
     const invitationObj = await this.getInvitationForEvent(invitationId, eventId);
     if (invitationObj.get('status') !== 'accepted') {
-      throw new Error('Presenca remota so pode ser confirmada apos aceitar o convite.');
+      throw new Error(serviceError('error.refereeInvitation.remotePresenceAfterAccept'));
     }
     if (invitationObj.get('attendanceMode') !== 'remote') {
-      throw new Error('Este convite nao e de assistencia remota.');
+      throw new Error(serviceError('error.refereeInvitation.notRemoteInvite'));
     }
 
     const event = await this.eventService.getById(eventId);
@@ -919,7 +925,7 @@ export class RefereeInvitationService {
     const canConfirmRemote =
       isAdmin || (registration && ['cameraman', 'narrator'].includes(registration.role));
     if (!canConfirmRemote) {
-      throw new Error('Apenas administrador, cinegrafista ou narrador do evento podem confirmar assistencia remota.');
+      throw new Error(serviceError('error.refereeInvitation.remotePresenceAdminsOnly'));
     }
 
     invitationObj.set('presenceConfirmed', true);
@@ -942,7 +948,7 @@ export class RefereeInvitationService {
 
   async confirmPaymentReceived(invitationId: string): Promise<RefereeInvitation> {
     const user = Parse.User.current();
-    if (!user) throw new Error('Faca login.');
+    if (!user) throw new Error(serviceError('error.service.loginRequired'));
 
     const query = new Parse.Query(CLASS);
     query.include('event');
@@ -953,21 +959,21 @@ export class RefereeInvitationService {
 
     const invited = invitationObj.get('invitedUser') as Parse.User | undefined;
     if (invited?.id !== user.id) {
-      throw new Error('Este convite nao pertence a voce.');
+      throw new Error(serviceError('error.refereeInvitation.inviteNotYours'));
     }
 
     if (invitationObj.get('status') !== 'accepted') {
-      throw new Error('Pagamento so pode ser confirmado apos aceitar o convite.');
+      throw new Error(serviceError('error.refereeInvitation.paymentAfterAccept'));
     }
 
     const paymentSent =
       !!invitationObj.get('paymentConfirmedByAdmin') || !!invitationObj.get('paymentReleased');
     if (!paymentSent) {
-      throw new Error('O administrador ainda nao confirmou o pagamento.');
+      throw new Error(serviceError('error.refereeInvitation.adminPaymentNotConfirmed'));
     }
 
     if (invitationObj.get('paymentConfirmedByReferee')) {
-      throw new Error('Pagamento ja foi confirmado.');
+      throw new Error(serviceError('error.refereeInvitation.paymentAlreadyConfirmed'));
     }
 
     invitationObj.set('paymentConfirmedByReferee', true);
@@ -1070,7 +1076,7 @@ export class RefereeInvitationService {
   private async assertEventAdmin(eventId: string): Promise<void> {
     const event = await this.eventService.getById(eventId);
     if (!event || !this.eventService.isCurrentUserAdmin(event)) {
-      throw new Error('Apenas o administrador do evento pode executar esta acao.');
+      throw new Error(serviceError('error.refereeInvitation.adminOnlyAction'));
     }
   }
 

@@ -1,13 +1,13 @@
 # Status capturas manual — produção
 
-**Atualizado:** 2026-11-13 (integração Suiane)
+**Atualizado:** 2026-11-24 (fase 2 MDX — placeholders zerados)
 
 | Fase | Responsável | Status |
 |------|-------------|--------|
 | Inventário MDX / matriz | Agent | Concluído |
 | Roteiro WhatsApp | Agent | [MANUAL-CAPTURA-WHATSAPP-PRODUCAO.txt](MANUAL-CAPTURA-WHATSAPP-PRODUCAO.txt) |
 | **Capturas Samsung** | **Suiane Rana** | **17/31** integrados — ver [MANUAL-SCREENSHOT-REPORT-2026-11-13.md](MANUAL-SCREENSHOT-REPORT-2026-11-13.md) |
-| Copiar → site + MDX | Agent | **Site publicado** `controledebolasite` `98c6439` |
+| Copiar → site + MDX | Agent | **MDX fase 2** — 0 `{/* print */}`; `check-manual-guia-images` missing **[]**; **deploy Cloudflare** após push `controledebolasite` |
 
 ## Agents e screenshots
 

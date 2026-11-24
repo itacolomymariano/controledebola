@@ -16,6 +16,7 @@ import { normalizeSearchText } from '../utils/search-text.util';
 import { getUserAvatarUrl } from '../utils/user-avatar.util';
 import { ParseService } from './parse.service';
 import { ParseFileService } from './parse-file.service';
+import { serviceError } from '../utils/parse-error.util';
 
 const CLASS = 'RoleProfile';
 const EVENT_REGISTRATION_CLASS = 'EventRegistration';
@@ -879,7 +880,7 @@ export class RoleProfileService {
 
   async create(payload: CreateRoleProfilePayload): Promise<RoleProfile> {
     const user = Parse.User.current();
-    if (!user) throw new Error('Faca login para criar o perfil.');
+    if (!user) throw new Error(serviceError('error.service.loginToCreateProfile'));
 
     const existing = await this.getForRole(payload.role);
     if (existing) return existing;
@@ -900,13 +901,13 @@ export class RoleProfileService {
 
   async update(role: ProfessionalRole, payload: UpdateRoleProfilePayload): Promise<RoleProfile> {
     const user = Parse.User.current();
-    if (!user) throw new Error('Faca login para atualizar o perfil.');
+    if (!user) throw new Error(serviceError('error.service.loginToUpdateProfile'));
 
     const query = new Parse.Query(CLASS);
     query.equalTo('user', user);
     query.equalTo('role', role);
     const profile = await query.first();
-    if (!profile) throw new Error('Perfil nao encontrado.');
+    if (!profile) throw new Error(serviceError('error.service.profileNotFound'));
 
     this.applyPayload(profile, { role, ...payload });
     this.applyUserDisplayFields(profile, user);

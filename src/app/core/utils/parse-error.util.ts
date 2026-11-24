@@ -31,7 +31,9 @@ export function isCloudFunctionUnavailableError(error: unknown): boolean {
   );
 }
 
-export type ParseErrorI18n = { t(key: string): string };
+export type ParseErrorI18n = {
+  t(key: string, params?: Record<string, string | number>): string;
+};
 
 let defaultParseErrorI18n: ParseErrorI18n | null = null;
 
@@ -40,9 +42,18 @@ export function setParseErrorI18n(i18n: ParseErrorI18n | null): void {
   defaultParseErrorI18n = i18n;
 }
 
-function tr(i18n: ParseErrorI18n | undefined, key: string): string {
+function tr(
+  i18n: ParseErrorI18n | undefined,
+  key: string,
+  params?: Record<string, string | number>
+): string {
   const svc = i18n ?? defaultParseErrorI18n;
-  return svc ? svc.t(key) : key;
+  return svc ? svc.t(key, params) : key;
+}
+
+/** Mensagens de validação em services (usa I18nService registrado em init). */
+export function serviceError(key: string, params?: Record<string, string | number>): string {
+  return tr(undefined, key, params);
 }
 
 /** Parse 137 (DUPLICATE_VALUE) e usado por varias regras; so a mensagem do servidor diz qual. */
