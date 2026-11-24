@@ -38,6 +38,8 @@ import {
 })
 export class BirthDatePickerComponent implements ControlValueAccessor, Validator, OnDestroy {
   @Input() label = 'Data de nascimento';
+  /** Quando true, dia/mês/ano vazios invalidam o controle (obrigatório). */
+  @Input() required = false;
 
   readonly months = BIRTH_DATE_MONTHS;
   readonly years = buildBirthYearOptions();
@@ -106,7 +108,7 @@ export class BirthDatePickerComponent implements ControlValueAccessor, Validator
   validate(): ValidationErrors | null {
     const { day, month, year } = this.form.getRawValue();
     if (day == null && month == null && year == null) {
-      return null;
+      return this.required ? { required: true } : null;
     }
     if (day == null || month == null || year == null) {
       return { incompleteBirthDate: true };

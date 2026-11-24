@@ -1,0 +1,55 @@
+.arbitration-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.phase-chip {
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.referee-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.referee-timeline-step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0.45;
+}
+
+.referee-timeline-step.done {
+  opacity: 1;
+}
+
+.referee-timeline-step.current {
+  opacity: 1;
+  font-weight: 600;
+}
+
+.referee-timeline-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--ion-color-medium);
+  flex-shrink: 0;
+}
+
+.referee-timeline-step.done .referee-timeline-dot {
+  background: var(--ion-color-success);
+}
+
+.referee-timeline-step.current .referee-timeline-dot {
+  background: var(--ion-color-warning);
+}
+
+.shortcut-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}

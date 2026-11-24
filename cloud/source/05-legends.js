@@ -1227,16 +1227,6 @@ Parse.Cloud.define('requestLegendTeamJoin', async (request) => {
         actionRoute: '/inbox',
       });
     }
-    await createAppMessage({
-      recipientId: user.id,
-      senderId: user.id,
-      kind: 'legend_team_join_outbox',
-      title: `Solicitacao enviada — ${teamLabel}`,
-      body: `Seu pedido para participar de "${teamLabel}" foi enviado aos responsaveis.`,
-      relatedClass: LEGEND_TEAM_JOIN_REQUEST_CLASS,
-      relatedId: row.id,
-      actionRoute: `/legends/team/${legendTeamId}`,
-    });
   }
 
   return mapLegendTeamJoinRequestRow(row);

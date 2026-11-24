@@ -1177,6 +1177,19 @@ async function loadEventMuralParticipantRows(eventId) {
         byUser[uid].profileLabel = primaryPosition;
       }
     }
+
+    const userQuery = new Parse.Query(Parse.User);
+    userQuery.containedIn('objectId', userIdList);
+    userQuery.limit(Math.min(userIdList.length, 500));
+    const muralUsers = await userQuery.find({ useMasterKey: true });
+    for (const muralUser of muralUsers) {
+      const bucket = byUser[muralUser.id];
+      if (!bucket) continue;
+      bucket.muralHeightShowcaseBlocked =
+        typeof muralHeightShowcaseAllowedForUser === 'function'
+          ? !muralHeightShowcaseAllowedForUser(muralUser)
+          : false;
+    }
   }
 
   return Object.values(byUser).sort((a, b) => a.userName.localeCompare(b.userName, 'pt-BR'));
@@ -3520,6 +3533,7 @@ function buildEventMuralCuriositiesFromRows(rows) {
   const heightRows = [];
   for (const row of rows || []) {
     if (!muralParticipantHeightEligible(row)) continue;
+    if (row.muralHeightShowcaseBlocked) continue;
     const heightCm = Number(row.heightCm || 0);
     if (heightCm > 0) {
       heightRows.push({ row, heightCm });
@@ -4870,6 +4884,7 @@ function pickHeightShowcase(rows, mode, createdAtByUserId) {
   const eligible = [];
   for (const row of rows || []) {
     if (!muralParticipantHeightEligible(row)) continue;
+    if (row.muralHeightShowcaseBlocked) continue;
     const heightCm = Number(row.heightCm || 0);
     if (heightCm > 0) eligible.push({ row, heightCm });
   }
@@ -4999,6 +5014,10 @@ async function loadExploreAthleteProfileRows(locationFilter) {
         ? resolveStoredAvatarUrl(user, null)
         : String(user.get('avatarUrl') || profile.get('userAvatarUrl') || '').trim()) || undefined;
     const pos = String(profile.get('primaryPosition') || '').trim();
+    const heightShowcaseBlocked =
+      typeof muralHeightShowcaseAllowedForUser === 'function'
+        ? !muralHeightShowcaseAllowedForUser(user)
+        : false;
 
     rows.push({
       userId: String(user.id),
@@ -5009,6 +5028,7 @@ async function loadExploreAthleteProfileRows(locationFilter) {
       avatarUrl,
       heightCm: height > 0 ? height : 0,
       profileLabel: pos || 'Atleta',
+      muralHeightShowcaseBlocked: heightShowcaseBlocked,
     });
   }
 

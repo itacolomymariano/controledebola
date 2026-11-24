@@ -82,6 +82,11 @@ import {
   buildEventDetailOverviewViewModel,
   buildEventVotingPeriodLabels,
 } from '../../core/utils/event-detail-display.util';
+import { EventInviteCandidate } from '../../core/models/referee-invitation.model';
+import {
+  buildRefereeArbitrationViewModel,
+  RefereeArbitrationViewModel,
+} from '../../core/utils/referee-hiring-state.util';
 import { votingStatusI18nKey } from '../../core/utils/event-status-i18n.util';
 import { intlLocaleForApp } from '../../core/utils/locale-datetime.util';
 import {
@@ -236,6 +241,11 @@ export class EventDetailPage implements OnDestroy {
 
   hiringInvitationCounts: Partial<Record<HireableRole, number>> = {};
 
+  refereeArbitrationVm: RefereeArbitrationViewModel | null = null;
+  peladaRefereeShortcuts: EventInviteCandidate[] = [];
+  refereeArbitrationLoading = false;
+  refereePreselectUserId = '';
+
   private pendingHiringRestore: { role: HireableRole; search: string } | null = null;
 
   private hiringContextRestored = false;
@@ -268,6 +278,14 @@ export class EventDetailPage implements OnDestroy {
     if (this.canToggleHomeUninvited) sides.push('home');
     if (this.canToggleAwayUninvited) sides.push('away');
     return sides.length ? sides : ['home', 'away'];
+  }
+
+  get showRefereeArbitrationCard(): boolean {
+    return !!this.event && (this.isAdmin || this.canManageTeamMatchHiring);
+  }
+
+  get peladaFrequentRefereeUserIds(): string[] {
+    return this.peladaRefereeShortcuts.map((item) => item.userId).filter(Boolean);
   }
   readonly anonymousParticipantRoles = EVENT_REGISTRATION_ROLES;
 
@@ -388,11 +406,17 @@ export class EventDetailPage implements OnDestroy {
     this.registrationsChangedSub = this.registrationService.onRegistrationsChanged.subscribe(() => {
       void this.refreshRegistrationState();
     });
+    this.invitationChangedSub = this.invitationService.onChanged.subscribe(() => {
+      void this.refreshRefereeArbitrationContext();
+      void this.refreshHiringInvitationCounts();
+    });
     this.localeSub = this.i18n.locale$.subscribe(() => {
       this.refreshUiState();
       this.cdr.markForCheck();
     });
   }
+
+  private invitationChangedSub?: Subscription;
 
   private t(key: string, params?: Record<string, string | number>): string {
     return this.i18n.t(key, params);
@@ -400,6 +424,7 @@ export class EventDetailPage implements OnDestroy {
 
   ngOnDestroy(): void {
     this.registrationsChangedSub?.unsubscribe();
+    this.invitationChangedSub?.unsubscribe();
     this.localeSub?.unsubscribe();
   }
 
@@ -741,6 +766,7 @@ export class EventDetailPage implements OnDestroy {
 
     if (!isInitialLoad) {
       void this.refreshParticipantsList();
+      void this.refreshRefereeArbitrationContext();
     }
 
     this.restoreHiringPanelStateFromSession(eventId);
@@ -1533,6 +1559,61 @@ export class EventDetailPage implements OnDestroy {
 
   onHiringInvitationCountsChanged(): void {
     void this.refreshHiringInvitationCounts();
+    void this.refreshRefereeArbitrationContext();
+  }
+
+  async refreshRefereeArbitrationContext(): Promise<void> {
+    if (!this.event?.objectId || !this.showRefereeArbitrationCard) {
+      this.refereeArbitrationVm = null;
+      this.peladaRefereeShortcuts = [];
+      return;
+    }
+
+    this.refereeArbitrationLoading = true;
+    this.cdr.markForCheck();
+
+    try {
+      const invitations = await this.invitationService.listForEvent(this.event.objectId, 'referee');
+      this.refereeArbitrationVm = buildRefereeArbitrationViewModel(this.event, invitations);
+
+      if (this.event.peladaId && this.event.type !== 'team_match') {
+        this.peladaRefereeShortcuts = await this.invitationService.listPeladaRefereeShortcuts(
+          this.event.peladaId
+        );
+      } else {
+        this.peladaRefereeShortcuts = [];
+      }
+    } catch (error: unknown) {
+      console.warn('Falha ao carregar arbitragem do evento', error);
+      this.refereeArbitrationVm = buildRefereeArbitrationViewModel(this.event, []);
+    } finally {
+      this.refereeArbitrationLoading = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  openRefereeArbitrationManagement(): void {
+    this.refereePreselectUserId = '';
+    this.closeAdminInlinePanelsExcept('hiring');
+    this.showHiringPanel = true;
+    this.activeHiringAccordionRole = 'referee';
+    void this.refreshHiringInvitationCounts();
+    this.persistHiringPanelState();
+    this.refreshUiState();
+    this.cdr.markForCheck();
+    void this.scrollToAnchor('referee-arbitration-anchor').then(() =>
+      this.scrollToAnchor('hiring-panel-anchor')
+    );
+    void this.pinHiringAccordion('referee');
+  }
+
+  openInboxForRefereeApproval(): void {
+    void this.router.navigate(['/inbox']);
+  }
+
+  onReinvitePeladaReferee(candidate: EventInviteCandidate): void {
+    this.refereePreselectUserId = candidate.userId;
+    this.openRefereeArbitrationManagement();
   }
 
   toggleGatePanel(): void {
@@ -2706,7 +2787,7 @@ export class EventDetailPage implements OnDestroy {
       this.hiringContextRestored ||
       this.loading ||
       !this.pendingHiringRestore ||
-      !this.isAdmin ||
+      (!this.isAdmin && !this.canManageTeamMatchHiring) ||
       !this.event
     ) {
       return;
@@ -3523,7 +3604,7 @@ export class EventDetailPage implements OnDestroy {
       this.cdr.markForCheck();
       void this.loadMatchdaySummary();
       void this.loadConvocationAccess();
-      void this.refreshTeamMatchScheduleAccess();
+      await this.refreshTeamMatchScheduleAccess();
 
       await this.loadSecondaryEventData(eventId);
 
@@ -3595,6 +3676,7 @@ export class EventDetailPage implements OnDestroy {
     this.refreshUiState();
     this.cdr.markForCheck();
     void this.loadVoteScores();
+    void this.refreshRefereeArbitrationContext();
   }
 
   private countConfirmedGoalkeepers(): number {

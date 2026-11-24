@@ -45,6 +45,20 @@
       }
     </app-event-detail-overview>
 
+    @if (showRefereeArbitrationCard) {
+      <div id="referee-arbitration-anchor">
+        <app-event-referee-arbitration-card
+          [event]="event"
+          [viewModel]="refereeArbitrationVm"
+          [peladaShortcuts]="peladaRefereeShortcuts"
+          [loading]="refereeArbitrationLoading"
+          (manageReferee)="openRefereeArbitrationManagement()"
+          (openInbox)="openInboxForRefereeApproval()"
+          (reinvitePeladaReferee)="onReinvitePeladaReferee($event)"
+        ></app-event-referee-arbitration-card>
+      </div>
+    }
+
     @if (isEventFinished) {
       <ion-card class="ion-margin-top">
         <ion-card-header>
@@ -421,6 +435,8 @@
                 [event]="event"
                 [seedInvitationCount]="hiringInvitationCounts[role] ?? 0"
                 [allowedTeamSides]="hiringAllowedTeamSides"
+                [peladaFrequentRefereeUserIds]="role === 'referee' ? peladaFrequentRefereeUserIds : []"
+                [refereePreselectUserId]="role === 'referee' ? refereePreselectUserId : ''"
                 (invitationsChanged)="onHiringInvitationCountsChanged()"
                 (panelInteraction)="pinHiringAccordion($event)"
               ></app-event-role-hiring-panel>

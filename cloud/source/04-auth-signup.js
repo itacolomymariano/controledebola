@@ -164,9 +164,15 @@ Parse.Cloud.define('registerUser', async (request) => {
   if (normalizedPhone) {
     user.set('phone', normalizedPhone);
   }
-  if (params.birthDate) {
-    user.set('birthDate', new Date(params.birthDate));
+  const birthDateRaw = params.birthDate ? new Date(params.birthDate) : null;
+  if (!birthDateRaw || Number.isNaN(birthDateRaw.getTime())) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'Informe sua data de nascimento (dia, mes e ano). Ela e necessaria para os rankings do mural.'
+    );
   }
+  user.set('birthDate', birthDateRaw);
+  user.set('appUsageReputation', APP_USAGE_REPUTATION_DEFAULT);
 
   user.set('signupChallengeId', String(params.signupChallengeId || '').trim());
   user.set('signupCaptchaAnswer', Number(params.signupCaptchaAnswer));

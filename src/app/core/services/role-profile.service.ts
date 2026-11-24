@@ -99,6 +99,27 @@ export class RoleProfileService {
     return this.loadAllRoleCandidates(role, eventAddress);
   }
 
+  /** Sugestões iniciais: proximidade + histórico na pelada + nota (match/pelada rate). */
+  async suggestRefereeCandidatesForEvent(
+    eventAddress?: Address,
+    options?: { preferredUserIds?: string[]; limit?: number }
+  ): Promise<EventInviteCandidate[]> {
+    const limit = Math.max(1, options?.limit ?? 8);
+    const preferred = new Set(options?.preferredUserIds ?? []);
+    const candidates = await this.loadAllRefereeCandidates(eventAddress);
+
+    const ranked = candidates
+      .map((candidate) => {
+        const proximity = candidate.proximityScore ?? 0;
+        const muralScore = Math.max(candidate.matchRate ?? 0, candidate.peladaRate ?? 0);
+        const peladaBoost = preferred.has(candidate.userId) ? 500 : 0;
+        return { candidate, score: peladaBoost + proximity * 5 + muralScore };
+      })
+      .sort((a, b) => b.score - a.score || a.candidate.userName.localeCompare(b.candidate.userName, 'pt-BR'));
+
+    return ranked.slice(0, limit).map((row) => row.candidate);
+  }
+
   async listRefereeFlagCandidates(eventAddress?: Address): Promise<EventInviteCandidate[]> {
     const user = Parse.User.current();
     const query = new Parse.Query(CLASS);

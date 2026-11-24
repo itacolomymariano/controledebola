@@ -429,10 +429,13 @@ Parse.Cloud.afterSave('Event', async (request) => {
   }
 });
 
-Parse.Cloud.afterSave('EventRegistration', async (request) => {
-  const registration = request.object;
-  if (registration.get('profilePresentationStatus') !== 'pending') return;
-  if (request.original && request.original.get('profilePresentationStatus') === 'pending') return;
+/**
+ * Caixa permanente para inscricao nova no evento (Entrada do admin, Saida do participante).
+ * Push so quando ha apresentacao de perfil pendente.
+ */
+async function notifyEventRegistrationMailbox(registration, request) {
+  if (request.original) return;
+  if (registration.get('invitedByContract') || registration.get('invitedAsReferee')) return;
 
   const eventPtr = registration.get('event');
   if (!eventPtr || !eventPtr.id) return;
@@ -446,46 +449,97 @@ Parse.Cloud.afterSave('EventRegistration', async (request) => {
 
   const pelada = await getPeladaFromEvent(event);
   if (!pelada || !pelada.id) return;
-  const admin = pelada.get('admin');
-  if (!admin || !admin.id) return;
+
+  let recipientId = '';
+  const eventAdmin = event.get('admin');
+  if (eventAdmin && eventAdmin.id) {
+    recipientId = String(eventAdmin.id);
+  } else {
+    const peladaAdmin = pelada.get('admin');
+    if (peladaAdmin && peladaAdmin.id) recipientId = String(peladaAdmin.id);
+  }
+  if (!recipientId) return;
+
+  let participantUserId = '';
+  if (typeof resolveRegistrationParticipantUserId === 'function') {
+    try {
+      const resolved = await resolveRegistrationParticipantUserId(registration);
+      participantUserId = String(resolved.userId || '');
+      if (resolved.shouldSave) {
+        try {
+          await registration.save(null, { useMasterKey: true });
+        } catch (error) {
+          console.error('notifyEventRegistrationMailbox participantUserId save failed', error);
+        }
+      }
+    } catch (error) {
+      console.error('notifyEventRegistrationMailbox resolve participant failed', error);
+    }
+  }
+  if (!participantUserId) {
+    participantUserId = String(
+      registration.get('participantUserId') ||
+        (registration.get('user') && registration.get('user').id) ||
+        (request.user && request.user.id) ||
+        ''
+    );
+  }
+  if (!participantUserId || participantUserId === recipientId) return;
 
   const participantName =
     registration.get('userDisplayName') || registration.get('apelido') || 'Participante';
   const eventName = event.get('name') || 'evento';
+  const presentationPending = registration.get('profilePresentationStatus') === 'pending';
+  const role = String(registration.get('role') || '');
+  const roleLabel = typeof hiringRoleLabel === 'function' ? hiringRoleLabel(role) : role || 'participante';
 
-  const requestAlert = `${participantName} pediu para participar do evento "${eventName}".`;
-  await sendPushToUser(admin.id, {
-    title: 'Nova solicitacao de participacao',
-    alert: requestAlert,
-    data: {
-      type: 'profile_presentation_request',
-      peladaId: pelada.id,
-      eventId: event.id,
-      registrationId: registration.id,
-    },
-  });
-
-  const participantUserId = String(
-    registration.get('participantUserId') ||
-      (registration.get('user') && registration.get('user').id) ||
-      (request.user && request.user.id) ||
-      ''
-  );
-  if (
-    typeof createAppMessage === 'function' &&
-    participantUserId &&
-    participantUserId !== admin.id
-  ) {
-    await createAppMessage({
-      recipientId: admin.id,
-      senderId: participantUserId,
-      kind: 'profile_presentation_request',
+  if (presentationPending) {
+    const requestAlert = `${participantName} pediu para participar do evento "${eventName}".`;
+    await sendPushToUser(recipientId, {
       title: 'Nova solicitacao de participacao',
-      body: requestAlert,
+      alert: requestAlert,
+      data: {
+        type: 'profile_presentation_request',
+        peladaId: pelada.id,
+        eventId: event.id,
+        registrationId: registration.id,
+      },
+    });
+    if (typeof createAppMessage === 'function') {
+      await createAppMessage({
+        recipientId,
+        senderId: participantUserId,
+        kind: 'profile_presentation_request',
+        title: 'Nova solicitacao de participacao',
+        body: requestAlert,
+        relatedClass: 'EventRegistration',
+        relatedId: registration.id,
+        actionRoute: `/event/${event.id}`,
+      });
+    }
+    return;
+  }
+
+  const body = `${participantName} inscreveu-se como ${roleLabel} no evento "${eventName}".`;
+  if (typeof createAppMessage === 'function') {
+    await createAppMessage({
+      recipientId,
+      senderId: participantUserId,
+      kind: 'event_registration',
+      title: 'Nova inscricao no evento',
+      body,
       relatedClass: 'EventRegistration',
       relatedId: registration.id,
       actionRoute: `/event/${event.id}`,
     });
+  }
+}
+
+Parse.Cloud.afterSave('EventRegistration', async (request) => {
+  try {
+    await notifyEventRegistrationMailbox(request.object, request);
+  } catch (error) {
+    console.error('notifyEventRegistrationMailbox failed', error);
   }
 });
 

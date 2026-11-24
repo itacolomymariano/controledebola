@@ -20,7 +20,8 @@ Cloud: `setPushNotificationsEnabled` / `getPushNotificationsEnabled`. Desligar d
 | `team_match_created` | Cloud `createTeamMatch` | Elenco ativo dos dois times + presidentes + confirmados + contratados aceitos (exceto quem criou) | `collectTeamMatchNotifyUserIds` + `notifyTeamMatchStakeholders`. Convocados tambem recebem `hiring_invite` |
 | `match_challenge` | Cloud `createMatchChallenge` | Presidente desafiado | Push + inbox |
 | `match_challenge_response` | Cloud `respondMatchChallenge` | Presidente desafiante | Aceite ou recusa com motivo |
-| `profile_presentation_request` | Registration → pending | Admin da pelada | `afterSave` EventRegistration |
+| `profile_presentation_request` | Inscricao nova com apresentacao pendente | Admin do evento / pelada | `afterSave` EventRegistration (+ push) |
+| _(caixa `event_registration`)_ | Inscricao nova confirmada na hora (ex. torcedor) | Admin do evento / pelada | `afterSave` EventRegistration (`AppMessage`, sem push) |
 | `profile_presentation_approved` / `_rejected` | Admin resolve apresentação | Participante | Cloud em `10-pelada.js` |
 | `event_admin_message` | Admin “Notificar participantes” | Confirmados efetivos | Cloud + UI `event-detail` |
 | `event_journal_reportage` | Cloud `publishEventJournalReportage` | Confirmados efetivos (exceto jornalista) | `12-event-media.js` |

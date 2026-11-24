@@ -1,0 +1,84 @@
+<ion-card class="ion-margin-top event-referee-arbitration-card">
+  <ion-card-header>
+    <div class="arbitration-card-header">
+      <div>
+        <ion-card-title>{{ 'eventRefereeArbitration.title' | t }}</ion-card-title>
+        <ion-card-subtitle class="ion-text-wrap">
+          {{ 'eventRefereeArbitration.subtitle' | t }}
+        </ion-card-subtitle>
+      </div>
+      @if (viewModel && !loading) {
+        <ion-chip [color]="phaseColor()" class="phase-chip">
+          <ion-label>{{ phaseLabel() }}</ion-label>
+        </ion-chip>
+      }
+    </div>
+  </ion-card-header>
+  <ion-card-content>
+    @if (loading) {
+      <div class="ion-text-center ion-padding">
+        <ion-spinner name="crescent"></ion-spinner>
+      </div>
+    } @else if (viewModel) {
+      @if (viewModel.acceptedRefereeName && (phase === 'confirmed' || phase === 'present')) {
+        <p class="ion-text-wrap">
+          {{ 'eventRefereeArbitration.confirmedReferee' | t: { name: viewModel.acceptedRefereeName } }}
+        </p>
+      }
+      @if (phase === 'none') {
+        <p class="ion-text-wrap ion-margin-bottom">
+          {{ 'eventRefereeArbitration.noRefereeYet' | t }}
+        </p>
+      }
+
+      @if (viewModel.showConfrontoTimeline && viewModel.timeline.length) {
+        <div class="referee-timeline ion-margin-bottom" role="list">
+          @for (step of viewModel.timeline; track step.id) {
+            <div
+              class="referee-timeline-step"
+              role="listitem"
+              [class.done]="step.done"
+              [class.current]="step.current"
+            >
+              <span class="referee-timeline-dot" aria-hidden="true"></span>
+              <span class="referee-timeline-label">{{ timelineStepLabel(step.id) }}</span>
+            </div>
+          }
+        </div>
+        @if (viewModel.hasPendingOpponentApproval) {
+          <ion-note color="warning" class="ion-display-block ion-margin-bottom">
+            {{ 'eventRefereeArbitration.inboxApprovalHint' | t }}
+          </ion-note>
+        }
+      }
+
+      @if (peladaShortcuts.length && event.type !== 'team_match') {
+        <div class="pelada-shortcuts ion-margin-bottom">
+          <p><strong>{{ 'eventRefereeArbitration.peladaShortcutsTitle' | t }}</strong></p>
+          <div class="shortcut-buttons">
+            @for (candidate of peladaShortcuts; track candidate.userId) {
+              <ion-button
+                size="small"
+                fill="outline"
+                (click)="reinvitePeladaReferee.emit(candidate)"
+              >
+                {{ 'eventRefereeArbitration.reinvite' | t: { name: shortcutName(candidate) } }}
+              </ion-button>
+            }
+          </div>
+        </div>
+      }
+
+      <ion-button expand="block" (click)="manageReferee.emit()">
+        <ion-icon name="ribbon-outline" slot="start"></ion-icon>
+        {{ 'eventRefereeArbitration.manageButton' | t }}
+      </ion-button>
+      @if (viewModel.hasPendingOpponentApproval) {
+        <ion-button expand="block" fill="outline" class="ion-margin-top" (click)="openInbox.emit()">
+          <ion-icon name="mail-outline" slot="start"></ion-icon>
+          {{ 'eventRefereeArbitration.openInbox' | t }}
+        </ion-button>
+      }
+    }
+  </ion-card-content>
+</ion-card>

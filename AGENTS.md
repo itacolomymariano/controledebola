@@ -190,7 +190,7 @@ splash → (onboarding?) → login/register → (profile-setup?) → tabs/pelada
 | Convite / App Links | Menu, Perfil, Sobre (`Convidar Amigos`) | `app-invite-share.service`, `deep-link.service` |
 | Conta | `login` (reset), `register`, `account-edit`, Perfil (`Excluir conta`) | `auth.service` — reset por codigo. SMTP em `MailSettings` (nao env vars). Exclusao via `deleteMyAccount`. Biometria: `biometric-unlock.service` (credenciais no aparelho; logout nao apaga) |
 | Contato | `contact/feedback`, `contact/support` | `contact-message.service` → Cloud `sendContactMessage` |
-| Mensagens | `inbox` (icone de e-mail do cabecalho) | `app-message.service` → Cloud `18-app-mailbox.js`. Registro permanente por mensagem (`AppMessage`): Entrada/Saida, busca e nao lidas. Fora da caixa: socio de pelada, apresentacao de perfil e `sendContactMessage` |
+| Mensagens | `inbox` (icone de e-mail do cabecalho) | `app-message.service` → Cloud `18-app-mailbox.js`. Registro permanente por mensagem (`AppMessage`): Entrada/Saida, busca e nao lidas. Inclui inscricao no evento (`event_registration`), apresentacao de perfil, socio, desafios, etc. Fora da caixa: `sendContactMessage`, lembrete 2h, push de teste |
 
 **Deep links / convite:** "Convidar Amigos" compartilha o link de **teste interno** da Play
 (`https://play.google.com/apps/internaltest/...`) enquanto nao houver listagem publica.
@@ -263,6 +263,17 @@ Apos deploy: rodar `configureMuralClassPermissions`, `configureMaterialClassPerm
 5. Valido com `npm run build`
 6. Antes de instalar no dispositivo: revisar [docs/SMOKE-TEST-PRE-INSTALL.md](docs/SMOKE-TEST-PRE-INSTALL.md)
 
+### Delegacao (Primeiro Coordenador)
+
+| Tarefa | Quem |
+|--------|------|
+| Mapa de codigo, “onde fica X?”, um dominio isolado | Subagent **explore** (quick/medium); incluir regra graphify no prompt |
+| Pagina + servico + Cloud + ACL | **Coordenador** (este fluxo) |
+| CI Play / TestFlight falhou | **ci-investigator** |
+| Bugbot / Security | So se o humano pedir |
+
+Antes de explore amplo: `docs/AGENT-ACTIVITY-CACHE.md` + `graphify query` (se `graphify-out/graph.json` existir).
+
 ---
 
 ## Documentacao
@@ -270,7 +281,7 @@ Apos deploy: rodar `configureMuralClassPermissions`, `configureMaterialClassPerm
 - **Nao e automatica** em cada ajuste pequeno: atualizo `docs/` e `AGENTS.md` quando a mudanca altera fluxo, Cloud Function, modelo de dados ou regra de negocio relevante.
 - Tarefas **complexas** (multiplos modulos, Cloud Code, ACL): atualizar tambem o guia completo em `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md`.
 - Regressoes: preferir Cloud Functions para listas admin; recarregar dados em `ionViewWillEnter`; rodar smoke test antes de instalar.
-- **Cache de atividades:** `docs/AGENT-ACTIVITY-CACHE.md` (mapa de perfis, gotchas, sessoes). Consultar no inicio de tarefas; atualizar apos intervencoes relevantes. Regra: `.cursor/rules/agent-activity-cache.mdc`.
+- **Cache de atividades:** `docs/AGENT-ACTIVITY-CACHE.md` (mapa de perfis, gotchas, sessoes). **Tríade:** este arquivo + (se complexa) `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` + cache no inicio/fim de tarefas. Regra: `.cursor/rules/agent-activity-cache.mdc`.
 - **Plano de testes por perfil:** `docs/PLANO-TESTES-PERFIS.md`.
 - **Fluxo sequencial (ciclo de vida):** `docs/FLUXO-TESTES-CICLO-DE-VIDA.md` — cadastros → pelada → evento → dia do jogo → mural.
 

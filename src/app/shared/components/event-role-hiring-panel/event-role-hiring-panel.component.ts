@@ -42,6 +42,10 @@ export class EventRoleHiringPanelComponent implements OnChanges {
   @Input() seedInvitationCount = 0;
   /** Em confronto, lados que o usuario pode usar ao convocar atleta. */
   @Input() allowedTeamSides: Array<'home' | 'away'> = ['home', 'away'];
+  /** IDs de árbitros que já arbitraram eventos desta pelada (prioridade nas sugestões). */
+  @Input() peladaFrequentRefereeUserIds: string[] = [];
+  /** Pré-seleciona candidato ao abrir o painel (atalho de reconvite). */
+  @Input() refereePreselectUserId = '';
 
   @Output() invitationsChanged = new EventEmitter<void>();
   @Output() panelInteraction = new EventEmitter<HireableRole>();
@@ -52,6 +56,7 @@ export class EventRoleHiringPanelComponent implements OnChanges {
   searchLoading = false;
   allCandidates: EventInviteCandidate[] = [];
   displayedCandidates: EventInviteCandidate[] = [];
+  proactiveRefereeSuggestions: EventInviteCandidate[] = [];
   invitations: RefereeInvitation[] = [];
   inviteUserId = '';
   offeredAmount: number | null = null;
@@ -136,6 +141,10 @@ export class EventRoleHiringPanelComponent implements OnChanges {
     return this.event.type === 'team_match' && this.role === 'referee';
   }
 
+  get showProactiveRefereeSuggestions(): boolean {
+    return this.role === 'referee' && !this.search.trim() && !this.selectedCandidate;
+  }
+
   get isTeamMatchAthleteHiring(): boolean {
     return this.event.type === 'team_match' && this.role === 'athlete';
   }
@@ -159,6 +168,10 @@ export class EventRoleHiringPanelComponent implements OnChanges {
   ngOnChanges(): void {
     this.applyDefaultResponseDeadline();
     this.applyDefaultTeamSide();
+    const preselect = this.refereePreselectUserId?.trim();
+    if (this.role === 'referee' && preselect) {
+      void this.preselectCandidateByUserId(preselect);
+    }
   }
 
   onExpand(): void {
@@ -194,6 +207,34 @@ export class EventRoleHiringPanelComponent implements OnChanges {
   onSearchClear(): void {
     this.search = '';
     this.displayedCandidates = [];
+    void this.refreshProactiveRefereeSuggestions();
+    this.cdr.markForCheck();
+  }
+
+  async preselectCandidateByUserId(userId: string): Promise<void> {
+    if (!userId?.trim() || this.role !== 'referee') return;
+    await this.ensureExpandedLoad();
+
+    let candidate = this.findCandidate(userId);
+    if (!candidate) {
+      candidate = this.proactiveRefereeSuggestions.find((item) => item.userId === userId);
+    }
+    if (!candidate) {
+      const fromPelada = this.peladaFrequentRefereeUserIds.includes(userId);
+      if (fromPelada) {
+        const suggestions = await this.roleProfileService.suggestRefereeCandidatesForEvent(
+          this.event.address,
+          { preferredUserIds: this.peladaFrequentRefereeUserIds, limit: 20 }
+        );
+        candidate = suggestions.find((item) => item.userId === userId);
+        if (candidate) {
+          this.mergeCandidatesCache([candidate]);
+        }
+      }
+    }
+    if (candidate) {
+      this.selectCandidate(candidate);
+    }
     this.cdr.markForCheck();
   }
 
@@ -587,7 +628,14 @@ export class EventRoleHiringPanelComponent implements OnChanges {
       await this.reloadInvitations();
 
       await this.loadCandidates();
+      if (this.role === 'referee') {
+        await this.refreshProactiveRefereeSuggestions();
+      }
       await this.applySearch();
+      const preselect = this.refereePreselectUserId?.trim();
+      if (this.role === 'referee' && preselect) {
+        await this.preselectCandidateByUserId(preselect);
+      }
     } finally {
       this.loading = false;
       this.dataLoaded = true;
@@ -623,6 +671,14 @@ export class EventRoleHiringPanelComponent implements OnChanges {
       return;
     }
 
+    if (this.role === 'referee') {
+      this.allCandidates = await this.roleProfileService.suggestRefereeCandidatesForEvent(
+        this.event.address,
+        { preferredUserIds: this.peladaFrequentRefereeUserIds, limit: 40 }
+      );
+      return;
+    }
+
     const role = this.role as ProfessionalRole;
     const profileRole = this.role as ProfileRole;
     await this.profileSearchService.preloadCatalog(profileRole);
@@ -643,11 +699,28 @@ export class EventRoleHiringPanelComponent implements OnChanges {
     );
   }
 
+  private async refreshProactiveRefereeSuggestions(): Promise<void> {
+    if (this.role !== 'referee') {
+      this.proactiveRefereeSuggestions = [];
+      return;
+    }
+    const suggestions = await this.roleProfileService.suggestRefereeCandidatesForEvent(
+      this.event.address,
+      { preferredUserIds: this.peladaFrequentRefereeUserIds, limit: 8 }
+    );
+    this.proactiveRefereeSuggestions = suggestions;
+    this.mergeCandidatesCache(suggestions);
+    this.cdr.markForCheck();
+  }
+
   private async applySearch(): Promise<void> {
     const requestId = ++this.searchRequestId;
     const query = this.search.trim();
     if (!query) {
       this.displayedCandidates = [];
+      if (this.role === 'referee') {
+        await this.refreshProactiveRefereeSuggestions();
+      }
       this.cdr.markForCheck();
       return;
     }

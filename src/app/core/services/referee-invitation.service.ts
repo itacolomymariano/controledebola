@@ -4,6 +4,7 @@ import Parse from 'parse';
 import {
   CreateRefereeInvitationPayload,
   CreateSupplementaryInvitationPayload,
+  EventInviteCandidate,
   RefereeInvitation,
   RefereeInvitationStatus,
   SupplementaryHiringOpportunity,
@@ -23,6 +24,7 @@ import { AppStorageService } from './app-storage.service';
 
 const CLASS = 'RefereeInvitation';
 const EVENT_CLASS = 'Event';
+const PELADA_CLASS = 'Pelada';
 const REGISTRATION_CLASS = 'EventRegistration';
 
 @Injectable({ providedIn: 'root' })
@@ -315,6 +317,37 @@ export class RefereeInvitationService {
     query.limit(100);
     const results = await query.find();
     return results.map((obj) => this.toInvitation(obj));
+  }
+
+  /** Árbitros que já arbitraram eventos desta pelada (para atalhos de reconvite). */
+  async listPeladaRefereeShortcuts(peladaId: string, limit = 6): Promise<EventInviteCandidate[]> {
+    if (!peladaId?.trim()) return [];
+
+    const query = new Parse.Query(CLASS);
+    query.equalTo('pelada', Parse.Object.extend(PELADA_CLASS).createWithoutData(peladaId));
+    query.equalTo('role', 'referee');
+    query.equalTo('status', 'accepted');
+    query.include('invitedUser');
+    query.descending('createdAt');
+    query.limit(120);
+
+    const rows = await query.find();
+    const byUserId = new Map<string, EventInviteCandidate>();
+
+    for (const row of rows) {
+      const invitation = this.toInvitation(row);
+      const userId = invitation.invitedUserId;
+      if (!userId || byUserId.has(userId)) continue;
+      byUserId.set(userId, {
+        userId,
+        userName: invitation.invitedUserFullName || invitation.invitedUserName,
+        apelido: invitation.invitedUserApelido,
+        avatarUrl: invitation.invitedUserAvatarUrl,
+      });
+      if (byUserId.size >= limit) break;
+    }
+
+    return Array.from(byUserId.values());
   }
 
   async listAcceptedForSupplementaryHiring(): Promise<SupplementaryHiringOpportunity[]> {

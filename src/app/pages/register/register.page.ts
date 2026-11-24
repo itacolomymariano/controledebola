@@ -26,6 +26,7 @@ export const REGISTER_WIZARD_STEPS = [
   'contact',
   'security',
   'location',
+  'photo',
   'verify',
 ] as const;
 
@@ -36,6 +37,7 @@ const STEP_FIELDS: Record<RegisterWizardStep, string[]> = {
   contact: ['email', 'cpf', 'phone'],
   security: ['password', 'confirmPassword'],
   location: ['birthDate', 'address'],
+  photo: [],
   verify: ['signupCaptchaAnswer'],
 };
 
@@ -74,6 +76,9 @@ export class RegisterPage implements OnInit, OnDestroy {
 
   currentStepIndex = 0;
   canSubmit = false;
+  pendingAvatarFile: File | null = null;
+  pendingAvatarPreview: string | null = null;
+  photoStepTouched = false;
   showPassword = false;
   showConfirmPassword = false;
   signupChallengeQuestion = '';
@@ -179,6 +184,9 @@ export class RegisterPage implements OnInit, OnDestroy {
       if (this.currentStep === 'location') {
         this.addressForm?.armIncompleteHint();
       }
+      if (this.currentStep === 'photo') {
+        this.photoStepTouched = true;
+      }
       this.cdr.markForCheck();
       return;
     }
@@ -221,8 +229,10 @@ export class RegisterPage implements OnInit, OnDestroy {
     }
     if (step === 'location') {
       const birth = this.form.get('birthDate');
-      const birthOk = !birth?.value || birth.valid;
-      return birthOk && this.form.get('address')!.valid;
+      return !!birth?.valid && !!String(birth?.value || '').trim() && this.form.get('address')!.valid;
+    }
+    if (step === 'photo') {
+      return !!this.pendingAvatarFile;
     }
     if (step === 'verify') {
       return this.form.get('signupCaptchaAnswer')!.valid;
@@ -376,6 +386,10 @@ export class RegisterPage implements OnInit, OnDestroy {
   }
 
   async submit(): Promise<void> {
+    if (!this.pendingAvatarFile) {
+      await this.showError(this.i18n.t('register.photoRequired'));
+      return;
+    }
     if (!this.validateCurrentStep() || this.form.invalid) {
       this.form.markAllAsTouched();
       if (this.form.get('address')?.hasError('addressIncomplete')) {
@@ -391,6 +405,12 @@ export class RegisterPage implements OnInit, OnDestroy {
     }
 
     const v = this.form.getRawValue();
+    const birthIso = parseBirthDateIso(String(v.birthDate || ''));
+    if (!birthIso) {
+      await this.showError(this.i18n.t('register.birthDateIncomplete'));
+      return;
+    }
+
     const loading = await this.loadingCtrl.create({ message: this.i18n.t('register.creatingAccount') });
     await loading.present();
 
@@ -403,12 +423,16 @@ export class RegisterPage implements OnInit, OnDestroy {
         phone: v.phone || undefined,
         password: v.password!,
         address: v.address!,
-        birthDate: v.birthDate ? parseBirthDateIso(v.birthDate) ?? undefined : undefined,
+        birthDate: birthIso,
         signupChallengeId: v.signupChallengeId || undefined,
         signupCaptchaAnswer: v.signupCaptchaAnswer ? Number(v.signupCaptchaAnswer) : undefined,
         signupStartedAt: this.signupStartedAt,
         signupHoneypot: v.signupHoneypot || undefined,
       });
+
+      if (this.pendingAvatarFile) {
+        await this.auth.updateAvatar(this.pendingAvatarFile);
+      }
 
       await this.storage.clearRegisterDraft();
       await this.storage.setOnboardingComplete();
@@ -449,6 +473,18 @@ export class RegisterPage implements OnInit, OnDestroy {
       buttons: [this.i18n.t('common.ok')],
     });
     await alert.present();
+  }
+
+  onRegisterPhotoSelected(file: File): void {
+    this.pendingAvatarFile = file;
+    try {
+      this.pendingAvatarPreview = URL.createObjectURL(file);
+    } catch {
+      this.pendingAvatarPreview = null;
+    }
+    this.photoStepTouched = false;
+    this.refreshSubmitState();
+    this.cdr.markForCheck();
   }
 
   onCpfInput(event: CustomEvent): void {

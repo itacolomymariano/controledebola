@@ -1,6 +1,6 @@
 /**
  * Cloud Code — gerado por npm run build:cloud
- * Gerado em: 2026-11-13T18:10:30.033Z
+ * Gerado em: 2026-11-19T10:40:38.763Z
  * Copie o conteudo deste arquivo no Back4App (Server Settings > Cloud Code).
  * Fontes modulares em cloud/source/
  * NAO edite este arquivo direto — edite cloud/source/ e rode npm run build:cloud
@@ -530,6 +530,110 @@ function attachVoterReliabilityWeightsFromRows(voteRows) {
 
   return voteRows;
 }
+
+// --- 01f-user-app-reputation.js ---
+
+/** Reputacao de bom uso do app (perfil vs. rankings do mural — ex. altura extrema sem idade). */
+
+const APP_USAGE_REPUTATION_DEFAULT = 1;
+/** Abaixo disto o atleta nao entra em destaques de altura no Explorar. */
+const APP_USAGE_REPUTATION_HEIGHT_SHOWCASE_MIN = 0.6;
+/** Altura muito baixa sem data de nascimento: suspeita de aparecer no mural como "mais baixo". */
+const MURAL_SHORTEST_GAMING_MAX_HEIGHT_CM = 140;
+const APP_USAGE_REPUTATION_GAMING_SCORE = 0.45;
+
+function userHasShareableAge(user) {
+  if (!user) return false;
+  const birthDate = user.get('birthDate');
+  return birthDate instanceof Date && !Number.isNaN(birthDate.getTime());
+}
+
+/**
+ * @param {Parse.User|object} user
+ * @param {number} heightCm altura no AthleteProfile
+ */
+function isSuspectedMuralShortestGaming(user, heightCm) {
+  const height = Number(heightCm || 0);
+  if (height <= 0 || height > MURAL_SHORTEST_GAMING_MAX_HEIGHT_CM) return false;
+  return !userHasShareableAge(user);
+}
+
+function computeAppUsageReputationScore(user, heightCm) {
+  if (isSuspectedMuralShortestGaming(user, heightCm)) {
+    return APP_USAGE_REPUTATION_GAMING_SCORE;
+  }
+  return APP_USAGE_REPUTATION_DEFAULT;
+}
+
+function muralHeightShowcaseAllowedForUser(user) {
+  if (!user) return true;
+  if (user.get('muralHeightGamingSuspected')) return false;
+  const rep = Number(user.get('appUsageReputation'));
+  if (!Number.isNaN(rep) && rep > 0 && rep < APP_USAGE_REPUTATION_HEIGHT_SHOWCASE_MIN) {
+    return false;
+  }
+  return true;
+}
+
+async function refreshUserAppUsageReputationForUserId(userId) {
+  const uid = String(userId || '').trim();
+  if (!uid) return;
+
+  let user;
+  try {
+    user = await new Parse.Query(Parse.User).get(uid, { useMasterKey: true });
+  } catch {
+    return;
+  }
+
+  const athleteProfile = await new Parse.Query('AthleteProfile')
+    .equalTo('user', user)
+    .first({ useMasterKey: true });
+
+  const heightCm = athleteProfile ? Number(athleteProfile.get('height') || 0) : 0;
+  const gaming = isSuspectedMuralShortestGaming(user, heightCm);
+  const nextScore = computeAppUsageReputationScore(user, heightCm);
+
+  const prevScore = Number(user.get('appUsageReputation'));
+  const prevGaming = !!user.get('muralHeightGamingSuspected');
+
+  if (
+    !Number.isNaN(prevScore) &&
+    Math.abs(prevScore - nextScore) < 0.001 &&
+    prevGaming === gaming
+  ) {
+    return;
+  }
+
+  user.set('appUsageReputation', nextScore);
+  user.set('muralHeightGamingSuspected', gaming);
+  if (gaming) {
+    user.set('muralHeightGamingAt', new Date());
+  } else {
+    user.unset('muralHeightGamingAt');
+  }
+  await user.save(null, { useMasterKey: true });
+}
+
+Parse.Cloud.afterSave('AthleteProfile', async (request) => {
+  const profile = request.object;
+  if (!profile) return;
+  const user = profile.get('user');
+  const userId = user && (user.id || user.objectId);
+  if (userId) await refreshUserAppUsageReputationForUserId(userId);
+});
+
+Parse.Cloud.afterSave(Parse.User, async (request) => {
+  const user = request.object;
+  if (!user || !user.id) return;
+  const orig = request.original;
+  const origDate = orig ? orig.get('birthDate') : undefined;
+  const nextDate = user.get('birthDate');
+  const origTime = origDate instanceof Date ? origDate.getTime() : 0;
+  const nextTime = nextDate instanceof Date ? nextDate.getTime() : 0;
+  if (origTime === nextTime) return;
+  await refreshUserAppUsageReputationForUserId(user.id);
+});
 
 // --- 02-core.js ---
 
@@ -1937,10 +2041,13 @@ Parse.Cloud.afterSave('Event', async (request) => {
   }
 });
 
-Parse.Cloud.afterSave('EventRegistration', async (request) => {
-  const registration = request.object;
-  if (registration.get('profilePresentationStatus') !== 'pending') return;
-  if (request.original && request.original.get('profilePresentationStatus') === 'pending') return;
+/**
+ * Caixa permanente para inscricao nova no evento (Entrada do admin, Saida do participante).
+ * Push so quando ha apresentacao de perfil pendente.
+ */
+async function notifyEventRegistrationMailbox(registration, request) {
+  if (request.original) return;
+  if (registration.get('invitedByContract') || registration.get('invitedAsReferee')) return;
 
   const eventPtr = registration.get('event');
   if (!eventPtr || !eventPtr.id) return;
@@ -1954,46 +2061,97 @@ Parse.Cloud.afterSave('EventRegistration', async (request) => {
 
   const pelada = await getPeladaFromEvent(event);
   if (!pelada || !pelada.id) return;
-  const admin = pelada.get('admin');
-  if (!admin || !admin.id) return;
+
+  let recipientId = '';
+  const eventAdmin = event.get('admin');
+  if (eventAdmin && eventAdmin.id) {
+    recipientId = String(eventAdmin.id);
+  } else {
+    const peladaAdmin = pelada.get('admin');
+    if (peladaAdmin && peladaAdmin.id) recipientId = String(peladaAdmin.id);
+  }
+  if (!recipientId) return;
+
+  let participantUserId = '';
+  if (typeof resolveRegistrationParticipantUserId === 'function') {
+    try {
+      const resolved = await resolveRegistrationParticipantUserId(registration);
+      participantUserId = String(resolved.userId || '');
+      if (resolved.shouldSave) {
+        try {
+          await registration.save(null, { useMasterKey: true });
+        } catch (error) {
+          console.error('notifyEventRegistrationMailbox participantUserId save failed', error);
+        }
+      }
+    } catch (error) {
+      console.error('notifyEventRegistrationMailbox resolve participant failed', error);
+    }
+  }
+  if (!participantUserId) {
+    participantUserId = String(
+      registration.get('participantUserId') ||
+        (registration.get('user') && registration.get('user').id) ||
+        (request.user && request.user.id) ||
+        ''
+    );
+  }
+  if (!participantUserId || participantUserId === recipientId) return;
 
   const participantName =
     registration.get('userDisplayName') || registration.get('apelido') || 'Participante';
   const eventName = event.get('name') || 'evento';
+  const presentationPending = registration.get('profilePresentationStatus') === 'pending';
+  const role = String(registration.get('role') || '');
+  const roleLabel = typeof hiringRoleLabel === 'function' ? hiringRoleLabel(role) : role || 'participante';
 
-  const requestAlert = `${participantName} pediu para participar do evento "${eventName}".`;
-  await sendPushToUser(admin.id, {
-    title: 'Nova solicitacao de participacao',
-    alert: requestAlert,
-    data: {
-      type: 'profile_presentation_request',
-      peladaId: pelada.id,
-      eventId: event.id,
-      registrationId: registration.id,
-    },
-  });
-
-  const participantUserId = String(
-    registration.get('participantUserId') ||
-      (registration.get('user') && registration.get('user').id) ||
-      (request.user && request.user.id) ||
-      ''
-  );
-  if (
-    typeof createAppMessage === 'function' &&
-    participantUserId &&
-    participantUserId !== admin.id
-  ) {
-    await createAppMessage({
-      recipientId: admin.id,
-      senderId: participantUserId,
-      kind: 'profile_presentation_request',
+  if (presentationPending) {
+    const requestAlert = `${participantName} pediu para participar do evento "${eventName}".`;
+    await sendPushToUser(recipientId, {
       title: 'Nova solicitacao de participacao',
-      body: requestAlert,
+      alert: requestAlert,
+      data: {
+        type: 'profile_presentation_request',
+        peladaId: pelada.id,
+        eventId: event.id,
+        registrationId: registration.id,
+      },
+    });
+    if (typeof createAppMessage === 'function') {
+      await createAppMessage({
+        recipientId,
+        senderId: participantUserId,
+        kind: 'profile_presentation_request',
+        title: 'Nova solicitacao de participacao',
+        body: requestAlert,
+        relatedClass: 'EventRegistration',
+        relatedId: registration.id,
+        actionRoute: `/event/${event.id}`,
+      });
+    }
+    return;
+  }
+
+  const body = `${participantName} inscreveu-se como ${roleLabel} no evento "${eventName}".`;
+  if (typeof createAppMessage === 'function') {
+    await createAppMessage({
+      recipientId,
+      senderId: participantUserId,
+      kind: 'event_registration',
+      title: 'Nova inscricao no evento',
+      body,
       relatedClass: 'EventRegistration',
       relatedId: registration.id,
       actionRoute: `/event/${event.id}`,
     });
+  }
+}
+
+Parse.Cloud.afterSave('EventRegistration', async (request) => {
+  try {
+    await notifyEventRegistrationMailbox(request.object, request);
+  } catch (error) {
+    console.error('notifyEventRegistrationMailbox failed', error);
   }
 });
 
@@ -3220,9 +3378,15 @@ Parse.Cloud.define('registerUser', async (request) => {
   if (normalizedPhone) {
     user.set('phone', normalizedPhone);
   }
-  if (params.birthDate) {
-    user.set('birthDate', new Date(params.birthDate));
+  const birthDateRaw = params.birthDate ? new Date(params.birthDate) : null;
+  if (!birthDateRaw || Number.isNaN(birthDateRaw.getTime())) {
+    throw new Parse.Error(
+      Parse.Error.VALIDATION_ERROR,
+      'Informe sua data de nascimento (dia, mes e ano). Ela e necessaria para os rankings do mural.'
+    );
   }
+  user.set('birthDate', birthDateRaw);
+  user.set('appUsageReputation', APP_USAGE_REPUTATION_DEFAULT);
 
   user.set('signupChallengeId', String(params.signupChallengeId || '').trim());
   user.set('signupCaptchaAnswer', Number(params.signupCaptchaAnswer));
@@ -4526,16 +4690,6 @@ Parse.Cloud.define('requestLegendTeamJoin', async (request) => {
         actionRoute: '/inbox',
       });
     }
-    await createAppMessage({
-      recipientId: user.id,
-      senderId: user.id,
-      kind: 'legend_team_join_outbox',
-      title: `Solicitacao enviada — ${teamLabel}`,
-      body: `Seu pedido para participar de "${teamLabel}" foi enviado aos responsaveis.`,
-      relatedClass: LEGEND_TEAM_JOIN_REQUEST_CLASS,
-      relatedId: row.id,
-      actionRoute: `/legends/team/${legendTeamId}`,
-    });
   }
 
   return mapLegendTeamJoinRequestRow(row);
@@ -6584,6 +6738,19 @@ async function loadEventMuralParticipantRows(eventId) {
       if (primaryPosition) {
         byUser[uid].profileLabel = primaryPosition;
       }
+    }
+
+    const userQuery = new Parse.Query(Parse.User);
+    userQuery.containedIn('objectId', userIdList);
+    userQuery.limit(Math.min(userIdList.length, 500));
+    const muralUsers = await userQuery.find({ useMasterKey: true });
+    for (const muralUser of muralUsers) {
+      const bucket = byUser[muralUser.id];
+      if (!bucket) continue;
+      bucket.muralHeightShowcaseBlocked =
+        typeof muralHeightShowcaseAllowedForUser === 'function'
+          ? !muralHeightShowcaseAllowedForUser(muralUser)
+          : false;
     }
   }
 
@@ -8928,6 +9095,7 @@ function buildEventMuralCuriositiesFromRows(rows) {
   const heightRows = [];
   for (const row of rows || []) {
     if (!muralParticipantHeightEligible(row)) continue;
+    if (row.muralHeightShowcaseBlocked) continue;
     const heightCm = Number(row.heightCm || 0);
     if (heightCm > 0) {
       heightRows.push({ row, heightCm });
@@ -10278,6 +10446,7 @@ function pickHeightShowcase(rows, mode, createdAtByUserId) {
   const eligible = [];
   for (const row of rows || []) {
     if (!muralParticipantHeightEligible(row)) continue;
+    if (row.muralHeightShowcaseBlocked) continue;
     const heightCm = Number(row.heightCm || 0);
     if (heightCm > 0) eligible.push({ row, heightCm });
   }
@@ -10407,6 +10576,10 @@ async function loadExploreAthleteProfileRows(locationFilter) {
         ? resolveStoredAvatarUrl(user, null)
         : String(user.get('avatarUrl') || profile.get('userAvatarUrl') || '').trim()) || undefined;
     const pos = String(profile.get('primaryPosition') || '').trim();
+    const heightShowcaseBlocked =
+      typeof muralHeightShowcaseAllowedForUser === 'function'
+        ? !muralHeightShowcaseAllowedForUser(user)
+        : false;
 
     rows.push({
       userId: String(user.id),
@@ -10417,6 +10590,7 @@ async function loadExploreAthleteProfileRows(locationFilter) {
       avatarUrl,
       heightCm: height > 0 ? height : 0,
       profileLabel: pos || 'Atleta',
+      muralHeightShowcaseBlocked: heightShowcaseBlocked,
     });
   }
 
@@ -22618,16 +22792,6 @@ Parse.Cloud.define('requestAmateurTeamJoin', async (request) => {
       relatedClass: TEAM_JOIN_REQUEST_CLASS,
       relatedId: row.id,
       actionRoute: '/inbox',
-    });
-    await createAppMessage({
-      recipientId: user.id,
-      senderId: user.id,
-      kind: 'amateur_team_join_outbox',
-      title: `Solicitacao enviada — ${teamName}`,
-      body: `Seu pedido para participar de "${teamName}" foi enviado ao presidente.`,
-      relatedClass: TEAM_JOIN_REQUEST_CLASS,
-      relatedId: row.id,
-      actionRoute: `/team/${teamId}`,
     });
   }
 

@@ -27,6 +27,7 @@ import { MuralHighlightsPanelComponent } from './components/mural-highlights-pan
 import { MuralPeriodRankingsCardComponent } from './components/mural-period-rankings-card/mural-period-rankings-card.component';
 import { MuralShowcaseEntryComponent } from './components/mural-showcase-entry/mural-showcase-entry.component';
 import { EventRoleHiringPanelComponent } from './components/event-role-hiring-panel/event-role-hiring-panel.component';
+import { EventRefereeArbitrationCardComponent } from './components/event-referee-arbitration-card/event-referee-arbitration-card.component';
 import { MuralParticipantStatsComponent } from './components/mural-participant-stats/mural-participant-stats.component';
 import { MuralLocationTopRankingsComponent } from './components/mural-location-top-rankings/mural-location-top-rankings.component';
 import { MuralPredictionRankingsComponent } from './components/mural-prediction-rankings/mural-prediction-rankings.component';
@@ -92,6 +93,7 @@ import { PlayedTeamListComponent } from './components/played-team-list/played-te
     MuralPeriodRankingsCardComponent,
     MuralShowcaseEntryComponent,
     EventRoleHiringPanelComponent,
+    EventRefereeArbitrationCardComponent,
     MuralParticipantStatsComponent,
     MuralLocationTopRankingsComponent,
     MuralPredictionRankingsComponent,
@@ -157,6 +159,7 @@ import { PlayedTeamListComponent } from './components/played-team-list/played-te
     MuralPeriodRankingsCardComponent,
     MuralShowcaseEntryComponent,
     EventRoleHiringPanelComponent,
+    EventRefereeArbitrationCardComponent,
     MuralParticipantStatsComponent,
     MuralLocationTopRankingsComponent,
     MuralPredictionRankingsComponent,

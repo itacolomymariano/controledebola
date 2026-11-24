@@ -33,7 +33,47 @@
 
     @if (!dataLoaded && !loading) {
       <ion-note color="medium">Carregando candidatos...</ion-note>
-    } @else if (dataLoaded && !search.trim() && !selectedCandidate) {
+    } @else if (dataLoaded && !search.trim() && !selectedCandidate && !showProactiveRefereeSuggestions) {
+      <ion-note color="medium">
+        Digite nome ou apelido para buscar {{ roleLabel.toLowerCase() }}.
+      </ion-note>
+    } @else if (showProactiveRefereeSuggestions && proactiveRefereeSuggestions.length) {
+      <ion-note color="medium" class="ion-display-block ion-margin-bottom">
+        {{ 'roleHiringPanel.refereeSuggestionsHint' | t }}
+      </ion-note>
+      <ion-list lines="none" class="candidate-results playful-elevated-list">
+        @for (candidate of proactiveRefereeSuggestions; track candidate.userId) {
+          <ion-item
+            detail="false"
+            [class.candidate-selected]="candidate.userId === inviteUserId"
+            (click)="onCandidateClick(candidate, $event)"
+          >
+            <app-user-avatar
+              slot="start"
+              [avatarUrl]="candidate.avatarUrl"
+              [alt]="candidate.apelido || candidate.userName"
+              size="md"
+            ></app-user-avatar>
+            <ion-label class="ion-text-wrap">
+              <h2>{{ candidate.apelido || candidate.userName }}</h2>
+              @if (formatCandidateSubtitle(candidate)) {
+                <p>{{ formatCandidateSubtitle(candidate) }}</p>
+              }
+            </ion-label>
+            <ion-button
+              fill="clear"
+              slot="end"
+              (click)="viewCandidateProfile(candidate, $event)"
+            >
+              Ver perfil
+            </ion-button>
+          </ion-item>
+        }
+      </ion-list>
+      <ion-note color="medium" class="ion-display-block ion-margin-top">
+        Digite nome ou apelido para refinar a busca.
+      </ion-note>
+    } @else if (showProactiveRefereeSuggestions && !proactiveRefereeSuggestions.length) {
       <ion-note color="medium">
         Digite nome ou apelido para buscar {{ roleLabel.toLowerCase() }}.
       </ion-note>

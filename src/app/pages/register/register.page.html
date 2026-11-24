@@ -153,10 +153,16 @@
         <div class="register-field-row-help">
           <app-birth-date-picker
             formControlName="birthDate"
+            [required]="true"
             [label]="'register.birthDateLabel' | t"
           ></app-birth-date-picker>
           <app-field-help textKey="register.birthDateHint"></app-field-help>
         </div>
+        @if (form.get('birthDate')?.touched && form.get('birthDate')?.hasError('required')) {
+          <ion-note color="danger" class="ion-padding-horizontal">
+            {{ 'register.birthDateRequired' | t }}
+          </ion-note>
+        }
         @if (form.get('birthDate')?.touched && form.get('birthDate')?.hasError('incompleteBirthDate')) {
           <ion-note color="danger" class="ion-padding-horizontal">
             {{ 'register.birthDateIncomplete' | t }}
@@ -185,6 +191,20 @@
         @if (form.get('address')?.touched && form.get('address')?.hasError('addressIncomplete')) {
           <ion-note color="danger" class="ion-padding-horizontal">
             {{ 'register.addressError' | t }}
+          </ion-note>
+        }
+      }
+
+      @case ('photo') {
+        <app-image-picker
+          [label]="'register.photoLabel' | t"
+          [hint]="'register.photoHint' | t"
+          [previewUrl]="pendingAvatarPreview"
+          (imageSelected)="onRegisterPhotoSelected($event)"
+        ></app-image-picker>
+        @if (photoStepTouched && !pendingAvatarFile) {
+          <ion-note color="danger" class="ion-padding-horizontal">
+            {{ 'register.photoRequired' | t }}
           </ion-note>
         }
       }

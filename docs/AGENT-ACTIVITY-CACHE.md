@@ -2,7 +2,49 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-11-15 (i18n onda 6 — scan v2 0)
+**Ultima atualizacao:** 2026-11-24 (Recapitulação Primeiro Coordenador pós-reinstall Windows)
+
+### 2026-11-24 — Recapitulação coordenador (reinstall Windows)
+
+- **Tríade de entrada (obrigatória):** `AGENTS.md` → classificar simples/complexa (`.cursor/rules/agent-documentation-gate.mdc`) → se complexa, `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md`; contexto recente **sempre** neste cache antes de varrer código.
+- **Perdido com SO (mitigação):** chats Cursor antigos — usar este cache + git remoto; **mantido no clone:** `environment.local.ts`, `android/keystore.properties`, `node_modules`, build **403** / marketing `1.0.16`.
+- **Ambiente pós-recap:** git `safe.directory` em `D:/Ita/git/minhapelada`; Python 3.12 + `pip install graphifyy` (+ `anyio` para `graphify query`); `graphify update .` → `graphify-out/` (8045 nós, nov/2025).
+- **Git:** `HEAD` = `origin/main` @ `428bd58` (release 1.0.16 build 398); **muitas alterações locais não commitadas** (nov/19: arbitragem, cadastro, Cloud `01f`, mailbox, i18n).
+- **Delegação (custo):** mapas “onde fica X?” → subagent **explore** (quick/medium); fluxo página+serviço+Cloud → **Coordenador**; CI loja → **ci-investigator**; Bugbot/Security só se humano pedir.
+- **Pendências herdadas (nov/2025):** deploy Cloud após todo touch em `cloud/source/`; i18n `throw` em `core/services/`; checklist manual `PROD-READINESS-CHECKLIST-2026-10-31.md`; manual/site `MANUAL-CAPTURA-STATUS.md`.
+- **Retomada sugerida:** smoke `build:cloud` + `check:i18n:scan:v2` + `npm run build`; validar Back4App prod (`01f`, mailbox `03`).
+
+### 2026-11-19 — Arbitragem Opção A (event-detail)
+
+- **UI:** card `app-event-referee-arbitration-card` (status chip, linha do tempo confronto, atalhos pelada, CTA contratação + inbox); painel `referee` com sugestões proativas (proximidade + histórico pelada + nota mural).
+- **Serviços:** `listPeladaRefereeShortcuts`, `suggestRefereeCandidatesForEvent`; util `referee-hiring-state.util.ts`.
+- **Sem Cloud novo** — só cliente.
+
+### 2026-11-19 — Cadastro: foto + nascimento obrigatorios; reputacao altura mural
+
+- **Wizard `register`:** passo `photo` (entre local e verificacao); `birthDate` obrigatorio (`app-birth-date-picker` `[required]`); upload avatar apos `registerUser`.
+- **Cloud:** `04-auth-signup.js` exige `birthDate`; novo `01f-user-app-reputation.js` — `appUsageReputation` / `muralHeightGamingSuspected` (altura ≤140 cm sem nascimento); hooks `AthleteProfile` + `User.birthDate`; `07-mural.js` exclui bloqueados de destaques de altura.
+- **Deploy:** `npm run build:cloud` + publicar `cloud/main.js`.
+
+### 2026-11-17 — Play: falha atualizar build 398
+
+### 2026-11-17 — Play: “Não foi possível instalar” ao atualizar build 398
+
+- **Play:** `versionCode` **398** / `2026.11.15.0398` = commit `428bd58`; main local já **399** — irrelevante para loja, mas bloqueia downgrade no aparelho se sideload > 398.
+- **Back4App `main.js`:** não causa erro de instalação na Play (só runtime pós-abrir).
+- **Hipóteses P0 (dispositivo):** assinatura conflitante (APK release local/USB vs Play App Signing); `versionCode` instalado **>** 398; espaço/cache Play.
+- **Sandbox:** `com.minhapelada.app.sandbox` — não sobrescreve app da Play (`com.minhapelada.app`).
+- **ADB:** Samsung SM-A376B — `versionCode` **397**, `installerPackageName=null` (sideload); upgrade Play **398** falhou por assinatura.
+- **Resolvido:** desinstalar APK local → instalar só pela Play; próximas atualizações da loja devem funcionar.
+- Relatório: agent explore [Android Play install audit](aa0fd8fc-aed1-4d72-b4a3-45b3a3cfd75c).
+
+### 2026-11-16 — Caixa: inscricao no evento (torcedor e demais perfis)
+
+- **Causa:** `afterSave EventRegistration` so gravava `AppMessage` com `profilePresentationStatus === 'pending'`; inscricao direta (ex. torcedor Arena Fire) nao aparecia na Saida.
+- **Correcao:** `notifyEventRegistrationMailbox` em `03-push-notifications.js` — toda inscricao nova (exceto convite/contrato) gera `AppMessage` (`event_registration` ou `profile_presentation_request`); push so no fluxo pendente.
+- **Limpeza:** removido `createAppMessage` com `senderId === recipientId` em `05-legends.js` e `15-amateur-teams.js` (nunca persistia).
+- **Deploy:** `npm run build:cloud` + publicar `cloud/main.js` no Back4App (obrigatorio para efeito em prod).
+- **Smoke:** inscrever como torcedor → Inbox Saida → “Mensagens enviadas”; admin → Entrada.
 
 ### 2026-11-15 — i18n onda 6 (varredura hardcode → chaves)
 

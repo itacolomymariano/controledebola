@@ -847,16 +847,6 @@ Parse.Cloud.define('requestAmateurTeamJoin', async (request) => {
       relatedId: row.id,
       actionRoute: '/inbox',
     });
-    await createAppMessage({
-      recipientId: user.id,
-      senderId: user.id,
-      kind: 'amateur_team_join_outbox',
-      title: `Solicitacao enviada — ${teamName}`,
-      body: `Seu pedido para participar de "${teamName}" foi enviado ao presidente.`,
-      relatedClass: TEAM_JOIN_REQUEST_CLASS,
-      relatedId: row.id,
-      actionRoute: `/team/${teamId}`,
-    });
   }
 
   return mapAmateurTeamJoinRequestRow(row);

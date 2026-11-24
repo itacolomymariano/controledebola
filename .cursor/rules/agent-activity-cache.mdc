@@ -22,6 +22,12 @@ Apos concluir trabalho relevante, acrescente em `docs/AGENT-ACTIVITY-CACHE.md`:
 3. Achados (bugs, gotchas, decisoes)
 4. Pendencias abertas
 
+## Delegacao (custo)
+
+- Exploracao ampla ou localizar um arquivo/servico → subagent **explore** (quick), com graphify no prompt.
+- Fluxo multi-camada (UI + `core/services` + `cloud/source`) → agente principal (Coordenador), nao encadear explores caros.
+- Ver tabela em `AGENTS.md` secao **Delegacao**.
+
 ## Regras
 
 - Manter secoes curtas; nao duplicar o guia completo
