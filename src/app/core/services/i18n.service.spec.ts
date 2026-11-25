@@ -12,18 +12,18 @@ describe('I18nService', () => {
     service: I18nService;
     setLocaleSpy: jasmine.Spy;
     tickSpy: jasmine.Spy;
+    httpGetSpy: jasmine.Spy;
   } {
     const storage: Pick<AppStorageService, 'getLocale' | 'setLocale'> = {
       getLocale: async () => null,
       setLocale: async () => undefined,
     };
-    const http = {
-      get: (url: string) => {
-        if (url.includes('en-GB')) return of(en);
-        if (url.includes('es-ES')) return of(es);
-        return of(pt);
-      },
-    };
+    const httpGetSpy = jasmine.createSpy('get').and.callFake((url: string) => {
+      if (url.includes('en-GB')) return of(en);
+      if (url.includes('es-ES')) return of(es);
+      return of(pt);
+    });
+    const http = { get: httpGetSpy };
     const appRef = { tick: () => undefined } as ApplicationRef;
     const tickSpy = spyOn(appRef, 'tick');
     const ngZone = { run: (fn: () => void) => fn() } as NgZone;
@@ -33,7 +33,7 @@ describe('I18nService', () => {
       appRef,
       ngZone
     );
-    return { service, setLocaleSpy: jasmine.createSpy(), tickSpy };
+    return { service, setLocaleSpy: jasmine.createSpy(), tickSpy, httpGetSpy };
   }
 
   it('isAppLocale accepts only configured locales', async () => {
@@ -58,5 +58,15 @@ describe('I18nService', () => {
     tickSpy.calls.reset();
     await service.applyAppLocale('pt-BR');
     expect(tickSpy).not.toHaveBeenCalled();
+  });
+
+  it('setLocale uses precached dict without extra HTTP after init', async () => {
+    const { service, httpGetSpy } = createService();
+    await service.init();
+    const callsAfterInit = httpGetSpy.calls.count();
+    await service.applyAppLocale('en-GB');
+    await service.applyAppLocale('es-ES');
+    await service.applyAppLocale('pt-BR');
+    expect(httpGetSpy.calls.count()).toBe(callsAfterInit);
   });
 });

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/core';
+import { LocaleRefreshDirective } from '../../shared/directives/locale-refresh.directive';
 import { ActivatedRoute } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
 import { EventMediaService } from '../../core/services/event-media.service';
@@ -11,6 +12,7 @@ type JournalSection = 'reportage' | 'interview';
   templateUrl: './event-journalist-journal.page.html',
   styleUrls: ['./event-journalist-journal.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class EventJournalistJournalPage {

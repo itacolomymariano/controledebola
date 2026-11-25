@@ -16,6 +16,8 @@ import {
   MuralService,
 } from '../../../core/services/mural.service';
 import { I18nService } from '../../../core/services/i18n.service';
+import { muralPlayfulNestedTone } from '../../../core/utils/mural-playful-tone.util';
+import { PlayfulCardTone } from '../playful-card/playful-card.component';
 
 export type MuralPeriodRankMetric = 'goals' | 'yellowCards' | 'redCards';
 
@@ -44,6 +46,12 @@ export class MuralPeriodRankingsCardComponent implements OnInit, OnChanges {
 
   readonly spotlightRow1: MuralPeriodSpotlightKey[] = ['craque', 'goleador', 'melhorGoleiro'];
   readonly spotlightRow2: MuralPeriodSpotlightKey[] = ['melhorJuiz', 'yellowCards', 'redCards'];
+
+  readonly periodParentTone: PlayfulCardTone = 'peladas';
+
+  periodNestedTone(childIndex: number): PlayfulCardTone {
+    return muralPlayfulNestedTone(this.periodParentTone, childIndex);
+  }
 
   constructor(
     private readonly muralService: MuralService,

@@ -1,3 +1,4 @@
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -15,6 +16,7 @@ export type PlayfulCardTone = 'surface' | 'muted' | 'peladas' | 'confrontos' | '
   templateUrl: './playful-card.component.html',
   styleUrls: ['./playful-card.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class PlayfulCardComponent {

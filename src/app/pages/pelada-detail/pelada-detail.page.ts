@@ -19,6 +19,11 @@ import {
 } from '../../core/models/pelada-participant.model';
 import { ProfileRole } from '../../core/models/profile-role.model';
 import { muralRankingBadgeLabel } from '../../core/utils/mural-ranking.util';
+import {
+  muralPlayfulNestedTone,
+  muralPlayfulToneByIndex,
+} from '../../core/utils/mural-playful-tone.util';
+import { PlayfulCardTone } from '../../shared/components/playful-card/playful-card.component';
 import { MuralRankingEntry } from '../../core/models/mural.model';
 import { MuralHighlights } from '../../core/models/mural-highlights.model';
 import { MuralParticipantLocationStats } from '../../core/models/mural-participant-stats.model';
@@ -103,6 +108,11 @@ export class PeladaDetailPage implements OnDestroy {
   muralShareContext: MuralShareContext | null = null;
   participantStats: MuralParticipantLocationStats | null = null;
   muralRoles = Object.keys(MURAL_TARGET_ROLE_LABELS) as MuralTargetRole[];
+  readonly muralPlayfulToneByIndex = muralPlayfulToneByIndex;
+
+  muralRankNestedTone(parent: PlayfulCardTone, childIndex: number): PlayfulCardTone {
+    return muralPlayfulNestedTone(parent, childIndex);
+  }
   participants: PeladaParticipant[] = [];
   participantSearch = '';
   socioListRows: SocioListRow[] = [];

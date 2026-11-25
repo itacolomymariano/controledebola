@@ -55,6 +55,10 @@ export interface MuralRankingEntry {
   locationState?: string;
   locationCity?: string;
   locationNeighborhood?: string;
+  /** Idade do atleta (User.birthDate) quando o mural enriquece o ranking. */
+  age?: number;
+  /** Slug de posicao principal (AthleteProfile). */
+  primaryPosition?: string;
 }
 
 export interface CreateMuralVotePayload {

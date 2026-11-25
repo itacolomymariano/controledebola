@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 import { ToastController } from '@ionic/angular';
 
 @Component({
@@ -6,6 +7,7 @@ import { ToastController } from '@ionic/angular';
   templateUrl: './record-id-note.component.html',
   styleUrls: ['./record-id-note.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class RecordIdNoteComponent {

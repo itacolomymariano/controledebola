@@ -123,6 +123,7 @@ export class SearchPage implements OnInit, OnDestroy {
     this.rebuildLocalizedFilters();
     this.localeSub = this.i18n.locale$.subscribe(() => {
       this.rebuildLocalizedFilters();
+      this.cdr.markForCheck();
     });
   }
 

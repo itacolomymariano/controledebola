@@ -98,10 +98,24 @@ ion-item:has(ion-select[labelPlacement='stacked']) {
   width: 100%;
 
   ion-card-title,
-  ion-card-subtitle {
+  ion-card-subtitle,
+  h2,
+  h3,
+  h4 {
     flex: 1;
     min-width: 0;
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: manual;
+    line-height: 1.25;
   }
+}
+
+.mural-card-header-end {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 2px;
 }
 
 .mural-filter-line {
@@ -134,14 +148,148 @@ ion-item:has(ion-select[labelPlacement='stacked']) {
   margin-top: 12px;
   padding: 10px;
   border-radius: 14px;
-  background: var(--cb-playful-card-muted, var(--cb-playful-card-surface, #fff));
+  background: color-mix(in srgb, var(--cb-playful-card-surface, #fff) 72%, transparent);
   box-shadow: 0 2px 8px rgba(30, 20, 60, 0.06);
+}
+
+.cb-playful-card--peladas .mural-playful-rank-row {
+  background: color-mix(in srgb, var(--cb-playful-tone-peladas-bg) 55%, #fff 45%);
+}
+
+.cb-playful-card--confrontos .mural-playful-rank-row {
+  background: color-mix(in srgb, var(--cb-playful-tone-confrontos-bg) 55%, #fff 45%);
+}
+
+.cb-playful-card--times .mural-playful-rank-row {
+  background: color-mix(in srgb, var(--cb-playful-tone-times-bg) 55%, #fff 45%);
+}
+
+.cb-playful-card--users .mural-playful-rank-row {
+  background: color-mix(in srgb, var(--cb-playful-tone-users-bg) 55%, #fff 45%);
+}
+
+.mural-playful-accordion-header {
+  --background: var(--cb-playful-tone-users-bg);
+  --color: var(--cb-playful-text);
+  border-radius: var(--cb-playful-radius-sm);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.mural-playful-screen {
+  > ion-card {
+    margin-inline: 0;
+    border-radius: var(--cb-playful-radius);
+    box-shadow: var(--cb-playful-shadow);
+  }
+
+  > ion-card:nth-of-type(4n + 1),
+  ion-accordion [slot='content'] > ion-card:nth-of-type(4n + 1) {
+    --background: var(--cb-playful-tone-peladas-bg);
+  }
+
+  > ion-card:nth-of-type(4n + 2),
+  ion-accordion [slot='content'] > ion-card:nth-of-type(4n + 2) {
+    --background: var(--cb-playful-tone-confrontos-bg);
+  }
+
+  > ion-card:nth-of-type(4n + 3),
+  ion-accordion [slot='content'] > ion-card:nth-of-type(4n + 3) {
+    --background: var(--cb-playful-tone-times-bg);
+  }
+
+  > ion-card:nth-of-type(4n),
+  ion-accordion [slot='content'] > ion-card:nth-of-type(4n) {
+    --background: var(--cb-playful-tone-users-bg);
+  }
+}
+
+.match-rank-card--nested {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: var(--cb-playful-radius-sm);
+  background: color-mix(in srgb, var(--cb-playful-card-surface, #fff) 65%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cb-playful-text) 8%, transparent);
+  box-shadow: none;
+}
+
+.cb-playful-card--peladas .match-rank-card--nested {
+  background: color-mix(in srgb, var(--cb-playful-tone-peladas-bg) 40%, #fff 60%);
+}
+
+.cb-playful-card--confrontos .match-rank-card--nested {
+  background: color-mix(in srgb, var(--cb-playful-tone-confrontos-bg) 40%, #fff 60%);
+}
+
+.cb-playful-card--times .match-rank-card--nested {
+  background: color-mix(in srgb, var(--cb-playful-tone-times-bg) 40%, #fff 60%);
+}
+
+.cb-playful-card--users .match-rank-card--nested {
+  background: color-mix(in srgb, var(--cb-playful-tone-users-bg) 40%, #fff 60%);
+}
+
+.match-rank-card--child-peladas {
+  background: color-mix(in srgb, var(--cb-playful-tone-peladas-bg) 40%, #fff 60%);
+}
+
+.match-rank-card--child-confrontos {
+  background: color-mix(in srgb, var(--cb-playful-tone-confrontos-bg) 40%, #fff 60%);
+}
+
+.match-rank-card--child-times {
+  background: color-mix(in srgb, var(--cb-playful-tone-times-bg) 40%, #fff 60%);
+}
+
+.match-rank-card--child-users {
+  background: color-mix(in srgb, var(--cb-playful-tone-users-bg) 40%, #fff 60%);
 }
 
 .mural-playful-rank-pos {
   font-weight: 700;
   min-width: 1.5rem;
   text-align: center;
+}
+
+.mural-playful-rank-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(30, 20, 60, 0.08);
+}
+
+.mural-playful-rank-entry--peladas {
+  background: color-mix(in srgb, var(--cb-playful-tone-peladas-bg) 78%, #fff 22%);
+}
+
+.mural-playful-rank-entry--confrontos {
+  background: color-mix(in srgb, var(--cb-playful-tone-confrontos-bg) 78%, #fff 22%);
+}
+
+.mural-playful-rank-entry--times {
+  background: color-mix(in srgb, var(--cb-playful-tone-times-bg) 78%, #fff 22%);
+}
+
+.mural-playful-rank-entry--users {
+  background: color-mix(in srgb, var(--cb-playful-tone-users-bg) 78%, #fff 22%);
+}
+
+.mural-rank-meta-line {
+  display: block;
+  font-size: 0.85rem;
+  opacity: 0.92;
+}
+
+.mural-rank-badge {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.mural-playful-accordion-content.mural-playful-screen {
+  padding-top: 4px;
 }
 
 .mural-athlete-location-line {
@@ -174,9 +322,35 @@ ion-item:has(ion-select[labelPlacement='stacked']) {
   --background: var(--cb-playful-tone-peladas-bg);
 }
 
-.mural-playful-screen .mural-playful-analytics-host ion-card {
-  border-radius: var(--cb-playful-radius);
-  box-shadow: var(--cb-playful-shadow);
+.mural-playful-screen .mural-playful-analytics-panel .top-entry,
+.mural-playful-analytics-panel .top-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(30, 20, 60, 0.08);
+}
+
+.mural-playful-screen .mural-playful-analytics-panel .top-entry:nth-of-type(4n + 1),
+.mural-playful-analytics-panel .top-entry:nth-of-type(4n + 1) {
+  background: color-mix(in srgb, var(--cb-playful-tone-peladas-bg) 78%, #fff 22%);
+}
+
+.mural-playful-screen .mural-playful-analytics-panel .top-entry:nth-of-type(4n + 2),
+.mural-playful-analytics-panel .top-entry:nth-of-type(4n + 2) {
+  background: color-mix(in srgb, var(--cb-playful-tone-confrontos-bg) 78%, #fff 22%);
+}
+
+.mural-playful-screen .mural-playful-analytics-panel .top-entry:nth-of-type(4n + 3),
+.mural-playful-analytics-panel .top-entry:nth-of-type(4n + 3) {
+  background: color-mix(in srgb, var(--cb-playful-tone-times-bg) 78%, #fff 22%);
+}
+
+.mural-playful-screen .mural-playful-analytics-panel .top-entry:nth-of-type(4n),
+.mural-playful-analytics-panel .top-entry:nth-of-type(4n) {
+  background: color-mix(in srgb, var(--cb-playful-tone-users-bg) 78%, #fff 22%);
 }
 
 .mural-event-hub__title {

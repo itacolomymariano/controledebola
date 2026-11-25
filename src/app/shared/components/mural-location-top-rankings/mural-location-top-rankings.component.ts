@@ -1,12 +1,13 @@
-import { Component, Input } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, OnDestroy } from '@angular/core';
+import { Subscription } from 'rxjs';
 import {
-  MURAL_TARGET_ROLE_LABELS,
   MURAL_TARGET_ROLES,
   MuralTargetRole,
 } from '../../../core/models/event-performance.model';
 import { MuralLocationTopGroup, MuralLocationTopRankings } from '../../../core/models/mural-location-top.model';
 import { MuralShareContext } from '../../../core/models/mural-share.model';
 import { MuralRankingEntry } from '../../../core/models/mural.model';
+import { I18nService } from '../../../core/services/i18n.service';
 import { muralRankingDisplayScore } from '../../../core/utils/mural-ranking.util';
 import {
   cityBelongsToState,
@@ -14,10 +15,30 @@ import {
   displayNeighborhoodName,
   neighborhoodBelongsToCity,
 } from '../../../core/utils/mural-location-drilldown.util';
+import {
+  muralPlayfulNestedTone,
+  muralPlayfulToneByIndex,
+} from '../../../core/utils/mural-playful-tone.util';
+import { PlayfulCardTone } from '../playful-card/playful-card.component';
 
 type TopRankingsLevel = 'states' | 'stateDetail' | 'cities' | 'cityDetail' | 'neighborhoods' | 'neighborhoodDetail';
 
-const ROLE_LABELS = MURAL_TARGET_ROLE_LABELS;
+const ROLE_I18N_KEYS: Record<MuralTargetRole, string> = {
+  athlete: 'profileRole.athlete',
+  goalkeeper: 'profileRole.goalkeeper',
+  referee: 'profileRole.referee',
+  scout: 'profileRole.scout',
+  journalist: 'profileRole.journalist',
+  cameraman: 'profileRole.cameraman',
+  narrator: 'profileRole.narrator',
+  coach: 'profileRole.coach',
+  physical_trainer: 'profileRole.physical_trainer',
+  masseur: 'profileRole.masseur',
+  kitman: 'profileRole.kitman',
+  gandula: 'profileRole.gandula',
+  fan: 'profileRole.fan',
+  gatekeeper: 'profileRole.gatekeeper',
+};
 
 @Component({
   selector: 'app-mural-location-top-rankings',
@@ -25,10 +46,11 @@ const ROLE_LABELS = MURAL_TARGET_ROLE_LABELS;
   styleUrls: ['./mural-location-top-rankings.component.scss'],
   standalone: false,
 })
-export class MuralLocationTopRankingsComponent {
+export class MuralLocationTopRankingsComponent implements OnDestroy {
   @Input() rankings: MuralLocationTopRankings | null = null;
   @Input() shareContext: MuralShareContext | null = null;
   @Input() filterCaption = '';
+  @Input() playfulChrome = false;
 
   level: TopRankingsLevel = 'states';
   selectedState = '';
@@ -36,21 +58,51 @@ export class MuralLocationTopRankingsComponent {
   selectedNeighborhoodLabel = '';
 
   readonly muralRoles = MURAL_TARGET_ROLES;
+  private localeSub?: Subscription;
+
+  constructor(
+    private readonly i18n: I18nService,
+    private readonly cdr: ChangeDetectorRef
+  ) {
+    this.localeSub = this.i18n.locale$.subscribe(() => this.cdr.markForCheck());
+  }
+
+  ngOnDestroy(): void {
+    this.localeSub?.unsubscribe();
+  }
+
+  participantCountLabel(count: number): string {
+    return this.i18n.t('mural.locationTop.participantCount', { count });
+  }
+
+  roleHeading(role: MuralTargetRole): string {
+    return this.i18n.t('mural.locationTop.roleHeading', { role: this.roleLabel(role) });
+  }
+
+  groupCardTitle(label: string): string {
+    return this.i18n.t('mural.locationTop.cardTitle', { label });
+  }
 
   get breadcrumb(): string {
     switch (this.level) {
       case 'states':
-        return 'Top 3 por estado';
+        return this.i18n.t('mural.locationTop.breadcrumb.states');
       case 'stateDetail':
-        return `Top 3 · ${this.selectedState}`;
+        return this.i18n.t('mural.locationTop.breadcrumb.stateDetail', { state: this.selectedState });
       case 'cities':
-        return `Top 3 por cidade · ${this.selectedState}`;
+        return this.i18n.t('mural.locationTop.breadcrumb.cities', { state: this.selectedState });
       case 'cityDetail':
-        return `Top 3 · ${this.cityDisplayName(this.selectedCityLabel)}`;
+        return this.i18n.t('mural.locationTop.breadcrumb.cityDetail', {
+          city: this.cityDisplayName(this.selectedCityLabel),
+        });
       case 'neighborhoods':
-        return `Top 3 por bairro · ${this.cityDisplayName(this.selectedCityLabel)}`;
+        return this.i18n.t('mural.locationTop.breadcrumb.neighborhoods', {
+          city: this.cityDisplayName(this.selectedCityLabel),
+        });
       case 'neighborhoodDetail':
-        return `Top 3 · ${this.neighborhoodDisplayName(this.selectedNeighborhoodLabel)}`;
+        return this.i18n.t('mural.locationTop.breadcrumb.neighborhoodDetail', {
+          neighborhood: this.neighborhoodDisplayName(this.selectedNeighborhoodLabel),
+        });
       default:
         return '';
     }
@@ -98,7 +150,8 @@ export class MuralLocationTopRankingsComponent {
   }
 
   roleLabel(role: MuralTargetRole): string {
-    return ROLE_LABELS[role];
+    const key = ROLE_I18N_KEYS[role];
+    return key ? this.i18n.t(key) : role;
   }
 
   rankingScore(entry: MuralRankingEntry): number {
@@ -169,5 +222,17 @@ export class MuralLocationTopRankingsComponent {
       default:
         break;
     }
+  }
+
+  roleCardTone(roleIndex: number): PlayfulCardTone {
+    return muralPlayfulToneByIndex(roleIndex);
+  }
+
+  drilldownTone(index: number): PlayfulCardTone {
+    return muralPlayfulToneByIndex(index);
+  }
+
+  locationNestedTone(parent: PlayfulCardTone, childIndex: number): PlayfulCardTone {
+    return muralPlayfulNestedTone(parent, childIndex);
   }
 }

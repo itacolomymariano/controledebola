@@ -1,3 +1,4 @@
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -20,6 +21,7 @@ import {
   templateUrl: './amateur-team-search-modal.component.html',
   styleUrls: ['./amateur-team-search-modal.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class AmateurTeamSearchModalComponent {

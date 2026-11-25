@@ -1,4 +1,5 @@
-import { Component, HostBinding, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { PlayfulCardTone } from '../playful-card/playful-card.component';
 import {
   ATHLETE_FOOT_LABELS,
   formatFootPreference,
@@ -29,11 +30,6 @@ export class MuralPerformanceAnalyticsComponent implements OnChanges {
   /** Exibe só um bloco (mural do evento em drill-down). */
   @Input() panel: 'all' | 'qualitative' | 'quantitative' | 'charts' | 'goalTypes' = 'all';
   @Input() playfulChrome = false;
-
-  @HostBinding('class.mural-playful-analytics-host')
-  get playfulAnalyticsHost(): boolean {
-    return this.playfulChrome;
-  }
 
   loading = false;
   loadedAnalytics: MuralPerformanceAnalytics | null = null;
@@ -101,6 +97,16 @@ export class MuralPerformanceAnalyticsComponent implements OnChanges {
 
   showPanel(name: 'qualitative' | 'quantitative' | 'charts' | 'goalTypes'): boolean {
     return this.panel === 'all' || this.panel === name;
+  }
+
+  panelTone(panel: 'qualitative' | 'quantitative' | 'charts' | 'goalTypes'): PlayfulCardTone {
+    const tones: Record<typeof panel, PlayfulCardTone> = {
+      qualitative: 'users',
+      quantitative: 'confrontos',
+      charts: 'times',
+      goalTypes: 'peladas',
+    };
+    return tones[panel];
   }
 
   goalTypeCount(field: string): number {

@@ -14,6 +14,7 @@ import { MuralParticipantStatsService } from '../../core/services/mural-particip
 import { MuralService } from '../../core/services/mural.service';
 import { MuralShareService } from '../../core/services/mural-share.service';
 import { EventMediaService } from '../../core/services/event-media.service';
+import { ImageLightboxService } from '../../core/services/image-lightbox.service';
 import { RegistrationService } from '../../core/services/registration.service';
 import { SupportRoleToolsService } from '../../core/services/support-role-tools.service';
 import { AthletePerformanceService, MuralPerformanceAnalytics } from '../../core/services/athlete-performance.service';
@@ -22,6 +23,11 @@ import {
   MuralRankingDisplaySection,
 } from '../../core/utils/mural-ranking-display.util';
 import { resolveRouteParam } from '../../core/utils/route-param.util';
+import {
+  muralPlayfulNestedTone,
+  muralPlayfulToneForSection,
+} from '../../core/utils/mural-playful-tone.util';
+import { PlayfulCardTone } from '../../shared/components/playful-card/playful-card.component';
 
 /** Perfis sob "Outros TOP 10..." no mural do evento (pelada e confronto). */
 const EVENT_OTHER_TOP10_ROLES: MuralTargetRole[] = [
@@ -71,6 +77,11 @@ export interface EventMuralStackFrame {
   standalone: false,
 })
 export class EventMuralPage implements OnInit, OnDestroy {
+  readonly muralPlayfulToneForSection = muralPlayfulToneForSection;
+
+  muralRankNestedTone(parent: PlayfulCardTone, childIndex: number): PlayfulCardTone {
+    return muralPlayfulNestedTone(parent, childIndex);
+  }
   private localeSub?: Subscription;
   eventId = '';
   loading = true;
@@ -101,6 +112,7 @@ export class EventMuralPage implements OnInit, OnDestroy {
   mediaJournalHeadline = '';
   mediaRadioTitle = '';
   mediaVideoTitle = '';
+  mediaPressPhotos: Array<{ url: string; label: string }> = [];
 
   constructor(
     private readonly route: ActivatedRoute,
@@ -114,8 +126,13 @@ export class EventMuralPage implements OnInit, OnDestroy {
     private readonly supportTools: SupportRoleToolsService,
     private readonly performanceService: AthletePerformanceService,
     private readonly cdr: ChangeDetectorRef,
-    private readonly i18n: I18nService
+    private readonly i18n: I18nService,
+    private readonly imageLightbox: ImageLightboxService
   ) {}
+
+  openPressPhoto(url: string, label: string): void {
+    void this.imageLightbox.open(url, label);
+  }
 
   ngOnInit(): void {
     this.localeSub = this.i18n.locale$.subscribe(() => this.cdr.markForCheck());
@@ -319,6 +336,7 @@ export class EventMuralPage implements OnInit, OnDestroy {
     this.mediaJournalHeadline = '';
     this.mediaRadioTitle = '';
     this.mediaVideoTitle = '';
+    this.mediaPressPhotos = [];
     if (!this.eventId) return;
     try {
       const dashboard = await this.eventMediaService.loadDashboard(this.eventId);
@@ -331,6 +349,20 @@ export class EventMuralPage implements OnInit, OnDestroy {
       this.mediaRadioTitle =
         dashboard.radioNarration?.title || dashboard.radioInterview?.title || '';
       this.mediaVideoTitle = dashboard.highlightVideo?.title || '';
+      const press: Array<{ url: string; label: string }> = [];
+      if (dashboard.journalReportage?.photoUrl) {
+        press.push({
+          url: dashboard.journalReportage.photoUrl,
+          label: dashboard.journalReportage.headline || this.i18n.t('eventMural.hub.mediaJournal'),
+        });
+      }
+      if (dashboard.journalInterview?.photoUrl) {
+        press.push({
+          url: dashboard.journalInterview.photoUrl,
+          label: dashboard.journalInterview.headline || this.i18n.t('eventMural.hub.mediaJournal'),
+        });
+      }
+      this.mediaPressPhotos = press;
     } catch (error: unknown) {
       console.warn('event-mural media preview failed', error);
     }

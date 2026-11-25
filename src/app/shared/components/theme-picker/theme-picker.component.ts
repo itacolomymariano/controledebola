@@ -1,3 +1,4 @@
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -23,6 +24,7 @@ import { ThemePaletteService } from '../../../core/services/theme-palette.servic
   templateUrl: './theme-picker.component.html',
   styleUrls: ['./theme-picker.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class ThemePickerComponent implements OnInit, OnDestroy {

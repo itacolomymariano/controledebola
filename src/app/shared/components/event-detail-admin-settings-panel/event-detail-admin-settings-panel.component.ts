@@ -1,3 +1,4 @@
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -16,6 +17,7 @@ import { Subscription } from 'rxjs';
   selector: 'app-event-detail-admin-settings-panel',
   templateUrl: './event-detail-admin-settings-panel.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class EventDetailAdminSettingsPanelComponent implements OnChanges, OnDestroy {

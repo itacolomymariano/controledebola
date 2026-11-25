@@ -335,12 +335,11 @@ export class MuralPage implements OnInit, OnDestroy {
       this.performanceAnalytics = dashboard.performanceAnalytics as MuralPerformanceAnalytics | null;
 
       if (!dashboard.cloudAvailable) {
-        this.errorMessage =
-          'Alguns dados do mural podem estar incompletos. Publique o Cloud Code mais recente no Back4App.';
+        this.errorMessage = this.i18n.t('mural.error.cloudIncomplete');
       }
     } catch {
       if (generation !== this.muralLoadSeq) return;
-      this.errorMessage = 'Nao foi possivel carregar o mural. Tente novamente.';
+      this.errorMessage = this.i18n.t('mural.error.loadFailed');
       this.loading = false;
       this.cdr.markForCheck();
       return;

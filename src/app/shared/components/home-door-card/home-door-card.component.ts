@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 
 export type HomeDoorVariant =
   | 'peladas'
@@ -13,6 +14,7 @@ export type HomeDoorVariant =
   templateUrl: './home-door-card.component.html',
   styleUrls: ['./home-door-card.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class HomeDoorCardComponent {

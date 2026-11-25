@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 
 /**
  * Envolve o conteúdo de `ion-content` com fundo playful (gradiente + orbes) e safe-area inferior.
@@ -9,6 +10,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   templateUrl: './playful-page.component.html',
   styleUrls: ['./playful-page.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class PlayfulPageComponent {}

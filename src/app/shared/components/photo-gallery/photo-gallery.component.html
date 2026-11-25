@@ -1,0 +1,51 @@
+@if (!compact) {
+  <h2 class="photo-gallery__title">{{ 'photoPost.galleryTitle' | t }}</h2>
+}
+@if (loading) {
+  <ion-spinner name="crescent"></ion-spinner>
+}
+@if (!loading && !cloudAvailable) {
+  <ion-note color="medium">{{ 'photoPost.cloudUnavailable' | t }}</ion-note>
+}
+@if (!loading && cloudAvailable) {
+  @if (canPost) {
+    <ion-item lines="none" class="photo-gallery__caption">
+      <ion-input
+        [label]="'photoPost.captionLabel' | t"
+        labelPlacement="stacked"
+        [placeholder]="'photoPost.captionPlaceholder' | t"
+        [(ngModel)]="captionDraft"
+        maxlength="280"
+      ></ion-input>
+    </ion-item>
+    <app-image-picker
+      [label]="'photoPost.addPhoto' | t"
+      [hint]="'imagePicker.hintDefault' | t"
+      [disabled]="busy"
+      (imageSelected)="onImageSelected($event)"
+    ></app-image-picker>
+  }
+  @if (!posts.length) {
+    <ion-note color="medium">{{ 'photoPost.empty' | t }}</ion-note>
+  }
+  @if (posts.length) {
+    <div class="photo-gallery__grid" [class.photo-gallery__grid--compact]="compact">
+      @for (post of posts; track post.objectId) {
+        <figure class="photo-gallery__tile">
+          <button type="button" class="photo-gallery__thumb" (click)="openImage(post)">
+            <img [src]="post.imageUrl" [alt]="post.caption || post.authorName" loading="lazy" />
+          </button>
+          @if (post.caption) {
+            <figcaption>{{ post.caption }}</figcaption>
+          }
+          <p class="photo-gallery__meta">{{ post.authorName }}</p>
+          @if (canDeletePost(post)) {
+            <ion-button fill="clear" size="small" color="medium" (click)="deletePost(post)">
+              {{ 'photoPost.remove' | t }}
+            </ion-button>
+          }
+        </figure>
+      }
+    </div>
+  }
+}

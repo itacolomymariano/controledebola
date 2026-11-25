@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 import { ToastController } from '@ionic/angular';
 import { copyTextToClipboard } from '../../../core/utils/clipboard.util';
 
@@ -7,6 +8,7 @@ import { copyTextToClipboard } from '../../../core/utils/clipboard.util';
   templateUrl: './pix-copy-button.component.html',
   styleUrls: ['./pix-copy-button.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class PixCopyButtonComponent {

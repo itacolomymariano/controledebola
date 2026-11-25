@@ -4,12 +4,15 @@ import {
   Component,
   Input,
   OnChanges,
+  OnDestroy,
   SimpleChanges,
 } from '@angular/core';
 import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { EventMediaTopItem, EventMediaTopKind } from '../../../core/models/event-media.model';
 import { MuralShareContext } from '../../../core/models/mural-share.model';
 import { EventMediaService } from '../../../core/services/event-media.service';
+import { I18nService } from '../../../core/services/i18n.service';
 
 @Component({
   selector: 'app-mural-media-top-card',
@@ -18,7 +21,7 @@ import { EventMediaService } from '../../../core/services/event-media.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: false,
 })
-export class MuralMediaTopCardComponent implements OnChanges {
+export class MuralMediaTopCardComponent implements OnChanges, OnDestroy {
   @Input() scope: 'app' | 'pelada' = 'app';
   @Input() peladaId = '';
   @Input() kind: EventMediaTopKind = 'video';
@@ -28,25 +31,25 @@ export class MuralMediaTopCardComponent implements OnChanges {
 
   loading = true;
   item: EventMediaTopItem | null = null;
+  private localeSub?: Subscription;
 
   constructor(
     private readonly eventMediaService: EventMediaService,
     private readonly router: Router,
-    private readonly cdr: ChangeDetectorRef
-  ) {}
+    private readonly cdr: ChangeDetectorRef,
+    private readonly i18n: I18nService
+  ) {
+    this.localeSub = this.i18n.locale$.subscribe(() => this.cdr.markForCheck());
+  }
 
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['scope'] || changes['peladaId'] || changes['kind']) {
-      void this.load();
-    }
+  ngOnDestroy(): void {
+    this.localeSub?.unsubscribe();
   }
 
   get title(): string {
-    const kindLabel =
-      this.kind === 'video' ? 'Video' : this.kind === 'radio' ? 'Radio' : 'Jornal';
-    return this.scope === 'app'
-      ? `${kindLabel} mais visto do app`
-      : `${kindLabel} mais visto da pelada`;
+    const scopeKey = this.scope === 'app' ? 'app' : 'pelada';
+    const mediaKey = this.kind === 'video' ? 'video' : this.kind === 'radio' ? 'radio' : 'journal';
+    return this.i18n.t(`mural.mediaTop.title.${scopeKey}.${mediaKey}`);
   }
 
   async load(): Promise<void> {
@@ -67,6 +70,12 @@ export class MuralMediaTopCardComponent implements OnChanges {
     } finally {
       this.loading = false;
       this.cdr.markForCheck();
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['scope'] || changes['peladaId'] || changes['kind']) {
+      void this.load();
     }
   }
 

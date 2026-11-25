@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/core';
+import { LocaleRefreshDirective } from '../../shared/directives/locale-refresh.directive';
 import { ActivatedRoute } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
 import { EventMediaHighlightVideoItem } from '../../core/models/event-media.model';
@@ -10,6 +11,7 @@ import { I18nService } from '../../core/services/i18n.service';
   templateUrl: './event-cameraman-coverage.page.html',
   styleUrls: ['./event-cameraman-coverage.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class EventCameramanCoveragePage {

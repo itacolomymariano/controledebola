@@ -617,6 +617,8 @@ Parse.Cloud.define('getAmateurTeamPublicProfile', async (request) => {
   const topPoints = Array.from(pointsMap.values()).sort((a, b) => b.points - a.points)[0] || null;
   const teamImage = team.get('teamImage');
   const shieldImage = team.get('shieldImage');
+  const presidentImage = team.get('presidentImage');
+  const headquartersImage = team.get('headquartersImage');
   const president = team.get('president');
 
   return {
@@ -626,7 +628,11 @@ Parse.Cloud.define('getAmateurTeamPublicProfile', async (request) => {
     foundedAt: team.get('foundedAt') ? team.get('foundedAt').toISOString() : null,
     homeVenue: team.get('homeVenue') || '',
     imageUrl: teamImage && teamImage.url ? teamImage.url() : undefined,
+    teamImageUrl: teamImage && teamImage.url ? teamImage.url() : undefined,
     shieldImageUrl: shieldImage && shieldImage.url ? shieldImage.url() : undefined,
+    presidentImageUrl: presidentImage && presidentImage.url ? presidentImage.url() : undefined,
+    headquartersImageUrl:
+      headquartersImage && headquartersImage.url ? headquartersImage.url() : undefined,
     presidentId: president && president.id ? president.id : '',
     presidentName: personDisplayFromUser(president).name,
     presidentAvatarUrl: personDisplayFromUser(president).avatarUrl,

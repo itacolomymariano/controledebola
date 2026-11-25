@@ -1,3 +1,4 @@
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -22,6 +23,7 @@ import {
   templateUrl: './played-team-list.component.html',
   styleUrls: ['./played-team-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class PlayedTeamListComponent {

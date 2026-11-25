@@ -1,4 +1,5 @@
 ﻿import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
+import { LocaleRefreshDirective } from '../../shared/directives/locale-refresh.directive';
 import { Router } from '@angular/router';
 import { RefresherCustomEvent } from '@ionic/angular';
 import Parse from 'parse';
@@ -28,6 +29,7 @@ interface ConfrontoRow {
   templateUrl: './events.page.html',
   styleUrls: ['./events.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class EventsPage implements OnDestroy {
@@ -49,6 +51,7 @@ export class EventsPage implements OnDestroy {
 
   private eventsSub?: Subscription;
   private challengeSub?: Subscription;
+  private localeSub?: Subscription;
 
   constructor(
     private readonly auth: AuthService,
@@ -65,11 +68,13 @@ export class EventsPage implements OnDestroy {
     this.challengeSub = this.challengeService.onChanged.subscribe(() => {
       void this.loadMatches();
     });
+    this.localeSub = this.i18n.locale$.subscribe(() => this.remapRowsForLocale());
   }
 
   ngOnDestroy(): void {
     this.eventsSub?.unsubscribe();
     this.challengeSub?.unsubscribe();
+    this.localeSub?.unsubscribe();
   }
 
   ionViewWillEnter(): void {
@@ -146,6 +151,23 @@ export class EventsPage implements OnDestroy {
 
   private formatDate(date: Date): string {
     return formatAppDateTime(date, this.i18n.locale);
+  }
+
+  private remapRowsForLocale(): void {
+    if (this.rows.length) {
+      this.rows = this.rows.map((row) => ({
+        ...row,
+        dateLabel: this.formatDate(row.match.startTime),
+        badge: row.match.returnOfEventId
+          ? this.i18n.t('inbox.returnLeg')
+          : row.match.hasReturnLeg
+            ? this.i18n.t('events.badgeFirstLeg')
+            : undefined,
+      }));
+    } else if (this.errorMessage && !this.parseConfigured) {
+      this.errorMessage = this.i18n.t('events.parseKeysHint');
+    }
+    this.cdr.markForCheck();
   }
 
   private formatLocation(address: Address, complement: string): string {

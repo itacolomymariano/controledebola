@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 
 @Component({
   selector: 'app-form-wizard',
   templateUrl: './form-wizard.component.html',
   styleUrls: ['./form-wizard.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class FormWizardComponent {

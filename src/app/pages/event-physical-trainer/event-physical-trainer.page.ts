@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/core';
+import { LocaleRefreshDirective } from '../../shared/directives/locale-refresh.directive';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
@@ -20,6 +21,7 @@ import { parseErrorMessage } from '../../core/utils/parse-error.util';
   templateUrl: './event-physical-trainer.page.html',
   styleUrls: ['./event-physical-trainer.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class EventPhysicalTrainerPage {

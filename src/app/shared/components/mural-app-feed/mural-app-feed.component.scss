@@ -23,7 +23,7 @@
   margin-top: 12px;
   padding: 10px;
   border-radius: 14px;
-  background: var(--cb-playful-card-surface, #fff);
+  background: color-mix(in srgb, var(--cb-playful-card-surface, #fff) 72%, transparent);
   box-shadow: 0 2px 8px rgba(30, 20, 60, 0.06);
 }
 

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 
 export interface EventDetailOverviewChip {
   label: string;
@@ -38,6 +39,7 @@ export interface EventDetailOverviewViewModel {
   templateUrl: './event-detail-overview.component.html',
   styleUrls: ['./event-detail-overview.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class EventDetailOverviewComponent {

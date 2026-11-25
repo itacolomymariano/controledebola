@@ -3,6 +3,7 @@
     <ion-spinner name="crescent"></ion-spinner>
   </div>
 } @else if (dashboard) {
+  <div class="mural-playful-screen">
   <ion-card>
     <ion-card-header>
       <ion-card-title>{{ 'mural.confrontos.totalTitle' | t }}</ion-card-title>
@@ -68,7 +69,8 @@
       rankingCard;
       context: {
         titleKey: 'mural.confrontos.topAthletes',
-        entries: dashboard.topAthletes
+        entries: dashboard.topAthletes,
+        cardIndex: 0
       }
     "
   ></ng-container>
@@ -77,7 +79,8 @@
       rankingCard;
       context: {
         titleKey: 'mural.confrontos.topGoalkeepers',
-        entries: dashboard.topGoalkeepers
+        entries: dashboard.topGoalkeepers,
+        cardIndex: 1
       }
     "
   ></ng-container>
@@ -86,7 +89,8 @@
       rankingCard;
       context: {
         titleKey: 'mural.confrontos.topReferees',
-        entries: dashboard.topReferees
+        entries: dashboard.topReferees,
+        cardIndex: 2
       }
     "
   ></ng-container>
@@ -94,19 +98,19 @@
   <ng-container
     *ngTemplateOutlet="
       performanceCard;
-      context: { titleKey: 'mural.confrontos.topScorers', entries: dashboard.topScorers }
+      context: { titleKey: 'mural.confrontos.topScorers', entries: dashboard.topScorers, cardIndex: 3 }
     "
   ></ng-container>
   <ng-container
     *ngTemplateOutlet="
       performanceCard;
-      context: { titleKey: 'mural.confrontos.topAssists', entries: dashboard.topAssists }
+      context: { titleKey: 'mural.confrontos.topAssists', entries: dashboard.topAssists, cardIndex: 4 }
     "
   ></ng-container>
   <ng-container
     *ngTemplateOutlet="
       performanceCard;
-      context: { titleKey: 'mural.confrontos.topPasses', entries: dashboard.topPasses }
+      context: { titleKey: 'mural.confrontos.topPasses', entries: dashboard.topPasses, cardIndex: 5 }
     "
   ></ng-container>
 
@@ -115,50 +119,45 @@
       {{ 'mural.confrontos.cloudHint' | t }}
     </ion-note>
   }
+  </div>
 } @else {
   <ion-note color="medium">{{ 'mural.confrontos.empty' | t }}</ion-note>
 }
 
-<ng-template #rankingCard let-titleKey="titleKey" let-entries="entries">
-  <ion-card>
-    <ion-card-header>
-      <ion-card-title>{{ titleKey | t }}</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      @if (!entries?.length) {
-        <ion-note color="medium">{{ 'mural.confrontos.noData' | t }}</ion-note>
-      }
-      @for (entry of entries; track entry.userId; let i = $index) {
-        <div class="rank-row ion-margin-bottom">
-          <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="sm"></app-user-avatar>
-          <span>{{ i + 1 }}. {{ entry.userName }}</span>
-          <ion-badge>{{ rankingBadge(entry) }}</ion-badge>
-        </div>
-      }
-    </ion-card-content>
-  </ion-card>
+<ng-template #rankingCard let-titleKey="titleKey" let-entries="entries" let-cardIndex="cardIndex">
+  <app-playful-card [tone]="cardTone(cardIndex)" class="mural-playful-ranking ion-margin-bottom">
+    <h2 class="mural-playful-ranking__title">{{ titleKey | t }}</h2>
+    @if (!entries?.length) {
+      <ion-note color="medium">{{ 'mural.confrontos.noData' | t }}</ion-note>
+    }
+    @for (entry of entries; track entry.userId; let i = $index) {
+      <app-mural-rank-entry
+        [rank]="i + 1"
+        [userName]="entry.userName"
+        [avatarUrl]="entry.avatarUrl"
+        [badge]="rankingBadge(entry)"
+        [primaryPosition]="entry.primaryPosition"
+        [age]="entry.age"
+        [tone]="nestedTone(cardTone(cardIndex), i)"
+      ></app-mural-rank-entry>
+    }
+  </app-playful-card>
 </ng-template>
 
-<ng-template #performanceCard let-titleKey="titleKey" let-entries="entries">
-  <ion-card>
-    <ion-card-header>
-      <ion-card-title>{{ titleKey | t }}</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      @if (!entries?.length) {
-        <ion-note color="medium">{{ 'mural.confrontos.noData' | t }}</ion-note>
-      }
-      @for (entry of entries; track entry.userId; let i = $index) {
-        <div class="rank-row ion-margin-bottom">
-          <app-user-avatar
-            [avatarUrl]="entry.avatarUrl"
-            [alt]="performanceName(entry)"
-            size="sm"
-          ></app-user-avatar>
-          <span>{{ i + 1 }}. {{ performanceName(entry) }}</span>
-          <ion-badge>{{ entry.total }}</ion-badge>
-        </div>
-      }
-    </ion-card-content>
-  </ion-card>
+<ng-template #performanceCard let-titleKey="titleKey" let-entries="entries" let-cardIndex="cardIndex">
+  <app-playful-card [tone]="cardTone(cardIndex)" class="mural-playful-ranking ion-margin-bottom">
+    <h2 class="mural-playful-ranking__title">{{ titleKey | t }}</h2>
+    @if (!entries?.length) {
+      <ion-note color="medium">{{ 'mural.confrontos.noData' | t }}</ion-note>
+    }
+    @for (entry of entries; track entry.userId; let i = $index) {
+      <app-mural-rank-entry
+        [rank]="i + 1"
+        [userName]="performanceName(entry)"
+        [avatarUrl]="entry.avatarUrl"
+        [badge]="'' + entry.total"
+        [tone]="nestedTone(cardTone(cardIndex), i)"
+      ></app-mural-rank-entry>
+    }
+  </app-playful-card>
 </ng-template>

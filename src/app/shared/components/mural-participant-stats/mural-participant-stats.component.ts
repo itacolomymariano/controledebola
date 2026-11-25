@@ -1,4 +1,4 @@
-import { Component, HostBinding, Input } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { I18nService } from '../../../core/services/i18n.service';
 import { MuralLocationCount, MuralParticipantLocationStats } from '../../../core/models/mural-participant-stats.model';
 import { MuralShareContext } from '../../../core/models/mural-share.model';
@@ -9,6 +9,8 @@ import {
   displayNeighborhoodName,
   neighborhoodBelongsToCity,
 } from '../../../core/utils/mural-location-drilldown.util';
+import { muralPlayfulToneByIndex } from '../../../core/utils/mural-playful-tone.util';
+import { PlayfulCardTone } from '../playful-card/playful-card.component';
 
 type ParticipantStatsLevel = 'states' | 'cities' | 'neighborhoods';
 
@@ -32,9 +34,8 @@ export class MuralParticipantStatsComponent {
   @Input() shareContext: MuralShareContext | null = null;
   @Input() playfulChrome = false;
 
-  @HostBinding('class.mural-playful-participant-host')
-  get playfulParticipantHost(): boolean {
-    return this.playfulChrome && !!this.stats;
+  drilldownTone(index: number): PlayfulCardTone {
+    return muralPlayfulToneByIndex(index);
   }
   @Input() filterCaption = '';
 

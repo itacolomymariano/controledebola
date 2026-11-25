@@ -20,6 +20,7 @@ export class I18nService {
 
   private dict: Dict = {};
   private fallback: Dict = {};
+  private readonly dictCache = new Map<AppLocale, Dict>();
   private tick = 0;
 
   constructor(
@@ -54,7 +55,14 @@ export class I18nService {
   }
 
   async init(): Promise<void> {
-    this.fallback = await this.loadFile(DEFAULT_APP_LOCALE);
+    const loaded = await Promise.all(
+      APP_LOCALES.map(async (locale) => {
+        const dict = await this.loadFile(locale);
+        this.dictCache.set(locale, dict);
+        return [locale, dict] as const;
+      })
+    );
+    this.fallback = this.dictCache.get(DEFAULT_APP_LOCALE) ?? loaded[0]?.[1] ?? {};
     const saved = await this.storage.getLocale();
     await this.setLocale(saved ?? DEFAULT_APP_LOCALE, false);
     setParseErrorI18n(this);
@@ -62,11 +70,12 @@ export class I18nService {
 
   async setLocale(locale: AppLocale, persist = true): Promise<void> {
     const next = APP_LOCALES.includes(locale) ? locale : DEFAULT_APP_LOCALE;
-    this.dict = next === DEFAULT_APP_LOCALE ? this.fallback : await this.loadFile(next);
+    const cached = await this.ensureDictCached(next);
+    this.dict = cached;
     this.locale$.next(next);
     this.tick += 1;
     if (persist) {
-      await this.storage.setLocale(next);
+      void this.storage.setLocale(next);
     }
     this.ngZone.run(() => this.appRef.tick());
   }
@@ -123,6 +132,14 @@ export class I18nService {
       return 'error.sessionExpired';
     }
     return null;
+  }
+
+  private async ensureDictCached(locale: AppLocale): Promise<Dict> {
+    const hit = this.dictCache.get(locale);
+    if (hit) return hit;
+    const dict = await this.loadFile(locale);
+    this.dictCache.set(locale, dict);
+    return dict;
   }
 
   private async loadFile(locale: AppLocale): Promise<Dict> {

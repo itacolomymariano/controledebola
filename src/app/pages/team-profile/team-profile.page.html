@@ -48,6 +48,44 @@
     @if (profile['description']) {
       <p>{{ profile['description'] }}</p>
     }
+    @if (
+      profile['teamImageUrl'] || profile['imageUrl'] || profile['headquartersImageUrl'] || profile['presidentImageUrl']
+    ) {
+      <h2>{{ 'teamProfile.photosSection' | t }}</h2>
+      <div class="team-static-photos">
+        @if (profile['teamImageUrl'] || profile['imageUrl']) {
+          <button
+            type="button"
+            class="team-static-photos__thumb"
+            (click)="openProfileImage(profile['teamImageUrl'] || profile['imageUrl'])"
+          >
+            <img [src]="$any(profile['teamImageUrl'] || profile['imageUrl'])" [alt]="'' + profile['name']" />
+            <span>{{ 'teamProfile.teamPhoto' | t }}</span>
+          </button>
+        }
+        @if (profile['headquartersImageUrl']) {
+          <button
+            type="button"
+            class="team-static-photos__thumb"
+            (click)="openProfileImage(profile['headquartersImageUrl'], 'teamProfile.hqPhoto')"
+          >
+            <img [src]="$any(profile['headquartersImageUrl'])" alt="" />
+            <span>{{ 'teamProfile.hqPhoto' | t }}</span>
+          </button>
+        }
+        @if (profile['presidentImageUrl']) {
+          <button
+            type="button"
+            class="team-static-photos__thumb"
+            (click)="openProfileImage(profile['presidentImageUrl'], 'teamProfile.presidentPhoto')"
+          >
+            <img [src]="$any(profile['presidentImageUrl'])" alt="" />
+            <span>{{ 'teamProfile.presidentPhoto' | t }}</span>
+          </button>
+        }
+      </div>
+    }
+    <app-photo-gallery subjectKind="amateur_team" [subjectId]="teamId"></app-photo-gallery>
     <p>Fundação: {{ formatFoundedAt(profile['foundedAt']) }}</p>
     <p>Torcedores: {{ profile['fanCount'] ?? 0 }}</p>
     <p>Invicto há: {{ profile['unbeatenFor'] || '—' }}</p>

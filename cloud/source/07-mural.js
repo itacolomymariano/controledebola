@@ -27,7 +27,8 @@ async function loadGoalkeeperUserIdsForMuralScope(scope, scopeId) {
 
   async function addFromEventRegistrations(eventIds) {
     for (const eventId of eventIds) {
-      const event = Parse.Object.extend('Event').createWithoutData(eventId);
+      const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
+      const participationFee = Number(event.get('participationFee') || 0);
       const registrations = await new Parse.Query('EventRegistration')
         .equalTo('event', event)
         .include('athlete')
@@ -35,6 +36,12 @@ async function loadGoalkeeperUserIdsForMuralScope(scope, scopeId) {
         .find({ useMasterKey: true });
 
       for (const registration of registrations) {
+        if (
+          typeof computeRegistrationEffectiveConfirmation === 'function' &&
+          !computeRegistrationEffectiveConfirmation(registration, participationFee)
+        ) {
+          continue;
+        }
         const resolved = await resolveRegistrationParticipantUserId(registration);
         if (!resolved.userId) continue;
 
@@ -74,6 +81,60 @@ async function loadGoalkeeperUserIdsForMuralScope(scope, scopeId) {
   }
 
   return ids;
+}
+
+function muralPerformanceEventId(perf) {
+  const event = perf && perf.get ? perf.get('event') : undefined;
+  return event && event.id ? String(event.id) : '';
+}
+
+async function loadConfirmedUserIdsByEventIds(eventIds) {
+  const map = new Map();
+  const unique = [...new Set((eventIds || []).map((id) => String(id)).filter(Boolean))];
+  for (const eventId of unique) {
+    const ids =
+      typeof collectConfirmedEventParticipantUserIds === 'function'
+        ? await collectConfirmedEventParticipantUserIds(eventId)
+        : await collectEventParticipantUserIds(eventId);
+    map.set(String(eventId), ids instanceof Set ? ids : new Set(ids));
+  }
+  return map;
+}
+
+async function collectConfirmedByEventFromPerfAndVotes(performances, voteRows) {
+  const eventIds = new Set();
+  for (const perf of performances || []) {
+    const eventId = muralPerformanceEventId(perf);
+    if (eventId) eventIds.add(eventId);
+  }
+  for (const vote of voteRows || []) {
+    const scopeId = String(vote.scopeId || '').trim();
+    if (scopeId) eventIds.add(scopeId);
+  }
+  if (!eventIds.size) return new Map();
+  return loadConfirmedUserIdsByEventIds(Array.from(eventIds));
+}
+
+function filterPerformancesToConfirmedParticipants(performances, confirmedByEvent) {
+  if (!confirmedByEvent || !confirmedByEvent.size) return performances || [];
+  return (performances || []).filter((perf) => {
+    const eventId = muralPerformanceEventId(perf);
+    const userId = getPerformanceParticipantId(perf);
+    if (!eventId || !userId) return false;
+    const set = confirmedByEvent.get(eventId);
+    return set ? set.has(String(userId)) : false;
+  });
+}
+
+function filterVoteRowsToConfirmedTargets(voteRows, confirmedByEvent) {
+  if (!confirmedByEvent || !confirmedByEvent.size) return voteRows || [];
+  return (voteRows || []).filter((vote) => {
+    const eventId = String(vote.scopeId || '').trim();
+    const targetUserId = String(vote.targetUserId || '').trim();
+    if (!eventId || !targetUserId) return false;
+    const set = confirmedByEvent.get(eventId);
+    return set ? set.has(targetUserId) : false;
+  });
 }
 
 function normalizeVoteRowTargetRole(voteRow, goalkeeperUserIds) {
@@ -1293,6 +1354,66 @@ async function enrichMuralRankingNames(scope, scopeId, result) {
     });
   }
 
+  return enrichMuralAthleteRankingMeta(result);
+}
+
+/** Idade (User) e posicao principal (AthleteProfile) em rankings de atleta/goleiro. */
+async function enrichMuralAthleteRankingMeta(result) {
+  const roles = ['athlete', 'goalkeeper'];
+  const userIds = new Set();
+  for (const role of roles) {
+    for (const entry of result[role] || []) {
+      if (entry.userId) userIds.add(String(entry.userId));
+    }
+  }
+  if (!userIds.size) return result;
+
+  const idList = Array.from(userIds);
+  const ageById = new Map();
+  for (let i = 0; i < idList.length; i += 100) {
+    const batch = idList.slice(i, i + 100);
+    const userQuery = new Parse.Query(Parse.User);
+    userQuery.containedIn('objectId', batch);
+    userQuery.select('birthDate');
+    userQuery.limit(100);
+    const users = await userQuery.find({ useMasterKey: true });
+    for (const user of users) {
+      const birthDate = user.get('birthDate');
+      if (birthDate) {
+        const age = calcAgeFromBirthDate(birthDate);
+        if (age > 0) ageById.set(user.id, age);
+      }
+    }
+  }
+
+  const positionById = new Map();
+  for (let i = 0; i < idList.length; i += 100) {
+    const batch = idList.slice(i, i + 100);
+    const userPtrs = batch.map((id) => Parse.User.createWithoutData(id));
+    const athleteQuery = new Parse.Query('AthleteProfile');
+    athleteQuery.containedIn('user', userPtrs);
+    athleteQuery.limit(100);
+    const profiles = await athleteQuery.find({ useMasterKey: true });
+    for (const profile of profiles) {
+      const userPtr = profile.get('user');
+      const uid = userPtr && userPtr.id ? String(userPtr.id) : '';
+      if (!uid) continue;
+      const primaryPosition = (profile.get('primaryPosition') || '').trim();
+      if (primaryPosition) positionById.set(uid, primaryPosition);
+    }
+  }
+
+  for (const role of roles) {
+    result[role] = (result[role] || []).map((entry) => {
+      const userId = String(entry.userId || '');
+      return {
+        ...entry,
+        ...(ageById.has(userId) ? { age: ageById.get(userId) } : {}),
+        ...(positionById.has(userId) ? { primaryPosition: positionById.get(userId) } : {}),
+      };
+    });
+  }
+
   return result;
 }
 
@@ -1394,13 +1515,19 @@ async function collectMuralProfileUserIds(scope, scopeId, extraUserIds) {
   }
 
   if (scope === 'pelada' && scopeId) {
-    const participantIds = await collectPeladaParticipantUserIds(scopeId);
+    const participantIds =
+      typeof collectConfirmedPeladaParticipantUserIds === 'function'
+        ? await collectConfirmedPeladaParticipantUserIds(scopeId)
+        : await collectPeladaParticipantUserIds(scopeId);
     for (const id of participantIds) ids.add(id);
     return ids;
   }
 
   if (scope === 'event' && scopeId) {
-    const participantIds = await collectEventParticipantUserIds(scopeId);
+    const participantIds =
+      typeof collectConfirmedEventParticipantUserIds === 'function'
+        ? await collectConfirmedEventParticipantUserIds(scopeId)
+        : await collectEventParticipantUserIds(scopeId);
     for (const id of participantIds) ids.add(id);
     return ids;
   }
@@ -1828,13 +1955,19 @@ async function collectMuralStatsUserIds(scope, scopeId, extraUserIds) {
   }
 
   if (scope === 'pelada' && scopeId) {
-    const participantIds = await collectPeladaParticipantUserIds(scopeId);
+    const participantIds =
+      typeof collectConfirmedPeladaParticipantUserIds === 'function'
+        ? await collectConfirmedPeladaParticipantUserIds(scopeId)
+        : await collectPeladaParticipantUserIds(scopeId);
     for (const id of participantIds) ids.add(id);
     return ids;
   }
 
   if (scope === 'event' && scopeId) {
-    const participantIds = await collectEventParticipantUserIds(scopeId);
+    const participantIds =
+      typeof collectConfirmedEventParticipantUserIds === 'function'
+        ? await collectConfirmedEventParticipantUserIds(scopeId)
+        : await collectEventParticipantUserIds(scopeId);
     for (const id of participantIds) ids.add(id);
     return ids;
   }
@@ -2935,7 +3068,10 @@ Parse.Cloud.define('getMuralRankings', async (request) => {
   const limit = Math.min(Number(request.params.limit) || 10, 10000);
 
   if (scope === 'event' && scopeId) {
-    const voteRows = await mapMuralVoteRowsForScope(scope, scopeId);
+    let voteRows = await mapMuralVoteRowsForScope(scope, scopeId);
+  const rawPerformances = await loadMuralPerformanceRows(scope, scopeId);
+  const confirmedByEvent = await collectConfirmedByEventFromPerfAndVotes(rawPerformances, voteRows);
+  voteRows = filterVoteRowsToConfirmedTargets(voteRows, confirmedByEvent);
     // Quorum e informativo no cliente; rankings continuam visiveis.
     const rankings = await finalizeEventGoalkeeperRankings(
       await enrichMuralRankingNames(scope, scopeId, buildEventVoteRankings(voteRows, limit))
@@ -2943,8 +3079,12 @@ Parse.Cloud.define('getMuralRankings', async (request) => {
     return rankings;
   }
 
-  const performanceRows = await mapPerformanceRowsForMural(scope, scopeId, await loadMuralPerformanceRows(scope, scopeId));
-  const voteRows = await mapMuralVoteRowsForScope(scope, scopeId);
+  let rawPerformances = await loadMuralPerformanceRows(scope, scopeId);
+  let voteRows = await mapMuralVoteRowsForScope(scope, scopeId);
+  const confirmedByEvent = await collectConfirmedByEventFromPerfAndVotes(rawPerformances, voteRows);
+  rawPerformances = filterPerformancesToConfirmedParticipants(rawPerformances, confirmedByEvent);
+  voteRows = filterVoteRowsToConfirmedTargets(voteRows, confirmedByEvent);
+  const performanceRows = await mapPerformanceRowsForMural(scope, scopeId, rawPerformances);
   let rankings =
     scope === 'app' || (scope === 'pelada' && scopeId)
       ? buildPeladaMuralRankings(performanceRows, voteRows, limit)
@@ -2969,8 +3109,12 @@ Parse.Cloud.define('getMuralLocationTopRankings', async (request) => {
     };
   }
 
-  const performanceRows = await mapPerformanceRowsForMural('app', undefined, await loadMuralPerformanceRows('app'));
-  const voteRows = await mapMuralVoteRowsForScope('app');
+  let rawPerformances = await loadMuralPerformanceRows('app');
+  let voteRows = await mapMuralVoteRowsForScope('app');
+  const confirmedByEvent = await collectConfirmedByEventFromPerfAndVotes(rawPerformances, voteRows);
+  rawPerformances = filterPerformancesToConfirmedParticipants(rawPerformances, confirmedByEvent);
+  voteRows = filterVoteRowsToConfirmedTargets(voteRows, confirmedByEvent);
+  const performanceRows = await mapPerformanceRowsForMural('app', undefined, rawPerformances);
   let fullRankings = buildPeladaMuralRankings(performanceRows, voteRows, 10000);
   fullRankings = await enrichMuralRankingNames('app', undefined, fullRankings);
 
@@ -3001,6 +3145,7 @@ async function loadRecentAppParticipantRows(limit, locationFilter) {
   const registrationQuery = new Parse.Query('EventRegistration')
     .descending('createdAt')
     .include('user')
+    .include('event')
     .limit(cap);
   if (locationFilter && locationFilter.active) {
     registrationQuery.matchesQuery('event', buildMuralLocationEventQuery(locationFilter));
@@ -3009,6 +3154,15 @@ async function loadRecentAppParticipantRows(limit, locationFilter) {
 
   const byUser = {};
   for (const registration of registrations) {
+    const event = registration.get('event');
+    const participationFee = event && event.get ? Number(event.get('participationFee') || 0) : 0;
+    if (
+      event &&
+      typeof computeRegistrationEffectiveConfirmation === 'function' &&
+      !computeRegistrationEffectiveConfirmation(registration, participationFee)
+    ) {
+      continue;
+    }
     const userId = getRegistrationUserId(registration);
     if (!userId) continue;
 
@@ -3253,11 +3407,21 @@ Parse.Cloud.define('getMuralAppDashboard', async (request) => {
   const scope = 'app';
   const locationFilter = normalizeMuralLocationFilter(request.params);
 
-  const [participants, performanceRaw, voteRowsRaw] = await Promise.all([
+  const [participants, performanceRawInitial, voteRowsRawInitial] = await Promise.all([
     loadRecentAppParticipantRows(participantLimit, locationFilter),
     loadMuralPerformanceRows(scope, undefined, locationFilter),
     mapMuralVoteRowsForScope(scope, undefined, locationFilter),
   ]);
+
+  const confirmedByEvent = await collectConfirmedByEventFromPerfAndVotes(
+    performanceRawInitial,
+    voteRowsRawInitial
+  );
+  let performanceRaw = filterPerformancesToConfirmedParticipants(
+    performanceRawInitial,
+    confirmedByEvent
+  );
+  let voteRowsRaw = filterVoteRowsToConfirmedTargets(voteRowsRawInitial, confirmedByEvent);
 
   const voteRows =
     typeof attachVoterReliabilityWeightsFromRows === 'function'
@@ -3385,7 +3549,11 @@ Parse.Cloud.define('getEventMuralDashboard', async (request) => {
   for (const vote of voteRows) {
     if (vote.voterId) voterIds.add(vote.voterId);
   }
-  const totalParticipants = (await collectEventParticipantUserIds(eventId)).size;
+  const totalParticipants = (
+    typeof collectConfirmedEventParticipantUserIds === 'function'
+      ? await collectConfirmedEventParticipantUserIds(eventId)
+      : await collectEventParticipantUserIds(eventId)
+  ).size;
   const voterCount = voterIds.size;
   const votePercentage =
     totalParticipants > 0 ? Math.round((voterCount / totalParticipants) * 1000) / 10 : 0;
@@ -3474,7 +3642,11 @@ Parse.Cloud.define('getEventMuralVoteSummary', async (request) => {
     if (vote.voterId) voterIds.add(vote.voterId);
   }
 
-  const totalParticipants = (await collectEventParticipantUserIds(eventId)).size;
+  const totalParticipants = (
+    typeof collectConfirmedEventParticipantUserIds === 'function'
+      ? await collectConfirmedEventParticipantUserIds(eventId)
+      : await collectEventParticipantUserIds(eventId)
+  ).size;
   const voterCount = voterIds.size;
   const votePercentage =
     totalParticipants > 0
@@ -4579,6 +4751,8 @@ Parse.Cloud.define('getMuralPeriodRankings', async (request) => {
 
   let performances = await loadMuralPerformanceRows(scope, scopeId);
   performances = await filterPerformancesByEventWindow(performances, from, to);
+  const confirmedByEvent = await collectConfirmedByEventFromPerfAndVotes(performances, []);
+  performances = filterPerformancesToConfirmedParticipants(performances, confirmedByEvent);
   const totalsByUser = new Map();
 
   for (const perf of performances) {
@@ -4650,6 +4824,12 @@ Parse.Cloud.define('getMuralPeriodSpotlights', async (request) => {
   let performances = await loadMuralPerformanceRows('app', undefined, locationFilter);
   performances = await filterPerformancesByEventWindow(performances, from, to);
   performances = await filterPerformancesByAppBucket(performances, appBucketTab);
+  const confirmedByEvent = await collectConfirmedByEventFromPerfAndVotes(
+    performances,
+    voteRows
+  );
+  performances = filterPerformancesToConfirmedParticipants(performances, confirmedByEvent);
+  voteRows = filterVoteRowsToConfirmedTargets(voteRows, confirmedByEvent);
 
   const totalsForSpotlights = [
     aggregateVoteTotalsByRole(voteRows, 'athlete'),
@@ -5076,12 +5256,16 @@ Parse.Cloud.define('getMuralExploreCuriosities', async (request) => {
     throw new Parse.Error(Parse.Error.INVALID_QUERY, 'scopeId obrigatorio.');
   }
 
-  const [performances, voteRowsRaw, participantRowsRaw, profileRowsRaw] = await Promise.all([
+  let [performances, voteRowsRaw, participantRowsRaw, profileRowsRaw] = await Promise.all([
     loadMuralPerformanceRows(scope, scopeId, locationFilter),
     mapMuralVoteRowsForScope(scope, scopeId, locationFilter),
     loadExploreParticipantRows(scope, scopeId, locationFilter),
     scope === 'app' ? loadExploreAthleteProfileRows(locationFilter) : Promise.resolve([]),
   ]);
+
+  const confirmedByEvent = await collectConfirmedByEventFromPerfAndVotes(performances, voteRowsRaw);
+  performances = filterPerformancesToConfirmedParticipants(performances, confirmedByEvent);
+  voteRowsRaw = filterVoteRowsToConfirmedTargets(voteRowsRaw, confirmedByEvent);
 
   const voteRows =
     typeof attachVoterReliabilityWeightsFromRows === 'function'

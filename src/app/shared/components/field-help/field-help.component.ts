@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 import { I18nService } from '../../../core/services/i18n.service';
 
 @Component({
@@ -6,6 +7,7 @@ import { I18nService } from '../../../core/services/i18n.service';
   templateUrl: './field-help.component.html',
   styleUrls: ['./field-help.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class FieldHelpComponent {

@@ -17,7 +17,7 @@
       ></app-team-match-headline>
     }
     @if (context.journalistName) {
-      <p class="mural-event-context-journalist">Jornalista: {{ context.journalistName }}</p>
+      <p class="mural-event-context-journalist">{{ journalistLabel(context.journalistName) }}</p>
     }
   </div>
 }

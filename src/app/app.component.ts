@@ -164,8 +164,8 @@ export class AppComponent implements OnInit {
           text: `${APP_LOCALE_FLAGS[locale]} ${APP_LOCALE_LABELS[locale]}${
             locale === this.i18n.locale ? ' ✓' : ''
           }`,
-          handler: () => {
-            void this.i18n.applyAppLocale(locale);
+          handler: async () => {
+            await this.i18n.applyAppLocale(locale);
           },
         })),
         { text: this.i18n.t('confirm.cancel'), role: 'cancel' },

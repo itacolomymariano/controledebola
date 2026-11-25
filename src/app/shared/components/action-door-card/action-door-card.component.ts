@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 import { HomeDoorVariant } from '../home-door-card/home-door-card.component';
 
 @Component({
@@ -6,6 +7,7 @@ import { HomeDoorVariant } from '../home-door-card/home-door-card.component';
   templateUrl: './action-door-card.component.html',
   styleUrls: ['./action-door-card.component.scss', '../home-door-card/home-door-card.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class ActionDoorCardComponent {

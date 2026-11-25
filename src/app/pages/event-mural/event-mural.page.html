@@ -138,25 +138,25 @@
           </div>
         </app-playful-card>
 
-        <app-playful-card tone="surface" class="ion-margin-bottom">
+        <app-playful-card [tone]="muralPlayfulToneForSection('event-hub')" class="ion-margin-bottom">
           <div class="mural-card-header-row">
             <h2 class="mural-event-hub__title">{{ 'eventMural.hub.mediaTitle' | t }}</h2>
-            <ion-button fill="clear" size="small" (click)="toggleExtrasMedia(); $event.stopPropagation()">
-              {{
-                showExtrasMedia ? ('eventMural.hub.collapse' | t) : ('eventMural.hub.expand' | t)
-              }}
-            </ion-button>
+            <span class="mural-card-header-end">
+              <app-mural-share-button
+                [context]="shareContext"
+                [cardTitle]="'eventMural.hub.mediaTitle' | t"
+                ruleKey="mural.rule.eventMedia"
+              ></app-mural-share-button>
+              <ion-button fill="clear" size="small" (click)="toggleExtrasMedia(); $event.stopPropagation()">
+                {{
+                  showExtrasMedia ? ('eventMural.hub.collapse' | t) : ('eventMural.hub.expand' | t)
+                }}
+              </ion-button>
+            </span>
           </div>
           @if (showExtrasMedia) {
             <div class="ion-padding-top">
-              <div class="mural-card-header-row ion-margin-bottom">
-                <ion-card-subtitle>{{ 'eventMural.hub.mediaSubtitle' | t }}</ion-card-subtitle>
-                <app-mural-share-button
-                  [context]="shareContext"
-                  [cardTitle]="'eventMural.hub.mediaTitle' | t"
-                  ruleKey="mural.rule.eventMedia"
-                ></app-mural-share-button>
-              </div>
+              <ion-card-subtitle class="ion-margin-bottom">{{ 'eventMural.hub.mediaSubtitle' | t }}</ion-card-subtitle>
               @if (mediaHasJournal || mediaHasRadio || mediaHasVideo) {
                 <div class="media-preview-list">
                   @if (mediaHasJournal) {
@@ -197,16 +197,43 @@
           }
         </app-playful-card>
 
+        <app-playful-card [tone]="muralPlayfulToneForSection('event-hub')" class="ion-margin-bottom">
+          <h2 class="mural-event-hub__title">{{ 'photoPost.gamePhotosTitle' | t }}</h2>
+          <p class="mural-event-hub__subtitle">{{ 'photoPost.galleryTitle' | t }}</p>
+          <app-photo-gallery subjectKind="event" [subjectId]="eventId"></app-photo-gallery>
+          @if (mediaPressPhotos.length) {
+            <h3 class="mural-press-photos__title">{{ 'eventMural.hub.pressPhotosTitle' | t }}</h3>
+            <div class="mural-press-photos__grid">
+              @for (item of mediaPressPhotos; track item.url) {
+                <button
+                  type="button"
+                  class="mural-press-photos__thumb"
+                  (click)="openPressPhoto(item.url, item.label)"
+                >
+                  <img [src]="item.url" [alt]="item.label" loading="lazy" />
+                </button>
+              }
+            </div>
+          }
+        </app-playful-card>
+
         <app-playful-card tone="muted" class="ion-margin-bottom">
           <div class="mural-card-header-row">
             <h2 class="mural-event-hub__title">{{ 'eventMural.hub.predictionsTitle' | t }}</h2>
-            <ion-button fill="clear" size="small" (click)="toggleExtrasPredictions(); $event.stopPropagation()">
-              {{
-                showExtrasPredictions
-                  ? ('eventMural.hub.collapse' | t)
-                  : ('eventMural.hub.expand' | t)
-              }}
-            </ion-button>
+            <span class="mural-card-header-end">
+              <app-mural-share-button
+                [context]="shareContext"
+                [cardTitle]="'eventMural.hub.predictionsTitle' | t"
+                ruleKey="mural.rule.palpites"
+              ></app-mural-share-button>
+              <ion-button fill="clear" size="small" (click)="toggleExtrasPredictions(); $event.stopPropagation()">
+                {{
+                  showExtrasPredictions
+                    ? ('eventMural.hub.collapse' | t)
+                    : ('eventMural.hub.expand' | t)
+                }}
+              </ion-button>
+            </span>
           </div>
           @if (showExtrasPredictions) {
             <app-mural-prediction-rankings
@@ -324,7 +351,7 @@
 
       @case ('notas') {
         @for (role of ['scout', 'masseur', 'kitman']; track role) {
-          <app-playful-card tone="surface" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('notas-role', $any(role))">
+          <app-playful-card [tone]="muralPlayfulToneForSection('event-hub')" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('notas-role', $any(role))">
             <h2 class="mural-event-hub__title">{{
               'eventMural.view.notasRoleTitle' | t: { title: rankingSectionForRole($any(role))?.title ?? '' }
             }}</h2>
@@ -351,11 +378,11 @@
         <app-playful-card tone="users" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('curiosities-height')">
           <h2 class="mural-event-hub__title">{{ 'eventMural.view.tallestShortestAthletes' | t }}</h2>
         </app-playful-card>
-        <app-playful-card tone="surface" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('curiosities-explore')">
+        <app-playful-card [tone]="muralPlayfulToneForSection('event-hub')" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('curiosities-explore')">
           <h2 class="mural-event-hub__title">{{ 'eventMural.view.athleteCuriosities' | t }}</h2>
           <p class="mural-event-hub__subtitle">{{ 'eventMural.view.athleteCuriositiesSubtitle' | t }}</p>
         </app-playful-card>
-        <app-playful-card tone="surface" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('curiosities-fan-checkins')">
+        <app-playful-card [tone]="muralPlayfulToneForSection('event-hub')" class="ion-margin-bottom" [interactive]="true" (activate)="pushView('curiosities-fan-checkins')">
           <h2 class="mural-event-hub__title">{{ 'eventMural.view.fansWithCheckIn' | t }}</h2>
         </app-playful-card>
       }
@@ -485,7 +512,7 @@
 </ion-content>
 
 <ng-template #rankingCard let-section="section">
-  <app-playful-card tone="surface" class="mural-playful-ranking ion-margin-bottom">
+  <app-playful-card [tone]="muralPlayfulToneForSection(section.role)" class="mural-playful-ranking ion-margin-bottom">
     <app-mural-event-context [context]="shareContext"></app-mural-event-context>
     <div class="mural-card-header-row">
       <h2 class="mural-playful-ranking__title">Top 10 — {{ section.title }}</h2>
@@ -499,17 +526,16 @@
       <ion-note>{{ 'mural.playful.noData' | t }}</ion-note>
     }
     @for (entry of section.entries; track entry.userId; let i = $index) {
-      <div class="mural-playful-rank-row">
-        <span class="mural-playful-rank-pos">{{ i + 1 }}</span>
-        <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="md"></app-user-avatar>
-        <div class="mural-playful-rank-meta">
-          <strong>{{ entry.userName }}</strong>
-          @if (entry | muralAthleteLocationLine; as loc) {
-            <span class="mural-athlete-location-line">{{ loc }}</span>
-          }
-          <span>{{ entry.badgeLabel }}</span>
-        </div>
-      </div>
+      <app-mural-rank-entry
+        [rank]="i + 1"
+        [userName]="entry.userName"
+        [avatarUrl]="entry.avatarUrl"
+        [badge]="entry.badgeLabel"
+        [primaryPosition]="entry.primaryPosition"
+        [age]="entry.age"
+        [tone]="muralRankNestedTone(muralPlayfulToneForSection(section.role), i)"
+        [locationLine]="(entry | muralAthleteLocationLine) || ''"
+      ></app-mural-rank-entry>
     }
   </app-playful-card>
 </ng-template>

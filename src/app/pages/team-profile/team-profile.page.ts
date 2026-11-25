@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/core';
+import { LocaleRefreshDirective } from '../../shared/directives/locale-refresh.directive';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LoadingController, ToastController } from '@ionic/angular';
 import { AmateurTeamJoinRequestService } from '../../core/services/amateur-team-join-request.service';
@@ -11,12 +12,15 @@ import {
   consumeTeamProfileReturnState,
   TeamProfileReturnState,
 } from '../../core/utils/team-profile-navigation.util';
+import { ImageLightboxService } from '../../core/services/image-lightbox.service';
+import { I18nService } from '../../core/services/i18n.service';
 
 @Component({
   selector: 'app-team-profile',
   templateUrl: './team-profile.page.html',
   styleUrls: ['./team-profile.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class TeamProfilePage {
@@ -39,8 +43,17 @@ export class TeamProfilePage {
     private readonly loadingCtrl: LoadingController,
     private readonly toastCtrl: ToastController,
     private readonly wizardTour: WizardTourService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly imageLightbox: ImageLightboxService,
+    private readonly i18n: I18nService
   ) {}
+
+  openProfileImage(url: unknown, altKey?: string): void {
+    const src = String(url || '').trim();
+    if (!src) return;
+    const alt = altKey ? this.i18n.t(altKey) : String(this.profile?.['name'] || '');
+    void this.imageLightbox.open(src, alt);
+  }
 
   async ionViewWillEnter(): Promise<void> {
     this.teamReturn = consumeTeamProfileReturnState();

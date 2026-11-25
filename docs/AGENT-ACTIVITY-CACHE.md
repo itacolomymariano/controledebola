@@ -2,7 +2,75 @@
 
 Documento vivo para acelerar intervencoes futuras. Complementa `AGENTS.md` e `docs/GUIA-CICLO-DE-VIDA-E-ARQUITETURA.md` — nao os substitui.
 
-**Ultima atualizacao:** 2026-11-24 (manual site fase 2 + i18n onda 7 services)
+**Ultima atualizacao:** 2026-11-25 (i18n troca instantânea menu)
+
+### 2026-11-25 — i18n: troca instantânea pelo menu (LocaleRefreshDirective)
+
+- **Causa:** filhos `OnPush` sem `locale$` não re-renderizavam; rodapé/menu OK, conteúdo da aba stale.
+- **Infra:** `LocaleRefreshDirective` (`hostDirectives`) + export `SharedModule`; precache 3 JSON em `I18nService.dictCache`; menu `await applyAppLocale`.
+- **TS:** `events.page` remapeia badges/datas; `home-directory` `formatAppDateTime` + `refreshMatchWhenLabels`; `search` `markForCheck` após filtros.
+- **Lote:** 41 componentes/páginas OnPush gap; `AGENTS.md` atualizado; `i18n.service.spec.ts` (+1 caso cache); build + 4 testes OK.
+- **Smoke:** item 2 `I18N-SMOKE-XAIANA.md` (EN→ES→PT sem trocar aba).
+
+### 2026-11-25 — Mural onda 3: varredura cartões coloridos
+
+- **UI:** `app-playful-card` em participant-stats, performance-analytics (4 painéis), explore (mapa UF/cidade/bairro + `cardTone` por índice), location-top drilldown; `mural-app-feed` sem guard `tab===geral` (Top atletas, Apoio/árbitros, palpites, confrontos, Top 10 peladas nested); Master `confrontos`; acordeão Explorar pelada alinhado ao app.
+- **SCSS:** `match-rank-card--child-*`; `mural-playful-analytics-panel` para `.top-entry`; drilldown playful.
+- **Docs:** `MURAL-PLAYFUL-TONE-MATRIX-2026-11.md` (mapa desempenho/participantes/explore).
+- **Smoke:** Mural app 3 abas + pelada/evento; claro/escuro; share PNG.
+
+### 2026-11-25 — Mural onda 2: card dentro de card + idade/posição atleta
+
+- **UI:** `muralPlayfulNestedTone`; componente `app-mural-rank-entry`; acordeões Explorar/Apoio/Período com `mural-playful-accordion-content` + `playfulChrome` nos filhos; Top 10 app/pelada/evento/confrontos/período/fan/predictions com filhos em tom offset; matriz pai/filho em `docs/MURAL-PLAYFUL-TONE-MATRIX-2026-11.md`.
+- **Cloud:** `enrichMuralAthleteRankingMeta` em `07-mural.js` (via `enrichMuralRankingNames` — `age`, `primaryPosition` em athlete/goalkeeper).
+- **Modelo:** `MuralRankingEntry.age` / `primaryPosition`.
+- **Deploy:** `npm run build:cloud` gerado; publicar `cloud/main.js` no Back4App para meta no Top 10.
+- **Build:** `npm run build` OK (prebuild local pode ter bumpado `versionCode` — reverter se não for release).
+- **Smoke manual:** Mural app Geral → Top atletas (cor filho + idade + posição após deploy); acordeões Explorar e Resultados por período; pelada/evento Top 10.
+
+### 2026-11-25 — Mural: cartões coloridos + destaques só confirmados
+
+- **UI:** `mural-playful-tone.util.ts`; `playfulChrome` em todas as abas do mural app; acordeões com header pastel; `.mural-playful-screen` colore `ion-card` por `nth-of-type`; rank rows semitransparentes; período em `app-playful-card`; matriz em `docs/MURAL-PLAYFUL-TONE-MATRIX-2026-11.md`.
+- **Cloud:** `collectConfirmedEvent/PeladaParticipantUserIds` (`10-pelada.js`); filtros `filterPerformancesToConfirmedParticipants` / `filterVoteRowsToConfirmedTargets` em `07-mural.js` (rankings, período, explore, dashboard, quorum participantes).
+- **i18n:** `mural.rule.common.effectiveConfirmation` (pt/en/es) anexado no `app-mural-share-button` (exceto regras puramente de confronto).
+- **Deploy:** `npm run build:cloud` + publicar `cloud/main.js` no Back4App (obrigatório para rankings em prod).
+- **Smoke:** Mural app (3 abas + acordeões), pelada > mural Top 10, event-mural Conquistas/Top 10, claro/escuro.
+
+### 2026-11-24 — Layout playful (mural Conquistas / texto vertical)
+
+- **Causa:** `playful-grid` 2 colunas até 380px + cabeçalho tile `icon + h4 + share` em ~50% largura → títulos i18n longos quebram por letra (event-mural Conquistas).
+- **UX (regras):** coluna mín. **280px**; telefone portrait **1 coluna**; título tile **linha inteira**; ícone/share na linha abaixo; showcase **coluna** dentro de tile; `overflow-wrap: break-word` (sem `break-all`).
+- **Arquivos:** `playful-grid.component.scss`, `mural-highlights-panel.component.scss`, `mural-showcase-entry` via `::ng-deep`, `global.scss` (h2–h4 em `mural-card-header-row`), `origin-columns` (mural + highlights), drilldown `200px` (location-top, participant-stats).
+- **Smoke:** event-mural Conquistas, Board, search/events grids (2 col só se ≥280px/célula).
+
+### 2026-11-24 — i18n aba Board / mural onda 8
+
+### 2026-11-24 — i18n aba Board (mural onda 8)
+
+- **Causa:** subcomponentes do `mural-app-feed` com literais PT; `check:i18n:scan:v2` **0** por `PT_HINT` sem acento.
+- **Chaves:** `scripts/i18n-wave8-mural-extra.js` (+52 chaves; **2643** total) — showcase, predictions, locationTop, mediaTop, explore, erros mural, confrontos highlights.
+- **Componentes:** `mural-showcase-entry`, `mural-highlights-panel`, `mural-prediction-rankings`, `mural-location-top-rankings` (`profileRole.*` + `locale$`), `mural-media-top-card`, `mural-explore-curiosities`, `mural-event-context` (`formatAppDateTime`), `mural-confrontos-panel`, `mural.page.ts`.
+- **Scanner:** `PT_HINT` ampliado em `scan-i18n-hardcoded-v2.js`; mural Board fora dos hits P0/P1.
+- **P2:** [`I18N-WAVE8-P2-BACKLOG.md`](I18N-WAVE8-P2-BACKLOG.md) — smoke + support-ops + media meta `Autor`.
+- **Build:** `npm run build` OK (prebuild bump local `0408` — reverter se não for release).
+
+### 2026-11-24 — PhotoPost galerias contextuais
+
+### 2026-11-24 — Galerias PhotoPost (evento, time, lenda, atleta)
+
+- **Cloud:** `20-photo-posts.js` — `PhotoPost`, `createPhotoPost` / `listPhotoPosts` / `deletePhotoPost`, `configurePhotoPostClassPermissions`; confirmacao via `computeRegistrationEffectiveConfirmation` em eventos; presidentes/lendas via `assertTeamPresident` / `assertLegendRegisteredBy`.
+- **Cliente:** `photo-post.service.ts`, `app-photo-gallery`; mural do evento (fotos do jogo + bloco imprensa leitura); `team-profile` (imagens cadastro + galeria); lendas atleta/time; `profile-view` atleta com `includeEventPhotos`.
+- **Deploy:** `npm run build:cloud` + publicar `cloud/main.js`; REST `configurePhotoPostClassPermissions` (Master Key).
+- **i18n:** chaves `photoPost.*`, `teamProfile.photosSection`, `eventMural.hub.pressPhotosTitle` (pt/en/es).
+
+### 2026-11-24 — Mural: "?" e compartilhar (playful / evento)
+
+- **`app-mural-share-button`:** `resolveTarget` usa `.cb-playful-card__shell` após `ion-card`; `ruleText` com fallback `ruleKey` em **evento** e cadeia **pelada** (`pelada` / `peladas` / `default` / base).
+- **`mural-highlights-panel`:** tiles Conquistas (goleador, goleiro, time amado, juiz/promessa) com `app-mural-share-button` + SCSS `.mural-playful-tile__head`.
+- **`event-mural`:** share/? nos headers de Mídia e Palpites (colapsados); `.mural-card-header-end` em `global.scss`.
+- **Pelada Top 10:** `ruleKey="mural.rule.top10"`; i18n `mural.rule.top10.peladas` (pt/en/es).
+- **Gotcha:** share PNG só funciona se o botão estiver dentro de `ion-card` ou `app-playful-card` (shell).
+- **Build:** `npm run build` OK.
 
 ### 2026-11-24 — Manual site fase 2 + i18n services (onda 7)
 

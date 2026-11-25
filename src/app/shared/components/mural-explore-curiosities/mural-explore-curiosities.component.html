@@ -6,35 +6,47 @@
   <ion-note color="medium" class="ion-padding-horizontal">{{ 'mural.explore.loadFailed' | t }}</ion-note>
 } @else if (data) {
   <h3 class="mural-explore-section-title">{{ 'mural.explore.sectionGoals' | t }}</h3>
-  @for (card of goalCards; track card.ruleKey) {
+  @for (card of goalCards; track card.ruleKey; let i = $index) {
     <ng-container
-      *ngTemplateOutlet="showcaseCard; context: { card: card, entry: card.getEntry(data) }"
+      *ngTemplateOutlet="showcaseCard; context: { card: card, entry: card.getEntry(data), index: i }"
     ></ng-container>
   }
 
   <h3 class="mural-explore-section-title ion-margin-top">{{ 'mural.explore.sectionAge' | t }}</h3>
-  @for (card of voteAgeCards; track card.ruleKey) {
+  @for (card of voteAgeCards; track card.ruleKey; let i = $index) {
     <ng-container
-      *ngTemplateOutlet="showcaseCard; context: { card: card, entry: card.getEntry(data) }"
+      *ngTemplateOutlet="showcaseCard; context: { card: card, entry: card.getEntry(data), index: i }"
     ></ng-container>
   }
 
   <h3 class="mural-explore-section-title ion-margin-top">{{ 'mural.explore.sectionHeight' | t }}</h3>
-  @for (card of heightCards; track card.ruleKey) {
+  @for (card of heightCards; track card.ruleKey; let i = $index) {
     <ng-container
-      *ngTemplateOutlet="showcaseCard; context: { card: card, entry: card.getEntry(data) }"
+      *ngTemplateOutlet="showcaseCard; context: { card: card, entry: card.getEntry(data), index: i }"
     ></ng-container>
   }
 
   <h3 class="mural-explore-section-title ion-margin-top">{{ 'mural.explore.sectionMap' | t }}</h3>
 
-  <ion-card class="ion-margin-bottom">
-    <ion-card-header>
+  <ng-container
+    *ngTemplateOutlet="mapStateCard"
+  ></ng-container>
+  <ng-container
+    *ngTemplateOutlet="mapCityCard"
+  ></ng-container>
+  <ng-container
+    *ngTemplateOutlet="mapNeighborhoodCard"
+  ></ng-container>
+}
+
+<ng-template #mapStateCard>
+  @if (playfulChrome) {
+    <app-playful-card [tone]="mapCardTones[0]" class="ion-margin-bottom">
       @if (scope === 'event') {
         <app-mural-event-context [context]="shareContext"></app-mural-event-context>
       }
       <div class="mural-card-header-row">
-        <ion-card-title>{{ 'mural.explore.mapState' | t }}</ion-card-title>
+        <h2 class="mural-playful-ranking__title">{{ 'mural.explore.mapState' | t }}</h2>
         <app-mural-share-button
           [context]="shareContext"
           [cardTitle]="'mural.explore.mapState' | t"
@@ -44,63 +56,130 @@
       @if (filterCaption) {
         <p class="mural-filter-line">{{ filterCaption }}</p>
       }
-    </ion-card-header>
-    <ion-card-content>
-      @if (data.athleteMap.topState; as row) {
-        <p><strong>{{ row.uf }}</strong> — {{ row.count }} {{ row.count === 1 ? 'atleta' : 'atletas' }}</p>
+      @if (data?.athleteMap?.topState; as row) {
+        <p><strong>{{ row.uf }}</strong> — {{ mapAthleteCount(row.count) }}</p>
       } @else {
         <ion-note color="medium">{{ 'mural.explore.noData' | t }}</ion-note>
       }
-    </ion-card-content>
-  </ion-card>
+    </app-playful-card>
+  } @else {
+    <ion-card class="ion-margin-bottom">
+      <ion-card-header>
+        @if (scope === 'event') {
+          <app-mural-event-context [context]="shareContext"></app-mural-event-context>
+        }
+        <div class="mural-card-header-row">
+          <ion-card-title>{{ 'mural.explore.mapState' | t }}</ion-card-title>
+          <app-mural-share-button
+            [context]="shareContext"
+            [cardTitle]="'mural.explore.mapState' | t"
+            ruleKey="mural.rule.explore.mapState"
+          ></app-mural-share-button>
+        </div>
+        @if (filterCaption) {
+          <p class="mural-filter-line">{{ filterCaption }}</p>
+        }
+      </ion-card-header>
+      <ion-card-content>
+        @if (data?.athleteMap?.topState; as row) {
+          <p><strong>{{ row.uf }}</strong> — {{ mapAthleteCount(row.count) }}</p>
+        } @else {
+          <ion-note color="medium">{{ 'mural.explore.noData' | t }}</ion-note>
+        }
+      </ion-card-content>
+    </ion-card>
+  }
+</ng-template>
 
-  <ion-card class="ion-margin-bottom">
-    <ion-card-header>
+<ng-template #mapCityCard>
+  @if (playfulChrome) {
+    <app-playful-card [tone]="mapCardTones[1]" class="ion-margin-bottom">
       <div class="mural-card-header-row">
-        <ion-card-title>{{ 'mural.explore.mapCity' | t }}</ion-card-title>
+        <h2 class="mural-playful-ranking__title">{{ 'mural.explore.mapCity' | t }}</h2>
         <app-mural-share-button
           [context]="shareContext"
           [cardTitle]="'mural.explore.mapCity' | t"
           ruleKey="mural.rule.explore.mapCity"
         ></app-mural-share-button>
       </div>
-    </ion-card-header>
-    <ion-card-content>
-      @if (data.athleteMap.topCity; as row) {
-        <p><strong>{{ row.city }} ({{ row.uf }})</strong> — {{ row.count }} {{ row.count === 1 ? 'atleta' : 'atletas' }}</p>
+      @if (data?.athleteMap?.topCity; as row) {
+        <p><strong>{{ row.city }} ({{ row.uf }})</strong> — {{ mapAthleteCount(row.count) }}</p>
       } @else {
         <ion-note color="medium">{{ 'mural.explore.noData' | t }}</ion-note>
       }
-    </ion-card-content>
-  </ion-card>
+    </app-playful-card>
+  } @else {
+    <ion-card class="ion-margin-bottom">
+      <ion-card-header>
+        <div class="mural-card-header-row">
+          <ion-card-title>{{ 'mural.explore.mapCity' | t }}</ion-card-title>
+          <app-mural-share-button
+            [context]="shareContext"
+            [cardTitle]="'mural.explore.mapCity' | t"
+            ruleKey="mural.rule.explore.mapCity"
+          ></app-mural-share-button>
+        </div>
+      </ion-card-header>
+      <ion-card-content>
+        @if (data?.athleteMap?.topCity; as row) {
+          <p><strong>{{ row.city }} ({{ row.uf }})</strong> — {{ mapAthleteCount(row.count) }}</p>
+        } @else {
+          <ion-note color="medium">{{ 'mural.explore.noData' | t }}</ion-note>
+        }
+      </ion-card-content>
+    </ion-card>
+  }
+</ng-template>
 
-  <ion-card class="ion-margin-bottom">
-    <ion-card-header>
+<ng-template #mapNeighborhoodCard>
+  @if (playfulChrome) {
+    <app-playful-card [tone]="mapCardTones[2]" class="ion-margin-bottom">
       <div class="mural-card-header-row">
-        <ion-card-title>{{ 'mural.explore.mapNeighborhood' | t }}</ion-card-title>
+        <h2 class="mural-playful-ranking__title">{{ 'mural.explore.mapNeighborhood' | t }}</h2>
         <app-mural-share-button
           [context]="shareContext"
           [cardTitle]="'mural.explore.mapNeighborhood' | t"
           ruleKey="mural.rule.explore.mapNeighborhood"
         ></app-mural-share-button>
       </div>
-    </ion-card-header>
-    <ion-card-content>
-      @if (data.athleteMap.topNeighborhood; as row) {
+      @if (data?.athleteMap?.topNeighborhood; as row) {
         <p>
           <strong>{{ row.neighborhood }}</strong> — {{ row.city }} ({{ row.uf }}) —
-          {{ row.count }} {{ row.count === 1 ? 'atleta' : 'atletas' }}
+          {{ mapAthleteCount(row.count) }}
         </p>
       } @else {
         <ion-note color="medium">{{ 'mural.explore.noData' | t }}</ion-note>
       }
-    </ion-card-content>
-  </ion-card>
-}
+    </app-playful-card>
+  } @else {
+    <ion-card class="ion-margin-bottom">
+      <ion-card-header>
+        <div class="mural-card-header-row">
+          <ion-card-title>{{ 'mural.explore.mapNeighborhood' | t }}</ion-card-title>
+          <app-mural-share-button
+            [context]="shareContext"
+            [cardTitle]="'mural.explore.mapNeighborhood' | t"
+            ruleKey="mural.rule.explore.mapNeighborhood"
+          ></app-mural-share-button>
+        </div>
+      </ion-card-header>
+      <ion-card-content>
+        @if (data?.athleteMap?.topNeighborhood; as row) {
+          <p>
+            <strong>{{ row.neighborhood }}</strong> — {{ row.city }} ({{ row.uf }}) —
+            {{ mapAthleteCount(row.count) }}
+          </p>
+        } @else {
+          <ion-note color="medium">{{ 'mural.explore.noData' | t }}</ion-note>
+        }
+      </ion-card-content>
+    </ion-card>
+  }
+</ng-template>
 
-<ng-template #showcaseCard let-card="card" let-entry="entry">
+<ng-template #showcaseCard let-card="card" let-entry="entry" let-index="index">
   @if (playfulChrome) {
-    <app-playful-card tone="surface" class="ion-margin-bottom">
+    <app-playful-card [tone]="cardTone(index)" class="ion-margin-bottom">
       @if (scope === 'event') {
         <app-mural-event-context [context]="shareContext"></app-mural-event-context>
       }

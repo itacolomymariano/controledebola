@@ -40,6 +40,7 @@ import { AthletePerformancePanelComponent } from './components/athlete-performan
 import { MuralPerformanceAnalyticsComponent } from './components/mural-performance-analytics/mural-performance-analytics.component';
 import { MuralConfrontosPanelComponent } from './components/mural-confrontos-panel/mural-confrontos-panel.component';
 import { MuralAppFeedComponent } from './components/mural-app-feed/mural-app-feed.component';
+import { MuralRankEntryComponent } from './components/mural-rank-entry/mural-rank-entry.component';
 import { EventGateTicketCardComponent } from './components/event-gate-ticket-card/event-gate-ticket-card.component';
 import { PixCopyButtonComponent } from './components/pix-copy-button/pix-copy-button.component';
 import { EventMediaEngagementComponent } from './components/event-media-engagement/event-media-engagement.component';
@@ -65,6 +66,8 @@ import { PlayfulGridComponent } from './components/playful-grid/playful-grid.com
 import { ImageLightboxComponent } from './components/image-lightbox/image-lightbox.component';
 import { FormWizardComponent } from './components/form-wizard/form-wizard.component';
 import { PlayedTeamListComponent } from './components/played-team-list/played-team-list.component';
+import { PhotoGalleryComponent } from './components/photo-gallery/photo-gallery.component';
+import { LocaleRefreshDirective } from './directives/locale-refresh.directive';
 
 @NgModule({
   declarations: [
@@ -106,6 +109,7 @@ import { PlayedTeamListComponent } from './components/played-team-list/played-te
     MuralPerformanceAnalyticsComponent,
     MuralConfrontosPanelComponent,
     MuralAppFeedComponent,
+    MuralRankEntryComponent,
     EventGateTicketCardComponent,
     PixCopyButtonComponent,
     EventMediaEngagementComponent,
@@ -129,10 +133,11 @@ import { PlayedTeamListComponent } from './components/played-team-list/played-te
     ImageLightboxComponent,
     FormWizardComponent,
     PlayedTeamListComponent,
+    PhotoGalleryComponent,
     TranslatePipe,
     MuralAthleteLocationLinePipe,
   ],
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, IonicModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, IonicModule, LocaleRefreshDirective],
   exports: [
     EventDetailOverviewComponent,
     EventDetailVotingPanelComponent,
@@ -172,6 +177,7 @@ import { PlayedTeamListComponent } from './components/played-team-list/played-te
     MuralPerformanceAnalyticsComponent,
     MuralConfrontosPanelComponent,
     MuralAppFeedComponent,
+    MuralRankEntryComponent,
     EventGateTicketCardComponent,
     PixCopyButtonComponent,
     EventMediaEngagementComponent,
@@ -195,8 +201,10 @@ import { PlayedTeamListComponent } from './components/played-team-list/played-te
     ImageLightboxComponent,
     FormWizardComponent,
     PlayedTeamListComponent,
+    PhotoGalleryComponent,
     TranslatePipe,
     MuralAthleteLocationLinePipe,
+    LocaleRefreshDirective,
   ],
 })
 export class SharedModule {}

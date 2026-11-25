@@ -1,16 +1,16 @@
 @if (stats) {
-  <ion-card>
-    <ion-card-header>
+  @if (playfulChrome) {
+    <app-playful-card tone="users" class="ion-margin-bottom">
       @if (scope === 'event') {
         <app-mural-event-context [context]="shareContext"></app-mural-event-context>
       }
       <div class="mural-card-header-row">
         <div>
-          <ion-card-title>{{ 'mural.stats.participantsByLocation' | t }}</ion-card-title>
+          <h2 class="mural-playful-ranking__title">{{ 'mural.stats.participantsByLocation' | t }}</h2>
           @if (filterCaption) {
             <p class="mural-filter-line">{{ filterCaption }}</p>
           }
-          <ion-card-subtitle>{{ 'mural.stats.totalLine' | t: { count: stats.total } }}</ion-card-subtitle>
+          <p class="mural-filter-line">{{ 'mural.stats.totalLine' | t: { count: stats.total } }}</p>
         </div>
         <app-mural-share-button
           [context]="shareContext"
@@ -18,141 +18,201 @@
           ruleKey="mural.rule.participantesLocal"
         ></app-mural-share-button>
       </div>
-    </ion-card-header>
-    <ion-card-content>
-      @if (useDrilldown) {
-        <div class="drilldown-header">
-          @if (level !== 'states') {
+      <ng-container *ngTemplateOutlet="statsBody"></ng-container>
+    </app-playful-card>
+  } @else {
+    <ion-card>
+      <ion-card-header>
+        @if (scope === 'event') {
+          <app-mural-event-context [context]="shareContext"></app-mural-event-context>
+        }
+        <div class="mural-card-header-row">
+          <div>
+            <ion-card-title>{{ 'mural.stats.participantsByLocation' | t }}</ion-card-title>
+            @if (filterCaption) {
+              <p class="mural-filter-line">{{ filterCaption }}</p>
+            }
+            <ion-card-subtitle>{{ 'mural.stats.totalLine' | t: { count: stats.total } }}</ion-card-subtitle>
+          </div>
+          <app-mural-share-button
+            [context]="shareContext"
+            [cardTitle]="'mural.stats.participantsByLocation' | t"
+            ruleKey="mural.rule.participantesLocal"
+          ></app-mural-share-button>
+        </div>
+      </ion-card-header>
+      <ion-card-content>
+        <ng-container *ngTemplateOutlet="statsBody"></ng-container>
+      </ion-card-content>
+    </ion-card>
+  }
+}
+
+<ng-template #statsBody>
+  @if (useDrilldown) {
+    <div class="drilldown-header">
+      @if (level !== 'states') {
+        <ion-button
+          class="drilldown-back-btn"
+          fill="outline"
+          size="small"
+          (click)="backLevel()"
+        >
+          <ion-icon slot="start" name="chevron-back-outline" aria-hidden="true"></ion-icon>
+          {{ 'common.back' | t }}
+        </ion-button>
+      }
+      <ion-note>{{ breadcrumb }}</ion-note>
+    </div>
+
+    @if (level === 'states') {
+      @if (!stateCards.length) {
+        <ion-note color="medium">{{ 'mural.stats.noStateAddress' | t }}</ion-note>
+      }
+      <div class="drilldown-grid">
+        @for (row of stateCards; track row.label; let i = $index) {
+          @if (playfulChrome) {
+            <app-playful-card
+              [tone]="drilldownTone(i)"
+              [interactive]="true"
+              class="drilldown-card drilldown-card-playful"
+              (activate)="openState(row.label)"
+            >
+              <h3 class="mural-playful-section-title">{{ row.label }}</h3>
+              <p>{{ 'mural.stats.participantsLine' | t: { count: row.count } }}</p>
+              <ion-note>{{ row.subLine }}</ion-note>
+            </app-playful-card>
+          } @else {
+            <ion-card button class="drilldown-card" (click)="openState(row.label)">
+              <ion-card-header>
+                <ion-card-title>{{ row.label }}</ion-card-title>
+                <ion-card-subtitle>{{ 'mural.stats.participantsLine' | t: { count: row.count } }}</ion-card-subtitle>
+              </ion-card-header>
+              <ion-card-content>
+                <ion-note>{{ row.subLine }}</ion-note>
+              </ion-card-content>
+            </ion-card>
+          }
+        }
+      </div>
+    }
+
+    @if (level === 'cities') {
+      @if (!cityCards.length) {
+        <ion-note color="medium">{{ 'mural.stats.noCityInState' | t }}</ion-note>
+      }
+      <div class="drilldown-grid">
+        @for (row of cityCards; track row.label; let i = $index) {
+          @if (playfulChrome) {
+            <app-playful-card
+              [tone]="drilldownTone(i)"
+              [interactive]="true"
+              class="drilldown-card drilldown-card-playful"
+              (activate)="openCity(row.label)"
+            >
+              <h3 class="mural-playful-section-title">{{ row.label }}</h3>
+              <p>{{ 'mural.stats.participantsLine' | t: { count: row.count } }}</p>
+              <ion-note>{{ row.subLine }}</ion-note>
+            </app-playful-card>
+          } @else {
+            <ion-card button class="drilldown-card" (click)="openCity(row.label)">
+              <ion-card-header>
+                <ion-card-title>{{ row.label }}</ion-card-title>
+                <ion-card-subtitle>{{ 'mural.stats.participantsLine' | t: { count: row.count } }}</ion-card-subtitle>
+              </ion-card-header>
+              <ion-card-content>
+                <ion-note>{{ row.subLine }}</ion-note>
+              </ion-card-content>
+            </ion-card>
+          }
+        }
+      </div>
+    }
+
+    @if (level === 'neighborhoods') {
+      @if (!neighborhoodCards.length) {
+        <ion-note color="medium">{{ 'mural.stats.noNeighborhoodInCity' | t }}</ion-note>
+      }
+      <div class="drilldown-grid">
+        @for (row of neighborhoodCards; track row.label; let i = $index) {
+          @if (playfulChrome) {
+            <app-playful-card [tone]="drilldownTone(i)" class="drilldown-card drilldown-card-playful">
+              <h3 class="mural-playful-section-title">{{ row.label }}</h3>
+              <p>{{ 'mural.stats.participantsLine' | t: { count: row.count } }}</p>
+            </app-playful-card>
+          } @else {
+            <ion-card class="drilldown-card drilldown-card-static">
+              <ion-card-header>
+                <ion-card-title>{{ row.label }}</ion-card-title>
+                <ion-card-subtitle>{{ 'mural.stats.participantsLine' | t: { count: row.count } }}</ion-card-subtitle>
+              </ion-card-header>
+            </ion-card>
+          }
+        }
+      </div>
+    }
+  } @else {
+    @if (showCity) {
+      <div class="stats-section">
+        <h3>{{ 'mural.stats.byCity' | t }}</h3>
+        @if (!stats!.byCity.length) {
+          <ion-note color="medium">{{ 'mural.stats.noCityAddress' | t }}</ion-note>
+        }
+        @for (row of stats!.byCity; track row.label) {
+          <div class="stats-row">
+            <span class="stats-label">{{ row.label }}</span>
+            <ion-badge color="primary">{{ row.count }}</ion-badge>
+          </div>
+        }
+      </div>
+    }
+
+    @if (showNeighborhood) {
+      <div class="stats-section">
+        @if (!neighborhoodsExpanded) {
+          <ion-item
+            button
+            detail="true"
+            lines="none"
+            class="neighborhood-summary"
+            (click)="openNeighborhoods()"
+          >
+            <ion-label>
+              <h3>{{ 'mural.stats.byNeighborhood' | t }}</h3>
+              <p>
+                @if (neighborhoodCount === 1) {
+                  {{ 'mural.stats.neighborhoodsOneInScope' | t: { scope: scopeLabel } }}
+                } @else {
+                  {{ 'mural.stats.neighborhoodsManyInScope' | t: { count: neighborhoodCount, scope: scopeLabel } }}
+                }
+              </p>
+            </ion-label>
+            <ion-badge slot="end" color="primary">{{ neighborhoodCount }}</ion-badge>
+          </ion-item>
+        } @else {
+          <div class="drilldown-header">
             <ion-button
               class="drilldown-back-btn"
               fill="outline"
               size="small"
-              (click)="backLevel()"
+              (click)="closeNeighborhoods()"
             >
               <ion-icon slot="start" name="chevron-back-outline" aria-hidden="true"></ion-icon>
               {{ 'common.back' | t }}
             </ion-button>
+            <ion-note>{{ 'mural.stats.byNeighborhoodCount' | t: { count: neighborhoodCount } }}</ion-note>
+          </div>
+          @if (!stats!.byNeighborhood.length) {
+            <ion-note color="medium">{{ 'mural.stats.noNeighborhoodAddress' | t }}</ion-note>
           }
-          <ion-note>{{ breadcrumb }}</ion-note>
-        </div>
-
-        @if (level === 'states') {
-          @if (!stateCards.length) {
-            <ion-note color="medium">{{ 'mural.stats.noStateAddress' | t }}</ion-note>
+          @for (row of stats!.byNeighborhood; track row.label) {
+            <div class="stats-row">
+              <span class="stats-label">{{ row.label }}</span>
+              <ion-badge color="primary">{{ row.count }}</ion-badge>
+            </div>
           }
-          <div class="drilldown-grid">
-            @for (row of stateCards; track row.label) {
-              <ion-card button class="drilldown-card" (click)="openState(row.label)">
-                <ion-card-header>
-                  <ion-card-title>{{ row.label }}</ion-card-title>
-                  <ion-card-subtitle>{{ 'mural.stats.participantsLine' | t: { count: row.count } }}</ion-card-subtitle>
-                </ion-card-header>
-                <ion-card-content>
-                  <ion-note>{{ row.subLine }}</ion-note>
-                </ion-card-content>
-              </ion-card>
-            }
-          </div>
         }
-
-        @if (level === 'cities') {
-          @if (!cityCards.length) {
-            <ion-note color="medium">{{ 'mural.stats.noCityInState' | t }}</ion-note>
-          }
-          <div class="drilldown-grid">
-            @for (row of cityCards; track row.label) {
-              <ion-card button class="drilldown-card" (click)="openCity(row.label)">
-                <ion-card-header>
-                  <ion-card-title>{{ row.label }}</ion-card-title>
-                  <ion-card-subtitle>{{ 'mural.stats.participantsLine' | t: { count: row.count } }}</ion-card-subtitle>
-                </ion-card-header>
-                <ion-card-content>
-                  <ion-note>{{ row.subLine }}</ion-note>
-                </ion-card-content>
-              </ion-card>
-            }
-          </div>
-        }
-
-        @if (level === 'neighborhoods') {
-          @if (!neighborhoodCards.length) {
-            <ion-note color="medium">{{ 'mural.stats.noNeighborhoodInCity' | t }}</ion-note>
-          }
-          <div class="drilldown-grid">
-            @for (row of neighborhoodCards; track row.label) {
-              <ion-card class="drilldown-card drilldown-card-static">
-                <ion-card-header>
-                  <ion-card-title>{{ row.label }}</ion-card-title>
-                  <ion-card-subtitle>{{ 'mural.stats.participantsLine' | t: { count: row.count } }}</ion-card-subtitle>
-                </ion-card-header>
-              </ion-card>
-            }
-          </div>
-        }
-      } @else {
-        @if (showCity) {
-          <div class="stats-section">
-            <h3>{{ 'mural.stats.byCity' | t }}</h3>
-            @if (!stats.byCity.length) {
-              <ion-note color="medium">{{ 'mural.stats.noCityAddress' | t }}</ion-note>
-            }
-            @for (row of stats.byCity; track row.label) {
-              <div class="stats-row">
-                <span class="stats-label">{{ row.label }}</span>
-                <ion-badge color="primary">{{ row.count }}</ion-badge>
-              </div>
-            }
-          </div>
-        }
-
-        @if (showNeighborhood) {
-          <div class="stats-section">
-            @if (!neighborhoodsExpanded) {
-              <ion-item
-                button
-                detail="true"
-                lines="none"
-                class="neighborhood-summary"
-                (click)="openNeighborhoods()"
-              >
-                <ion-label>
-                  <h3>{{ 'mural.stats.byNeighborhood' | t }}</h3>
-                  <p>
-                    @if (neighborhoodCount === 1) {
-                      {{ 'mural.stats.neighborhoodsOneInScope' | t: { scope: scopeLabel } }}
-                    } @else {
-                      {{ 'mural.stats.neighborhoodsManyInScope' | t: { count: neighborhoodCount, scope: scopeLabel } }}
-                    }
-                  </p>
-                </ion-label>
-                <ion-badge slot="end" color="primary">{{ neighborhoodCount }}</ion-badge>
-              </ion-item>
-            } @else {
-              <div class="drilldown-header">
-                <ion-button
-                  class="drilldown-back-btn"
-                  fill="outline"
-                  size="small"
-                  (click)="closeNeighborhoods()"
-                >
-                  <ion-icon slot="start" name="chevron-back-outline" aria-hidden="true"></ion-icon>
-                  {{ 'common.back' | t }}
-                </ion-button>
-                <ion-note>{{ 'mural.stats.byNeighborhoodCount' | t: { count: neighborhoodCount } }}</ion-note>
-              </div>
-              @if (!stats.byNeighborhood.length) {
-                <ion-note color="medium">{{ 'mural.stats.noNeighborhoodAddress' | t }}</ion-note>
-              }
-              @for (row of stats.byNeighborhood; track row.label) {
-                <div class="stats-row">
-                  <span class="stats-label">{{ row.label }}</span>
-                  <ion-badge color="primary">{{ row.count }}</ion-badge>
-                </div>
-              }
-            }
-          </div>
-        }
-      }
-    </ion-card-content>
-  </ion-card>
-}
+      </div>
+    }
+  }
+</ng-template>

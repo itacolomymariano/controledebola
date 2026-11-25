@@ -25,6 +25,7 @@ import {
   loggedUserAddress,
 } from './home-directory.util';
 import { PlayfulCardTone } from '../../shared/components/playful-card/playful-card.component';
+import { formatAppDateTime } from '../../core/utils/locale-datetime.util';
 
 type HomeDoor = 'confrontos' | 'times' | 'usuarios';
 
@@ -96,7 +97,10 @@ export class HomeDirectoryPage implements OnDestroy {
     private readonly i18n: I18nService,
     private readonly cdr: ChangeDetectorRef
   ) {
-    this.localeSub = this.i18n.locale$.subscribe(() => this.cdr.markForCheck());
+    this.localeSub = this.i18n.locale$.subscribe(() => {
+      this.refreshMatchWhenLabels();
+      this.cdr.markForCheck();
+    });
   }
 
   ngOnDestroy(): void {
@@ -413,14 +417,16 @@ export class HomeDirectoryPage implements OnDestroy {
     this.userRows = rows;
   }
 
+  private refreshMatchWhenLabels(): void {
+    if (!this.matchRows.length) return;
+    this.matchRows = this.matchRows.map((row) => ({
+      ...row,
+      when: this.formatWhen(row.startTime),
+    }));
+  }
+
   private formatWhen(date: Date): string {
     if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
-    return new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
+    return formatAppDateTime(date, this.i18n.locale);
   }
 }

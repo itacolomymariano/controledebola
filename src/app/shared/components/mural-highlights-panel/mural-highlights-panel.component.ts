@@ -47,7 +47,7 @@ export class MuralHighlightsPanelComponent implements OnDestroy {
 
   get showPlayfulHero(): boolean {
     if (!this.playfulChrome || !this.highlights) return false;
-    if (this.scope === 'app') return this.appBucketTab === 'geral';
+    if (this.scope === 'app') return !!this.appBucketTab;
     return this.scope === 'pelada' || this.scope === 'event';
   }
 

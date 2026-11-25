@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/core';
+import { LocaleRefreshDirective } from '../../shared/directives/locale-refresh.directive';
 import { ActivatedRoute } from '@angular/router';
 import { EventMediaDashboard } from '../../core/models/event-media.model';
 import { EventMediaService } from '../../core/services/event-media.service';
@@ -9,6 +10,7 @@ import { resolveRouteParam } from '../../core/utils/route-param.util';
   templateUrl: './event-mural-media-video.page.html',
   styleUrls: ['./event-mural-media.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class EventMuralMediaVideoPage {

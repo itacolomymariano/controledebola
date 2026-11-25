@@ -23,14 +23,13 @@
       <ion-note>{{ 'mural.fan.noCheckIns' | t }}</ion-note>
     } @else {
       @for (entry of entries; track entry.userId; let i = $index) {
-        <div class="mural-playful-rank-row">
-          <span class="mural-playful-rank-pos">{{ i + 1 }}</span>
-          <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="md"></app-user-avatar>
-          <div class="mural-playful-rank-meta">
-            <strong>{{ entry.userName }}</strong>
-            <span>{{ entry.engagementScore }} · {{ entry.checkIns }} check-ins</span>
-          </div>
-        </div>
+        <app-mural-rank-entry
+          [rank]="i + 1"
+          [userName]="entry.userName"
+          [avatarUrl]="entry.avatarUrl"
+          [badge]="entry.engagementScore + ' · ' + entry.checkIns + ' check-ins'"
+          [tone]="fanNestedTone(i)"
+        ></app-mural-rank-entry>
       }
     }
   </app-playful-card>

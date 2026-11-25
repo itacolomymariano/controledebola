@@ -229,6 +229,21 @@
         </ion-card-content>
       </ion-card>
     }
+
+    @if (role === 'athlete' && profile.userId) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>{{ 'photoPost.momentsTitle' | t }}</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <app-photo-gallery
+            subjectKind="athlete_user"
+            [subjectId]="profile.userId"
+            [includeEventPhotos]="true"
+          ></app-photo-gallery>
+        </ion-card-content>
+      </ion-card>
+    }
     </app-playful-page>
   }
 </ion-content>

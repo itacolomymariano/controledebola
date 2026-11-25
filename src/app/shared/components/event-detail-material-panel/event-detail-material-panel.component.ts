@@ -1,3 +1,4 @@
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -23,6 +24,7 @@ import { I18nService } from '../../../core/services/i18n.service';
   templateUrl: './event-detail-material-panel.component.html',
   styleUrls: ['./event-detail-material-panel.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class EventDetailMaterialPanelComponent implements OnChanges {

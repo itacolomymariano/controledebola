@@ -1,9 +1,9 @@
 @if (rankings) {
   <ion-list-header>
-    <ion-label>Top 3 por localizacao</ion-label>
+    <ion-label>{{ 'mural.locationTop.title' | t }}</ion-label>
     <app-mural-share-button
       [context]="shareContext"
-      cardTitle="Top 3 por localizacao"
+      [cardTitle]="('mural.locationTop.title' | t)"
       ruleKey="mural.rule.topLocal"
       [target]="locationShareRoot"
     ></app-mural-share-button>
@@ -30,17 +30,29 @@
 
   @if (level === 'states') {
     @if (!stateGroups.length) {
-      <ion-note color="medium">Sem Top 3 por estado disponivel.</ion-note>
+      <ion-note color="medium">{{ 'mural.locationTop.empty.byState' | t }}</ion-note>
     }
     <div class="drilldown-grid">
-      @for (group of stateGroups; track group.label) {
+      @for (group of stateGroups; track group.label; let i = $index) {
         @if (hasAnyRankings(group)) {
-          <ion-card button class="drilldown-card" (click)="openState(group.label)">
-            <ion-card-header>
-              <ion-card-title>{{ group.label }}</ion-card-title>
-              <ion-card-subtitle>{{ group.participantCount }} participantes</ion-card-subtitle>
-            </ion-card-header>
-          </ion-card>
+          @if (playfulChrome) {
+            <app-playful-card
+              [tone]="drilldownTone(i)"
+              [interactive]="true"
+              class="drilldown-card drilldown-card-playful"
+              (activate)="openState(group.label)"
+            >
+              <h3 class="mural-playful-section-title">{{ group.label }}</h3>
+              <p>{{ participantCountLabel(group.participantCount) }}</p>
+            </app-playful-card>
+          } @else {
+            <ion-card button class="drilldown-card" (click)="openState(group.label)">
+              <ion-card-header>
+                <ion-card-title>{{ group.label }}</ion-card-title>
+                <ion-card-subtitle>{{ participantCountLabel(group.participantCount) }}</ion-card-subtitle>
+              </ion-card-header>
+            </ion-card>
+          }
         }
       }
     </div>
@@ -52,23 +64,35 @@
     ></ng-container>
     @if (cityGroupsForState.length) {
       <ion-button expand="block" fill="outline" class="ion-margin-top" (click)="openCitiesList()">
-        Ver Top 3 por cidades de {{ selectedState }}
+        {{ 'mural.locationTop.viewCitiesInState' | t: { state: selectedState } }}
       </ion-button>
     }
   }
 
   @if (level === 'cities') {
     @if (!cityGroupsForState.length) {
-      <ion-note color="medium">Sem Top 3 por cidade neste estado.</ion-note>
+      <ion-note color="medium">{{ 'mural.locationTop.empty.byCity' | t }}</ion-note>
     }
     <div class="drilldown-grid">
-      @for (group of cityGroupsForState; track group.label) {
-        <ion-card button class="drilldown-card" (click)="openCity(group.label)">
-          <ion-card-header>
-            <ion-card-title>{{ cityDisplayName(group.label) }}</ion-card-title>
-            <ion-card-subtitle>{{ group.participantCount }} participantes</ion-card-subtitle>
-          </ion-card-header>
-        </ion-card>
+      @for (group of cityGroupsForState; track group.label; let i = $index) {
+        @if (playfulChrome) {
+          <app-playful-card
+            [tone]="drilldownTone(i)"
+            [interactive]="true"
+            class="drilldown-card drilldown-card-playful"
+            (activate)="openCity(group.label)"
+          >
+            <h3 class="mural-playful-section-title">{{ cityDisplayName(group.label) }}</h3>
+            <p>{{ participantCountLabel(group.participantCount) }}</p>
+          </app-playful-card>
+        } @else {
+          <ion-card button class="drilldown-card" (click)="openCity(group.label)">
+            <ion-card-header>
+              <ion-card-title>{{ cityDisplayName(group.label) }}</ion-card-title>
+              <ion-card-subtitle>{{ participantCountLabel(group.participantCount) }}</ion-card-subtitle>
+            </ion-card-header>
+          </ion-card>
+        }
       }
     </div>
   }
@@ -79,23 +103,35 @@
     ></ng-container>
     @if (neighborhoodGroupsForCity.length) {
       <ion-button expand="block" fill="outline" class="ion-margin-top" (click)="openNeighborhoodsList()">
-        Ver Top 3 por bairros de {{ cityDisplayName(selectedCityLabel) }}
+        {{ 'mural.locationTop.viewNeighborhoodsInCity' | t: { city: cityDisplayName(selectedCityLabel) } }}
       </ion-button>
     }
   }
 
   @if (level === 'neighborhoods') {
     @if (!neighborhoodGroupsForCity.length) {
-      <ion-note color="medium">Sem Top 3 por bairro nesta cidade.</ion-note>
+      <ion-note color="medium">{{ 'mural.locationTop.empty.byNeighborhood' | t }}</ion-note>
     }
     <div class="drilldown-grid">
-      @for (group of neighborhoodGroupsForCity; track group.label) {
-        <ion-card button class="drilldown-card" (click)="openNeighborhood(group.label)">
-          <ion-card-header>
-            <ion-card-title>{{ neighborhoodDisplayName(group.label) }}</ion-card-title>
-            <ion-card-subtitle>{{ group.participantCount }} participantes</ion-card-subtitle>
-          </ion-card-header>
-        </ion-card>
+      @for (group of neighborhoodGroupsForCity; track group.label; let i = $index) {
+        @if (playfulChrome) {
+          <app-playful-card
+            [tone]="drilldownTone(i)"
+            [interactive]="true"
+            class="drilldown-card drilldown-card-playful"
+            (activate)="openNeighborhood(group.label)"
+          >
+            <h3 class="mural-playful-section-title">{{ neighborhoodDisplayName(group.label) }}</h3>
+            <p>{{ participantCountLabel(group.participantCount) }}</p>
+          </app-playful-card>
+        } @else {
+          <ion-card button class="drilldown-card" (click)="openNeighborhood(group.label)">
+            <ion-card-header>
+              <ion-card-title>{{ neighborhoodDisplayName(group.label) }}</ion-card-title>
+              <ion-card-subtitle>{{ participantCountLabel(group.participantCount) }}</ion-card-subtitle>
+            </ion-card-header>
+          </ion-card>
+        }
       }
     </div>
   }
@@ -109,47 +145,85 @@
 }
 
 <ng-template #rankingsBlock let-group>
-  <ion-card>
-    <ion-card-header>
+  @if (playfulChrome) {
+    <app-playful-card tone="times" class="ion-margin-bottom">
       <div class="mural-card-header-row">
         <div>
-          <ion-card-title>{{ group.label }}</ion-card-title>
+          <h2 class="mural-playful-ranking__title">{{ group.label }}</h2>
           @if (filterCaption) {
             <p class="mural-filter-line">{{ filterCaption }}</p>
           }
-          <ion-card-subtitle>{{ group.participantCount }} participantes</ion-card-subtitle>
+          <p class="mural-filter-line">{{ participantCountLabel(group.participantCount) }}</p>
         </div>
         <app-mural-share-button
           [context]="shareContext"
-          [cardTitle]="'Top 3 — ' + group.label"
+          [cardTitle]="groupCardTitle(group.label)"
           ruleKey="mural.rule.topLocal"
         ></app-mural-share-button>
       </div>
-    </ion-card-header>
-    <ion-card-content>
-      @for (role of muralRoles; track role) {
+      @for (role of muralRoles; track role; let rIdx = $index) {
         @if (group.rankings[role]?.length) {
           <div class="location-role-block">
-            <h3>Top 3 — {{ roleLabel(role) }}</h3>
+            <h3>{{ roleHeading(role) }}</h3>
             @for (entry of group.rankings[role]; track entry.userId; let i = $index) {
-              <div class="rank-row ion-margin-bottom">
-                <app-user-avatar
-                  [avatarUrl]="entry.avatarUrl"
-                  [alt]="entry.userName"
-                  size="sm"
-                ></app-user-avatar>
-                <div class="rank-row__label">
-                  <span>{{ i + 1 }}. {{ entry.userName }}</span>
-                  @if (entry | muralAthleteLocationLine; as loc) {
-                    <small class="mural-athlete-location-line">{{ loc }}</small>
-                  }
-                </div>
-                <ion-badge>{{ rankingScore(entry).toFixed(1) }}</ion-badge>
-              </div>
+              <app-mural-rank-entry
+                [rank]="i + 1"
+                [userName]="entry.userName"
+                [avatarUrl]="entry.avatarUrl"
+                [badge]="rankingScore(entry).toFixed(1)"
+                [primaryPosition]="entry.primaryPosition"
+                [age]="entry.age"
+                [tone]="locationNestedTone(roleCardTone(rIdx), i)"
+                [locationLine]="(entry | muralAthleteLocationLine) || ''"
+              ></app-mural-rank-entry>
             }
           </div>
         }
       }
-    </ion-card-content>
-  </ion-card>
+    </app-playful-card>
+  } @else {
+    <ion-card>
+      <ion-card-header>
+        <div class="mural-card-header-row">
+          <div>
+            <ion-card-title>{{ group.label }}</ion-card-title>
+            @if (filterCaption) {
+              <p class="mural-filter-line">{{ filterCaption }}</p>
+            }
+            <ion-card-subtitle>{{ participantCountLabel(group.participantCount) }}</ion-card-subtitle>
+          </div>
+          <app-mural-share-button
+            [context]="shareContext"
+            [cardTitle]="groupCardTitle(group.label)"
+            ruleKey="mural.rule.topLocal"
+          ></app-mural-share-button>
+        </div>
+      </ion-card-header>
+      <ion-card-content>
+        @for (role of muralRoles; track role) {
+          @if (group.rankings[role]?.length) {
+            <div class="location-role-block">
+              <h3>{{ roleHeading(role) }}</h3>
+              @for (entry of group.rankings[role]; track entry.userId; let i = $index) {
+                <div class="rank-row ion-margin-bottom">
+                  <app-user-avatar
+                    [avatarUrl]="entry.avatarUrl"
+                    [alt]="entry.userName"
+                    size="sm"
+                  ></app-user-avatar>
+                  <div class="rank-row__label">
+                    <span>{{ i + 1 }}. {{ entry.userName }}</span>
+                    @if (entry | muralAthleteLocationLine; as loc) {
+                      <small class="mural-athlete-location-line">{{ loc }}</small>
+                    }
+                  </div>
+                  <ion-badge>{{ rankingScore(entry).toFixed(1) }}</ion-badge>
+                </div>
+              }
+            </div>
+          }
+        }
+      </ion-card-content>
+    </ion-card>
+  }
 </ng-template>

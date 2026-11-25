@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 import { Subscription } from 'rxjs';
 import { WizardTourService } from '../../../core/services/wizard-tour.service';
 
@@ -7,6 +8,7 @@ import { WizardTourService } from '../../../core/services/wizard-tour.service';
   templateUrl: './coach-hint.component.html',
   styleUrls: ['./coach-hint.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class CoachHintComponent implements OnInit, OnDestroy {

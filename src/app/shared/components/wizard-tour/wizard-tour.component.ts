@@ -1,3 +1,4 @@
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -18,6 +19,7 @@ import { WizardTourService } from '../../../core/services/wizard-tour.service';
   templateUrl: './wizard-tour.component.html',
   styleUrls: ['./wizard-tour.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class WizardTourComponent implements OnInit, OnDestroy {

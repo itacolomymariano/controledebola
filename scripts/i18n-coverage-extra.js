@@ -131,3 +131,4 @@ Object.assign(module.exports, require('./i18n-wave3-extra.js'));
 Object.assign(module.exports, require('./i18n-wave4-extra.js'));
 Object.assign(module.exports, require('./i18n-wave5-extra.js'));
 Object.assign(module.exports, require('./i18n-wave6-extra.js'));
+Object.assign(module.exports, require('./i18n-wave8-mural-extra.js'));

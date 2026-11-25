@@ -1,12 +1,352 @@
 {
-  "generatedAt": "2026-11-15T15:21:01.180Z",
+  "generatedAt": "2026-11-24T19:00:07.262Z",
   "version": 2,
-  "files": [],
+  "files": [
+    {
+      "file": "pages/event-mural/event-mural.page.html",
+      "priority": "p0",
+      "hits": [
+        {
+          "line": 493,
+          "snippet": "<ion-card-title>Check-ins da torcida</ion-card-title>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "pages/pelada-detail/pelada-detail.page.html",
+      "priority": "p0",
+      "hits": [
+        {
+          "line": 849,
+          "snippet": "<p class=\"ion-margin-top\">Nenhuma observacao de sumula registrada no App.</p>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "pages/event-mural-media/event-mural-media-journal.page.html",
+      "priority": "p1",
+      "hits": [
+        {
+          "line": 41,
+          "snippet": "<ion-note class=\"ion-margin-top\">Nenhuma reportagem publicada ainda.</ion-note>",
+          "kind": "html"
+        },
+        {
+          "line": 92,
+          "snippet": "<ion-note class=\"ion-margin-top\">Nenhuma entrevista publicada ainda.</ion-note>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "pages/event-mural-media/event-mural-media-radio.page.html",
+      "priority": "p1",
+      "hits": [
+        {
+          "line": 36,
+          "snippet": "<ion-note>Nenhuma narracao publicada ainda.</ion-note>",
+          "kind": "html"
+        },
+        {
+          "line": 70,
+          "snippet": "<ion-note>Nenhuma entrevista publicada ainda.</ion-note>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "shared/components/mural-support-ops-card/mural-support-ops-card.component.html",
+      "priority": "p1",
+      "hits": [
+        {
+          "line": 8,
+          "snippet": "<ion-card-title>Operacao de apoio</ion-card-title>",
+          "kind": "html"
+        },
+        {
+          "line": 22,
+          "snippet": "<ion-note>Resumo indisponivel para este evento.</ion-note>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "core/services/mural-highlights.service.ts",
+      "priority": "p1",
+      "hits": [
+        {
+          "line": 1674,
+          "snippet": "return 'Participante';",
+          "kind": "ts"
+        }
+      ]
+    },
+    {
+      "file": "pages/event-detail/event-detail.page.html",
+      "priority": "p1",
+      "hits": [
+        {
+          "line": 601,
+          "snippet": "<p class=\"ion-margin-top\">Nenhuma observacao de sumula registrada no App.</p>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "pages/event-mural-media/event-mural-media-video.page.html",
+      "priority": "p1",
+      "hits": [
+        {
+          "line": 32,
+          "snippet": "<ion-note>Nenhum video de melhores momentos publicado ainda.</ion-note>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "pages/profile-view/profile-view.page.html",
+      "priority": "p2",
+      "hits": [
+        {
+          "line": 117,
+          "snippet": "<ion-card-title>Engajamento da torcida</ion-card-title>",
+          "kind": "html"
+        },
+        {
+          "line": 130,
+          "snippet": "<ion-card-title>Operacao como treinador</ion-card-title>",
+          "kind": "html"
+        },
+        {
+          "line": 143,
+          "snippet": "<ion-card-title>Confrontos (treinador)</ion-card-title>",
+          "kind": "html"
+        },
+        {
+          "line": 208,
+          "snippet": "<ion-note>Nenhuma partida registrada ainda.</ion-note>",
+          "kind": "html"
+        },
+        {
+          "line": 224,
+          "snippet": "<ion-note>Nenhum time registrado ainda.</ion-note>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "pages/team-profile/team-profile.page.html",
+      "priority": "p2",
+      "hits": [
+        {
+          "line": 130,
+          "snippet": "<p>Nenhum atleta no elenco.</p>",
+          "kind": "html"
+        },
+        {
+          "line": 143,
+          "snippet": "<p>Nenhum treinador nos confrontos deste time.</p>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "pages/athlete-profile-view/athlete-profile-view.page.html",
+      "priority": "p2",
+      "hits": [
+        {
+          "line": 319,
+          "snippet": "<ion-note class=\"ion-margin-top\">Nenhum apontamento scout registrado ainda.</ion-note>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "pages/event-fan-checkin/event-fan-checkin.page.html",
+      "priority": "p3",
+      "hits": [
+        {
+          "line": 9,
+          "snippet": "<ion-title>Torcida</ion-title>",
+          "kind": "html"
+        },
+        {
+          "line": 23,
+          "snippet": "<p>Confirme sua presenca na torcida (presencial ou remota) e deixe um recado curto.</p>",
+          "kind": "html"
+        },
+        {
+          "line": 64,
+          "snippet": "<ion-note>Nenhum check-in ainda.</ion-note>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "pages/event-scout-apontamento/event-scout-apontamento.page.html",
+      "priority": "p3",
+      "hits": [
+        {
+          "line": 74,
+          "snippet": "<ion-note>Nenhum atleta disponivel para atribuicao.</ion-note>",
+          "kind": "html"
+        },
+        {
+          "line": 103,
+          "snippet": "<ion-note>Nenhum atleta confirmado para apontamento.</ion-note>",
+          "kind": "html"
+        },
+        {
+          "line": 201,
+          "snippet": "<ion-note>Nenhum atleta confirmado para apontamento.</ion-note>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "pages/event-coach-board/event-coach-board.page.html",
+      "priority": "p3",
+      "hits": [
+        {
+          "line": 9,
+          "snippet": "<ion-title>Painel do treinador</ion-title>",
+          "kind": "html"
+        },
+        {
+          "line": 53,
+          "snippet": "<ion-note class=\"ion-padding-horizontal\">Somente o treinador do outro time edita.</ion-note>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "pages/legends-hub/legends-hub.page.html",
+      "priority": "p3",
+      "hits": [
+        {
+          "line": 54,
+          "snippet": "<ion-note>Nenhuma lenda de atleta cadastrada.</ion-note>",
+          "kind": "html"
+        },
+        {
+          "line": 83,
+          "snippet": "<ion-note>Nenhuma lenda de time cadastrada.</ion-note>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "shared/components/legend-suggest-input/legend-suggest-input.component.ts",
+      "priority": "p3",
+      "hits": [
+        {
+          "line": 116,
+          "snippet": "return `Nenhum time encontrado para \"${this.search.trim()}\".`;",
+          "kind": "ts"
+        },
+        {
+          "line": 118,
+          "snippet": "return `Nenhum atleta encontrado para \"${this.search.trim()}\".`;",
+          "kind": "ts"
+        }
+      ]
+    },
+    {
+      "file": "pages/event-gate-entries/event-gate-entries.page.html",
+      "priority": "p3",
+      "hits": [
+        {
+          "line": 18,
+          "snippet": "<ion-note color=\"medium\">Nenhum participante ingressou na area do evento ainda.</ion-note>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "pages/event-masseur-treatments/event-masseur-treatments.page.html",
+      "priority": "p3",
+      "hits": [
+        {
+          "line": 103,
+          "snippet": "<ion-note>Nenhum atendimento neste evento.</ion-note>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "pages/event-sumula/event-sumula.page.html",
+      "priority": "p3",
+      "hits": [
+        {
+          "line": 73,
+          "snippet": "<ion-note>Nenhum atleta confirmado para a sumula.</ion-note>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "pages/legend-athlete-view/legend-athlete-view.page.html",
+      "priority": "p3",
+      "hits": [
+        {
+          "line": 86,
+          "snippet": "<p>Nenhum time registrado.</p>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "shared/components/amateur-team-search-modal/amateur-team-search-modal.component.html",
+      "priority": "p3",
+      "hits": [
+        {
+          "line": 52,
+          "snippet": "<ion-note class=\"ion-padding\">Nenhum time encontrado.</ion-note>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "shared/components/event-role-hiring-panel/event-role-hiring-panel.component.html",
+      "priority": "p3",
+      "hits": [
+        {
+          "line": 255,
+          "snippet": "<ion-note class=\"ion-padding-top\">Nenhum convite enviado ainda.</ion-note>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "shared/components/legend-suggest-input/legend-suggest-input.component.html",
+      "priority": "p3",
+      "hits": [
+        {
+          "line": 157,
+          "snippet": "<ion-note>Nenhuma sugestao encontrada.</ion-note>",
+          "kind": "html"
+        }
+      ]
+    },
+    {
+      "file": "shared/components/team-picker/team-picker.component.html",
+      "priority": "p3",
+      "hits": [
+        {
+          "line": 38,
+          "snippet": "<ion-note class=\"ion-padding\">Nenhum time encontrado.</ion-note>",
+          "kind": "html"
+        }
+      ]
+    }
+  ],
   "summary": {
-    "p0": 0,
-    "p1": 0,
-    "p2": 0,
-    "p3": 0,
-    "totalHits": 0
+    "p0": 2,
+    "p1": 9,
+    "p2": 8,
+    "p3": 20,
+    "totalHits": 39
   }
 }

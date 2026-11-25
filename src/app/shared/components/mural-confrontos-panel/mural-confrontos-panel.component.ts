@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Input, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import {
   MuralTeamMatchDashboard,
   MuralTeamMatchPerformanceTopEntry,
@@ -7,6 +8,12 @@ import {
 } from '../../../core/models/mural.model';
 import { MuralRankingEntry } from '../../../core/models/mural.model';
 import { MuralShareContext } from '../../../core/models/mural-share.model';
+import { I18nService } from '../../../core/services/i18n.service';
+import {
+  muralPlayfulNestedTone,
+  muralPlayfulToneByIndex,
+} from '../../../core/utils/mural-playful-tone.util';
+import { PlayfulCardTone } from '../playful-card/playful-card.component';
 
 @Component({
   selector: 'app-mural-confrontos-panel',
@@ -15,12 +22,24 @@ import { MuralShareContext } from '../../../core/models/mural-share.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: false,
 })
-export class MuralConfrontosPanelComponent {
+export class MuralConfrontosPanelComponent implements OnDestroy {
   @Input() dashboard: MuralTeamMatchDashboard | null = null;
   @Input() loading = false;
   @Input() shareContext: MuralShareContext = { scope: 'app' };
 
-  constructor(private readonly router: Router) {}
+  private localeSub?: Subscription;
+
+  constructor(
+    private readonly router: Router,
+    private readonly i18n: I18nService,
+    private readonly cdr: ChangeDetectorRef
+  ) {
+    this.localeSub = this.i18n.locale$.subscribe(() => this.cdr.markForCheck());
+  }
+
+  ngOnDestroy(): void {
+    this.localeSub?.unsubscribe();
+  }
 
   openTeam(teamId: string | undefined): void {
     if (!teamId) return;
@@ -28,14 +47,15 @@ export class MuralConfrontosPanelComponent {
   }
 
   teamHighlightLabel(key: string): string {
-    const labels: Record<string, string> = {
-      mostMatches: 'Mais jogos',
-      mostWins: 'Mais vitorias',
-      mostLosses: 'Mais derrotas',
-      mostDraws: 'Mais empates',
-      bestWinRate: 'Melhor aproveitamento',
+    const labelKeys: Record<string, string> = {
+      mostMatches: 'mural.confrontos.highlight.mostMatches',
+      mostWins: 'mural.confrontos.highlight.mostWins',
+      mostLosses: 'mural.confrontos.highlight.mostLosses',
+      mostDraws: 'mural.confrontos.highlight.mostDraws',
+      bestWinRate: 'mural.confrontos.highlight.bestWinRate',
     };
-    return labels[key] || key;
+    const i18nKey = labelKeys[key];
+    return i18nKey ? this.i18n.t(i18nKey) : key;
   }
 
   highlightEntries(): Array<{ key: string; team: MuralTeamMatchRecordHighlight }> {
@@ -51,7 +71,13 @@ export class MuralConfrontosPanelComponent {
   }
 
   recordLine(team: MuralTeamMatchRecordHighlight): string {
-    return `${team.matchesPlayed} J · ${team.wins} V · ${team.draws} E · ${team.losses} D · ${team.winRatePercent}%`;
+    return this.i18n.t('mural.confrontos.recordLine', {
+      played: team.matchesPlayed,
+      wins: team.wins,
+      draws: team.draws,
+      losses: team.losses,
+      winRate: team.winRatePercent,
+    });
   }
 
   rankingBadge(entry: MuralRankingEntry): string {
@@ -63,6 +89,14 @@ export class MuralConfrontosPanelComponent {
   }
 
   performanceName(entry: MuralTeamMatchPerformanceTopEntry): string {
-    return entry.userName || 'Participante';
+    return entry.userName || this.i18n.t('common.participant');
+  }
+
+  cardTone(cardIndex: number): PlayfulCardTone {
+    return muralPlayfulToneByIndex(cardIndex);
+  }
+
+  nestedTone(parent: PlayfulCardTone, childIndex: number): PlayfulCardTone {
+    return muralPlayfulNestedTone(parent, childIndex);
   }
 }

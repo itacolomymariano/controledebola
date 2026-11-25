@@ -565,6 +565,42 @@ async function collectEventParticipantUserIds(eventId) {
   return ids;
 }
 
+/** Inscrições com confirmação efetiva (mural, quorum, destaques). */
+async function collectConfirmedEventParticipantUserIds(eventId) {
+  const event = await new Parse.Query('Event').get(eventId, { useMasterKey: true });
+  const participationFee = Number(event.get('participationFee') || 0);
+  const ids = new Set();
+  const regQuery = new Parse.Query('EventRegistration');
+  regQuery.equalTo('event', event);
+  regQuery.limit(2000);
+  const registrations = await regQuery.find({ useMasterKey: true });
+  for (const row of registrations) {
+    if (
+      typeof computeRegistrationEffectiveConfirmation === 'function' &&
+      !computeRegistrationEffectiveConfirmation(row, participationFee)
+    ) {
+      continue;
+    }
+    const userId = row.get('participantUserId') || (row.get('user') && row.get('user').id);
+    if (userId) ids.add(String(userId));
+  }
+  return ids;
+}
+
+async function collectConfirmedPeladaParticipantUserIds(peladaId) {
+  const ids = new Set();
+  const pelada = Parse.Object.extend('Pelada').createWithoutData(peladaId);
+  const eventQuery = new Parse.Query('Event');
+  eventQuery.equalTo('pelada', pelada);
+  eventQuery.limit(500);
+  const events = await eventQuery.find({ useMasterKey: true });
+  for (const event of events) {
+    const chunk = await collectConfirmedEventParticipantUserIds(event.id);
+    chunk.forEach((id) => ids.add(id));
+  }
+  return ids;
+}
+
 // Helpers de administracao da pelada
 async function assertPeladaAdminUser(peladaId, user) {
   const pelada = await new Parse.Query('Pelada').get(peladaId, { useMasterKey: true });

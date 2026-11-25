@@ -1,3 +1,4 @@
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -14,6 +15,7 @@ import { MuralRuleSpeechService } from '../../../core/services/mural-rule-speech
   templateUrl: './app-screen-help.component.html',
   styleUrls: ['./app-screen-help.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class AppScreenHelpComponent implements OnDestroy {

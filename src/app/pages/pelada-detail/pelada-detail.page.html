@@ -669,10 +669,10 @@
         @if (!muralLoading) {
         <ion-accordion-group class="ion-margin-bottom">
           <ion-accordion value="explore">
-            <ion-item slot="header" color="light">
+            <ion-item slot="header" class="mural-playful-accordion-header">
               <ion-label>{{ 'mural.app.accordion.explore' | t }}</ion-label>
             </ion-item>
-            <div slot="content" class="ion-padding-horizontal ion-padding-bottom">
+            <div slot="content" class="ion-padding mural-playful-accordion-content mural-playful-screen">
               <app-mural-explore-curiosities
                 scope="pelada"
                 [scopeId]="peladaId"
@@ -741,29 +741,29 @@
         ></app-mural-performance-analytics>
 
         @for (role of muralRoles; track role) {
-          <app-playful-card tone="surface" class="mural-playful-ranking ion-margin-bottom">
+          <app-playful-card [tone]="muralPlayfulToneByIndex($index)" class="mural-playful-ranking ion-margin-bottom">
             <div class="mural-card-header-row">
               <h2 class="mural-playful-ranking__title">{{ 'mural.playful.ranking' | t }} — {{ roleLabel(role) }}</h2>
               <app-mural-share-button
                 [context]="muralShareContext"
                 [cardTitle]="'Top 10 — ' + roleLabel(role)"
+                ruleKey="mural.rule.top10"
               ></app-mural-share-button>
             </div>
             @if (!muralRankings[role]?.length) {
               <ion-note>{{ 'mural.playful.noData' | t }}</ion-note>
             }
             @for (entry of muralRankings[role] ?? []; track entry.userId; let i = $index) {
-              <div class="mural-playful-rank-row">
-                <span class="mural-playful-rank-pos">{{ i + 1 }}</span>
-                <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="md"></app-user-avatar>
-                <div class="mural-playful-rank-meta">
-                  <strong>{{ entry.userName }}</strong>
-                  @if (entry | muralAthleteLocationLine; as loc) {
-                    <span class="mural-athlete-location-line">{{ loc }}</span>
-                  }
-                  <span>{{ rankingBadgeLabel(role, entry) }}</span>
-                </div>
-              </div>
+              <app-mural-rank-entry
+                [rank]="i + 1"
+                [userName]="entry.userName"
+                [avatarUrl]="entry.avatarUrl"
+                [badge]="rankingBadgeLabel(role, entry)"
+                [primaryPosition]="entry.primaryPosition"
+                [age]="entry.age"
+                [tone]="muralRankNestedTone(muralPlayfulToneByIndex($index), i)"
+                [locationLine]="(entry | muralAthleteLocationLine) || ''"
+              ></app-mural-rank-entry>
             }
           </app-playful-card>
         }

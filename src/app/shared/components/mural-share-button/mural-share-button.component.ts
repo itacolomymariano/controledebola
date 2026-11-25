@@ -1,3 +1,4 @@
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -18,6 +19,7 @@ import { MuralShareService } from '../../../core/services/mural-share.service';
   templateUrl: './mural-share-button.component.html',
   styleUrls: ['./mural-share-button.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class MuralShareButtonComponent implements OnDestroy {
@@ -56,18 +58,40 @@ export class MuralShareButtonComponent implements OnDestroy {
 
   get ruleText(): string {
     if (!this.ruleKey || !this.context) return '';
+    let base = '';
     if (this.context.scope === 'app') {
       const tab = this.context.appMuralVariant;
-      return this.firstTranslated([tab ? `${this.ruleKey}.${tab}` : '', `${this.ruleKey}.default`]);
-    }
-    if (this.context.scope === 'event') {
+      base = this.firstTranslated([tab ? `${this.ruleKey}.${tab}` : '', `${this.ruleKey}.default`]);
+    } else if (this.context.scope === 'event') {
       const kind = this.context.eventKind;
-      return this.firstTranslated([
+      base = this.firstTranslated([
         kind ? `${this.ruleKey}.evento_${kind}` : '',
         `${this.ruleKey}.evento`,
+        this.ruleKey,
+      ]);
+    } else if (this.context.scope === 'pelada') {
+      base = this.firstTranslated([
+        `${this.ruleKey}.pelada`,
+        `${this.ruleKey}.peladas`,
+        `${this.ruleKey}.default`,
+        this.ruleKey,
       ]);
     }
-    return '';
+    return this.appendEffectiveConfirmationNote(base);
+  }
+
+  private appendEffectiveConfirmationNote(base: string): string {
+    if (!base || !this.context) return base;
+    const confrontosOnly =
+    this.ruleKey.startsWith('mural.rule.melhorTime') ||
+    this.ruleKey.startsWith('mural.rule.invencibilidade') ||
+    this.ruleKey.startsWith('mural.rule.melhorAtaque') ||
+    this.ruleKey.startsWith('mural.rule.melhorDefesa') ||
+    this.context.appMuralVariant === 'confrontos';
+    if (confrontosOnly) return base;
+    const note = this.i18n.t('mural.rule.common.effectiveConfirmation');
+    if (!note || note === 'mural.rule.common.effectiveConfirmation') return base;
+    return `${base} ${note}`;
   }
 
   private firstTranslated(keys: string[]): string {
@@ -127,12 +151,18 @@ export class MuralShareButtonComponent implements OnDestroy {
   }
 
   private resolveTarget(): HTMLElement | null {
-    if (!this.target) {
-      return this.btnHost?.nativeElement?.closest('ion-card') as HTMLElement | null;
+    if (this.target) {
+      if (this.target instanceof ElementRef) {
+        return this.target.nativeElement;
+      }
+      return this.target;
     }
-    if (this.target instanceof ElementRef) {
-      return this.target.nativeElement;
-    }
-    return this.target;
+    const host = this.btnHost?.nativeElement;
+    if (!host) return null;
+    const ionCard = host.closest('ion-card');
+    if (ionCard) return ionCard as HTMLElement;
+    const playfulShell = host.closest('.cb-playful-card__shell');
+    if (playfulShell) return playfulShell as HTMLElement;
+    return null;
   }
 }

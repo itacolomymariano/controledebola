@@ -118,6 +118,10 @@
       }
     </ion-list>
 
+    @if (team.id) {
+      <app-photo-gallery subjectKind="legend_team" [subjectId]="team.id"></app-photo-gallery>
+    }
+
     @if (canRequestJoin || pendingJoin) {
       <ion-button
         expand="block"

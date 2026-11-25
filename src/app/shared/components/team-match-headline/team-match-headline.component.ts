@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 
 @Component({
   selector: 'app-team-match-headline',
   templateUrl: './team-match-headline.component.html',
   styleUrls: ['./team-match-headline.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class TeamMatchHeadlineComponent {

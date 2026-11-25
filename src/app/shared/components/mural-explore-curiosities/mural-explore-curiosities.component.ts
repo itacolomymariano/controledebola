@@ -4,6 +4,7 @@ import {
   Component,
   Input,
   OnChanges,
+  OnDestroy,
   OnInit,
   SimpleChanges,
 } from '@angular/core';
@@ -12,7 +13,10 @@ import { MuralShowcaseEntry } from '../../../core/models/mural-highlights.model'
 import { MuralLocationFilter, MuralScope } from '../../../core/models/mural.model';
 import { MuralShareContext } from '../../../core/models/mural-share.model';
 import { MuralService } from '../../../core/services/mural.service';
+import { I18nService } from '../../../core/services/i18n.service';
 import { muralLocationFiltersEqual } from '../../../core/utils/mural-location-filter.util';
+import { Subscription } from 'rxjs';
+import { muralPlayfulToneByIndex } from '../../../core/utils/mural-playful-tone.util';
 
 export interface MuralExploreCardDef {
   titleKey: string;
@@ -27,7 +31,7 @@ export interface MuralExploreCardDef {
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: false,
 })
-export class MuralExploreCuriositiesComponent implements OnInit, OnChanges {
+export class MuralExploreCuriositiesComponent implements OnInit, OnChanges, OnDestroy {
   @Input({ required: true }) scope!: MuralScope;
   @Input() scopeId?: string;
   @Input() shareContext: MuralShareContext | null = null;
@@ -37,6 +41,13 @@ export class MuralExploreCuriositiesComponent implements OnInit, OnChanges {
 
   loading = false;
   data: MuralExploreCuriosities | null = null;
+  private localeSub?: Subscription;
+
+  cardTone(index = 0) {
+    return muralPlayfulToneByIndex(index);
+  }
+
+  readonly mapCardTones = ['times', 'peladas', 'confrontos'] as const;
 
   readonly goalCards: MuralExploreCardDef[] = [
     {
@@ -109,8 +120,20 @@ export class MuralExploreCuriositiesComponent implements OnInit, OnChanges {
 
   constructor(
     private readonly muralService: MuralService,
-    private readonly cdr: ChangeDetectorRef
-  ) {}
+    private readonly cdr: ChangeDetectorRef,
+    private readonly i18n: I18nService
+  ) {
+    this.localeSub = this.i18n.locale$.subscribe(() => this.cdr.markForCheck());
+  }
+
+  ngOnDestroy(): void {
+    this.localeSub?.unsubscribe();
+  }
+
+  mapAthleteCount(count: number): string {
+    const key = count === 1 ? 'mural.explore.mapAthleteCount.one' : 'mural.explore.mapAthleteCount.other';
+    return this.i18n.t(key, { count });
+  }
 
   ngOnInit(): void {
     void this.reload();

@@ -51,8 +51,15 @@
     }
     <app-playful-grid class="mural-playful-conquistas ion-margin-bottom">
       <app-playful-card tone="confrontos" class="mural-playful-tile">
-        <ion-icon name="football-outline" class="mural-playful-tile__icon"></ion-icon>
-        <h4>{{ goleadorTitle }}</h4>
+        <div class="mural-playful-tile__head mural-card-header-row">
+          <ion-icon name="football-outline" class="mural-playful-tile__icon" aria-hidden="true"></ion-icon>
+          <h4>{{ goleadorTitle }}</h4>
+          <app-mural-share-button
+            [context]="shareContext"
+            [cardTitle]="goleadorTitle"
+            ruleKey="mural.rule.goleador"
+          ></app-mural-share-button>
+        </div>
         @if (tileGoleador; as entry) {
           <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
         } @else {
@@ -60,8 +67,15 @@
         }
       </app-playful-card>
       <app-playful-card tone="peladas" class="mural-playful-tile">
-        <ion-icon name="hand-left-outline" class="mural-playful-tile__icon"></ion-icon>
-        <h4>{{ melhorGoleiroTitle }}</h4>
+        <div class="mural-playful-tile__head mural-card-header-row">
+          <ion-icon name="hand-left-outline" class="mural-playful-tile__icon" aria-hidden="true"></ion-icon>
+          <h4>{{ melhorGoleiroTitle }}</h4>
+          <app-mural-share-button
+            [context]="shareContext"
+            [cardTitle]="melhorGoleiroTitle"
+            ruleKey="mural.rule.goleiro"
+          ></app-mural-share-button>
+        </div>
         @if (eventMelhorGoleiro; as entry) {
           <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
         } @else {
@@ -70,8 +84,15 @@
       </app-playful-card>
       @if (showPlayfulTeamTile) {
         <app-playful-card tone="times" class="mural-playful-tile">
-          <ion-icon name="heart-outline" class="mural-playful-tile__icon"></ion-icon>
-          <h4>{{ 'mural.playful.bestTeam' | t }}</h4>
+          <div class="mural-playful-tile__head mural-card-header-row">
+            <ion-icon name="heart-outline" class="mural-playful-tile__icon" aria-hidden="true"></ion-icon>
+            <h4>{{ 'mural.playful.bestTeam' | t }}</h4>
+            <app-mural-share-button
+              [context]="shareContext"
+              [cardTitle]="bestTeamTitle()"
+              ruleKey="mural.rule.timeAmado"
+            ></app-mural-share-button>
+          </div>
           @if (highlights.timeMaisAmado; as team) {
             <div class="mural-playful-team-row">
               <app-team-shield [teamName]="team.teamName" size="sm"></app-team-shield>
@@ -85,8 +106,15 @@
       }
       @if (showPlayfulJuizTile) {
         <app-playful-card tone="users" class="mural-playful-tile">
-          <ion-icon name="megaphone-outline" class="mural-playful-tile__icon"></ion-icon>
-          <h4>{{ melhorJuizTitle }}</h4>
+          <div class="mural-playful-tile__head mural-card-header-row">
+            <ion-icon name="megaphone-outline" class="mural-playful-tile__icon" aria-hidden="true"></ion-icon>
+            <h4>{{ melhorJuizTitle }}</h4>
+            <app-mural-share-button
+              [context]="shareContext"
+              [cardTitle]="melhorJuizTitle"
+              ruleKey="mural.rule.juiz"
+            ></app-mural-share-button>
+          </div>
           @if (highlights.melhorJuiz; as entry) {
             <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
           } @else {
@@ -94,9 +122,16 @@
           }
         </app-playful-card>
       } @else {
-        <app-playful-card tone="users" class="mural-playful-tile">
-          <ion-icon name="star-outline" class="mural-playful-tile__icon"></ion-icon>
-          <h4>{{ promessaTitle() }}</h4>
+        <app-playful-card tone="confrontos" class="mural-playful-tile">
+          <div class="mural-playful-tile__head mural-card-header-row">
+            <ion-icon name="star-outline" class="mural-playful-tile__icon" aria-hidden="true"></ion-icon>
+            <h4>{{ promessaTitle() }}</h4>
+            <app-mural-share-button
+              [context]="shareContext"
+              [cardTitle]="promessaTitle()"
+              ruleKey="mural.rule.promessa"
+            ></app-mural-share-button>
+          </div>
           @if (highlights.promessa; as entry) {
             <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
           } @else {
@@ -113,7 +148,7 @@
         [scopeId]="scopeId"
         [filterCaption]="filterCaption"
       ></app-mural-period-rankings-card>
-      <app-playful-card tone="surface" class="ion-margin-bottom">
+      <app-playful-card tone="users" class="ion-margin-bottom">
         <h3 class="mural-playful-section-title">{{ 'mural.playful.ageBandsCraque' | t }}</h3>
         @for (band of ageBands; track band) {
           <div class="highlight-block">
@@ -126,7 +161,7 @@
           </div>
         }
       </app-playful-card>
-      <app-playful-card tone="surface" class="ion-margin-bottom">
+      <app-playful-card tone="confrontos" class="ion-margin-bottom">
         <h3 class="mural-playful-section-title">{{ 'mural.playful.ageBandsScorer' | t }}</h3>
         @for (band of ageBands; track band) {
           <div class="highlight-block">
@@ -141,7 +176,7 @@
           </div>
         }
       </app-playful-card>
-      <app-playful-card tone="surface" class="ion-margin-bottom">
+      <app-playful-card tone="peladas" class="ion-margin-bottom">
         <h3 class="mural-playful-section-title">{{ 'mural.playful.ageBandsGk' | t }}</h3>
         @for (band of ageBands; track band) {
           <div class="highlight-block">
@@ -184,7 +219,7 @@
       } @else if (scope === 'app') {
         <div class="origin-columns">
           <div class="origin-col">
-            <h3>Peladas</h3>
+            <h3>{{ 'mural.tab.peladas' | t }}</h3>
             @if (highlights.craquePelada; as entry) {
               <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
             } @else {
@@ -192,7 +227,7 @@
             }
           </div>
           <div class="origin-col">
-            <h3>Confrontos</h3>
+            <h3>{{ 'mural.tab.confrontos' | t }}</h3>
             @if (highlights.craqueConfronto; as entry) {
               <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
             } @else {
@@ -200,7 +235,7 @@
             }
           </div>
         </div>
-        <h3 class="highlight-section-title">Por faixa etaria (geral)</h3>
+        <h3 class="highlight-section-title">{{ 'mural.highlights.byAgeGeneral' | t }}</h3>
         @for (band of ageBands; track band) {
           <div class="highlight-block">
             <h3>{{ ageBandHeading(band, winnerForBand(highlights.craque, band)) }}</h3>
@@ -259,7 +294,7 @@
       } @else if (scope === 'app') {
         <div class="origin-columns">
           <div class="origin-col">
-            <h3>Peladas</h3>
+            <h3>{{ 'mural.tab.peladas' | t }}</h3>
             @if (highlights.goleadorPelada?.length) {
               @for (entry of highlights.goleadorPelada; track entry.userId) {
                 <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
@@ -269,7 +304,7 @@
             }
           </div>
           <div class="origin-col">
-            <h3>Confrontos</h3>
+            <h3>{{ 'mural.tab.confrontos' | t }}</h3>
             @if (highlights.goleadorConfronto?.length) {
               @for (entry of highlights.goleadorConfronto; track entry.userId) {
                 <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
@@ -287,7 +322,7 @@
             }
           </div>
         }
-        <h3 class="highlight-section-title">Por faixa etaria (geral)</h3>
+        <h3 class="highlight-section-title">{{ 'mural.highlights.byAgeGeneral' | t }}</h3>
         @for (band of ageBands; track band) {
           <div class="highlight-block">
             <h3>{{ ageBandHeadingForList(band, winnersForGoleadorBand(highlights.goleador, band)) }}</h3>
@@ -309,7 +344,7 @@
           <ion-note>{{ 'mural.highlights.noGoalsScout' | t }}</ion-note>
         }
       } @else {
-        <h3 class="highlight-section-title">Por faixa etaria</h3>
+        <h3 class="highlight-section-title">{{ 'mural.highlights.byAge' | t }}</h3>
         @for (band of ageBands; track band) {
           <div class="highlight-block">
             <h3>{{ ageBandHeadingForList(band, winnersForGoleadorBand(highlights.goleador, band)) }}</h3>
@@ -353,7 +388,7 @@
       } @else if (scope === 'app') {
         <div class="origin-columns">
           <div class="origin-col">
-            <h3>Peladas</h3>
+            <h3>{{ 'mural.tab.peladas' | t }}</h3>
             @if (highlights.melhorGoleiroPelada; as entry) {
               <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
             } @else {
@@ -361,7 +396,7 @@
             }
           </div>
           <div class="origin-col">
-            <h3>Confrontos</h3>
+            <h3>{{ 'mural.tab.confrontos' | t }}</h3>
             @if (highlights.melhorGoleiroConfronto; as entry) {
               <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
             } @else {
@@ -369,7 +404,7 @@
             }
           </div>
         </div>
-        <h3 class="highlight-section-title">Por faixa etaria (geral)</h3>
+        <h3 class="highlight-section-title">{{ 'mural.highlights.byAgeGeneral' | t }}</h3>
         @for (band of ageBands; track band) {
           <div class="highlight-block">
             <h3>{{ ageBandHeading(band, winnerForBand(highlights.melhorGoleiro, band)) }}</h3>
@@ -444,7 +479,7 @@
 
   @if (!showPlayfulHero || scope === 'app') {
     @if (showPlayfulExtraCards) {
-      <app-playful-card tone="surface" class="ion-margin-bottom">
+      <app-playful-card tone="times" class="ion-margin-bottom">
         <div class="mural-card-header-row">
           <h3 class="mural-playful-section-title">{{ promessaTitle() }}</h3>
           <app-mural-share-button
@@ -489,7 +524,7 @@
   }
 
   @if (showPlayfulExtraCards) {
-    <app-playful-card tone="muted" class="ion-margin-bottom">
+    <app-playful-card tone="confrontos" class="ion-margin-bottom">
       <div class="mural-card-header-row">
         <h3 class="mural-playful-section-title">{{ masterTitle() }}</h3>
         <app-mural-share-button
@@ -575,7 +610,7 @@
           }
           @for (entry of highlights.birthdays ?? []; track entry.userId) {
             <div class="highlight-block">
-              <h3>Dia {{ entry.birthdayDay }}</h3>
+              <h3>{{ 'mural.highlights.birthdayDay' | t: { day: entry.birthdayDay } }}</h3>
               <app-mural-showcase-entry [entry]="entry"></app-mural-showcase-entry>
             </div>
           }

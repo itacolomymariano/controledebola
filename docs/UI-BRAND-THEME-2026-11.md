@@ -26,6 +26,7 @@
 | `theme-palette.service.ts` | `apply()` — `data-palette`, `data-surface`, `--ion-background-color`, `--ion-toolbar-*`, `--cb-home-*` (hero), `--cb-playful-*` |
 | `variables.scss` | `--ion-color-primary/tertiary`, `--cb-card-accent`, `--cb-header-tint` |
 | `global.scss` | Labels longos (input/select stacked); **não** cores de marca |
+| `playful-grid.component.scss` | Colunas `minmax(280px)`; conquistas mural = 1 coluna (`mural-playful-conquistas`) |
 
 **Modo claro vs escuro:** ambos aplicam superfície via `ThemePaletteService`; paleta muda tokens primary. Testar sempre os dois.
 

@@ -8,15 +8,15 @@
         <h2 class="mural-playful-ranking__title">{{ 'mural.predictions.top10Title' | t }}</h2>
         <p class="mural-filter-line">
           @if (scope === 'event') {
-            Palpiteiros do evento (pontuação após encerramento)
+            {{ 'mural.predictions.subtitle.event' | t }}
           } @else {
-            Maiores pontuadores em eventos encerrados
+            {{ 'mural.predictions.subtitle.app' | t }}
           }
         </p>
       </div>
       <app-mural-share-button
         [context]="shareContext"
-        cardTitle="Top 10 — Palpites"
+        [cardTitle]="('mural.predictions.top10Title' | t)"
         ruleKey="mural.rule.palpites"
       ></app-mural-share-button>
     </div>
@@ -26,14 +26,13 @@
       <ion-note>{{ emptyMessage }}</ion-note>
     } @else {
       @for (entry of loadedEntries; track entry.userId; let i = $index) {
-        <div class="mural-playful-rank-row">
-          <span class="mural-playful-rank-pos">{{ i + 1 }}</span>
-          <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.userName" size="md"></app-user-avatar>
-          <div class="mural-playful-rank-meta">
-            <strong>{{ entry.userName }}</strong>
-            <span>{{ entry.totalScore }} pts</span>
-          </div>
-        </div>
+        <app-mural-rank-entry
+          [rank]="i + 1"
+          [userName]="entry.userName"
+          [avatarUrl]="entry.avatarUrl"
+          [badge]="entry.totalScore + ' pts'"
+          [tone]="predictionNestedTone(i)"
+        ></app-mural-rank-entry>
       }
     }
   </app-playful-card>
@@ -45,18 +44,18 @@
       }
       <div class="mural-card-header-row">
         <div>
-          <ion-card-title>Top 10 — Palpites</ion-card-title>
+          <ion-card-title>{{ 'mural.predictions.top10Title' | t }}</ion-card-title>
           <ion-card-subtitle>
             @if (scope === 'event') {
-              Palpiteiros do evento (pontuacao apos encerramento)
+              {{ 'mural.predictions.subtitle.event' | t }}
             } @else {
-              Maiores pontuadores em eventos encerrados
+              {{ 'mural.predictions.subtitle.app' | t }}
             }
           </ion-card-subtitle>
         </div>
         <app-mural-share-button
           [context]="shareContext"
-          cardTitle="Top 10 — Palpites"
+          [cardTitle]="('mural.predictions.top10Title' | t)"
           ruleKey="mural.rule.palpites"
         ></app-mural-share-button>
       </div>

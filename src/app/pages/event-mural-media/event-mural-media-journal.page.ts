@@ -1,3 +1,4 @@
+import { LocaleRefreshDirective } from '../../shared/directives/locale-refresh.directive';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -21,6 +22,7 @@ type JournalSection = 'reportage' | 'interview';
   templateUrl: './event-mural-media-journal.page.html',
   styleUrls: ['./event-mural-media.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class EventMuralMediaJournalPage {

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 import {
   highlightTitleKeysForTab,
   MuralAppSupportRoleSection,
@@ -27,12 +28,19 @@ import {
 import { muralRankingBadgeLabel, athleteRankingDisplayNote } from '../../../core/utils/mural-ranking.util';
 import { I18nService } from '../../../core/services/i18n.service';
 import { intlLocaleForApp } from '../../../core/utils/locale-datetime.util';
+import {
+  muralPlayfulNestedTone,
+  muralPlayfulToneByIndex,
+  muralPlayfulToneForSection,
+} from '../../../core/utils/mural-playful-tone.util';
+import { PlayfulCardTone } from '../playful-card/playful-card.component';
 
 @Component({
   selector: 'app-mural-app-feed',
   templateUrl: './mural-app-feed.component.html',
   styleUrls: ['./mural-app-feed.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class MuralAppFeedComponent {
@@ -161,5 +169,17 @@ export class MuralAppFeedComponent {
 
   ageYears(age: number): string {
     return this.i18n.t('mural.app.coach.ageYears', { age });
+  }
+
+  sectionTone(sectionKey: string, index = 0): PlayfulCardTone {
+    return muralPlayfulToneForSection(sectionKey, index);
+  }
+
+  roleTone(index: number): PlayfulCardTone {
+    return muralPlayfulToneByIndex(index);
+  }
+
+  nestedTone(parent: PlayfulCardTone, childIndex: number): PlayfulCardTone {
+    return muralPlayfulNestedTone(parent, childIndex);
   }
 }

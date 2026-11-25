@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 import { EventRegistrationListItem } from '../../../core/models/event-registration.model';
 import { teamSideLabel } from '../../../core/models/event.model';
 import { RegistrationService } from '../../../core/services/registration.service';
@@ -7,6 +8,7 @@ import { RegistrationService } from '../../../core/services/registration.service
   selector: 'app-event-detail-voting-panel',
   templateUrl: './event-detail-voting-panel.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class EventDetailVotingPanelComponent {

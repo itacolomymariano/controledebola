@@ -2,19 +2,19 @@
   <app-user-avatar [avatarUrl]="entry.avatarUrl" [alt]="entry.displayName" size="md"></app-user-avatar>
   <div class="showcase-details">
     <h4>{{ entry.displayName }}</h4>
-    <p><strong>Posição:</strong> {{ entry.profileLabel }}</p>
+    <p><strong>{{ 'mural.showcase.position' | t }}</strong> {{ entry.profileLabel }}</p>
     @if (entry.locationState) {
-      <p><strong>Estado:</strong> {{ entry.locationState }}</p>
+      <p><strong>{{ 'mural.showcase.state' | t }}</strong> {{ entry.locationState }}</p>
     }
     @if (entry.locationCity) {
-      <p><strong>Cidade:</strong> {{ entry.locationCity }}</p>
+      <p><strong>{{ 'mural.showcase.city' | t }}</strong> {{ entry.locationCity }}</p>
     }
     @if (entry.locationNeighborhood) {
-      <p><strong>Bairro:</strong> {{ entry.locationNeighborhood }}</p>
+      <p><strong>{{ 'mural.showcase.neighborhood' | t }}</strong> {{ entry.locationNeighborhood }}</p>
     }
     @if (entry.favoriteProTeam) {
       <p class="showcase-team-row">
-        <strong>Time profissional do coração:</strong>
+        <strong>{{ 'mural.showcase.favoriteProTeam' | t }}</strong>
         <span class="showcase-team" [attr.data-pro-team]="entry.favoriteProTeam">
           <app-team-shield [teamName]="entry.favoriteProTeam" size="sm"></app-team-shield>
           {{ entry.favoriteProTeam }}
@@ -22,22 +22,22 @@
       </p>
     }
     @if (entry.favoriteAmateurTeam) {
-      <p><strong>Time amador do coração:</strong> {{ entry.favoriteAmateurTeam }}</p>
+      <p><strong>{{ 'mural.showcase.favoriteAmateurTeam' | t }}</strong> {{ entry.favoriteAmateurTeam }}</p>
     }
     @if (entry.proFootballIdol) {
-      <p><strong>Ídolo do futebol profissional:</strong> {{ entry.proFootballIdol }}</p>
+      <p><strong>{{ 'mural.showcase.proFootballIdol' | t }}</strong> {{ entry.proFootballIdol }}</p>
     }
     @if (entry.amateurFootballIdol) {
-      <p><strong>Ídolo do futebol amador:</strong> {{ entry.amateurFootballIdol }}</p>
+      <p><strong>{{ 'mural.showcase.amateurFootballIdol' | t }}</strong> {{ entry.amateurFootballIdol }}</p>
     }
     @if (entry.score !== undefined) {
-      <p><strong>{{ entry.scoreLabel || 'Pontuacao' }}:</strong> {{ formatScore(entry.score) }}</p>
+      <p><strong>{{ entry.scoreLabel || ('mural.showcase.scoreDefault' | t) }}:</strong> {{ formatScore(entry.score) }}</p>
     }
     @if (entry.evaluatorCountLabel) {
       <p class="showcase-meta">{{ entry.evaluatorCountLabel }}</p>
     }
     @if (entry.age !== undefined) {
-      <p><strong>Idade:</strong> {{ entry.age }} anos</p>
+      <p><strong>{{ 'mural.showcase.age' | t }}</strong> {{ 'mural.showcase.ageYears' | t: { age: entry.age } }}</p>
     }
     @if (entry.tenureLabel) {
       <p>{{ entry.tenureLabel }}</p>

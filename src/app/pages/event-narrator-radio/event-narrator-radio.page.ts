@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from '@angular/core';
+import { LocaleRefreshDirective } from '../../shared/directives/locale-refresh.directive';
 import { ActivatedRoute } from '@angular/router';
 import { AlertController, LoadingController } from '@ionic/angular';
 import { EventMediaService } from '../../core/services/event-media.service';
@@ -13,6 +14,7 @@ const INTERVIEW_MAX_MS = 50_000;
   templateUrl: './event-narrator-radio.page.html',
   styleUrls: ['./event-narrator-radio.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class EventNarratorRadioPage {

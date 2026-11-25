@@ -13,6 +13,33 @@
   margin: 0 -0.5rem;
 }
 
+.mural-press-photos__title {
+  margin: 16px 0 8px;
+  font-size: 1rem;
+}
+
+.mural-press-photos__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mural-press-photos__thumb {
+  border: none;
+  padding: 0;
+  background: transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+
+  img {
+    width: 96px;
+    height: 96px;
+    object-fit: cover;
+    display: block;
+  }
+}
+
 .media-hub-card ion-card-header {
   cursor: pointer;
 }

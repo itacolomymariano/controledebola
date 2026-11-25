@@ -26,7 +26,7 @@ const I18N_OK =
   /\|\s*t\b|textKey|titleKey|bodyKey|\{\{\s*['"][a-zA-Z0-9_.]+['"]\s*\|\s*t|i18n\.t|this\.t\(|this\.i18n\.t\(/;
 
 const PT_HINT =
-  /[àáâãéêíóôõúçÀÁÂÃÉÊÍÓÔÕÚÇ]|\b(Entrar|Voltar|Editar|Eventos|Socios|Sem dados|Buscar|Pelada|Mural|Local|Idade|Perfil|Nao|nao|apos|Informe|Selecione|Erro|Cancelar|Confirmar|Excluir|Salvando|Grave|titulo|descricao)\b/i;
+  /[àáâãéêíóôõúçÀÁÂÃÉÊÍÓÔÕÚÇ]|\b(Entrar|Voltar|Editar|Eventos|Socios|Sem dados|Buscar|Pelada|Mural|Local|Idade|Perfil|Nao|nao|apos|Informe|Selecione|Erro|Cancelar|Confirmar|Excluir|Salvando|Grave|titulo|descricao|Nenhum|Nenhuma|disponivel|indisponivel|participantes|participante|palpite|Palpite|conteudo|conteúdo|faixa|etaria|etária|visualizacao|Autor|Maiores|Ver Top|por estado|por cidade|por bairro|Operacao|Treinador|Massagista|Torcida)\b/i;
 
 const HTML_TAG =
   /<(ion-title|ion-label|ion-button|ion-card-title|ion-note|ion-searchbar|ion-select-option|ion-segment-button|h[1-4]|p)[^>]*>([^<{]+)</gi;

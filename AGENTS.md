@@ -148,7 +148,7 @@ docs/             documentacao (guia completo + fases Back4App + iOS Actions)
 - Use `parseErrorMessage()` e `handleApiError()` para erros Parse
 - Configure chaves em `src/environments/environment.local.ts` (nao commitar)
 - **UI / tema:** paleta marca `controle_de_bola` — [`docs/UI-BRAND-THEME-2026-11.md`](docs/UI-BRAND-THEME-2026-11.md); hex so em `theme/variables.scss` + `theme-palette.model.ts`; **Inicio** so no rodape (1ª aba), nao icone casa no `user-bar`; labels longos em forms → `global.scss` (stacked input/select)
-- **i18n / OnPush:** HTML com `| t`; strings montadas em TS → `i18n.t()` e, se a tela e OnPush ou Ionic cacheia a view, `locale$.subscribe(() => cdr.markForCheck())` ou getters (troca global dispara `ApplicationRef.tick()` em `I18nService.setLocale`). Menu e bandeiras usam `applyAppLocale`.
+- **i18n / OnPush:** HTML com `| t`; strings montadas em TS → `i18n.t()` e, se a tela e OnPush ou Ionic cacheia a view, `locale$.subscribe(() => cdr.markForCheck())`, getters, ou `hostDirectives: [LocaleRefreshDirective]` em `shared/directives/locale-refresh.directive.ts` (filhos OnPush sem o subscribe ficam stale). Troca global dispara `ApplicationRef.tick()` em `I18nService.setLocale`. Menu e bandeiras usam `applyAppLocale`.
 
 ### Nao faca
 
@@ -245,8 +245,9 @@ Inscreva no construtor, recarregue em `ionViewWillEnter`, `unsubscribe` em `ngOn
 | `16-match-challenge.js` | Desafio/aceite (`MatchChallenge`), placar, remarcacao, `TeamMatchJoinRequest` (solicitar participacao), contratacao arbitro confronto (aprovacao adversario) |
 | `17-team-match-stats.js` | V/E/D e aproveitamento (usuario/time/presidente); `getMuralTeamMatchDashboard` |
 | `18-app-mailbox.js` | Caixa de mensagens (`AppMessage`): `createAppMessage(s)` ao lado dos pushes, `listAppMessages`, leitura e contagem de nao lidas |
+| `20-photo-posts.js` | Galerias `PhotoPost` (evento, atleta, time, lenda): `createPhotoPost`, `listPhotoPosts`, `deletePhotoPost` |
 
-Apos deploy: rodar `configureMuralClassPermissions`, `configureMaterialClassPermissions`, `configureSupportRolesClassPermissions`, `configureEventMediaClassPermissions` e `configureAppMailboxClassPermissions` no Back4App (CLP de `MuralVote`, classes de midia e `AppMessage`: escrita so via Cloud).
+Apos deploy: rodar `configureMuralClassPermissions`, `configureMaterialClassPermissions`, `configureSupportRolesClassPermissions`, `configureEventMediaClassPermissions`, `configurePhotoPostClassPermissions` e `configureAppMailboxClassPermissions` no Back4App (CLP de `MuralVote`, classes de midia, `PhotoPost` e `AppMessage`: escrita so via Cloud).
 
 **Limpeza de dados de teste (go-live):** [docs/PROD-DATA-PURGE.md](docs/PROD-DATA-PURGE.md) — Cloud `prodDataPurge` / `prodDataPurgeInventory`; exige `PROD_PURGE_SECRET` no Back4App e Master Key (nunca no cliente).
 

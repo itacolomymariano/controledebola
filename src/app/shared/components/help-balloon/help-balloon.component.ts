@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Input, OnDestroy } from '@angular/core';
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 import { Subscription } from 'rxjs';
 import { I18nService } from '../../../core/services/i18n.service';
 import { MuralRuleSpeechService } from '../../../core/services/mural-rule-speech.service';
@@ -8,6 +9,7 @@ import { MuralRuleSpeechService } from '../../../core/services/mural-rule-speech
   templateUrl: './help-balloon.component.html',
   styleUrls: ['./help-balloon.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class HelpBalloonComponent implements OnDestroy {

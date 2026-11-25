@@ -3,6 +3,8 @@ import { MuralShareContext } from '../../../core/models/mural-share.model';
 import { MuralScope } from '../../../core/models/mural.model';
 import { FanHighlightEntry } from '../../../core/models/support-role-tools.model';
 import { SupportRoleToolsService } from '../../../core/services/support-role-tools.service';
+import { muralPlayfulNestedTone } from '../../../core/utils/mural-playful-tone.util';
+import { PlayfulCardTone } from '../playful-card/playful-card.component';
 
 @Component({
   selector: 'app-mural-fan-highlights',
@@ -21,6 +23,12 @@ export class MuralFanHighlightsComponent implements OnChanges {
   entries: FanHighlightEntry[] = [];
 
   constructor(private readonly supportTools: SupportRoleToolsService) {}
+
+  readonly fanParentTone: PlayfulCardTone = 'users';
+
+  fanNestedTone(childIndex: number): PlayfulCardTone {
+    return muralPlayfulNestedTone(this.fanParentTone, childIndex);
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (!changes['scope'] && !changes['scopeId']) {

@@ -1,5 +1,8 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Input, OnDestroy } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { MuralShareContext } from '../../../core/models/mural-share.model';
+import { I18nService } from '../../../core/services/i18n.service';
+import { formatAppDateTime } from '../../../core/utils/locale-datetime.util';
 
 @Component({
   selector: 'app-mural-event-context',
@@ -8,8 +11,20 @@ import { MuralShareContext } from '../../../core/models/mural-share.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: false,
 })
-export class MuralEventContextComponent {
+export class MuralEventContextComponent implements OnDestroy {
   @Input() context: MuralShareContext | null = null;
+  private localeSub?: Subscription;
+
+  constructor(
+    private readonly i18n: I18nService,
+    private readonly cdr: ChangeDetectorRef
+  ) {
+    this.localeSub = this.i18n.locale$.subscribe(() => this.cdr.markForCheck());
+  }
+
+  ngOnDestroy(): void {
+    this.localeSub?.unsubscribe();
+  }
 
   get show(): boolean {
     return this.context?.scope === 'event';
@@ -20,13 +35,7 @@ export class MuralEventContextComponent {
     if (!raw) return '';
     const date = raw instanceof Date ? raw : new Date(raw);
     if (Number.isNaN(date.getTime())) return '';
-    return new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
+    return formatAppDateTime(date, this.i18n.locale);
   }
 
   get showTeamMatch(): boolean {
@@ -39,5 +48,9 @@ export class MuralEventContextComponent {
       this.context!.homeScore != null &&
       this.context!.awayScore != null
     );
+  }
+
+  journalistLabel(name: string): string {
+    return this.i18n.t('mural.eventContext.journalist', { name });
   }
 }

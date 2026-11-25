@@ -1,0 +1,21 @@
+<div class="mural-playful-rank-entry" [class]="toneClass()">
+  <span class="mural-playful-rank-pos">{{ rank }}</span>
+  <app-user-avatar [avatarUrl]="avatarUrl" [alt]="userName" size="md"></app-user-avatar>
+  <div class="mural-playful-rank-meta">
+    <strong>{{ userName }}</strong>
+    @if (primaryPosition) {
+      <span class="mural-rank-meta-line">
+        {{ 'athleteProfile.primaryPosition' | t }}: {{ positionDisplay(primaryPosition) }}
+      </span>
+    }
+    @if (age !== undefined && age !== null && age > 0) {
+      <span class="mural-rank-meta-line">{{ 'mural.highlights.ageYears' | t: { age: age } }}</span>
+    }
+    @if (locationLine) {
+      <span class="mural-athlete-location-line">{{ locationLine }}</span>
+    }
+    @if (badge) {
+      <span class="mural-rank-badge">{{ badge }}</span>
+    }
+  </div>
+</div>

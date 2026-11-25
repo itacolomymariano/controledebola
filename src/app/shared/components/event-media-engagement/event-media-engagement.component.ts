@@ -1,3 +1,4 @@
+import { LocaleRefreshDirective } from '../../directives/locale-refresh.directive';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -23,6 +24,7 @@ import { commentDisciplineViolation } from '../../../core/utils/comment-discipli
   templateUrl: './event-media-engagement.component.html',
   styleUrls: ['./event-media-engagement.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [LocaleRefreshDirective],
   standalone: false,
 })
 export class EventMediaEngagementComponent implements OnChanges {
